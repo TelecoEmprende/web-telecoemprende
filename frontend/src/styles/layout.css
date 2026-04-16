@@ -1,0 +1,328 @@
+.page-shell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.page-content {
+  flex: 1;
+  width: 100%;
+}
+
+.section-card {
+  width: min(100% - 40px, var(--container-width));
+  background: var(--color-surface-soft);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-soft);
+  padding: 32px 28px;
+}
+
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: #eef4ff;
+  color: var(--color-primary);
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin-bottom: 16px;
+}
+
+.container-react {
+  width: 100%;
+  max-width: var(--container-width);
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+.site-header-react,
+.site-footer-react {
+  position: relative;
+  z-index: 1;
+}
+
+.site-header-react {
+  padding-top: 20px;
+}
+
+.header-inner-react,
+.footer-inner-react {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(207, 216, 230, 0.9);
+  border-radius: 24px;
+  padding: 16px 20px;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.04);
+}
+
+.brand-react {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.brand-logo-react {
+  width: 46px;
+  height: 46px;
+  border-radius: 12px;
+  background: #fff;
+  padding: 4px;
+}
+
+.brand-name-react {
+  font-size: 1.2rem;
+  font-weight: 900;
+  color: var(--color-primary);
+  letter-spacing: -0.03em;
+}
+
+.header-nav-react {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  flex-wrap: wrap;
+}
+
+.header-nav-react a {
+  color: var(--color-text-muted);
+  font-weight: 700;
+}
+
+.header-nav-react a.active {
+  color: var(--color-primary);
+}
+
+.public-tab-slider-react {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: center;
+  padding: 4px;
+  gap: 4px;
+  border-radius: 999px;
+  background: rgba(232, 238, 248, 0.9);
+  border: 1px solid rgba(220, 227, 238, 0.95);
+  min-width: 240px;
+}
+
+.public-tab-slider-react::before {
+  content: "";
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  width: calc(50% - 4px);
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--color-primary), #0b67d4);
+  box-shadow: 0 14px 28px rgba(15, 92, 192, 0.18);
+  transition: transform 0.22s ease;
+}
+
+.public-tab-slider-evento::before {
+  transform: translateX(0);
+}
+
+.public-tab-slider-registro::before {
+  transform: translateX(100%);
+}
+
+.public-tab-slider-react a {
+  position: relative;
+  z-index: 1;
+  min-height: 44px;
+  padding: 0 18px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-muted);
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  transition: color 0.18s ease;
+}
+
+.public-tab-slider-react a.active {
+  color: #fff;
+}
+
+.site-footer-react {
+  padding: 24px 0;
+}
+
+.footer-links-react {
+  display: flex;
+  gap: 18px;
+  flex-wrap: wrap;
+}
+
+.footer-links-react a {
+  color: var(--color-text-muted);
+  font-weight: 700;
+}
+
+.field-group-react {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.field-group-react label {
+  font-weight: 700;
+  color: #344054;
+}
+
+.field-group-react input {
+  width: 100%;
+  min-height: 54px;
+  border: 1px solid #d7dfeb;
+  border-radius: 16px;
+  background: #fdfefe;
+  padding: 0 16px;
+  color: var(--color-text);
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.field-group-react input:focus {
+  border-color: #80a9e6;
+  box-shadow: 0 0 0 4px rgba(15, 92, 192, 0.09);
+}
+
+.field-error-react {
+  margin: 4px 0 0;
+  color: #b42318;
+  font-size: 0.92rem;
+  font-weight: 700;
+}
+
+.submit-btn-react {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 56px;
+  padding: 0 22px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, var(--color-primary), #0b67d4);
+  color: #fff;
+  font-weight: 800;
+  border: 0;
+  box-shadow: 0 20px 50px rgba(15, 92, 192, 0.12);
+  cursor: pointer;
+  transition: transform 0.15s ease, filter 0.15s ease, opacity 0.15s ease;
+}
+
+.submit-btn-react:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.02);
+}
+
+.submit-btn-react:disabled {
+  cursor: wait;
+  opacity: 0.75;
+}
+
+@media (max-width: 720px) {
+  .section-card {
+    width: min(100% - 32px, var(--container-width));
+    padding: 24px 20px;
+  }
+
+  .container-react {
+    padding: 0 16px;
+  }
+
+  .site-header-react {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    padding-top: 10px;
+    padding-bottom: 10px;
+    background: linear-gradient(180deg, rgba(247, 249, 252, 0.92), rgba(247, 249, 252, 0.68));
+    backdrop-filter: blur(10px);
+  }
+
+  .header-inner-react,
+  .footer-inner-react {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 14px;
+    padding: 14px 16px;
+  }
+
+  .brand-react {
+    width: 100%;
+  }
+
+  .brand-name-react {
+    font-size: 1.05rem;
+  }
+
+  .brand-logo-react {
+    width: 42px;
+    height: 42px;
+  }
+
+  .header-nav-react {
+    width: 100%;
+    justify-content: stretch;
+  }
+
+  .header-nav-react a {
+    flex: 0 0 auto;
+    min-height: 40px;
+    padding: 0 14px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.85);
+    border: 1px solid rgba(220, 227, 238, 0.95);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .public-tab-slider-react {
+    width: 100%;
+    min-width: 0;
+    padding: 4px;
+    gap: 0;
+  }
+
+  .public-tab-slider-react a {
+    min-height: 46px;
+    padding: 0 12px;
+    background: transparent;
+    border: 0;
+  }
+
+  .header-nav-react a.active {
+    background: #eef4ff;
+  }
+
+  .public-tab-slider-react a.active {
+    background: transparent;
+    color: #fff;
+  }
+
+  .footer-links-react {
+    width: 100%;
+    gap: 10px;
+  }
+
+  .footer-links-react a {
+    min-height: 40px;
+    padding: 0 14px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.8);
+    border: 1px solid rgba(220, 227, 238, 0.95);
+    display: inline-flex;
+    align-items: center;
+  }
+}

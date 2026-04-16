@@ -1,0 +1,174 @@
+.admin-shell-react {
+  padding: 32px 0 48px;
+}
+
+.admin-placeholder {
+  margin: 0;
+}
+
+.admin-card-react {
+  background: rgba(255, 255, 255, 0.82);
+  border: 1px solid rgba(220, 227, 238, 0.95);
+  border-radius: 30px;
+  box-shadow: var(--shadow-soft);
+  padding: 28px;
+}
+
+.admin-login-box-react {
+  max-width: 540px;
+}
+
+.admin-login-box-react h1,
+.admin-toolbar-react h1 {
+  margin-bottom: 10px;
+  font-size: 2rem;
+  font-weight: 900;
+  letter-spacing: -0.04em;
+}
+
+.admin-login-box-react p,
+.admin-toolbar-react p {
+  color: var(--color-text-muted);
+  line-height: 1.7;
+}
+
+.admin-login-form-react {
+  margin-top: 24px;
+}
+
+.admin-toolbar-react {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  margin-top: 8px;
+  margin-bottom: 24px;
+}
+
+.admin-actions-react {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.secondary-btn-react {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  padding: 0 18px;
+  border-radius: 14px;
+  border: 1px solid #d7dfeb;
+  background: #fff;
+  color: var(--color-text);
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.secondary-btn-light-react {
+  background: #f7f9fc;
+}
+
+.secondary-btn-react:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+
+.table-wrapper-react {
+  overflow-x: auto;
+  border: 1px solid #dde5f1;
+  border-radius: 22px;
+  background: #fff;
+}
+
+.records-table-react {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 760px;
+}
+
+.records-table-react th,
+.records-table-react td {
+  padding: 16px 18px;
+  text-align: left;
+  border-bottom: 1px solid #eef2f7;
+}
+
+.records-table-react th {
+  background: #f8fbff;
+  color: #344054;
+  font-size: 0.9rem;
+  font-weight: 800;
+}
+
+.records-table-react td {
+  color: var(--color-text);
+  vertical-align: top;
+}
+
+.records-table-react td:nth-child(3),
+.records-table-react td:nth-child(4) {
+  min-width: 220px;
+}
+
+.records-table-react tbody tr:hover {
+  background: #fbfdff;
+}
+
+@media (max-width: 720px) {
+  .admin-shell-react {
+    padding: 18px 0 32px;
+  }
+
+  .admin-card-react {
+    padding: 18px;
+    border-radius: 24px;
+  }
+
+  .admin-toolbar-react {
+    flex-direction: column;
+    margin-bottom: 18px;
+  }
+
+  .admin-actions-react,
+  .secondary-btn-react {
+    width: 100%;
+  }
+
+  .admin-login-box-react h1,
+  .admin-toolbar-react h1 {
+    font-size: 1.7rem;
+  }
+
+  .admin-login-box-react p,
+  .admin-toolbar-react p {
+    font-size: 0.96rem;
+  }
+
+  .admin-login-form-react {
+    margin-top: 18px;
+  }
+
+  .table-wrapper-react {
+    margin: 0 -18px;
+    border-left: 0;
+    border-right: 0;
+    border-radius: 0;
+  }
+
+  .records-table-react th,
+  .records-table-react td {
+    padding: 14px 14px;
+  }
+}
+
+@media (max-width: 420px) {
+  .admin-card-react {
+    padding: 16px;
+  }
+
+  .table-wrapper-react {
+    margin: 0 -16px;
+  }
+}

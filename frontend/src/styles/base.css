@@ -1,0 +1,63 @@
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: "Inter", sans-serif;
+  color: var(--color-text);
+  background:
+    radial-gradient(circle at top left, rgba(15, 92, 192, 0.06), transparent 28%),
+    radial-gradient(circle at top right, rgba(243, 198, 165, 0.1), transparent 24%),
+    linear-gradient(180deg, #f7f9fc 0%, var(--color-background) 100%);
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+img {
+  display: block;
+  max-width: 100%;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+h1,
+p {
+  margin-top: 0;
+}
+
+.alert-banner {
+  margin-top: 20px;
+  padding: 14px 16px;
+  border-radius: var(--radius-md);
+  font-weight: 700;
+}
+
+.alert-info {
+  background: var(--color-info-bg);
+  color: var(--color-info-text);
+}
+
+.alert-success {
+  background: var(--color-success-bg);
+  color: var(--color-success-text);
+}
+
+.alert-error {
+  background: var(--color-error-bg);
+  color: var(--color-error-text);
+}
