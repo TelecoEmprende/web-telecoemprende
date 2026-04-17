@@ -28,7 +28,7 @@ export function AdminToolbar({
           onClick={() => void onLogout()}
           disabled={isLoggingOut}
         >
-          {isLoggingOut ? "Cerrando..." : "Cerrar sesion"}
+          {isLoggingOut ? "Cerrando..." : "Cerrar sesión"}
         </button>
       </div>
     </div>

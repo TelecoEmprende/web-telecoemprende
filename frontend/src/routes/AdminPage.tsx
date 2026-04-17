@@ -47,7 +47,7 @@ export function AdminPage() {
       } catch {
         if (active) {
           setMessageVariant("error");
-          setMessage("No se pudo comprobar la sesion de administracion.");
+          setMessage("No se pudo comprobar la sesión de administración.");
         }
       } finally {
         if (active) {
@@ -91,13 +91,13 @@ export function AdminPage() {
       if (response.ok) {
         setIsAuthenticated(true);
         setMessageVariant("success");
-        setMessage(response.message ?? "Sesion iniciada.");
+        setMessage(response.message ?? "Sesión iniciada.");
         await loadRegistrations();
       }
     } catch (error) {
       const apiError = error as ApiFailure;
       setMessageVariant("error");
-      setMessage(apiError.message || "No se pudo iniciar sesion.");
+      setMessage(apiError.message || "No se pudo iniciar sesión.");
     } finally {
       setIsSubmitting(false);
       setIsCheckingSession(false);
@@ -114,12 +114,12 @@ export function AdminPage() {
         setIsAuthenticated(false);
         setRegistros([]);
         setMessageVariant("success");
-        setMessage(response.message ?? "Sesion cerrada correctamente.");
+        setMessage(response.message ?? "Sesión cerrada correctamente.");
       }
     } catch (error) {
       const apiError = error as ApiFailure;
       setMessageVariant("error");
-      setMessage(apiError.message || "No se pudo cerrar la sesion.");
+      setMessage(apiError.message || "No se pudo cerrar la sesión.");
     } finally {
       setIsLoggingOut(false);
     }
@@ -139,7 +139,7 @@ export function AdminPage() {
               {isCheckingSession ? (
                 <div className="section-card admin-placeholder">
                   <p className="eyebrow">Cargando</p>
-                  <h1>Comprobando sesion de administracion...</h1>
+                  <h1>Comprobando sesión de administración...</h1>
                 </div>
               ) : null}
 

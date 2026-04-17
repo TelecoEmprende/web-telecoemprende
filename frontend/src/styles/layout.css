@@ -119,10 +119,13 @@
 }
 
 .brand-name-react {
-  font-size: 1.2rem;
-  font-weight: 900;
+  font-family: "Space Grotesk", "Inter", sans-serif;
+  font-size: 1.6rem;
+  font-weight: 700;
   color: var(--color-primary);
-  letter-spacing: -0.03em;
+  letter-spacing: -0.045em;
+  line-height: 0.98;
+  text-transform: none;
 }
 
 .header-nav-react {
@@ -304,7 +307,7 @@
   }
 
   .brand-name-react {
-    font-size: 1.05rem;
+    font-size: 1.6rem;
   }
 
   .brand-logo-react {

@@ -1,4 +1,5 @@
 import { FormEvent, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 import { submitRegistration } from "../../api/public";
 import { AlertBanner } from "../feedback/AlertBanner";
@@ -16,10 +17,10 @@ const INITIAL_FORM: RegistrationPayload = {
 };
 
 export function RegistrationForm() {
+  const navigate = useNavigate();
   const [form, setForm] = useState<RegistrationPayload>(INITIAL_FORM);
   const [errors, setErrors] = useState<RegistrationErrors>({});
   const [message, setMessage] = useState<string | null>(null);
-  const [status, setStatus] = useState<"idle" | "success" | "error">("idle");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   function updateField<K extends keyof RegistrationPayload>(
@@ -38,7 +39,6 @@ export function RegistrationForm() {
     setMessage(null);
 
     if (Object.keys(nextErrors).length > 0) {
-      setStatus("error");
       return;
     }
 
@@ -48,17 +48,17 @@ export function RegistrationForm() {
       const response = await submitRegistration(form);
 
       if (response.ok) {
-        setStatus("success");
-        setMessage(
-          response.message ??
-            "Registro completado. Te contactaremos pronto con la informacion del evento.",
-        );
         setForm(INITIAL_FORM);
         setErrors({});
+        navigate("/gracias", {
+          state: {
+            attendeeName: form.nombre.trim(),
+            attendeeEmail: form.email.trim(),
+          },
+        });
       }
     } catch (error) {
       const apiError = error as ApiFailure;
-      setStatus("error");
       setMessage(apiError.message || "No se pudo completar el registro.");
       if (apiError.errors) {
         setErrors((current) => ({ ...current, ...apiError.errors }));
@@ -72,11 +72,11 @@ export function RegistrationForm() {
     <section className="form-section-react" id="registro">
       <div className="container-react form-layout-react">
         <div className="section-copy-card-react">
-          <span className="section-eyebrow-react">Inscripcion</span>
+          <span className="section-eyebrow-react">Inscripción</span>
           <h2>Formulario de registro</h2>
           <p className="section-copy">
             Completa tus datos para reservar tu plaza. Usaremos esta
-            informacion unicamente para la gestion del evento y las
+            información únicamente para la gestión del evento y las
             comunicaciones relacionadas.
           </p>
         </div>
@@ -84,7 +84,7 @@ export function RegistrationForm() {
         <div className="form-card-react">
           {message ? (
             <AlertBanner
-              variant={status === "success" ? "success" : "error"}
+              variant="error"
               message={message}
             />
           ) : null}
@@ -123,7 +123,7 @@ export function RegistrationForm() {
                   type="text"
                   id="apellidos"
                   name="apellidos"
-                  placeholder="Ej. Perez Garcia"
+                  placeholder="Ej. Pérez García"
                   maxLength={100}
                   value={form.apellidos}
                   onChange={(event) => updateField("apellidos", event.target.value)}
@@ -140,7 +140,7 @@ export function RegistrationForm() {
                 type="text"
                 id="estudios"
                 name="estudios"
-                placeholder="Ej. ETSIT UPM / Ingenieria de Telecomunicacion"
+                placeholder="Ej. ETSIT UPM / Empresa X"
                 maxLength={120}
                 value={form.estudios}
                 onChange={(event) => updateField("estudios", event.target.value)}
@@ -151,7 +151,7 @@ export function RegistrationForm() {
             </div>
 
             <div className="field-group-react">
-              <label htmlFor="email">Correo electronico</label>
+              <label htmlFor="email">Correo electrónico</label>
               <input
                 type="email"
                 id="email"
@@ -174,8 +174,8 @@ export function RegistrationForm() {
                 onChange={(event) => updateField("privacidad", event.target.checked)}
               />
               <span>
-                Acepto la politica de privacidad y el tratamiento de mis datos
-                para la gestion del evento.
+                Acepto la política de privacidad y el tratamiento de mis datos
+                para la gestión del evento.
               </span>
             </label>
             {errors.privacidad ? (
@@ -188,7 +188,7 @@ export function RegistrationForm() {
             </button>
 
             <p className="privacy-text-react">
-              Al registrarte, podremos enviarte informacion sobre este evento y
+              Al registrarte, podremos enviarte información sobre este evento y
               futuras iniciativas de TelecoEmprende.
             </p>
           </form>

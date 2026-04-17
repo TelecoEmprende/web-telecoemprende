@@ -7,7 +7,7 @@ Formulario de inscripción para el evento **TelecoEmprende**. Este proyecto perm
 - **Formulario de inscripción** con campos para nombre, apellidos, estudios y correo electrónico.
 - **Validación de datos** para asegurar que la información es correcta.
 - **Generación de un archivo Excel** con los registros de todos los participantes.
-- **Interfaz de administración** para ver, descargar e gestionar las inscripciones.
+- **Interfaz de administración** para ver, descargar y gestionar las inscripciones.
 - **Protección contra bots** utilizando un campo honeypot y rate limiting.
 
 ## Tecnologías

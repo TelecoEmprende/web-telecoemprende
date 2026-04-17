@@ -151,10 +151,10 @@ def access_denied_response(message: str, status_code: int = 401):
           <body>
             <main class="card">
               <div class="badge">Acceso denegado</div>
-              <h1>Esta ruta de administracion no esta disponible ahora mismo.</h1>
+              <h1>Esta ruta de administración no está disponible ahora mismo.</h1>
               <p>
                 Has abierto un endpoint protegido de la API directamente en el navegador.
-                Esa URL solo responde si existe una sesion de administrador activa.
+                Esa URL solo responde si existe una sesión de administrador activa.
               </p>
               <div class="message">{{ message }}</div>
               <div class="actions">
@@ -162,7 +162,7 @@ def access_denied_response(message: str, status_code: int = 401):
                 <a class="secondary" href="/">Volver al inicio</a>
               </div>
               <p class="eyebrow">
-                Si acabas de cerrar sesion, vuelve a autenticarte desde el panel antes de consultar registros.
+                Si acabas de cerrar sesión, vuelve a autenticarte desde el panel antes de consultar registros.
               </p>
             </main>
           </body>
@@ -183,7 +183,7 @@ def api_admin_login():
         return (
             jsonify(build_response(
                 False,
-                "El panel admin no esta configurado correctamente.",
+                "El panel admin no está configurado correctamente.",
             )),
             503,
         )
@@ -199,15 +199,15 @@ def api_admin_login():
     password = str(payload.get("password", ""))
 
     if login_admin(password):
-        return jsonify(build_response(True, "Sesion iniciada.")), 200
+        return jsonify(build_response(True, "Sesión iniciada.")), 200
 
-    return jsonify(build_response(False, "Contrasena incorrecta.")), 401
+    return jsonify(build_response(False, "Contraseña incorrecta.")), 401
 
 
 @admin_api.route("/logout", methods=["POST"])
 def api_admin_logout():
     logout_admin()
-    return jsonify(build_response(True, "Sesion cerrada correctamente.")), 200
+    return jsonify(build_response(True, "Sesión cerrada correctamente.")), 200
 
 
 @admin_api.route("/session", methods=["GET"])
@@ -240,12 +240,12 @@ def api_admin_download():
     if not EXCEL_FILE.exists():
         if prefers_html_response():
             return access_denied_response(
-                "No existe ningun archivo de registros todavia.",
+                "No existe ningún archivo de registros todavía.",
                 404,
             )
         return jsonify(build_response(
             False,
-            "No existe ningun archivo de registros todavia.",
+            "No existe ningún archivo de registros todavía.",
         )), 404
 
     return send_file(

@@ -20,18 +20,18 @@ export function AdminLoginForm({
     <div className="admin-login-box-react">
       <h1>Acceso al panel</h1>
       <p>
-        Introduce la contrasena de administracion para consultar las
+        Introduce la contraseña de administración para consultar las
         inscripciones.
       </p>
 
       <form className="admin-login-form-react" onSubmit={handleSubmit}>
         <div className="field-group-react">
-          <label htmlFor="password">Contrasena</label>
+          <label htmlFor="password">Contraseña</label>
           <input
             type="password"
             id="password"
             name="password"
-            placeholder="Contrasena de administrador"
+            placeholder="Contraseña de administrador"
             value={password}
             onChange={(event) => setPassword(event.target.value)}
           />

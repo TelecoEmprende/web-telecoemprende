@@ -18,7 +18,7 @@ export function validateRegistrationDraft(
     errors.email = "Completa este campo.";
   }
   if (!payload.privacidad) {
-    errors.privacidad = "Debes aceptar la politica de privacidad.";
+    errors.privacidad = "Debes aceptar la política de privacidad.";
   }
 
   return errors;

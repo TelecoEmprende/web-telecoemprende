@@ -27,7 +27,7 @@ def create_registration():
         return (
             jsonify(build_response(
                 False,
-                "Demasiadas solicitudes desde esta red. Intentalo en un minuto.",
+                "Demasiadas solicitudes desde esta red. Inténtalo en un minuto.",
             )),
             429,
         )
@@ -56,7 +56,7 @@ def create_registration():
         errors["email"] = "Completa este campo."
     if not acepta_privacidad:
         errors["privacidad"] = (
-            "Debes aceptar la politica de privacidad para registrarte."
+            "Debes aceptar la política de privacidad para registrarte."
         )
 
     if errors:
@@ -82,15 +82,15 @@ def create_registration():
         return (
             jsonify(build_response(
                 False,
-                "Hay errores de validacion.",
-                errors={"email": "Introduce un correo electronico valido."},
+                "Hay errores de validación.",
+                errors={"email": "Introduce un correo electrónico válido."},
             )),
             400,
         )
 
     if email_ya_registrado(email):
         return (
-            jsonify(build_response(False, "Ese correo ya esta registrado.")),
+            jsonify(build_response(False, "Ese correo ya está registrado.")),
             409,
         )
 
@@ -106,8 +106,7 @@ def create_registration():
     return (
         jsonify(build_response(
             True,
-            "Registro completado. Te contactaremos pronto con la informacion del evento.",
+            "Registro completado. Te contactaremos pronto con la información del evento.",
         )),
         201,
     )
-

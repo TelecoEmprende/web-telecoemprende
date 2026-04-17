@@ -39,7 +39,7 @@ describe("AdminPage", () => {
 
   it("logs in and renders the registrations table", async () => {
     getAdminSession.mockResolvedValueOnce({ ok: true, authenticated: false });
-    loginAdmin.mockResolvedValueOnce({ ok: true, message: "Sesion iniciada." });
+    loginAdmin.mockResolvedValueOnce({ ok: true, message: "Sesión iniciada." });
     getAdminRegistrations.mockResolvedValueOnce({
       ok: true,
       total: 1,
@@ -62,7 +62,7 @@ describe("AdminPage", () => {
       </MemoryRouter>,
     );
 
-    await user.type(screen.getByLabelText("Contrasena"), "test-admin");
+    await user.type(await screen.findByLabelText("Contraseña"), "test-admin");
     await user.click(screen.getByRole("button", { name: /entrar/i }));
 
     expect(await screen.findByText("Inscripciones registradas")).toBeInTheDocument();

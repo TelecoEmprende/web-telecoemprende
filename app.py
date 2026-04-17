@@ -100,7 +100,7 @@ def descargar_excel():
         abort(401, description="No autorizado.")
 
     if not EXCEL_FILE.exists():
-        abort(404, description="No existe ningun archivo de registros todavia.")
+        abort(404, description="No existe ningún archivo de registros todavía.")
 
     return send_file(
         EXCEL_FILE,

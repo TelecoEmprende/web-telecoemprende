@@ -63,7 +63,7 @@ class ApiTestCase(unittest.TestCase):
         self.assertEqual(duplicate.status_code, 409)
         self.assertEqual(
             duplicate.get_json()["message"],
-            "Ese correo ya esta registrado.",
+            "Ese correo ya está registrado.",
         )
 
     def test_admin_session_login_and_registrations_flow(self):
