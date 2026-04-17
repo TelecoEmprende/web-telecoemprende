@@ -2,11 +2,15 @@
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  position: relative;
+  z-index: 1;
 }
 
 .page-content {
   flex: 1;
   width: 100%;
+  position: relative;
+  z-index: 1;
 }
 
 .section-card {
@@ -43,6 +47,43 @@
 .site-footer-react {
   position: relative;
   z-index: 1;
+}
+
+.particle-background-shell {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+  opacity: 0.92;
+}
+
+.particle-background-canvas {
+  position: absolute;
+  inset: 0;
+}
+
+.particle-background-glow {
+  position: absolute;
+  border-radius: 999px;
+  filter: blur(34px);
+  opacity: 0.5;
+}
+
+.particle-background-glow-left {
+  width: 220px;
+  height: 220px;
+  top: 120px;
+  left: -50px;
+  background: radial-gradient(circle, rgba(128, 192, 255, 0.28), transparent 68%);
+}
+
+.particle-background-glow-right {
+  width: 260px;
+  height: 260px;
+  top: 240px;
+  right: -80px;
+  background: radial-gradient(circle, rgba(111, 169, 255, 0.22), transparent 70%);
 }
 
 .site-header-react {
@@ -324,5 +365,19 @@
     border: 1px solid rgba(220, 227, 238, 0.95);
     display: inline-flex;
     align-items: center;
+  }
+
+  .particle-background-glow-left {
+    width: 170px;
+    height: 170px;
+    top: 150px;
+    left: -44px;
+  }
+
+  .particle-background-glow-right {
+    width: 200px;
+    height: 200px;
+    top: 380px;
+    right: -64px;
   }
 }
