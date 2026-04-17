@@ -25,7 +25,9 @@ export function Header({ adminMode = false }: HeaderProps) {
 
     const updateActiveTab = () => {
       const registroTop = registroSection.getBoundingClientRect().top;
-      const threshold = window.innerHeight * 0.4;
+      const headerHeight =
+        document.querySelector(".site-header-react")?.getBoundingClientRect().height ?? 0;
+      const threshold = headerHeight + 24;
       setActivePublicTab(registroTop <= threshold ? "registro" : "evento");
     };
 
