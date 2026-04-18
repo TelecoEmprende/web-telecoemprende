@@ -1,5 +1,26 @@
 export function HeroSection() {
   const whatsappCommunityUrl = "https://chat.whatsapp.com/DdllRrRTg3REkyYW248uFP";
+  const seriesEvents = [
+    {
+      dayLabel: "Día 1 - 29/04/2026",
+      speaker: "Carlos Herrera Yagüe",
+      role: "CTO Cabify",
+      imageSrc: "/carlos_cto_cabify.png",
+      featured: true,
+    },
+    {
+      dayLabel: "Día 2 - 7/05/2026",
+      speaker: "Enrique García y Joaquín Fernandez",
+      role: "Taxdown Cofounders (CEO y CTO)",
+      featured: false,
+    },
+    {
+      dayLabel: "Día 3 - 14/05/2026",
+      speaker: "Samuel Gil",
+      role: "CEO JME Ventures",
+      featured: false,
+    },
+  ];
 
   return (
     <section className="hero-section-react" id="evento">
@@ -28,9 +49,39 @@ export function HeroSection() {
             <div className="meta-item-react">👀 Charlas, networking e ideas</div>
           </div>
 
+          <div className="series-showcase-react" aria-label="Serie de eventos Teleco Builders">
+            <div className="series-header-react">
+              <span className="series-kicker-react">Serie Teleco Builders</span>
+              <strong>Primero de 3 encuentros</strong>
+            </div>
+
+            <div className="series-grid-react">
+              {seriesEvents.map((event) =>
+                event.featured ? (
+                  <article className="series-card-react series-card-featured-react" key={event.speaker}>
+                    <div className="series-card-copy-react">
+                      <span className="series-step-react series-step-featured-react">{event.dayLabel}</span>
+                      <strong>{event.speaker}</strong>
+                      <p>{event.role}</p>
+                    </div>
+                    <div className="series-card-portrait-react" aria-hidden="true">
+                      <img src={event.imageSrc} alt="" />
+                    </div>
+                  </article>
+                ) : (
+                  <article className="series-card-react series-card-compact-react" key={event.speaker}>
+                    <span className="series-step-react series-step-upcoming-react">{event.dayLabel}</span>
+                    <strong>{event.speaker}</strong>
+                    <p>{event.role}</p>
+                  </article>
+                ),
+              )}
+            </div>
+          </div>
+
           <div className="hero-actions-react">
             <a href="#registro" className="primary-btn-react">
-              Reservar plaza
+              Reservar plaza día 1
             </a>
             {/* <a href="#detalle" className="secondary-link-react">
               Ver detalles

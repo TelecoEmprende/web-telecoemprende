@@ -25,7 +25,7 @@ export function ThankYouPage() {
   return (
     <div className="page-shell">
       <ParticleBackground />
-      <Header />
+      <Header hidePublicNav />
       <main className="page-content thank-you-page-react">
         <section className="thank-you-section-react">
           <div className="container-react">
@@ -40,11 +40,11 @@ export function ThankYouPage() {
               </p>
 
               <div className="thank-you-note-react">
-                <strong>Te enviaremos un email con toda la información práctica del evento.</strong>
+                <strong>3 días antes del evento te enviaremos un email con toda la información práctica.</strong>
                 <p>
                   {attendeeEmail
                     ? `Lo recibirás en ${attendeeEmail}.`
-                    : "Recibirás la confirmación y los detalles del encuentro en tu correo electrónico."}
+                    : "Lo recibirás en el correo electrónico con el que te has registrado."}
                 </p>
               </div>
 
@@ -61,7 +61,7 @@ export function ThankYouPage() {
                 </div>
                 <div className="thank-you-point-react">
                   <strong>🪜 Siguiente paso</strong>
-                  <span>Revisa tu correo en los próximos días para no perderte ningún detalle.</span>
+                  <span>Estate atento: 3 días antes del evento te llegará el correo con todos los detalles.</span>
                 </div>
               </div>
 

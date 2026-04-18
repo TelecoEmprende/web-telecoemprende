@@ -116,53 +116,51 @@ Validation:
 
 ---
 
-### 3. Implement real confirmation email delivery
+### 3. Define and operationalize manual email communication
 
 Status now:
-- The thank-you page says users will receive an email
-- The backend does not send any email
+- The user flow says attendees will receive event information by email
+- The backend does not send automated emails
+- The team plans to handle that communication manually for now
 
 Why this matters:
-- This is now a user-facing promise
-- If the email is not actually sent, users will lose trust and event logistics become weaker
-
-Recommended target:
-- Transactional email provider such as Resend, SendGrid, Postmark, or Amazon SES
-
-Minimum email content:
-- Subject: `Tu registro en Teleco Builders 2026`
-- Body:
-  - confirmation of registration
-  - date, time, and venue
-  - organizer name
-  - optional WhatsApp community link
+ - This is still a user-facing promise
+ - Even if email is manual, the operational process must be reliable and documented
+ - If no one owns the communication step, attendees may never receive the event details
 
 How to implement:
-1. Add a mail service module, for example `backend/services/email.py`
-2. Trigger email sending after a successful registration write
-3. If the provider fails:
-  - keep the registration saved
-  - log the email failure
-  - optionally mark a delivery status for retry
-4. Add env vars:
-  - `EMAIL_PROVIDER_API_KEY`
-  - `EMAIL_FROM`
+1. Decide exactly when the manual email will be sent
+2. Make the website copy match that operational reality
+3. Define who is responsible for sending it
+4. Define where the recipient list comes from and how it is reviewed before sending
+5. Define a fallback if the primary responsible person is unavailable
 
-Recommended implementation approach:
-- Phase 1:
-  - synchronous send after successful registration
-- Phase 2:
-  - move to background job/queue if needed
+Recommended operational process:
+- Export the attendee list from the admin panel
+- Review duplicates or obvious data issues before sending
+- Send one manual event-information email batch 3 days before the event
+- Keep a simple internal checklist confirming the send happened
 
-Suggested DB extension if you adopt PostgreSQL:
-- `confirmation_email_status`
-- `confirmation_email_sent_at`
-- `confirmation_email_error`
+Minimum email content:
+- Subject: `Información para Teleco Builders 2026`
+- Body:
+  - reminder that the attendee is registered
+  - date, time, and venue
+  - arrival instructions if needed
+  - organizer contact or WhatsApp link
+
+Concrete repo changes:
+- Keep the thank-you page wording accurate
+- Add a short internal operations note, either in `README.md` or a new `OPERATIONS.md`, explaining:
+  - when the email batch must be sent
+  - who sends it
+  - where the attendee data is exported from
+  - how completion is confirmed
 
 Validation:
-- After a successful registration, the provider dashboard should show a sent email
-- Backend logs should capture failures clearly
-- Tests should mock the email service and assert it is called
+- The website must not imply immediate automated email delivery if that is not true
+- The team must have a written manual process for sending the event-information email
+- Before the event, there must be a clear owner for executing that send
 
 ---
 
@@ -335,7 +333,7 @@ Validation:
 
 ## Nice-to-Have After Launch
 
-### 9. Add background jobs for email and exports
+### 9. Add background jobs for future email automation and exports
 
 Why:
 - Keeps user-facing registration fast
@@ -445,9 +443,9 @@ Suggested pipeline stages:
 - Add backup strategy
 - Add DB-based duplicate protection
 
-### Phase 3: User promise fulfillment
-- Implement confirmation emails
-- Add provider config and logging
+### Phase 3: User communication reliability
+- Document and own the manual email process
+- Keep website copy aligned with the manual send timeline
 
 ### Phase 4: Operational confidence
 - Add structured logs
@@ -472,7 +470,7 @@ The app is reasonably production-ready when all of the following are true:
 - HTTPS is used and session cookies are secure
 - Registrations are stored in a real database
 - Duplicate registrations are prevented atomically
-- Confirmation emails are actually sent
+- The attendee communication process is documented and owned
 - Rate limiting works across all production instances
 - Logs and errors are observable
 - Backups and retention are defined
@@ -488,7 +486,6 @@ If you want the highest-leverage next implementation sequence for this repo, do 
 1. Add strict environment config and remove insecure defaults
 2. Add `.env.example` and `DEPLOYMENT.md`
 3. Move registrations from Excel to PostgreSQL
-4. Implement confirmation email sending
+4. Document and operationalize the manual attendee email process
 5. Add Redis-backed rate limiting
 6. Add CI and E2E coverage
-

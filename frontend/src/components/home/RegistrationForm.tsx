@@ -73,7 +73,7 @@ export function RegistrationForm() {
       <div className="container-react form-layout-react">
         <div className="section-copy-card-react">
           <span className="section-eyebrow-react">Inscripción</span>
-          <h2>Formulario de registro</h2>
+          <h2>Formulario de registro Día 1 - Charla con Carlos</h2>
           <p className="section-copy">
             Completa tus datos para reservar tu plaza. Usaremos esta
             información únicamente para la gestión del evento y las

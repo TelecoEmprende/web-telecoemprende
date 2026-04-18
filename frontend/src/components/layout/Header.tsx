@@ -3,9 +3,10 @@ import { Link, NavLink, useLocation } from "react-router-dom";
 
 type HeaderProps = {
   adminMode?: boolean;
+  hidePublicNav?: boolean;
 };
 
-export function Header({ adminMode = false }: HeaderProps) {
+export function Header({ adminMode = false, hidePublicNav = false }: HeaderProps) {
   const location = useLocation();
   const [activePublicTab, setActivePublicTab] = useState<"evento" | "registro">(
     "evento",
@@ -57,7 +58,7 @@ export function Header({ adminMode = false }: HeaderProps) {
               <NavLink to="/">Inicio</NavLink>
               <NavLink to="/admin">Admin</NavLink>
             </>
-          ) : (
+          ) : hidePublicNav ? null : (
             <div
               className={`public-tab-slider-react public-tab-slider-${activePublicTab}`}
             >
