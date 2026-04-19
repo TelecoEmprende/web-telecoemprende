@@ -1,4 +1,16 @@
 services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: telecoemprende
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set in .env}
+      POSTGRES_DB: telecoemprende
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - app-network
+    restart: unless-stopped
+
   backend:
     build:
       context: .
@@ -8,9 +20,12 @@ services:
     environment:
       - FLASK_SECRET_KEY=${FLASK_SECRET_KEY:?set in .env}
       - ADMIN_PASSWORD=${ADMIN_PASSWORD:?set in .env}
+      - DATABASE_URL=postgresql://telecoemprende:${POSTGRES_PASSWORD}@db:5432/telecoemprende
       - DATA_DIR=/app/data
     volumes:
       - ./data:/app/data
+    depends_on:
+      - db
     networks:
       - app-network
     restart: unless-stopped
@@ -44,5 +59,6 @@ networks:
     driver: bridge
 
 volumes:
+  pgdata:
   certbot-webroot:
   certbot-certs:

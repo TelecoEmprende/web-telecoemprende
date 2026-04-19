@@ -1,6 +1,5 @@
 from flask import Blueprint, jsonify, make_response, render_template_string, request, send_file
 
-from backend.config import EXCEL_FILE
 from backend.schemas import build_response
 from backend.services.admin import (
     admin_password_configured,
@@ -8,7 +7,13 @@ from backend.services.admin import (
     login_admin,
     logout_admin,
 )
-from backend.services.registrations import crear_excel_si_no_existe, obtener_registros
+from backend.services.registrations import (
+    actualizar_registro,
+    crear_excel_si_no_existe,
+    eliminar_registro,
+    generar_excel_en_memoria,
+    obtener_registros,
+)
 from backend.services.security import demasiadas_peticiones, obtener_ip_real
 
 
@@ -237,19 +242,40 @@ def api_admin_download():
     if not is_admin_authenticated():
         return access_denied_response("No autorizado.", 401)
 
-    if not EXCEL_FILE.exists():
-        if prefers_html_response():
-            return access_denied_response(
-                "No existe ningún archivo de registros todavía.",
-                404,
-            )
-        return jsonify(build_response(
-            False,
-            "No existe ningún archivo de registros todavía.",
-        )), 404
-
     return send_file(
-        EXCEL_FILE,
+        generar_excel_en_memoria(),
         as_attachment=True,
         download_name="registros_telecoemprende.xlsx",
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     )
+
+
+@admin_api.route("/registrations/<int:reg_id>", methods=["PUT"])
+def api_admin_update_registration(reg_id: int):
+    if not is_admin_authenticated():
+        return jsonify(build_response(False, "No autorizado.")), 401
+
+    payload = request.get_json(silent=True) or {}
+    nombre = str(payload.get("nombre", "")).strip()
+    apellidos = str(payload.get("apellidos", "")).strip()
+    estudios = str(payload.get("estudios", "")).strip()
+    email = str(payload.get("email", "")).strip()
+
+    if not all([nombre, apellidos, estudios, email]):
+        return jsonify(build_response(False, "Todos los campos son obligatorios.")), 400
+
+    if actualizar_registro(reg_id, nombre, apellidos, estudios, email):
+        return jsonify(build_response(True, "Registro actualizado.")), 200
+
+    return jsonify(build_response(False, "El email ya está registrado en otra inscripción.")), 409
+
+
+@admin_api.route("/registrations/<int:reg_id>", methods=["DELETE"])
+def api_admin_delete_registration(reg_id: int):
+    if not is_admin_authenticated():
+        return jsonify(build_response(False, "No autorizado.")), 401
+
+    if eliminar_registro(reg_id):
+        return jsonify(build_response(True, "Registro eliminado.")), 200
+
+    return jsonify(build_response(False, "Registro no encontrado.")), 404

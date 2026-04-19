@@ -10,9 +10,8 @@ from pathlib import Path
 
 from backend.api.admin import admin_api
 from backend.api.public import public_api
-from backend.config import EXCEL_FILE
 from backend.services.admin import is_admin_authenticated, logout_admin
-from backend.services.registrations import crear_excel_si_no_existe
+from backend.services.registrations import crear_excel_si_no_existe, generar_excel_en_memoria
 
 app = Flask(__name__)
 app.register_blueprint(public_api)
@@ -99,13 +98,11 @@ def descargar_excel():
     if not autenticado:
         abort(401, description="No autorizado.")
 
-    if not EXCEL_FILE.exists():
-        abort(404, description="No existe ningún archivo de registros todavía.")
-
     return send_file(
-        EXCEL_FILE,
+        generar_excel_en_memoria(),
         as_attachment=True,
-        download_name="registros_telecoemprende.xlsx"
+        download_name="registros_telecoemprende.xlsx",
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     )
 
 

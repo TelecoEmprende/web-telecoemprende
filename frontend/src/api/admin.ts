@@ -22,3 +22,19 @@ export function getAdminSession() {
 export function getAdminRegistrations() {
   return apiRequest<AdminRegistrationsResponse>("/api/admin/registrations");
 }
+
+export function updateRegistration(
+  id: number,
+  data: { nombre: string; apellidos: string; estudios: string; email: string },
+) {
+  return apiRequest<ApiResult>(`/api/admin/registrations/${id}`, {
+    method: "PUT",
+    body: JSON.stringify(data),
+  });
+}
+
+export function deleteRegistration(id: number) {
+  return apiRequest<ApiResult>(`/api/admin/registrations/${id}`, {
+    method: "DELETE",
+  });
+}

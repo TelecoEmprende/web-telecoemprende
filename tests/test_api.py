@@ -1,13 +1,13 @@
 import os
-import tempfile
 import unittest
-from pathlib import Path
 
 os.environ["ADMIN_PASSWORD"] = "test-admin"
+os.environ["DATABASE_URL"] = os.environ.get(
+    "TEST_DATABASE_URL",
+    "postgresql://telecoemprende:telecoemprende@localhost:5432/telecoemprende_test",
+)
 
 import app  # noqa: E402
-import backend.api.admin as admin_api  # noqa: E402
-import backend.config as config  # noqa: E402
 import backend.services.admin as admin_service  # noqa: E402
 import backend.services.registrations as registration_service  # noqa: E402
 import backend.services.security as security_service  # noqa: E402
@@ -15,20 +15,18 @@ import backend.services.security as security_service  # noqa: E402
 
 class ApiTestCase(unittest.TestCase):
     def setUp(self):
-        self.temp_dir = tempfile.TemporaryDirectory()
-        self.excel_path = Path(self.temp_dir.name) / "registros_test.xlsx"
-
-        config.EXCEL_FILE = self.excel_path
-        registration_service.EXCEL_FILE = self.excel_path
-        admin_api.EXCEL_FILE = self.excel_path
-        app.EXCEL_FILE = self.excel_path
         admin_service.ADMIN_PASSWORD = "test-admin"
         security_service.request_log.clear()
 
-        self.client = app.app.test_client()
+        registration_service.init_db()
 
-    def tearDown(self):
-        self.temp_dir.cleanup()
+        conn = registration_service._get_connection()
+        with conn.cursor() as cur:
+            cur.execute("DELETE FROM registrations")
+        conn.commit()
+        conn.close()
+
+        self.client = app.app.test_client()
 
     def register(self, email="juan@example.com"):
         return self.client.post(

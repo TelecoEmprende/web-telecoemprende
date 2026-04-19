@@ -1,54 +1,46 @@
 from datetime import datetime
+from io import BytesIO
 
-from openpyxl import Workbook, load_workbook
+import psycopg2
+from openpyxl import Workbook
 
-from backend.config import EXCEL_FILE
+from backend.config import DATABASE_URL
+
+
+def _get_connection():
+    return psycopg2.connect(DATABASE_URL)
+
+
+def init_db():
+    with _get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS registrations (
+                    id SERIAL PRIMARY KEY,
+                    nombre VARCHAR(60) NOT NULL,
+                    apellidos VARCHAR(100) NOT NULL,
+                    estudios VARCHAR(120) NOT NULL,
+                    email VARCHAR(120) NOT NULL UNIQUE,
+                    privacidad_aceptada VARCHAR(10) NOT NULL,
+                    ip_registro VARCHAR(45) NOT NULL,
+                    created_at TIMESTAMP NOT NULL DEFAULT NOW()
+                )
+            """)
+        conn.commit()
 
 
 def crear_excel_si_no_existe():
-    if not EXCEL_FILE.exists():
-        wb = Workbook()
-        ws = wb.active
-        ws.title = "Inscripciones"
-        ws.append([
-            "Nombre",
-            "Apellidos",
-            "Estudios / Procedencia",
-            "Correo electrónico",
-            "Acepta privacidad",
-            "IP registro",
-            "Fecha de registro",
-        ])
-        ajustar_columnas(ws)
-        wb.save(EXCEL_FILE)
-
-
-def ajustar_columnas(ws):
-    anchos = {
-        "A": 20,
-        "B": 25,
-        "C": 35,
-        "D": 32,
-        "E": 18,
-        "F": 18,
-        "G": 22,
-    }
-    for col, ancho in anchos.items():
-        ws.column_dimensions[col].width = ancho
+    init_db()
 
 
 def email_ya_registrado(email: str) -> bool:
-    if not EXCEL_FILE.exists():
-        return False
-
-    wb = load_workbook(EXCEL_FILE, read_only=True)
-    ws = wb["Inscripciones"]
-
-    for fila in ws.iter_rows(min_row=2, values_only=True):
-        if fila[3] and str(fila[3]).strip().lower() == email.strip().lower():
-            return True
-
-    return False
+    with _get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT 1 FROM registrations WHERE LOWER(email) = LOWER(%s) LIMIT 1",
+                (email.strip(),),
+            )
+            return cur.fetchone() is not None
 
 
 def guardar_registro(
@@ -59,44 +51,119 @@ def guardar_registro(
     acepta_privacidad: str,
     ip: str,
 ):
-    wb = load_workbook(EXCEL_FILE)
-    ws = wb["Inscripciones"]
-
-    fecha_registro = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-    ws.append([
-        nombre,
-        apellidos,
-        estudios,
-        email.lower(),
-        acepta_privacidad,
-        ip,
-        fecha_registro,
-    ])
-
-    ajustar_columnas(ws)
-    wb.save(EXCEL_FILE)
+    with _get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                INSERT INTO registrations
+                    (nombre, apellidos, estudios, email, privacidad_aceptada, ip_registro, created_at)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
+                """,
+                (
+                    nombre,
+                    apellidos,
+                    estudios,
+                    email.lower(),
+                    acepta_privacidad,
+                    ip,
+                    datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                ),
+            )
+        conn.commit()
 
 
 def obtener_registros():
-    if not EXCEL_FILE.exists():
-        return []
+    with _get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT id, nombre, apellidos, estudios, email,
+                       privacidad_aceptada, ip_registro, created_at
+                FROM registrations
+                ORDER BY id
+                """
+            )
+            rows = cur.fetchall()
 
-    wb = load_workbook(EXCEL_FILE, data_only=True)
-    ws = wb["Inscripciones"]
+    return [
+        {
+            "id": r[0],
+            "nombre": r[1],
+            "apellidos": r[2],
+            "estudios": r[3],
+            "email": r[4],
+            "privacidad": r[5],
+            "ip": r[6],
+            "fecha": r[7].strftime("%Y-%m-%d %H:%M:%S") if hasattr(r[7], "strftime") else str(r[7]),
+        }
+        for r in rows
+    ]
 
-    registros = []
-    for fila in ws.iter_rows(min_row=2, values_only=True):
-        if any(fila):
-            registros.append({
-                "nombre": fila[0] or "",
-                "apellidos": fila[1] or "",
-                "estudios": fila[2] or "",
-                "email": fila[3] or "",
-                "privacidad": fila[4] or "",
-                "ip": fila[5] or "",
-                "fecha": fila[6] or "",
-            })
 
-    return registros
+def actualizar_registro(reg_id: int, nombre: str, apellidos: str, estudios: str, email: str) -> bool:
+    with _get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT 1 FROM registrations WHERE LOWER(email) = LOWER(%s) AND id != %s LIMIT 1",
+                (email.strip(), reg_id),
+            )
+            if cur.fetchone() is not None:
+                return False
+
+            cur.execute(
+                """
+                UPDATE registrations
+                SET nombre = %s, apellidos = %s, estudios = %s, email = %s
+                WHERE id = %s
+                """,
+                (nombre.strip(), apellidos.strip(), estudios.strip(), email.strip().lower(), reg_id),
+            )
+        conn.commit()
+    return True
+
+
+def eliminar_registro(reg_id: int) -> bool:
+    with _get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute("DELETE FROM registrations WHERE id = %s", (reg_id,))
+            deleted = cur.rowcount > 0
+        conn.commit()
+    return deleted
+
+
+def generar_excel_en_memoria() -> BytesIO:
+    registros = obtener_registros()
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Inscripciones"
+    ws.append([
+        "Nombre",
+        "Apellidos",
+        "Estudios / Procedencia",
+        "Correo electrónico",
+        "Acepta privacidad",
+        "IP registro",
+        "Fecha de registro",
+    ])
+
+    anchos = {"A": 20, "B": 25, "C": 35, "D": 32, "E": 18, "F": 18, "G": 22}
+    for col, ancho in anchos.items():
+        ws.column_dimensions[col].width = ancho
+
+    for r in registros:
+        ws.append([
+            r["nombre"],
+            r["apellidos"],
+            r["estudios"],
+            r["email"],
+            r["privacidad"],
+            r["ip"],
+            r["fecha"],
+        ])
+
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+    return output
 

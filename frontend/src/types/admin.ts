@@ -1,4 +1,5 @@
 export type Registro = {
+  id: number;
   nombre: string;
   apellidos: string;
   estudios: string;

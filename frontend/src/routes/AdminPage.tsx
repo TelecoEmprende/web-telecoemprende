@@ -164,7 +164,17 @@ export function AdminPage() {
                       <h1>Obteniendo inscripciones...</h1>
                     </div>
                   ) : (
-                    <RecordsTable registros={registros} />
+                    <RecordsTable
+                      registros={registros}
+                      onUpdate={(id, data) => {
+                        setRegistros((prev) =>
+                          prev.map((r) => (r.id === id ? { ...r, ...data } : r)),
+                        );
+                      }}
+                      onDelete={(id) => {
+                        setRegistros((prev) => prev.filter((r) => r.id !== id));
+                      }}
+                    />
                   )}
                 </>
               ) : null}
