@@ -25,7 +25,7 @@ app.secret_key = os.environ.get("FLASK_SECRET_KEY", secrets.token_hex(32))
 # Configuración de cookies de sesión más segura
 app.config["SESSION_COOKIE_HTTPONLY"] = True
 app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
-app.config["SESSION_COOKIE_SECURE"] = False  # Ponlo en True cuando uses HTTPS real
+app.config["SESSION_COOKIE_SECURE"] = True
 
 FRONTEND_DIST_DIR = Path("frontend/dist")
 FRONTEND_ASSETS_DIR = FRONTEND_DIST_DIR / "assets"

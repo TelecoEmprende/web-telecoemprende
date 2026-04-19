@@ -1,21 +1,32 @@
-# Ignorar archivos de Python compilados
+# Python
 *.pyc
 *.pyo
 *.pyd
 __pycache__/
 
-# Ignorar el archivo de variables de entorno
+# Variables de entorno y secretos
 .env
+.env.*
+!.env.example
+*.pem
+*.key
+*.crt
 
-# Ignorar archivos de configuración del IDE
+# IDE
 .vscode/
 .idea/
 
-# Ignorar el archivo Excel
+# Datos locales / exportaciones
 registros_evento.xlsx
+*.xlsx
+data/
 
 # Frontend build and dependency artifacts
 frontend/node_modules/
+frontend/dist/
 frontend/*.tsbuildinfo
 frontend/vite.config.js
 frontend/vite.config.d.ts
+
+# Logs
+*.log

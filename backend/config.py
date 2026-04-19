@@ -2,8 +2,10 @@ import os
 from pathlib import Path
 
 
-EXCEL_FILE = Path("registros_evento.xlsx")
-ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "telecoemprende2026")
+DATA_DIR = Path(os.environ.get("DATA_DIR", "."))
+DATA_DIR.mkdir(parents=True, exist_ok=True)
+EXCEL_FILE = DATA_DIR / "registros_evento.xlsx"
+ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "")
 
 MAX_REQUESTS_PER_MINUTE = 8
 BLOCK_WINDOW_SECONDS = 60

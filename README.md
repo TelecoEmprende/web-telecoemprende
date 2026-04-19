@@ -1,83 +1,105 @@
 # TelecoEmprende - Registro de Evento
 
-Formulario de inscripción para el evento **TelecoEmprende**. Este proyecto permite a los estudiantes y graduados de telecomunicaciones registrarse para el evento, recibir detalles y obtener un archivo Excel con los registros.
+Formulario de inscripción para el evento TelecoEmprende con backend en Flask y frontend en React.
 
 ## Características
 
-- **Formulario de inscripción** con campos para nombre, apellidos, estudios y correo electrónico.
-- **Validación de datos** para asegurar que la información es correcta.
-- **Generación de un archivo Excel** con los registros de todos los participantes.
-- **Interfaz de administración** para ver, descargar y gestionar las inscripciones.
-- **Protección contra bots** utilizando un campo honeypot y rate limiting.
+- Formulario de inscripción con validaciones
+- Panel de administración con login
+- Exportación de registros a Excel
+- Protección básica anti bots con honeypot y rate limiting
 
-## Tecnologías
+## Stack
 
-Este proyecto está construido con:
+- Backend: Flask + Gunicorn
+- Frontend: React + TypeScript + Vite
+- Servidor web: Nginx
+- Despliegue: Docker Compose
 
-- **Python** (Flask) para el backend.
-- **Openpyxl** para manejar el archivo Excel con las inscripciones.
-- **React + TypeScript + Vite** para la interfaz de usuario.
+## Cómo está montado el despliegue
 
-## Instrucciones de uso
+La aplicación se ejecuta con dos contenedores:
 
-### 1. Clona este repositorio:
+- Frontend: Nginx sirve el build de React y reenvía las peticiones de /api al backend
+- Backend: Flask se ejecuta con Gunicorn en una red interna de Docker
+- Persistencia: el archivo Excel se guarda en la carpeta local data para no perder registros al reiniciar
+
+### Servicios
+
+- frontend expuesto en el puerto 80
+- backend disponible solo dentro de Docker en el puerto 5000
+
+## Arranque con Docker
+
+### 1. Variables opcionales
+
+Puedes definir un archivo .env en la raíz con:
+
+```env
+ADMIN_PASSWORD=tu_password_seguro
+FLASK_SECRET_KEY=una_clave_larga_y_segura
+```
+
+### 2. Levantar todo
 
 ```bash
-git clone https://github.com/aaleexxlex/Formulario-TelecoEmprende.git
-````
+docker compose up --build
+```
 
-### 2. Instala las dependencias necesarias:
+O en segundo plano:
+
+```bash
+docker compose up --build -d
+```
+
+La aplicación quedará disponible en:
+
+- http://localhost
+
+## Desarrollo local
+
+### Backend
 
 ```bash
 pip install -r requirements.txt
-````
-### 3. Ejecuta la aplicación backend:
-
-```bash
 python app.py
 ```
 
-## Desarrollo frontend
-
-El frontend React vive en `frontend/`.
-
-### Instalar dependencias
+### Frontend
 
 ```bash
 cd frontend
 npm install
-```
-
-### Ejecutar el frontend en desarrollo
-
-```bash
 npm run dev
 ```
 
-El servidor de Vite corre en `http://localhost:5173` y hace proxy de `/api` al backend Flask en `http://127.0.0.1:5000`.
+En desarrollo, Vite sirve el frontend en http://localhost:5173 y hace proxy de /api al backend en http://127.0.0.1:5000.
 
-## Producción
+## Persistencia de datos
 
-Para que Flask sirva la interfaz React, primero hay que generar el build:
+Los registros se guardan en:
+
+- data/registros_evento.xlsx
+
+## Comandos útiles
 
 ```bash
-cd frontend
-npm run build
+# parar servicios
+docker compose down
+
+# reconstruir imágenes
+docker compose build
+
+# ver logs
+docker compose logs -f
 ```
-
-Después Flask servirá:
-
-- `/` como shell principal de React
-- `/admin` como shell del panel React
-- `/assets/*` desde `frontend/dist/assets`
-- `/api/*` como rutas backend JSON
 
 ## Tests
 
 ### Backend
 
 ```bash
-/Users/jorgerodzruigomez/Documents/UPM/Master/telecoEmprende/env-telecoemprende/bin/python -m unittest discover -s tests -v
+python -m unittest discover -s tests -v
 ```
 
 ### Frontend
