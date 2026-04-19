@@ -1,60 +1,62 @@
-# TelecoEmprende - Registro de Evento
+# Teleco Builders 2026 - Registro de Evento
 
-Formulario de inscripción para el evento TelecoEmprende con backend en Flask y frontend en React.
+Formulario de inscripción para **Teleco Builders 2026**, evento de tecnología, emprendimiento e inversión. Backend en Flask, frontend en React, base de datos PostgreSQL.
 
 ## Características
 
-- Formulario de inscripción con validaciones
-- Panel de administración con login
+- Formulario de inscripción con validaciones en frontend y backend
+- Panel de administración con login protegido por contraseña
+- Edición y eliminación de registros directamente desde el panel admin (inline)
 - Exportación de registros a Excel
-- Protección básica anti bots con honeypot y rate limiting
+- Protección anti bots con honeypot y rate limiting
+- Protección contra SQL injection y XSS
+- HTTPS con certificados Let's Encrypt (Certbot)
+- Meta tags Open Graph y Twitter Card para compartir por WhatsApp y redes sociales
 
 ## Stack
 
-- Backend: Flask + Gunicorn
-- Frontend: React + TypeScript + Vite
-- Servidor web: Nginx
-- Despliegue: Docker Compose
+- **Backend:** Flask + Gunicorn
+- **Frontend:** React + TypeScript + Vite
+- **Base de datos:** PostgreSQL 16
+- **Servidor web:** Nginx
+- **Despliegue:** Docker Compose
+- **HTTPS:** Certbot / Let's Encrypt
 
-## Cómo está montado el despliegue
+## Arquitectura
 
-La aplicación se ejecuta con dos contenedores:
+- `frontend`: Nginx sirve el build de React en los puertos 80/443 y reenvía `/api` al backend
+- `backend`: Flask con Gunicorn en red interna Docker (puerto 5000)
+- `db`: PostgreSQL con volumen persistente (`pgdata`)
+- `certbot`: renovación automática de certificados SSL
 
-- Frontend: Nginx sirve el build de React y reenvía las peticiones de /api al backend
-- Backend: Flask se ejecuta con Gunicorn en una red interna de Docker
-- Persistencia: el archivo Excel se guarda en la carpeta local data para no perder registros al reiniciar
+## Variables de entorno
 
-### Servicios
-
-- frontend expuesto en el puerto 80
-- backend disponible solo dentro de Docker en el puerto 5000
-
-## Arranque con Docker
-
-### 1. Variables opcionales
-
-Puedes definir un archivo .env en la raíz con:
+Crea un archivo `.env` en la raíz con:
 
 ```env
 ADMIN_PASSWORD=tu_password_seguro
-FLASK_SECRET_KEY=una_clave_larga_y_segura
+FLASK_SECRET_KEY=una_clave_larga_y_aleatoria
+POSTGRES_PASSWORD=otra_clave_segura
+CERTBOT_EMAIL=tu@email.com
 ```
 
-### 2. Levantar todo
+## Despliegue con Docker
 
 ```bash
-docker compose up --build
-```
-
-O en segundo plano:
-
-```bash
+# Levantar todo (primer arranque o tras cambios)
 docker compose up --build -d
+
+# Ver logs en tiempo real
+docker compose logs -f
+
+# Parar servicios
+docker compose down
+
+# Reconstruir sin caché
+docker compose build --no-cache
 ```
 
-La aplicación quedará disponible en:
-
-- http://localhost
+La aplicación queda disponible en `https://tudominio.com` (o `http://localhost` sin SSL).
 
 ## Desarrollo local
 
@@ -73,26 +75,34 @@ npm install
 npm run dev
 ```
 
-En desarrollo, Vite sirve el frontend en http://localhost:5173 y hace proxy de /api al backend en http://127.0.0.1:5000.
+En desarrollo, Vite sirve el frontend en `http://localhost:5173` y hace proxy de `/api` al backend en `http://127.0.0.1:5000`.
 
-## Persistencia de datos
+## Base de datos
 
-Los registros se guardan en:
-
-- data/registros_evento.xlsx
-
-## Comandos útiles
+Los registros se guardan en PostgreSQL. Tabla principal: `registrations`.
 
 ```bash
-# parar servicios
-docker compose down
+# Entrar al cliente de PostgreSQL
+docker exec -it formulario-telecoemprende-db-1 psql -U telecoemprende -d telecoemprende
 
-# reconstruir imágenes
-docker compose build
+# Ver todos los registros
+SELECT * FROM registrations;
 
-# ver logs
-docker compose logs -f
+# Contar registros
+SELECT COUNT(*) FROM registrations;
 ```
+
+## API Admin
+
+| Método | Ruta | Descripción |
+|--------|------|-------------|
+| `POST` | `/api/admin/login` | Iniciar sesión |
+| `POST` | `/api/admin/logout` | Cerrar sesión |
+| `GET` | `/api/admin/session` | Comprobar sesión |
+| `GET` | `/api/admin/registrations` | Listar registros |
+| `PUT` | `/api/admin/registrations/<id>` | Editar un registro |
+| `DELETE` | `/api/admin/registrations/<id>` | Eliminar un registro |
+| `GET` | `/api/admin/download` | Descargar Excel |
 
 ## Tests
 
