@@ -49,9 +49,9 @@ export function ThankYouPage() {
               </div>
 
               <div className="thank-you-meta-react" aria-label="Información del evento">
-                <div className="meta-item-react">📍 Aula Magna, ETSIT UPM</div>
-                <div className="meta-item-react">📅 29 de abril</div>
-                <div className="meta-item-react">⏰ 18:00 - 20:00</div>
+                <div className="meta-item-react">📍 Sala de profesores, Edificio C, ETSIT UPM</div>
+                <div className="meta-item-react">📅 7 de mayo</div>
+                <div className="meta-item-react">⏰ 19:00 - 21:00</div>
               </div>
 
               <div className="thank-you-points-react">

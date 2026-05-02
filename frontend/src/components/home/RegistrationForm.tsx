@@ -7,18 +7,19 @@ import type { ApiFailure } from "../../types/api";
 import type { RegistrationErrors, RegistrationPayload } from "../../types/registration";
 import { validateRegistrationDraft } from "../../utils/validation";
 
-const INITIAL_FORM: RegistrationPayload = {
+const INITIAL_FORM = (evento: string): RegistrationPayload => ({
   nombre: "",
   apellidos: "",
   estudios: "",
   email: "",
   privacidad: false,
+  evento,
   telefono_oculto: "",
-};
+});
 
-export function RegistrationForm() {
+export function RegistrationForm({ evento }: { evento: string }) {
   const navigate = useNavigate();
-  const [form, setForm] = useState<RegistrationPayload>(INITIAL_FORM);
+  const [form, setForm] = useState<RegistrationPayload>(() => INITIAL_FORM(evento));
   const [errors, setErrors] = useState<RegistrationErrors>({});
   const [message, setMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -48,7 +49,7 @@ export function RegistrationForm() {
       const response = await submitRegistration(form);
 
       if (response.ok) {
-        setForm(INITIAL_FORM);
+        setForm(INITIAL_FORM(evento));
         setErrors({});
         navigate("/gracias", {
           state: {
@@ -73,7 +74,7 @@ export function RegistrationForm() {
       <div className="container-react form-layout-react">
         <div className="section-copy-card-react">
           <span className="section-eyebrow-react">Inscripción</span>
-          <h2>Formulario de registro Día 1 - Charla con Carlos</h2>
+          <h2>Formulario de registro Día 2 - Charla con Taxdown</h2>
           <p className="section-copy">
             Completa tus datos para reservar tu plaza. Usaremos esta
             información únicamente para la gestión del evento y las

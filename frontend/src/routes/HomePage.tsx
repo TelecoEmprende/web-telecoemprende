@@ -13,7 +13,7 @@ export function HomePage() {
       <main className="page-content">
         <HeroSection />
         <TrustSection />
-        <RegistrationForm />
+        <RegistrationForm evento="taxdown" />
       </main>
       <Footer />
     </div>

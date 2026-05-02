@@ -15,6 +15,8 @@ from backend.services.security import (
 )
 
 
+EVENTOS_VALIDOS = {"taxdown", "charla-santi-y-pablo", "cabify"}
+
 public_api = Blueprint("public_api", __name__, url_prefix="/api")
 
 
@@ -43,6 +45,13 @@ def create_registration():
     estudios = limpiar_texto(str(payload.get("estudios", "")))
     email = limpiar_texto(str(payload.get("email", ""))).lower()
     acepta_privacidad = payload.get("privacidad")
+    evento = str(payload.get("evento", "")).strip()
+
+    if evento not in EVENTOS_VALIDOS:
+        return (
+            jsonify(build_response(False, "Evento no válido.")),
+            400,
+        )
 
     errors = {}
 
@@ -88,9 +97,9 @@ def create_registration():
             400,
         )
 
-    if email_ya_registrado(email):
+    if email_ya_registrado(email, evento):
         return (
-            jsonify(build_response(False, "Ese correo ya está registrado.")),
+            jsonify(build_response(False, "Ese correo ya está registrado en este evento.")),
             409,
         )
 
@@ -101,6 +110,7 @@ def create_registration():
         email=email,
         acepta_privacidad="Sí",
         ip=ip,
+        evento=evento,
     )
 
     return (

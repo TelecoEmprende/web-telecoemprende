@@ -21,6 +21,8 @@ export function AdminPage() {
   const [isLoadingRecords, setIsLoadingRecords] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [registros, setRegistros] = useState<Registro[]>([]);
+  const [eventos, setEventos] = useState<string[]>([]);
+  const [eventoActivo, setEventoActivo] = useState<string>("");
   const [message, setMessage] = useState<string | null>(null);
   const [messageVariant, setMessageVariant] = useState<"info" | "success" | "error">(
     "info",
@@ -43,7 +45,7 @@ export function AdminPage() {
         }
 
         setIsAuthenticated(true);
-        await loadRegistrations();
+        await loadRegistrations("");
       } catch {
         if (active) {
           setMessageVariant("error");
@@ -63,14 +65,15 @@ export function AdminPage() {
     };
   }, []);
 
-  async function loadRegistrations() {
+  async function loadRegistrations(evento: string) {
     setIsLoadingRecords(true);
 
     try {
-      const response = await getAdminRegistrations();
+      const response = await getAdminRegistrations(evento || undefined);
 
       if (response.ok) {
         setRegistros(response.registros);
+        setEventos(response.eventos);
       }
     } catch (error) {
       const apiError = error as ApiFailure;
@@ -79,6 +82,11 @@ export function AdminPage() {
     } finally {
       setIsLoadingRecords(false);
     }
+  }
+
+  async function handleEventoChange(evento: string) {
+    setEventoActivo(evento);
+    await loadRegistrations(evento);
   }
 
   async function handleLogin(password: string) {
@@ -92,7 +100,7 @@ export function AdminPage() {
         setIsAuthenticated(true);
         setMessageVariant("success");
         setMessage(response.message ?? "Sesión iniciada.");
-        await loadRegistrations();
+        await loadRegistrations("");
       }
     } catch (error) {
       const apiError = error as ApiFailure;
@@ -113,6 +121,8 @@ export function AdminPage() {
       if (response.ok) {
         setIsAuthenticated(false);
         setRegistros([]);
+        setEventos([]);
+        setEventoActivo("");
         setMessageVariant("success");
         setMessage(response.message ?? "Sesión cerrada correctamente.");
       }
@@ -154,8 +164,11 @@ export function AdminPage() {
                 <>
                   <AdminToolbar
                     total={registros.length}
+                    eventos={eventos}
+                    eventoActivo={eventoActivo}
                     isLoggingOut={isLoggingOut}
                     onLogout={handleLogout}
+                    onEventoChange={(e) => void handleEventoChange(e)}
                   />
 
                   {isLoadingRecords ? (

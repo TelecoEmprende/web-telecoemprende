@@ -12,6 +12,7 @@ from backend.services.registrations import (
     crear_excel_si_no_existe,
     eliminar_registro,
     generar_excel_en_memoria,
+    obtener_eventos,
     obtener_registros,
 )
 from backend.services.security import demasiadas_peticiones, obtener_ip_real
@@ -229,11 +230,14 @@ def api_admin_registrations():
         return access_denied_response("No autorizado.", 401)
 
     crear_excel_si_no_existe()
-    registros = obtener_registros()
+    evento = request.args.get("evento") or None
+    registros = obtener_registros(evento)
+    eventos = obtener_eventos()
     return jsonify({
         "ok": True,
         "total": len(registros),
         "registros": registros,
+        "eventos": eventos,
     }), 200
 
 
@@ -242,10 +246,12 @@ def api_admin_download():
     if not is_admin_authenticated():
         return access_denied_response("No autorizado.", 401)
 
+    evento = request.args.get("evento") or None
+    filename = f"registros_{evento}.xlsx" if evento else "registros_todos.xlsx"
     return send_file(
-        generar_excel_en_memoria(),
+        generar_excel_en_memoria(evento),
         as_attachment=True,
-        download_name="registros_telecoemprende.xlsx",
+        download_name=filename,
         mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     )
 

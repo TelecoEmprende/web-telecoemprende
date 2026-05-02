@@ -1,14 +1,24 @@
 type AdminToolbarProps = {
   total: number;
+  eventos: string[];
+  eventoActivo: string;
   isLoggingOut: boolean;
   onLogout: () => Promise<void>;
+  onEventoChange: (evento: string) => void;
 };
 
 export function AdminToolbar({
   total,
+  eventos,
+  eventoActivo,
   isLoggingOut,
   onLogout,
+  onEventoChange,
 }: AdminToolbarProps) {
+  const downloadUrl = eventoActivo
+    ? `/api/admin/download?evento=${encodeURIComponent(eventoActivo)}`
+    : "/api/admin/download";
+
   return (
     <div className="admin-toolbar-react">
       <div>
@@ -19,7 +29,20 @@ export function AdminToolbar({
       </div>
 
       <div className="admin-actions-react">
-        <a href="/api/admin/download" className="secondary-btn-react">
+        <select
+          className="secondary-btn-react evento-select-react"
+          value={eventoActivo}
+          onChange={(e) => onEventoChange(e.target.value)}
+        >
+          <option value="">Todos los eventos</option>
+          {eventos.map((ev) => (
+            <option key={ev} value={ev}>
+              {ev}
+            </option>
+          ))}
+        </select>
+
+        <a href={downloadUrl} className="secondary-btn-react">
           Descargar Excel
         </a>
         <button

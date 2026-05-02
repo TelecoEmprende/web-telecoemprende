@@ -2,17 +2,19 @@ export function HeroSection() {
   const whatsappCommunityUrl = "https://chat.whatsapp.com/DdllRrRTg3REkyYW248uFP";
   const seriesEvents = [
     {
-      dayLabel: "Día 1 - 29/04/2026",
-      speaker: "Carlos Herrera Yagüe",
-      role: "CTO Cabify",
-      imageSrc: "/carlos_cto_cabify.png",
-      featured: true,
-    },
-    {
       dayLabel: "Día 2 - 7/05/2026",
       speaker: "Enrique García y Joaquín Fernandez",
       role: "Taxdown Cofounders (CEO y CTO)",
+      imageSrc: "/taxdown.png",
+      featured: true,
+    },
+    {
+      dayLabel: "Día 1 - Done",
+      speaker: "Carlos Herrera Yagüe",
+      role: "CTO Cabify",
+      imageSrc: "/carlos_cto_cabify.png",
       featured: false,
+      done: true,
     },
     {
       dayLabel: "Día 3 - 14/05/2026",
@@ -43,16 +45,16 @@ export function HeroSection() {
           </p>
 
           <div className="event-meta-react">
-            <div className="meta-item-react">📍 Aula Magna, ETSIT UPM</div>
-            <div className="meta-item-react">📅 29 de abril</div>
-            <div className="meta-item-react">⏰  18:00 - 20:00</div>
+            <div className="meta-item-react">📍 Sala de Profesores, Edificio C, ETSIT UPM</div>
+            <div className="meta-item-react">📅 7 de mayo</div>
+            <div className="meta-item-react">⏰  19:00 - 21:00</div>
             <div className="meta-item-react">👀 Charlas, networking e ideas</div>
           </div>
 
           <div className="series-showcase-react" aria-label="Serie de eventos Teleco Builders">
             <div className="series-header-react">
               <span className="series-kicker-react">Serie Teleco Builders</span>
-              <strong>Primero de 3 encuentros</strong>
+              <strong>Segundo de 3 encuentros</strong>
             </div>
 
             <div className="series-grid-react">
@@ -69,8 +71,11 @@ export function HeroSection() {
                     </div>
                   </article>
                 ) : (
-                  <article className="series-card-react series-card-compact-react" key={event.speaker}>
-                    <span className="series-step-react series-step-upcoming-react">{event.dayLabel}</span>
+                  <article className={`series-card-react series-card-compact-react${event.done ? ' series-card-done-react' : ''}`} key={event.speaker}>
+                    {event.done
+                      ? <span className="series-card-done-badge-react">✓ Done</span>
+                      : <span className="series-step-react series-step-upcoming-react">{event.dayLabel}</span>
+                    }
                     <strong>{event.speaker}</strong>
                     <p>{event.role}</p>
                   </article>
@@ -81,7 +86,7 @@ export function HeroSection() {
 
           <div className="hero-actions-react">
             <a href="#registro" className="primary-btn-react">
-              Reservar plaza día 1
+              Reservar plaza día 2
             </a>
             {/* <a href="#detalle" className="secondary-link-react">
               Ver detalles

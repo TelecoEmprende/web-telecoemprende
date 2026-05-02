@@ -20,10 +20,12 @@ def init_db():
                     nombre VARCHAR(60) NOT NULL,
                     apellidos VARCHAR(100) NOT NULL,
                     estudios VARCHAR(120) NOT NULL,
-                    email VARCHAR(120) NOT NULL UNIQUE,
+                    email VARCHAR(120) NOT NULL,
                     privacidad_aceptada VARCHAR(10) NOT NULL,
                     ip_registro VARCHAR(45) NOT NULL,
-                    created_at TIMESTAMP NOT NULL DEFAULT NOW()
+                    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+                    evento VARCHAR(50) NOT NULL,
+                    CONSTRAINT registrations_email_evento_key UNIQUE (email, evento)
                 )
             """)
         conn.commit()
@@ -33,12 +35,12 @@ def crear_excel_si_no_existe():
     init_db()
 
 
-def email_ya_registrado(email: str) -> bool:
+def email_ya_registrado(email: str, evento: str) -> bool:
     with _get_connection() as conn:
         with conn.cursor() as cur:
             cur.execute(
-                "SELECT 1 FROM registrations WHERE LOWER(email) = LOWER(%s) LIMIT 1",
-                (email.strip(),),
+                "SELECT 1 FROM registrations WHERE LOWER(email) = LOWER(%s) AND evento = %s LIMIT 1",
+                (email.strip(), evento),
             )
             return cur.fetchone() is not None
 
@@ -50,14 +52,15 @@ def guardar_registro(
     email: str,
     acepta_privacidad: str,
     ip: str,
+    evento: str,
 ):
     with _get_connection() as conn:
         with conn.cursor() as cur:
             cur.execute(
                 """
                 INSERT INTO registrations
-                    (nombre, apellidos, estudios, email, privacidad_aceptada, ip_registro, created_at)
-                VALUES (%s, %s, %s, %s, %s, %s, %s)
+                    (nombre, apellidos, estudios, email, privacidad_aceptada, ip_registro, created_at, evento)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
                 """,
                 (
                     nombre,
@@ -67,22 +70,43 @@ def guardar_registro(
                     acepta_privacidad,
                     ip,
                     datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                    evento,
                 ),
             )
         conn.commit()
 
 
-def obtener_registros():
+def obtener_eventos() -> list[str]:
     with _get_connection() as conn:
         with conn.cursor() as cur:
-            cur.execute(
-                """
-                SELECT id, nombre, apellidos, estudios, email,
-                       privacidad_aceptada, ip_registro, created_at
-                FROM registrations
-                ORDER BY id
-                """
-            )
+            cur.execute("SELECT DISTINCT evento FROM registrations ORDER BY evento")
+            rows = cur.fetchall()
+    return [r[0] for r in rows]
+
+
+def obtener_registros(evento: str | None = None):
+    with _get_connection() as conn:
+        with conn.cursor() as cur:
+            if evento:
+                cur.execute(
+                    """
+                    SELECT id, nombre, apellidos, estudios, email,
+                           privacidad_aceptada, ip_registro, created_at, evento
+                    FROM registrations
+                    WHERE evento = %s
+                    ORDER BY id
+                    """,
+                    (evento,),
+                )
+            else:
+                cur.execute(
+                    """
+                    SELECT id, nombre, apellidos, estudios, email,
+                           privacidad_aceptada, ip_registro, created_at, evento
+                    FROM registrations
+                    ORDER BY id
+                    """
+                )
             rows = cur.fetchall()
 
     return [
@@ -95,6 +119,7 @@ def obtener_registros():
             "privacidad": r[5],
             "ip": r[6],
             "fecha": r[7].strftime("%Y-%m-%d %H:%M:%S") if hasattr(r[7], "strftime") else str(r[7]),
+            "evento": r[8],
         }
         for r in rows
     ]
@@ -131,8 +156,8 @@ def eliminar_registro(reg_id: int) -> bool:
     return deleted
 
 
-def generar_excel_en_memoria() -> BytesIO:
-    registros = obtener_registros()
+def generar_excel_en_memoria(evento: str | None = None) -> BytesIO:
+    registros = obtener_registros(evento)
 
     wb = Workbook()
     ws = wb.active
@@ -145,9 +170,10 @@ def generar_excel_en_memoria() -> BytesIO:
         "Acepta privacidad",
         "IP registro",
         "Fecha de registro",
+        "Evento",
     ])
 
-    anchos = {"A": 20, "B": 25, "C": 35, "D": 32, "E": 18, "F": 18, "G": 22}
+    anchos = {"A": 20, "B": 25, "C": 35, "D": 32, "E": 18, "F": 18, "G": 22, "H": 25}
     for col, ancho in anchos.items():
         ws.column_dimensions[col].width = ancho
 
@@ -160,6 +186,7 @@ def generar_excel_en_memoria() -> BytesIO:
             r["privacidad"],
             r["ip"],
             r["fecha"],
+            r["evento"],
         ])
 
     output = BytesIO()

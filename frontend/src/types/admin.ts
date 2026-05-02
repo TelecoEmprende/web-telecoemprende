@@ -18,6 +18,7 @@ export type AdminRegistrationsResponse =
       ok: true;
       total: number;
       registros: Registro[];
+      eventos: string[];
     }
   | {
       ok: false;

@@ -75,6 +75,13 @@
   opacity: 0.7;
 }
 
+.evento-select-react {
+  min-width: 180px;
+  padding: 0 14px;
+  appearance: auto;
+  font-size: 0.95rem;
+}
+
 .table-wrapper-react {
   overflow-x: auto;
   border: 1px solid #dde5f1;

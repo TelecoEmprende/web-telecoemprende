@@ -4,6 +4,7 @@ export type RegistrationPayload = {
   estudios: string;
   email: string;
   privacidad: boolean;
+  evento: string;
   telefono_oculto?: string;
 };
 

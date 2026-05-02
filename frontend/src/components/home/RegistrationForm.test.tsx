@@ -17,7 +17,7 @@ describe("RegistrationForm", () => {
     const user = userEvent.setup();
     render(
       <MemoryRouter>
-        <RegistrationForm />
+        <RegistrationForm evento="taxdown" />
       </MemoryRouter>,
     );
 
@@ -42,7 +42,7 @@ describe("RegistrationForm", () => {
     render(
       <MemoryRouter initialEntries={["/"]}>
         <Routes>
-          <Route path="/" element={<RegistrationForm />} />
+          <Route path="/" element={<RegistrationForm evento="taxdown" />} />
           <Route path="/gracias" element={<ThankYouPage />} />
         </Routes>
       </MemoryRouter>,

@@ -19,8 +19,9 @@ export function getAdminSession() {
   return apiRequest<AdminSessionResponse>("/api/admin/session");
 }
 
-export function getAdminRegistrations() {
-  return apiRequest<AdminRegistrationsResponse>("/api/admin/registrations");
+export function getAdminRegistrations(evento?: string) {
+  const qs = evento ? `?evento=${encodeURIComponent(evento)}` : "";
+  return apiRequest<AdminRegistrationsResponse>(`/api/admin/registrations${qs}`);
 }
 
 export function updateRegistration(
