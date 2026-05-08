@@ -8,6 +8,7 @@ import { ParticleBackground } from "../components/layout/ParticleBackground";
 type ThankYouState = {
   attendeeName?: string;
   attendeeEmail?: string;
+  evento?: string;
 };
 
 export function ThankYouPage() {
@@ -17,6 +18,11 @@ export function ThankYouPage() {
   const attendeeName = state?.attendeeName?.trim();
   const attendeeEmail = state?.attendeeEmail?.trim();
   const firstName = attendeeName ? attendeeName.split(/\s+/)[0] : null;
+  const isSantiPablo = state?.evento === "charla-santi-y-pablo";
+
+  const eventMeta = isSantiPablo
+    ? { date: "1 de junio", time: "16:00 - 17:00" }
+    : { date: "7 de mayo", time: "19:00 - 21:00" };
 
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: "auto" });
@@ -50,14 +56,18 @@ export function ThankYouPage() {
 
               <div className="thank-you-meta-react" aria-label="Información del evento">
                 <div className="meta-item-react">📍 Sala de profesores, Edificio C, ETSIT UPM</div>
-                <div className="meta-item-react">📅 7 de mayo</div>
-                <div className="meta-item-react">⏰ 19:00 - 21:00</div>
+                <div className="meta-item-react">📅 {eventMeta.date}</div>
+                <div className="meta-item-react">⏰ {eventMeta.time}</div>
               </div>
 
               <div className="thank-you-points-react">
                 <div className="thank-you-point-react">
                   <strong>⌛️ ¿Qué te espera?</strong>
-                  <span>Charlas cercanas, experiencia real y networking con el ecosistema.</span>
+                  <span>
+                    {isSantiPablo
+                      ? "Una charla cercana sobre cómo crear contenido desde cero y construir algo propio."
+                      : "Charlas cercanas, experiencia real y networking con el ecosistema."}
+                  </span>
                 </div>
                 <div className="thank-you-point-react">
                   <strong>🪜 Siguiente paso</strong>

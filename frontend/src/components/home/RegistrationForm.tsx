@@ -17,7 +17,7 @@ const INITIAL_FORM = (evento: string): RegistrationPayload => ({
   telefono_oculto: "",
 });
 
-export function RegistrationForm({ evento }: { evento: string }) {
+export function RegistrationForm({ evento, title }: { evento: string; title?: string }) {
   const navigate = useNavigate();
   const [form, setForm] = useState<RegistrationPayload>(() => INITIAL_FORM(evento));
   const [errors, setErrors] = useState<RegistrationErrors>({});
@@ -55,6 +55,7 @@ export function RegistrationForm({ evento }: { evento: string }) {
           state: {
             attendeeName: form.nombre.trim(),
             attendeeEmail: form.email.trim(),
+            evento,
           },
         });
       }
@@ -74,7 +75,7 @@ export function RegistrationForm({ evento }: { evento: string }) {
       <div className="container-react form-layout-react">
         <div className="section-copy-card-react">
           <span className="section-eyebrow-react">Inscripción</span>
-          <h2>Formulario de registro Día 2 - Charla con Taxdown</h2>
+          <h2>{title ?? "Formulario de registro Día 2 - Charla con Taxdown"}</h2>
           <p className="section-copy">
             Completa tus datos para reservar tu plaza. Usaremos esta
             información únicamente para la gestión del evento y las
