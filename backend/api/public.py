@@ -15,7 +15,7 @@ from backend.services.security import (
 )
 
 
-EVENTOS_VALIDOS = {"taxdown", "charla-santi-y-pablo", "cabify"}
+EVENTOS_VALIDOS = {"taxdown", "charla-santi-y-pablo", "cabify", "samuel-gil"}
 
 public_api = Blueprint("public_api", __name__, url_prefix="/api")
 

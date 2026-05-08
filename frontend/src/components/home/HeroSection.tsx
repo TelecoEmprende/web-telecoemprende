@@ -2,10 +2,10 @@ export function HeroSection() {
   const whatsappCommunityUrl = "https://chat.whatsapp.com/DdllRrRTg3REkyYW248uFP";
   const seriesEvents = [
     {
-      dayLabel: "Día 2 - 7/05/2026",
-      speaker: "Enrique García y Joaquín Fernandez",
-      role: "Taxdown Cofounders (CEO y CTO)",
-      imageSrc: "/taxdown.png",
+      dayLabel: "Día 3 - 14/05/2026",
+      speaker: "Samuel Gil",
+      role: "CEO JME Ventures",
+      imageSrc: "/foto-samuel.png",
       featured: true,
     },
     {
@@ -17,10 +17,12 @@ export function HeroSection() {
       done: true,
     },
     {
-      dayLabel: "Día 3 - 14/05/2026",
-      speaker: "Samuel Gil",
-      role: "CEO JME Ventures",
+      dayLabel: "Día 2 - Done",
+      speaker: "Enrique García y Joaquín Fernandez",
+      role: "Taxdown Cofounders (CEO y CTO)",
+      imageSrc: "/taxdown.png",
       featured: false,
+      done: true,
     },
   ];
 
@@ -30,7 +32,7 @@ export function HeroSection() {
         <div className="hero-copy-react">
           <div className="hero-badges-react">
             <span className="tag-react">REGISTRO ABIERTO 2026</span>
-            <span className="spots-badge-react">Plazas limitadas</span>
+            <span className="spots-badge-react">50 plazas limitadas</span>
           </div>
 
           <h1>
@@ -46,15 +48,15 @@ export function HeroSection() {
 
           <div className="event-meta-react">
             <div className="meta-item-react">📍 Sala de Profesores, Edificio C, ETSIT UPM</div>
-            <div className="meta-item-react">📅 7 de mayo</div>
-            <div className="meta-item-react">⏰  19:00 - 21:00</div>
+            <div className="meta-item-react">📅 14 de mayo</div>
+            <div className="meta-item-react">⏰ 18:00 - 20:00</div>
             <div className="meta-item-react">👀 Charlas, networking e ideas</div>
           </div>
 
           <div className="series-showcase-react" aria-label="Serie de eventos Teleco Builders">
             <div className="series-header-react">
               <span className="series-kicker-react">Serie Teleco Builders</span>
-              <strong>Segundo de 3 encuentros</strong>
+              <strong>Tercero de 3 encuentros</strong>
             </div>
 
             <div className="series-grid-react">
@@ -86,7 +88,7 @@ export function HeroSection() {
 
           <div className="hero-actions-react">
             <a href="#registro" className="primary-btn-react">
-              Reservar plaza día 2
+              Reservar plaza día 3
             </a>
             {/* <a href="#detalle" className="secondary-link-react">
               Ver detalles

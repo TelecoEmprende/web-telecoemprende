@@ -19,9 +19,12 @@ export function ThankYouPage() {
   const attendeeEmail = state?.attendeeEmail?.trim();
   const firstName = attendeeName ? attendeeName.split(/\s+/)[0] : null;
   const isSantiPablo = state?.evento === "charla-santi-y-pablo";
+  const isSamuelGil = state?.evento === "samuel-gil";
 
   const eventMeta = isSantiPablo
     ? { date: "1 de junio", time: "16:00 - 17:00" }
+    : isSamuelGil
+    ? { date: "14 de mayo", time: "18:00 - 20:00" }
     : { date: "7 de mayo", time: "19:00 - 21:00" };
 
   useEffect(() => {

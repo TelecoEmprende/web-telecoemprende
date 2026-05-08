@@ -17,7 +17,7 @@ export function EventoSantiPabloPage() {
             <div className="hero-copy-react">
               <div className="hero-badges-react">
                 <span className="tag-react">REGISTRO ABIERTO 2026</span>
-                <span className="spots-badge-react">Plazas limitadas</span>
+                <span className="spots-badge-react">50 plazas limitadas</span>
               </div>
 
               <h1>
@@ -36,6 +36,36 @@ Compartirán su proceso real: qué hicieron, qué no funcionó y cómo acabaron 
                 <div className="meta-item-react">📅 1 de Junio</div>
                 <div className="meta-item-react">⏰ 16:00 - 17:00</div>
               </div>
+
+              <div className="series-showcase-react" aria-label="Ponentes del evento">
+                <div className="series-header-react">
+                  <span className="series-kicker-react">Teleco Builders 2026</span>
+                  <strong>Los ponentes</strong>
+                </div>
+
+                <div className="series-speakers-grid-react">
+                  <article className="series-card-react series-card-speaker-react">
+                    <div className="series-card-speaker-portrait-react" aria-hidden="true">
+                      <img src="/fotoPerfilSinFondo.png" alt="" />
+                    </div>
+                    <div className="series-card-speaker-copy-react">
+                      <strong>Santi</strong>
+                      <p>Creador de contenido y editor de vídeo autodidacta. Construye su marca personal desde Madrid.</p>
+                    </div>
+                  </article>
+
+                  <article className="series-card-react series-card-speaker-react">
+                    <div className="series-card-speaker-portrait-react" aria-hidden="true">
+                      <img src="/foto-pablo.png" alt="" />
+                    </div>
+                    <div className="series-card-speaker-copy-react">
+                      <strong>Pablo</strong>
+                      <p>Mentalidad creativa y emprendedora. Busca construir algo propio más allá de la ingeniería. Desde Zaragoza.</p>
+                    </div>
+                  </article>
+                </div>
+              </div>
+
 
               <div className="hero-actions-react">
                 <a href="#registro" className="primary-btn-react">

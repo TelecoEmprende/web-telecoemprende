@@ -13,7 +13,7 @@ export function HomePage() {
       <main className="page-content">
         <HeroSection />
         <TrustSection />
-        <RegistrationForm evento="taxdown" />
+        <RegistrationForm evento="samuel-gil" title="Formulario de registro Día 3 - Charla con Samuel Gil" />
       </main>
       <Footer />
     </div>
