@@ -1,0 +1,17 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "side-tab",
+        "value": "*",
+        "files": [
+          "src/styles/landing.css"
+        ],
+        "createdAt": "2026-08-13T00:45:00.000Z",
+        "reason": "reviewed: .lp-team-card::after is a bottom underline shown only on :hover (opacity 0->1), and .lp-events::before is a full-width section-top divider that fades to transparent — neither is a static solid card-edge bar; the one real instance (.form-card-react::before, static full-width top bar always visible) was removed"
+      }
+    ]
+  }
+}

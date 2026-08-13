@@ -5,13 +5,22 @@ import type { ApiFailure } from "../../types/api";
 
 type RecordsTableProps = {
   registros: Registro[];
-  onUpdate: (id: number, data: { nombre: string; apellidos: string; estudios: string; email: string }) => void;
+  onUpdate: (
+    id: number,
+    data: { nombre: string; apellidos: string; estudios: string; email: string; drive_link: string },
+  ) => void;
   onDelete: (id: number) => void;
 };
 
 export function RecordsTable({ registros, onUpdate, onDelete }: RecordsTableProps) {
   const [editingId, setEditingId] = useState<number | null>(null);
-  const [editData, setEditData] = useState({ nombre: "", apellidos: "", estudios: "", email: "" });
+  const [editData, setEditData] = useState({
+    nombre: "",
+    apellidos: "",
+    estudios: "",
+    email: "",
+    drive_link: "",
+  });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
@@ -19,7 +28,13 @@ export function RecordsTable({ registros, onUpdate, onDelete }: RecordsTableProp
 
   function startEdit(r: Registro) {
     setEditingId(r.id);
-    setEditData({ nombre: r.nombre, apellidos: r.apellidos, estudios: r.estudios, email: r.email });
+    setEditData({
+      nombre: r.nombre,
+      apellidos: r.apellidos,
+      estudios: r.estudios,
+      email: r.email,
+      drive_link: r.drive_link,
+    });
     setError(null);
   }
 
@@ -30,7 +45,7 @@ export function RecordsTable({ registros, onUpdate, onDelete }: RecordsTableProp
 
   async function saveEdit() {
     if (editingId === null) return;
-    if (!editData.nombre || !editData.apellidos || !editData.estudios || !editData.email) {
+    if (!editData.nombre || !editData.apellidos || !editData.estudios || !editData.email || !editData.drive_link) {
       setError("Todos los campos son obligatorios.");
       return;
     }
@@ -94,6 +109,7 @@ export function RecordsTable({ registros, onUpdate, onDelete }: RecordsTableProp
             <th>Apellidos</th>
             <th>Estudios / Procedencia</th>
             <th>Email</th>
+            <th>CV y pitch</th>
             <th>Privacidad</th>
             <th>Fecha</th>
             <th>Acciones</th>
@@ -133,6 +149,14 @@ export function RecordsTable({ registros, onUpdate, onDelete }: RecordsTableProp
                       onChange={(e) => setEditData({ ...editData, email: e.target.value })}
                     />
                   </td>
+                  <td>
+                    <input
+                      className="inline-edit-input"
+                      type="url"
+                      value={editData.drive_link}
+                      onChange={(e) => setEditData({ ...editData, drive_link: e.target.value })}
+                    />
+                  </td>
                   <td>{registro.privacidad}</td>
                   <td>{registro.fecha}</td>
                   <td className="actions-cell">
@@ -150,6 +174,15 @@ export function RecordsTable({ registros, onUpdate, onDelete }: RecordsTableProp
                   <td>{registro.apellidos}</td>
                   <td>{registro.estudios}</td>
                   <td>{registro.email}</td>
+                  <td>
+                    {registro.drive_link ? (
+                      <a href={registro.drive_link} target="_blank" rel="noreferrer">
+                        Ver enlace
+                      </a>
+                    ) : (
+                      "—"
+                    )}
+                  </td>
                   <td>{registro.privacidad}</td>
                   <td>{registro.fecha}</td>
                   <td className="actions-cell">

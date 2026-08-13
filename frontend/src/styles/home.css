@@ -126,7 +126,7 @@
 }
 
 .series-kicker-react {
-  background: #eef4ff;
+  background: rgba(224, 104, 14, 0.1);
   color: var(--color-primary);
 }
 
@@ -303,7 +303,7 @@
   min-height: 56px;
   padding: 0 22px;
   border-radius: 16px;
-  background: linear-gradient(135deg, var(--color-primary), #0b67d4);
+  background: linear-gradient(135deg, var(--color-primary), var(--color-gold));
   color: #fff;
   font-weight: 800;
   border: 0;
@@ -374,7 +374,7 @@
   padding: 0 22px;
   width: fit-content;
   border-radius: 16px;
-  background: linear-gradient(135deg, var(--color-primary), #0b67d4);
+  background: linear-gradient(135deg, var(--color-primary), var(--color-gold));
   color: #fff;
   font-weight: 800;
   box-shadow: 0 20px 50px rgba(15, 92, 192, 0.12);
@@ -440,7 +440,7 @@
 }
 
 .panel-mini-tag-react {
-  background: #eef4ff;
+  background: rgba(224, 104, 14, 0.1);
   color: var(--color-primary);
 }
 
@@ -693,7 +693,7 @@
   margin-bottom: 12px;
   padding: 8px 12px;
   border-radius: 999px;
-  background: #eef4ff;
+  background: rgba(224, 104, 14, 0.1);
   color: var(--color-primary);
   font-size: 0.8rem;
   font-weight: 800;
@@ -1003,7 +1003,7 @@
     position: absolute;
     inset: 0 0 auto;
     height: 5px;
-    background: linear-gradient(90deg, #0f5cc0, #f3a66a);
+    background: linear-gradient(90deg, var(--color-gold), var(--color-orange));
   }
 
   .registration-form-react {
@@ -1024,7 +1024,7 @@
     gap: 10px;
     padding: 14px 14px 12px;
     border-radius: 18px;
-    background: #f8fbff;
+    background: #fdf8ef;
     border: 1px solid #e2e8f2;
   }
 

@@ -43,14 +43,18 @@ describe("AdminPage", () => {
     getAdminRegistrations.mockResolvedValueOnce({
       ok: true,
       total: 1,
+      eventos: ["telecoemprende-2026-27"],
       registros: [
         {
+          id: 1,
           nombre: "Juan",
           apellidos: "Perez",
-          estudios: "ETSIT UPM",
+          estudios: "Grado - GIST",
           email: "juan@example.com",
+          drive_link: "https://drive.google.com/drive/folders/abc123",
           privacidad: "Sí",
           fecha: "2026-04-16 11:00:00",
+          evento: "telecoemprende-2026-27",
         },
       ],
     });

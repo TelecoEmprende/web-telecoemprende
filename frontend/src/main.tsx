@@ -8,6 +8,7 @@ import "./styles/base.css";
 import "./styles/layout.css";
 import "./styles/home.css";
 import "./styles/admin.css";
+import "./styles/landing.css";
 
 const container = document.getElementById("root");
 

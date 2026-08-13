@@ -21,12 +21,17 @@ def init_db():
                     apellidos VARCHAR(100) NOT NULL,
                     estudios VARCHAR(120) NOT NULL,
                     email VARCHAR(120) NOT NULL,
+                    drive_link VARCHAR(300) NOT NULL DEFAULT '',
                     privacidad_aceptada VARCHAR(10) NOT NULL,
                     ip_registro VARCHAR(45) NOT NULL,
                     created_at TIMESTAMP NOT NULL DEFAULT NOW(),
                     evento VARCHAR(50) NOT NULL,
                     CONSTRAINT registrations_email_evento_key UNIQUE (email, evento)
                 )
+            """)
+            cur.execute("""
+                ALTER TABLE registrations
+                ADD COLUMN IF NOT EXISTS drive_link VARCHAR(300) NOT NULL DEFAULT ''
             """)
         conn.commit()
 
@@ -50,6 +55,7 @@ def guardar_registro(
     apellidos: str,
     estudios: str,
     email: str,
+    drive_link: str,
     acepta_privacidad: str,
     ip: str,
     evento: str,
@@ -59,14 +65,15 @@ def guardar_registro(
             cur.execute(
                 """
                 INSERT INTO registrations
-                    (nombre, apellidos, estudios, email, privacidad_aceptada, ip_registro, created_at, evento)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                    (nombre, apellidos, estudios, email, drive_link, privacidad_aceptada, ip_registro, created_at, evento)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
                 """,
                 (
                     nombre,
                     apellidos,
                     estudios,
                     email.lower(),
+                    drive_link,
                     acepta_privacidad,
                     ip,
                     datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
@@ -90,7 +97,7 @@ def obtener_registros(evento: str | None = None):
             if evento:
                 cur.execute(
                     """
-                    SELECT id, nombre, apellidos, estudios, email,
+                    SELECT id, nombre, apellidos, estudios, email, drive_link,
                            privacidad_aceptada, ip_registro, created_at, evento
                     FROM registrations
                     WHERE evento = %s
@@ -101,7 +108,7 @@ def obtener_registros(evento: str | None = None):
             else:
                 cur.execute(
                     """
-                    SELECT id, nombre, apellidos, estudios, email,
+                    SELECT id, nombre, apellidos, estudios, email, drive_link,
                            privacidad_aceptada, ip_registro, created_at, evento
                     FROM registrations
                     ORDER BY id
@@ -116,16 +123,19 @@ def obtener_registros(evento: str | None = None):
             "apellidos": r[2],
             "estudios": r[3],
             "email": r[4],
-            "privacidad": r[5],
-            "ip": r[6],
-            "fecha": r[7].strftime("%Y-%m-%d %H:%M:%S") if hasattr(r[7], "strftime") else str(r[7]),
-            "evento": r[8],
+            "drive_link": r[5],
+            "privacidad": r[6],
+            "ip": r[7],
+            "fecha": r[8].strftime("%Y-%m-%d %H:%M:%S") if hasattr(r[8], "strftime") else str(r[8]),
+            "evento": r[9],
         }
         for r in rows
     ]
 
 
-def actualizar_registro(reg_id: int, nombre: str, apellidos: str, estudios: str, email: str) -> bool:
+def actualizar_registro(
+    reg_id: int, nombre: str, apellidos: str, estudios: str, email: str, drive_link: str
+) -> bool:
     with _get_connection() as conn:
         with conn.cursor() as cur:
             cur.execute(
@@ -138,10 +148,17 @@ def actualizar_registro(reg_id: int, nombre: str, apellidos: str, estudios: str,
             cur.execute(
                 """
                 UPDATE registrations
-                SET nombre = %s, apellidos = %s, estudios = %s, email = %s
+                SET nombre = %s, apellidos = %s, estudios = %s, email = %s, drive_link = %s
                 WHERE id = %s
                 """,
-                (nombre.strip(), apellidos.strip(), estudios.strip(), email.strip().lower(), reg_id),
+                (
+                    nombre.strip(),
+                    apellidos.strip(),
+                    estudios.strip(),
+                    email.strip().lower(),
+                    drive_link.strip(),
+                    reg_id,
+                ),
             )
         conn.commit()
     return True
@@ -167,13 +184,14 @@ def generar_excel_en_memoria(evento: str | None = None) -> BytesIO:
         "Apellidos",
         "Estudios / Procedencia",
         "Correo electrónico",
+        "Enlace CV y pitch",
         "Acepta privacidad",
         "IP registro",
         "Fecha de registro",
         "Evento",
     ])
 
-    anchos = {"A": 20, "B": 25, "C": 35, "D": 32, "E": 18, "F": 18, "G": 22, "H": 25}
+    anchos = {"A": 20, "B": 25, "C": 35, "D": 32, "E": 40, "F": 18, "G": 18, "H": 22, "I": 25}
     for col, ancho in anchos.items():
         ws.column_dimensions[col].width = ancho
 
@@ -183,6 +201,7 @@ def generar_excel_en_memoria(evento: str | None = None) -> BytesIO:
             r["apellidos"],
             r["estudios"],
             r["email"],
+            r["drive_link"],
             r["privacidad"],
             r["ip"],
             r["fecha"],

@@ -78,12 +78,12 @@ export function ParticleBackground() {
             0.38 + ((Math.sin(t * 1.8 + row * 0.5 + column * 0.28) + 1) / 2) * 0.32;
 
           context.beginPath();
-          context.fillStyle = `rgba(82, 155, 255, ${0.18 * shimmer})`;
+          context.fillStyle = `rgba(136, 165, 183, ${0.2 * shimmer})`;
           context.arc(point.x, point.y, 2.2, 0, Math.PI * 2);
           context.fill();
 
           context.beginPath();
-          context.fillStyle = `rgba(149, 204, 255, ${0.58 * shimmer})`;
+          context.fillStyle = `rgba(244, 176, 68, ${0.5 * shimmer})`;
           context.arc(point.x, point.y, 0.92, 0, Math.PI * 2);
           context.fill();
         }

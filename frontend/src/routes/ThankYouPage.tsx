@@ -18,14 +18,6 @@ export function ThankYouPage() {
   const attendeeName = state?.attendeeName?.trim();
   const attendeeEmail = state?.attendeeEmail?.trim();
   const firstName = attendeeName ? attendeeName.split(/\s+/)[0] : null;
-  const isSantiPablo = state?.evento === "charla-santi-y-pablo";
-  const isSamuelGil = state?.evento === "samuel-gil";
-
-  const eventMeta = isSantiPablo
-    ? { date: "1 de junio", time: "16:00 - 17:00" }
-    : isSamuelGil
-    ? { date: "14 de mayo", time: "18:00 - 20:00" }
-    : { date: "7 de mayo", time: "19:00 - 21:00" };
 
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: "auto" });
@@ -39,42 +31,38 @@ export function ThankYouPage() {
         <section className="thank-you-section-react">
           <div className="container-react">
             <div className="thank-you-card-react">
-              <span className="section-eyebrow-react">Registro completado</span>
+              <span className="section-eyebrow-react">Inscripción completada</span>
               <h1>
-                {firstName ? `Gracias, ${firstName}.` : "Gracias por registrarte."}
+                {firstName ? `Gracias, ${firstName}.` : "Gracias por inscribirte."}
               </h1>
               <p className="thank-you-lead-react">
-                Estamos deseando verte en Teleco Builders 2026. Tu plaza ha quedado
-                registrada correctamente.
+                Ya formas parte de TelecoEmprende 2026/27. Tu inscripción ha
+                quedado registrada correctamente.
               </p>
 
               <div className="thank-you-note-react">
-                <strong>3 días antes del evento te enviaremos un email con toda la información práctica.</strong>
+                <strong>Te enviaremos un email con los próximos pasos y los primeros eventos del curso.</strong>
                 <p>
                   {attendeeEmail
                     ? `Lo recibirás en ${attendeeEmail}.`
-                    : "Lo recibirás en el correo electrónico con el que te has registrado."}
+                    : "Lo recibirás en el correo electrónico con el que te has inscrito."}
                 </p>
               </div>
 
-              <div className="thank-you-meta-react" aria-label="Información del evento">
-                <div className="meta-item-react">📍 Sala de profesores, Edificio C, ETSIT UPM</div>
-                <div className="meta-item-react">📅 {eventMeta.date}</div>
-                <div className="meta-item-react">⏰ {eventMeta.time}</div>
+              <div className="thank-you-meta-react" aria-label="Información de la inscripción">
+                <div className="meta-item-react">🎓 Curso 2026/27</div>
+                <div className="meta-item-react">📍 ETSIT · UPM</div>
+                <div className="meta-item-react">🚀 Comunidad TelecoEmprende</div>
               </div>
 
               <div className="thank-you-points-react">
                 <div className="thank-you-point-react">
                   <strong>⌛️ ¿Qué te espera?</strong>
-                  <span>
-                    {isSantiPablo
-                      ? "Una charla cercana sobre cómo crear contenido desde cero y construir algo propio."
-                      : "Charlas cercanas, experiencia real y networking con el ecosistema."}
-                  </span>
+                  <span>Charlas con fundadores, networking de verdad y un sitio donde montar proyectos propios.</span>
                 </div>
                 <div className="thank-you-point-react">
                   <strong>🪜 Siguiente paso</strong>
-                  <span>Estate atento: 3 días antes del evento te llegará el correo con todos los detalles.</span>
+                  <span>Únete a la comunidad de WhatsApp para no perderte el arranque del curso.</span>
                 </div>
               </div>
 

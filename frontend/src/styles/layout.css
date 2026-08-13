@@ -27,7 +27,7 @@
   align-items: center;
   padding: 8px 12px;
   border-radius: 999px;
-  background: #eef4ff;
+  background: rgba(224, 104, 14, 0.1);
   color: var(--color-primary);
   font-size: 0.8rem;
   font-weight: 800;
@@ -75,7 +75,7 @@
   height: 220px;
   top: 120px;
   left: -50px;
-  background: radial-gradient(circle, rgba(128, 192, 255, 0.28), transparent 68%);
+  background: radial-gradient(circle, rgba(244, 176, 68, 0.26), transparent 68%);
 }
 
 .particle-background-glow-right {
@@ -83,7 +83,7 @@
   height: 260px;
   top: 240px;
   right: -80px;
-  background: radial-gradient(circle, rgba(111, 169, 255, 0.22), transparent 70%);
+  background: radial-gradient(circle, rgba(224, 104, 14, 0.18), transparent 70%);
 }
 
 .site-header-react {
@@ -164,7 +164,7 @@
   bottom: 4px;
   width: calc(50% - 4px);
   border-radius: 999px;
-  background: linear-gradient(135deg, var(--color-primary), #0b67d4);
+  background: linear-gradient(135deg, var(--color-primary), var(--color-gold));
   box-shadow: 0 14px 28px rgba(15, 92, 192, 0.18);
   transition: transform 0.22s ease;
 }
@@ -236,8 +236,8 @@
 }
 
 .field-group-react input:focus {
-  border-color: #80a9e6;
-  box-shadow: 0 0 0 4px rgba(15, 92, 192, 0.09);
+  border-color: #eba668;
+  box-shadow: 0 0 0 4px rgba(224, 104, 14, 0.12);
 }
 
 .field-error-react {
@@ -245,6 +245,13 @@
   color: #b42318;
   font-size: 0.92rem;
   font-weight: 700;
+}
+
+.field-hint-react {
+  margin: 6px 0 0;
+  color: var(--color-text-muted);
+  font-size: 0.86rem;
+  line-height: 1.5;
 }
 
 .submit-btn-react {
@@ -255,7 +262,7 @@
   min-height: 56px;
   padding: 0 22px;
   border-radius: 16px;
-  background: linear-gradient(135deg, var(--color-primary), #0b67d4);
+  background: linear-gradient(135deg, var(--color-primary), var(--color-gold));
   color: #fff;
   font-weight: 800;
   border: 0;
@@ -385,7 +392,7 @@
     bottom: 5px;
     width: calc(50% - 5px);
     border-radius: 16px;
-    background: linear-gradient(135deg, rgba(15, 92, 192, 0.94), rgba(31, 125, 255, 0.88));
+    background: linear-gradient(135deg, rgba(224, 104, 14, 0.94), rgba(244, 176, 68, 0.9));
     box-shadow:
       0 8px 18px rgba(15, 92, 192, 0.16),
       inset 0 1px 0 rgba(255, 255, 255, 0.18);
@@ -402,7 +409,7 @@
   }
 
   .header-nav-react a.active {
-    background: #eef4ff;
+    background: rgba(224, 104, 14, 0.1);
   }
 
   .public-tab-slider-react a.active {

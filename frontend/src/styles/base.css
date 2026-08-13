@@ -8,14 +8,25 @@ body,
   min-height: 100%;
 }
 
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 92px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
+
 body {
   margin: 0;
   font-family: "Inter", sans-serif;
   color: var(--color-text);
   background:
-    radial-gradient(circle at top left, rgba(15, 92, 192, 0.06), transparent 28%),
-    radial-gradient(circle at top right, rgba(243, 198, 165, 0.1), transparent 24%),
-    linear-gradient(180deg, #f7f9fc 0%, var(--color-background) 100%);
+    radial-gradient(circle at top left, rgba(224, 104, 14, 0.05), transparent 28%),
+    radial-gradient(circle at top right, rgba(244, 176, 68, 0.09), transparent 24%),
+    linear-gradient(180deg, #fbf7ef 0%, var(--color-background) 100%);
 }
 
 a {

@@ -8,14 +8,21 @@ from backend.services.registrations import (
 )
 from backend.services.security import (
     demasiadas_peticiones,
-    email_valido,
+    drive_link_valido,
+    email_upm_valido,
     limpiar_texto,
     longitud_valida,
     obtener_ip_real,
 )
 
 
-EVENTOS_VALIDOS = {"taxdown", "charla-santi-y-pablo", "cabify", "samuel-gil"}
+EVENTOS_VALIDOS = {
+    "taxdown",
+    "charla-santi-y-pablo",
+    "cabify",
+    "samuel-gil",
+    "telecoemprende-2026-27",
+}
 
 public_api = Blueprint("public_api", __name__, url_prefix="/api")
 
@@ -44,6 +51,7 @@ def create_registration():
     apellidos = limpiar_texto(str(payload.get("apellidos", "")))
     estudios = limpiar_texto(str(payload.get("estudios", "")))
     email = limpiar_texto(str(payload.get("email", ""))).lower()
+    drive_link = limpiar_texto(str(payload.get("drive_link", "")))
     acepta_privacidad = payload.get("privacidad")
     evento = str(payload.get("evento", "")).strip()
 
@@ -63,6 +71,8 @@ def create_registration():
         errors["estudios"] = "Completa este campo."
     if not email:
         errors["email"] = "Completa este campo."
+    if not drive_link:
+        errors["drive_link"] = "Completa este campo."
     if not acepta_privacidad:
         errors["privacidad"] = (
             "Debes aceptar la política de privacidad para registrarte."
@@ -78,7 +88,7 @@ def create_registration():
             400,
         )
 
-    if not longitud_valida(nombre, apellidos, estudios, email):
+    if not longitud_valida(nombre, apellidos, estudios, email, drive_link):
         return (
             jsonify(build_response(
                 False,
@@ -87,12 +97,26 @@ def create_registration():
             400,
         )
 
-    if not email_valido(email):
+    if not email_upm_valido(email):
         return (
             jsonify(build_response(
                 False,
                 "Hay errores de validación.",
-                errors={"email": "Introduce un correo electrónico válido."},
+                errors={
+                    "email": "Usa tu correo institucional de la UPM (@alumnos.upm.es o @upm.es).",
+                },
+            )),
+            400,
+        )
+
+    if not drive_link_valido(drive_link):
+        return (
+            jsonify(build_response(
+                False,
+                "Hay errores de validación.",
+                errors={
+                    "drive_link": "Introduce un enlace de Google Drive válido (https://drive.google.com/...).",
+                },
             )),
             400,
         )
@@ -108,6 +132,7 @@ def create_registration():
         apellidos=apellidos,
         estudios=estudios,
         email=email,
+        drive_link=drive_link,
         acepta_privacidad="Sí",
         ip=ip,
         evento=evento,
@@ -116,7 +141,7 @@ def create_registration():
     return (
         jsonify(build_response(
             True,
-            "Registro completado. Te contactaremos pronto con la información del evento.",
+            "Solicitud enviada. Te contactaremos pronto con los próximos pasos.",
         )),
         201,
     )

@@ -1,21 +1,23 @@
-import { Header } from "../components/layout/Header";
-import { Footer } from "../components/layout/Footer";
+import { LandingNav } from "../components/home/LandingNav";
 import { HeroSection } from "../components/home/HeroSection";
+import { AboutSection } from "../components/home/AboutSection";
+import { EventsSection } from "../components/home/EventsSection";
+import { RequirementsSection } from "../components/home/RequirementsSection";
 import { RegistrationForm } from "../components/home/RegistrationForm";
-import { TrustSection } from "../components/home/TrustSection";
-import { ParticleBackground } from "../components/layout/ParticleBackground";
+import { LandingFooter } from "../components/layout/LandingFooter";
 
 export function HomePage() {
   return (
-    <div className="page-shell">
-      <ParticleBackground />
-      <Header />
-      <main className="page-content">
+    <div className="lp-shell">
+      <LandingNav />
+      <main>
         <HeroSection />
-        <TrustSection />
-        <RegistrationForm evento="samuel-gil" title="Formulario de registro Día 3 - Charla con Samuel Gil" />
+        <AboutSection />
+        <EventsSection />
+        <RequirementsSection />
+        <RegistrationForm evento="telecoemprende-2026-27" />
       </main>
-      <Footer />
+      <LandingFooter />
     </div>
   );
 }

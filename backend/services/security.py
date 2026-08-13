@@ -7,10 +7,12 @@ from flask import request
 from backend.config import (
     BLOCK_WINDOW_SECONDS,
     MAX_APELLIDOS_LEN,
+    MAX_DRIVE_LINK_LEN,
     MAX_EMAIL_LEN,
     MAX_ESTUDIOS_LEN,
     MAX_NOMBRE_LEN,
     MAX_REQUESTS_PER_MINUTE,
+    UPM_EMAIL_DOMAINS,
 )
 
 
@@ -27,12 +29,25 @@ def email_valido(email: str) -> bool:
     return re.match(patron, email) is not None
 
 
-def longitud_valida(nombre: str, apellidos: str, estudios: str, email: str) -> bool:
+def email_upm_valido(email: str) -> bool:
+    if not email_valido(email):
+        return False
+    dominio = email.rsplit("@", 1)[-1].strip().lower()
+    return dominio in UPM_EMAIL_DOMAINS
+
+
+def drive_link_valido(url: str) -> bool:
+    patron = r"^https?://(www\.)?drive\.google\.com/.+"
+    return re.match(patron, url.strip(), re.IGNORECASE) is not None
+
+
+def longitud_valida(nombre: str, apellidos: str, estudios: str, email: str, drive_link: str = "") -> bool:
     return (
         len(nombre) <= MAX_NOMBRE_LEN
         and len(apellidos) <= MAX_APELLIDOS_LEN
         and len(estudios) <= MAX_ESTUDIOS_LEN
         and len(email) <= MAX_EMAIL_LEN
+        and len(drive_link) <= MAX_DRIVE_LINK_LEN
     )
 
 

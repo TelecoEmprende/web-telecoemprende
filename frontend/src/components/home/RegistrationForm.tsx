@@ -7,22 +7,50 @@ import type { ApiFailure } from "../../types/api";
 import type { RegistrationErrors, RegistrationPayload } from "../../types/registration";
 import { validateRegistrationDraft } from "../../utils/validation";
 
+type Nivel = "grado" | "master";
+
+const GRADOS = ["GIST", "GITT", "GISD", "GIB"];
+
+const MASTERES = [
+  "Máster Universitario en Ciberseguridad",
+  "Máster Universitario en Energía Solar Fotovoltaica",
+  "Máster Universitario en Ingeniería Biomédica",
+  "Máster Universitario en Ingeniería de Redes y Servicios Telemáticos",
+  "Máster Universitario en Ingeniería de Sistemas Electrónicos",
+  "Máster Universitario en Tratamiento Estadístico Computacional de la Información",
+  "Master of Science Signal Theory and Communications",
+  "Máster Universitario en Neurología",
+  "Máster Universitario en Ingeniería de Radiofrecuencias",
+];
+
 const INITIAL_FORM = (evento: string): RegistrationPayload => ({
   nombre: "",
   apellidos: "",
   estudios: "",
   email: "",
+  drive_link: "",
   privacidad: false,
   evento,
   telefono_oculto: "",
 });
 
+function buildEstudios(nivel: Nivel, programa: string): string {
+  if (!programa) {
+    return "";
+  }
+  return nivel === "grado" ? `Grado - ${programa}` : programa;
+}
+
 export function RegistrationForm({ evento, title }: { evento: string; title?: string }) {
   const navigate = useNavigate();
   const [form, setForm] = useState<RegistrationPayload>(() => INITIAL_FORM(evento));
+  const [nivel, setNivel] = useState<Nivel>("grado");
+  const [programa, setPrograma] = useState("");
   const [errors, setErrors] = useState<RegistrationErrors>({});
   const [message, setMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const programas = nivel === "grado" ? GRADOS : MASTERES;
 
   function updateField<K extends keyof RegistrationPayload>(
     field: K,
@@ -30,6 +58,20 @@ export function RegistrationForm({ evento, title }: { evento: string; title?: st
   ) {
     setForm((current) => ({ ...current, [field]: value }));
     setErrors((current) => ({ ...current, [field]: undefined }));
+  }
+
+  function selectNivel(nextNivel: Nivel) {
+    if (nextNivel === nivel) {
+      return;
+    }
+    setNivel(nextNivel);
+    setPrograma("");
+    updateField("estudios", "");
+  }
+
+  function selectPrograma(value: string) {
+    setPrograma(value);
+    updateField("estudios", buildEstudios(nivel, value));
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -50,6 +92,8 @@ export function RegistrationForm({ evento, title }: { evento: string; title?: st
 
       if (response.ok) {
         setForm(INITIAL_FORM(evento));
+        setPrograma("");
+        setNivel("grado");
         setErrors({});
         navigate("/gracias", {
           state: {
@@ -61,7 +105,7 @@ export function RegistrationForm({ evento, title }: { evento: string; title?: st
       }
     } catch (error) {
       const apiError = error as ApiFailure;
-      setMessage(apiError.message || "No se pudo completar el registro.");
+      setMessage(apiError.message || "No se pudo enviar tu solicitud.");
       if (apiError.errors) {
         setErrors((current) => ({ ...current, ...apiError.errors }));
       }
@@ -71,15 +115,18 @@ export function RegistrationForm({ evento, title }: { evento: string; title?: st
   }
 
   return (
-    <section className="form-section-react" id="registro">
+    <section className="form-section-react" id="inscripcion">
+      {/* Ancla legacy: EventoSantiPabloPage y el Header antiguo enlazan a #registro */}
+      <span id="registro" aria-hidden="true" />
       <div className="container-react form-layout-react">
         <div className="section-copy-card-react">
-          <span className="section-eyebrow-react">Inscripción</span>
-          <h2>{title ?? "Formulario de registro Día 2 - Charla con Taxdown"}</h2>
+          <span className="section-eyebrow-react">Solicitud</span>
+          <h2>{title ?? "Envía tu solicitud de inscripción"}</h2>
           <p className="section-copy">
-            Completa tus datos para reservar tu plaza. Usaremos esta
-            información únicamente para la gestión del evento y las
-            comunicaciones relacionadas.
+            Rellena tus datos, adjunta tu CV y tu vídeo de presentación, y
+            listo. Te escribiremos con la resolución, los primeros eventos del
+            curso y el acceso al grupo. Usaremos tus datos únicamente para
+            gestionar tu solicitud y las comunicaciones del club.
           </p>
         </div>
 
@@ -137,34 +184,89 @@ export function RegistrationForm({ evento, title }: { evento: string; title?: st
             </div>
 
             <div className="field-group-react">
-              <label htmlFor="estudios">Estudios / Procedencia</label>
+              <label htmlFor="email">Correo electrónico institucional (UPM)</label>
               <input
-                type="text"
-                id="estudios"
-                name="estudios"
-                placeholder="Ej. ETSIT UPM / Empresa X"
+                type="email"
+                id="email"
+                name="email"
+                placeholder="nombre.apellido@alumnos.upm.es"
                 maxLength={120}
-                value={form.estudios}
-                onChange={(event) => updateField("estudios", event.target.value)}
+                value={form.email}
+                onChange={(event) => updateField("email", event.target.value)}
               />
+              <p className="field-hint-react">Debe terminar en @alumnos.upm.es o @upm.es.</p>
+              {errors.email ? (
+                <p className="field-error-react">{errors.email}</p>
+              ) : null}
+            </div>
+
+            <div className="field-group-react">
+              <span className="field-label-react" id="nivel-label">
+                Grado o Máster
+              </span>
+              <div
+                className="level-toggle-react"
+                role="group"
+                aria-labelledby="nivel-label"
+              >
+                <button
+                  type="button"
+                  className={nivel === "grado" ? "active" : undefined}
+                  aria-pressed={nivel === "grado"}
+                  onClick={() => selectNivel("grado")}
+                >
+                  Grado
+                </button>
+                <button
+                  type="button"
+                  className={nivel === "master" ? "active" : undefined}
+                  aria-pressed={nivel === "master"}
+                  onClick={() => selectNivel("master")}
+                >
+                  Máster
+                </button>
+              </div>
+            </div>
+
+            <div className="field-group-react">
+              <label htmlFor="programa">Programa</label>
+              <select
+                id="programa"
+                name="programa"
+                value={programa}
+                onChange={(event) => selectPrograma(event.target.value)}
+              >
+                <option value="" disabled>
+                  {nivel === "grado" ? "Elige tu grado" : "Elige tu máster"}
+                </option>
+                {programas.map((option) => (
+                  <option value={option} key={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
               {errors.estudios ? (
                 <p className="field-error-react">{errors.estudios}</p>
               ) : null}
             </div>
 
             <div className="field-group-react">
-              <label htmlFor="email">Correo electrónico</label>
+              <label htmlFor="drive_link">Enlace a tu CV y vídeo (Google Drive)</label>
               <input
-                type="email"
-                id="email"
-                name="email"
-                placeholder="tu@email.com"
-                maxLength={120}
-                value={form.email}
-                onChange={(event) => updateField("email", event.target.value)}
+                type="url"
+                id="drive_link"
+                name="drive_link"
+                placeholder="https://drive.google.com/..."
+                maxLength={300}
+                value={form.drive_link}
+                onChange={(event) => updateField("drive_link", event.target.value)}
               />
-              {errors.email ? (
-                <p className="field-error-react">{errors.email}</p>
+              <p className="field-hint-react">
+                Sube tu CV y tu vídeo a una carpeta de Google Drive, activa el
+                acceso por enlace ("cualquier persona con el enlace") y pégalo aquí.
+              </p>
+              {errors.drive_link ? (
+                <p className="field-error-react">{errors.drive_link}</p>
               ) : null}
             </div>
 
@@ -177,7 +279,7 @@ export function RegistrationForm({ evento, title }: { evento: string; title?: st
               />
               <span>
                 Acepto la política de privacidad y el tratamiento de mis datos
-                para la gestión del evento.
+                para la gestión de la inscripción.
               </span>
             </label>
             {errors.privacidad ? (
@@ -185,13 +287,13 @@ export function RegistrationForm({ evento, title }: { evento: string; title?: st
             ) : null}
 
             <button type="submit" className="submit-btn-react" disabled={isSubmitting}>
-              {isSubmitting ? "Enviando..." : "Confirmar registro"}
+              {isSubmitting ? "Enviando..." : "Enviar solicitud de inscripción"}
               <span aria-hidden="true">→</span>
             </button>
 
             <p className="privacy-text-react">
-              Al registrarte, podremos enviarte información sobre este evento y
-              futuras iniciativas de TelecoEmprende.
+              Al enviar tu solicitud, podremos enviarte información sobre las
+              actividades de TelecoEmprende durante el curso 2026/27.
             </p>
           </form>
         </div>

@@ -72,8 +72,8 @@ export function AdminPage() {
       const response = await getAdminRegistrations(evento || undefined);
 
       if (response.ok) {
-        setRegistros(response.registros);
-        setEventos(response.eventos);
+        setRegistros(response.registros ?? []);
+        setEventos(response.eventos ?? []);
       }
     } catch (error) {
       const apiError = error as ApiFailure;

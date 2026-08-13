@@ -5,7 +5,7 @@ export function Footer() {
         <div>
           <strong>TelecoEmprende</strong>
           <p>
-            Evento impulsado por la comunidad emprendedora vinculada a la ETSIT-UPM.
+            Club de emprendimiento de la Escuela Técnica Superior de Ingenieros de Telecomunicación (ETSIT-UPM).
           </p>
         </div>
 

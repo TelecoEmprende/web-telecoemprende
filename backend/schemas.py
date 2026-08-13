@@ -3,6 +3,7 @@ REGISTRATION_FIELDS = (
     "apellidos",
     "estudios",
     "email",
+    "drive_link",
     "privacidad",
     "telefono_oculto",
 )
