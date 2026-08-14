@@ -1,9 +1,8 @@
 import { useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 
-import { Footer } from "../components/layout/Footer";
-import { Header } from "../components/layout/Header";
-import { ParticleBackground } from "../components/layout/ParticleBackground";
+import { LandingFooter } from "../components/layout/LandingFooter";
+import { LandingNav } from "../components/home/LandingNav";
 
 type ThankYouState = {
   attendeeName?: string;
@@ -24,23 +23,22 @@ export function ThankYouPage() {
   }, []);
 
   return (
-    <div className="page-shell">
-      <ParticleBackground />
-      <Header hidePublicNav />
-      <main className="page-content thank-you-page-react">
-        <section className="thank-you-section-react">
-          <div className="container-react">
-            <div className="thank-you-card-react">
-              <span className="section-eyebrow-react">Inscripción completada</span>
-              <h1>
+    <div className="lp-shell">
+      <LandingNav />
+      <main>
+        <section className="lp-thankyou">
+          <div className="lp-container">
+            <div className="lp-thankyou-card">
+              <span className="lp-eyebrow">Inscripción completada</span>
+              <h1 className="lp-heading">
                 {firstName ? `Gracias, ${firstName}.` : "Gracias por inscribirte."}
               </h1>
-              <p className="thank-you-lead-react">
+              <p className="lp-section-lead lp-thankyou-lead">
                 Ya formas parte de TelecoEmprende 2026/27. Tu inscripción ha
                 quedado registrada correctamente.
               </p>
 
-              <div className="thank-you-note-react">
+              <div className="lp-thankyou-note">
                 <strong>Te enviaremos un email con los próximos pasos y los primeros eventos del curso.</strong>
                 <p>
                   {attendeeEmail
@@ -49,29 +47,29 @@ export function ThankYouPage() {
                 </p>
               </div>
 
-              <div className="thank-you-meta-react" aria-label="Información de la inscripción">
-                <div className="meta-item-react">🎓 Curso 2026/27</div>
-                <div className="meta-item-react">📍 ETSIT · UPM</div>
-                <div className="meta-item-react">🚀 Comunidad TelecoEmprende</div>
+              <div className="lp-thankyou-meta" aria-label="Información de la inscripción">
+                <div className="lp-thankyou-meta-item">🎓 Curso 2026/27</div>
+                <div className="lp-thankyou-meta-item">📍 ETSIT · UPM</div>
+                <div className="lp-thankyou-meta-item">🚀 Comunidad TelecoEmprende</div>
               </div>
 
-              <div className="thank-you-points-react">
-                <div className="thank-you-point-react">
+              <div className="lp-thankyou-points">
+                <div className="lp-thankyou-point">
                   <strong>⌛️ ¿Qué te espera?</strong>
                   <span>Charlas con fundadores, networking de verdad y un sitio donde montar proyectos propios.</span>
                 </div>
-                <div className="thank-you-point-react">
+                <div className="lp-thankyou-point">
                   <strong>🪜 Siguiente paso</strong>
                   <span>Únete a la comunidad de WhatsApp para no perderte el arranque del curso.</span>
                 </div>
               </div>
 
-              <div className="thank-you-actions-react">
-                <Link to="/" className="primary-btn-react">
+              <div className="lp-thankyou-actions">
+                <Link to="/" className="lp-btn lp-btn-outline">
                   Volver al inicio
                 </Link>
-                <a href={whatsappCommunityUrl} className="highlight-btn-react thank-you-whatsapp-btn-react">
-                  <span className="highlight-btn-icon-react" aria-hidden="true">
+                <a href={whatsappCommunityUrl} className="lp-btn lp-btn-whatsapp">
+                  <span className="lp-btn-whatsapp-icon" aria-hidden="true">
                     <svg viewBox="0 0 24 24" focusable="false">
                       <path
                         fill="currentColor"
@@ -86,7 +84,7 @@ export function ThankYouPage() {
           </div>
         </section>
       </main>
-      <Footer />
+      <LandingFooter />
     </div>
   );
 }

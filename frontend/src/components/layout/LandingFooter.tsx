@@ -1,4 +1,10 @@
+import { useLocation } from "react-router-dom";
+
 export function LandingFooter() {
+  const { pathname } = useLocation();
+  const onHomePage = pathname === "/";
+  const toAnchor = (hash: string) => (onHomePage ? hash : `/${hash}`);
+
   return (
     <footer className="lp-footer">
       <div className="lp-container lp-footer-inner">
@@ -14,9 +20,10 @@ export function LandingFooter() {
         </div>
 
         <nav className="lp-footer-links" aria-label="Enlaces del pie de página">
-          <a href="#quienes-somos">Quiénes somos</a>
-          <a href="#eventos">Eventos</a>
-          <a href="#inscripcion">Inscripción</a>
+          <a href={toAnchor("#quienes-somos")}>Quiénes somos</a>
+          <a href={toAnchor("#departamentos")}>Departamentos</a>
+          <a href={toAnchor("#eventos")}>Eventos</a>
+          <a href={toAnchor("#inscripcion")}>Inscripción</a>
         </nav>
 
         <div className="lp-footer-social" aria-label="Redes sociales de TelecoEmprende">
