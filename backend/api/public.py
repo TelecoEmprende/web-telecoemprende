@@ -24,6 +24,12 @@ EVENTOS_VALIDOS = {
     "telecoemprende-2026-27",
 }
 
+DEPARTAMENTOS_VALIDOS = {
+    "Tech/Ingeniería",
+    "Marketing/Comms",
+    "Eventos/Logística",
+}
+
 public_api = Blueprint("public_api", __name__, url_prefix="/api")
 
 
@@ -51,6 +57,7 @@ def create_registration():
     apellidos = limpiar_texto(str(payload.get("apellidos", "")))
     estudios = limpiar_texto(str(payload.get("estudios", "")))
     email = limpiar_texto(str(payload.get("email", ""))).lower()
+    departamento = limpiar_texto(str(payload.get("departamento", "")))
     drive_link = limpiar_texto(str(payload.get("drive_link", "")))
     acepta_privacidad = payload.get("privacidad")
     evento = str(payload.get("evento", "")).strip()
@@ -71,6 +78,10 @@ def create_registration():
         errors["estudios"] = "Completa este campo."
     if not email:
         errors["email"] = "Completa este campo."
+    if not departamento:
+        errors["departamento"] = "Selecciona un departamento."
+    elif departamento not in DEPARTAMENTOS_VALIDOS:
+        errors["departamento"] = "Departamento no válido."
     if not drive_link:
         errors["drive_link"] = "Completa este campo."
     if not acepta_privacidad:
@@ -132,6 +143,7 @@ def create_registration():
         apellidos=apellidos,
         estudios=estudios,
         email=email,
+        departamento=departamento,
         drive_link=drive_link,
         acepta_privacidad="Sí",
         ip=ip,

@@ -266,12 +266,13 @@ def api_admin_update_registration(reg_id: int):
     apellidos = str(payload.get("apellidos", "")).strip()
     estudios = str(payload.get("estudios", "")).strip()
     email = str(payload.get("email", "")).strip()
+    departamento = str(payload.get("departamento", "")).strip()
     drive_link = str(payload.get("drive_link", "")).strip()
 
-    if not all([nombre, apellidos, estudios, email, drive_link]):
+    if not all([nombre, apellidos, estudios, email, departamento, drive_link]):
         return jsonify(build_response(False, "Todos los campos son obligatorios.")), 400
 
-    if actualizar_registro(reg_id, nombre, apellidos, estudios, email, drive_link):
+    if actualizar_registro(reg_id, nombre, apellidos, estudios, email, departamento, drive_link):
         return jsonify(build_response(True, "Registro actualizado.")), 200
 
     return jsonify(build_response(False, "El email ya está registrado en otra inscripción.")), 409

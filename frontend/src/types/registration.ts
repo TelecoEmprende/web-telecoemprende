@@ -3,6 +3,7 @@ export type RegistrationPayload = {
   apellidos: string;
   estudios: string;
   email: string;
+  departamento: string;
   drive_link: string;
   privacidad: boolean;
   evento: string;

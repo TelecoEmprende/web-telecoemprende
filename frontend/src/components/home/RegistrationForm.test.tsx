@@ -111,6 +111,10 @@ describe("RegistrationForm", () => {
       "juan@alumnos.upm.es",
     );
     await user.selectOptions(screen.getByLabelText("Programa"), "GIST");
+    await user.selectOptions(
+      screen.getByLabelText(/a qué departamento/i),
+      "Tech/Ingeniería",
+    );
     await user.type(
       screen.getByLabelText(/enlace a tu cv y vídeo/i),
       "https://drive.google.com/drive/folders/abc123",
@@ -134,6 +138,7 @@ describe("RegistrationForm", () => {
       apellidos: "Perez",
       estudios: "Grado - GIST",
       email: "juan@alumnos.upm.es",
+      departamento: "Tech/Ingeniería",
       drive_link: "https://drive.google.com/drive/folders/abc123",
       privacidad: true,
       evento: "telecoemprende-2026-27",
@@ -170,6 +175,10 @@ describe("RegistrationForm", () => {
     await user.selectOptions(
       screen.getByLabelText("Programa"),
       "Máster Universitario en Ciberseguridad",
+    );
+    await user.selectOptions(
+      screen.getByLabelText(/a qué departamento/i),
+      "Marketing/Comms",
     );
     await user.type(
       screen.getByLabelText(/enlace a tu cv y vídeo/i),

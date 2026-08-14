@@ -11,6 +11,8 @@ type Nivel = "grado" | "master";
 
 const GRADOS = ["GIST", "GITT", "GISD", "GIB"];
 
+const DEPARTAMENTOS = ["Tech/Ingeniería", "Marketing/Comms", "Eventos/Logística"];
+
 const MASTERES = [
   "Máster Universitario en Ciberseguridad",
   "Máster Universitario en Energía Solar Fotovoltaica",
@@ -28,6 +30,7 @@ const INITIAL_FORM = (evento: string): RegistrationPayload => ({
   apellidos: "",
   estudios: "",
   email: "",
+  departamento: "",
   drive_link: "",
   privacidad: false,
   evento,
@@ -247,6 +250,32 @@ export function RegistrationForm({ evento, title }: { evento: string; title?: st
               </select>
               {errors.estudios ? (
                 <p className="field-error-react">{errors.estudios}</p>
+              ) : null}
+            </div>
+
+            <div className="field-group-react">
+              <label htmlFor="departamento">¿A qué departamento te gustaría unirte?</label>
+              <select
+                id="departamento"
+                name="departamento"
+                value={form.departamento}
+                onChange={(event) => updateField("departamento", event.target.value)}
+              >
+                <option value="" disabled>
+                  Elige un departamento
+                </option>
+                {DEPARTAMENTOS.map((option) => (
+                  <option value={option} key={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
+              <p className="field-hint-react">
+                Es tu preferencia, no una asignación: si te seleccionamos, no
+                podemos garantizar que acabes en este departamento.
+              </p>
+              {errors.departamento ? (
+                <p className="field-error-react">{errors.departamento}</p>
               ) : null}
             </div>
 

@@ -1,5 +1,6 @@
 const NAV_LINKS = [
   { href: "#quienes-somos", label: "Quiénes somos" },
+  { href: "#departamentos", label: "Departamentos" },
   { href: "#eventos", label: "Eventos" },
   { href: "#inscripcion", label: "Inscripción" },
 ];

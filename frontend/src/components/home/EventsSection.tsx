@@ -14,11 +14,8 @@ export function EventsSection() {
         </p>
 
         <div className="lp-events-grid">
-          {CLUB_EVENTS.map((event, index) => (
-            <article
-              className={`lp-event-card${index === 0 ? " lp-event-card-featured" : ""}`}
-              key={event.id}
-            >
+          {CLUB_EVENTS.map((event) => (
+            <article className="lp-event-card" key={event.id}>
               <div className="lp-event-cover">
                 <img
                   src={event.photos[0].src}

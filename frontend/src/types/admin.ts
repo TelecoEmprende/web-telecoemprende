@@ -4,6 +4,7 @@ export type Registro = {
   apellidos: string;
   estudios: string;
   email: string;
+  departamento: string;
   drive_link: string;
   privacidad: string;
   fecha: string;

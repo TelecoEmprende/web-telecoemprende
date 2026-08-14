@@ -26,7 +26,14 @@ export function getAdminRegistrations(evento?: string) {
 
 export function updateRegistration(
   id: number,
-  data: { nombre: string; apellidos: string; estudios: string; email: string; drive_link: string },
+  data: {
+    nombre: string;
+    apellidos: string;
+    estudios: string;
+    email: string;
+    departamento: string;
+    drive_link: string;
+  },
 ) {
   return apiRequest<ApiResult>(`/api/admin/registrations/${id}`, {
     method: "PUT",

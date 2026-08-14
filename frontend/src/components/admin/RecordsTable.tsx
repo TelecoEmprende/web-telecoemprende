@@ -3,11 +3,20 @@ import { updateRegistration, deleteRegistration } from "../../api/admin";
 import type { Registro } from "../../types/admin";
 import type { ApiFailure } from "../../types/api";
 
+const DEPARTAMENTOS = ["Tech/Ingeniería", "Marketing/Comms", "Eventos/Logística"];
+
 type RecordsTableProps = {
   registros: Registro[];
   onUpdate: (
     id: number,
-    data: { nombre: string; apellidos: string; estudios: string; email: string; drive_link: string },
+    data: {
+      nombre: string;
+      apellidos: string;
+      estudios: string;
+      email: string;
+      departamento: string;
+      drive_link: string;
+    },
   ) => void;
   onDelete: (id: number) => void;
 };
@@ -19,6 +28,7 @@ export function RecordsTable({ registros, onUpdate, onDelete }: RecordsTableProp
     apellidos: "",
     estudios: "",
     email: "",
+    departamento: "",
     drive_link: "",
   });
   const [saving, setSaving] = useState(false);
@@ -33,6 +43,7 @@ export function RecordsTable({ registros, onUpdate, onDelete }: RecordsTableProp
       apellidos: r.apellidos,
       estudios: r.estudios,
       email: r.email,
+      departamento: r.departamento,
       drive_link: r.drive_link,
     });
     setError(null);
@@ -45,7 +56,14 @@ export function RecordsTable({ registros, onUpdate, onDelete }: RecordsTableProp
 
   async function saveEdit() {
     if (editingId === null) return;
-    if (!editData.nombre || !editData.apellidos || !editData.estudios || !editData.email || !editData.drive_link) {
+    if (
+      !editData.nombre ||
+      !editData.apellidos ||
+      !editData.estudios ||
+      !editData.email ||
+      !editData.departamento ||
+      !editData.drive_link
+    ) {
       setError("Todos los campos son obligatorios.");
       return;
     }
@@ -109,6 +127,7 @@ export function RecordsTable({ registros, onUpdate, onDelete }: RecordsTableProp
             <th>Apellidos</th>
             <th>Estudios / Procedencia</th>
             <th>Email</th>
+            <th>Departamento</th>
             <th>CV y pitch</th>
             <th>Privacidad</th>
             <th>Fecha</th>
@@ -150,6 +169,22 @@ export function RecordsTable({ registros, onUpdate, onDelete }: RecordsTableProp
                     />
                   </td>
                   <td>
+                    <select
+                      className="inline-edit-input"
+                      value={editData.departamento}
+                      onChange={(e) => setEditData({ ...editData, departamento: e.target.value })}
+                    >
+                      <option value="" disabled>
+                        Elige un departamento
+                      </option>
+                      {DEPARTAMENTOS.map((option) => (
+                        <option value={option} key={option}>
+                          {option}
+                        </option>
+                      ))}
+                    </select>
+                  </td>
+                  <td>
                     <input
                       className="inline-edit-input"
                       type="url"
@@ -174,6 +209,7 @@ export function RecordsTable({ registros, onUpdate, onDelete }: RecordsTableProp
                   <td>{registro.apellidos}</td>
                   <td>{registro.estudios}</td>
                   <td>{registro.email}</td>
+                  <td>{registro.departamento || "—"}</td>
                   <td>
                     {registro.drive_link ? (
                       <a href={registro.drive_link} target="_blank" rel="noreferrer">

@@ -17,6 +17,9 @@ export function validateRegistrationDraft(
   if (!payload.estudios.trim()) {
     errors.estudios = "Selecciona tu titulación.";
   }
+  if (!payload.departamento.trim()) {
+    errors.departamento = "Selecciona un departamento.";
+  }
   if (!payload.email.trim()) {
     errors.email = "Completa este campo.";
   } else if (!UPM_EMAIL_PATTERN.test(payload.email.trim())) {
