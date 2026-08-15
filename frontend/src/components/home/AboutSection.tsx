@@ -29,6 +29,13 @@ const TEAM: TeamMember[] = [
     program: "GISD, 2º año",
     line: "Coordina el día a día para que el resto del equipo pueda centrarse en construir.",
   },
+  {
+    name: "Alex",
+    photo: "/equipo-alex.jpg",
+    role: "Ex-secretario · Board Member",
+    program: "MUIT, 2º año",
+    line: "Fue el secretario que mantenía todo en orden; ahora sigue dando apoyo desde la sombra.",
+  },
 ];
 
 export function AboutSection() {
