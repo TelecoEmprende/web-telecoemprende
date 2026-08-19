@@ -13,8 +13,13 @@ export function LandingFooter() {
           <div>
             <strong>TelecoEmprende</strong>
             <p>
-              Club de emprendimiento de la Escuela Técnica Superior de
-              Ingenieros de Telecomunicación (ETSIT-UPM).
+              Club de emprendimiento nacido en la ETSIT, abierto a
+              estudiantes de toda la UPM.
+            </p>
+            <p className="lp-footer-contact">
+              <a href="mailto:telecoemprende.etsit@upm.es">
+                telecoemprende.etsit@upm.es
+              </a>
             </p>
           </div>
         </div>
@@ -56,7 +61,7 @@ export function LandingFooter() {
         </div>
 
         <p className="lp-footer-note">
-          Hecho con ☕ entre clase y clase, en la ETSIT.
+          Hecho con ☕ entre clase y clase, desde la ETSIT para toda la UPM.
         </p>
       </div>
     </footer>

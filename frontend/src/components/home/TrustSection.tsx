@@ -1,7 +1,7 @@
 const ITEMS = [
   {
     label: "👥 Comunidad",
-    value: "Estudiantes, alumni y emprendedores.",
+    value: "Estudiantes, alumni y emprendedores de toda la UPM.",
   },
   {
     label: "🎯 Enfoque",
@@ -9,7 +9,7 @@ const ITEMS = [
   },
   {
     label: "🚀 Organizado por",
-    value: "TelecoEmprende, club de emprendimiento de la ETSIT-UPM.",
+    value: "TelecoEmprende, nacido en la ETSIT y abierto a toda la UPM.",
   },
 ];
 

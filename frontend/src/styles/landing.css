@@ -143,10 +143,13 @@
 
 .lp-hero-grid {
   position: relative;
-  display: grid;
-  grid-template-columns: 1.05fr 0.95fr;
-  gap: 56px;
-  align-items: center;
+  display: flex;
+  justify-content: center;
+}
+
+.lp-hero-copy {
+  max-width: 760px;
+  text-align: center;
 }
 
 .lp-hero-eyebrow {
@@ -206,7 +209,7 @@
 }
 
 .lp-hero-lead {
-  margin: 0 0 34px;
+  margin: 0 auto 34px;
   max-width: 56ch;
   font-size: 1.13rem;
   line-height: 1.76;
@@ -216,6 +219,7 @@
 .lp-hero-actions {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 14px;
   flex-wrap: wrap;
 }
@@ -260,6 +264,7 @@
 .lp-hero-chips {
   display: flex;
   flex-wrap: wrap;
+  justify-content: center;
   gap: 10px;
   margin: 36px 0 0;
   padding: 0;
@@ -274,57 +279,6 @@
   color: #cfdde6;
   font-weight: 600;
   font-size: 0.92rem;
-}
-
-.lp-hero-collage {
-  position: relative;
-  min-height: 480px;
-}
-
-.lp-hero-photo {
-  position: absolute;
-  margin: 0;
-  border-radius: 22px;
-  overflow: hidden;
-  border: 5px solid rgba(250, 245, 236, 0.09);
-  box-shadow: 0 30px 70px rgba(0, 0, 0, 0.45);
-}
-
-.lp-hero-photo img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
-
-.lp-hero-photo-solo {
-  top: 50%;
-  left: 50%;
-  width: 88%;
-  aspect-ratio: 21 / 10;
-  transform: translate(-50%, -50%) rotate(-2deg);
-  background: #faf5ec;
-  border-color: rgba(250, 245, 236, 0.9);
-}
-
-.lp-hero-photo-solo img {
-  object-fit: contain;
-}
-
-.lp-hero-sticker {
-  position: absolute;
-  top: -2%;
-  left: 6%;
-  transform: rotate(-7deg);
-  padding: 12px 18px;
-  border-radius: 14px;
-  background: var(--color-gold);
-  color: var(--color-navy);
-  font-family: var(--font-display);
-  font-weight: 700;
-  font-size: 1.05rem;
-  letter-spacing: -0.02em;
-  box-shadow: 0 14px 32px rgba(224, 104, 14, 0.4);
 }
 
 /* ---------- Elementos comunes de sección ---------- */
@@ -386,6 +340,12 @@
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 26px;
   margin-top: 52px;
+}
+
+.lp-team-grid > :last-child:nth-child(4n + 1) {
+  grid-column: 1 / -1;
+  max-width: calc((100% - 3 * 26px) / 4);
+  margin: 0 auto;
 }
 
 .lp-team-card {
@@ -1007,6 +967,16 @@
   line-height: 1.6;
 }
 
+.lp-footer-contact a {
+  color: #c9d7e0;
+  font-weight: 600;
+  transition: color 0.15s ease;
+}
+
+.lp-footer-contact a:hover {
+  color: var(--color-gold);
+}
+
 .lp-footer-links {
   display: flex;
   gap: 22px;
@@ -1062,24 +1032,19 @@
 /* ---------- Responsive ---------- */
 
 @media (max-width: 980px) {
-  .lp-hero-grid {
-    grid-template-columns: 1fr;
-    gap: 56px;
-  }
-
   .lp-hero {
     padding: 64px 0 88px;
-  }
-
-  .lp-hero-collage {
-    min-height: 0;
-    aspect-ratio: 5 / 4;
-    max-width: 560px;
   }
 
   .lp-team-grid,
   .lp-departments-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .lp-team-grid > :last-child:nth-child(2n + 1) {
+    grid-column: 1 / -1;
+    max-width: calc((100% - 26px) / 2);
+    margin: 0 auto;
   }
 
   .lp-events-grid {
@@ -1121,11 +1086,6 @@
     width: 100%;
   }
 
-  .lp-hero-sticker {
-    font-size: 0.92rem;
-    padding: 10px 14px;
-  }
-
   .lp-about,
   .lp-departments,
   .lp-events,
@@ -1142,6 +1102,12 @@
     grid-template-columns: 1fr;
     gap: 20px;
     margin-top: 36px;
+  }
+
+  .lp-team-grid > :last-child:nth-child(2n + 1) {
+    grid-column: auto;
+    max-width: none;
+    margin: 0;
   }
 
   .lp-thankyou-points {

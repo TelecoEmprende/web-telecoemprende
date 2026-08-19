@@ -3,27 +3,14 @@ import { useNavigate } from "react-router-dom";
 
 import { submitRegistration } from "../../api/public";
 import { AlertBanner } from "../feedback/AlertBanner";
+import { UPM_SCHOOLS } from "../../data/upmSchools";
 import type { ApiFailure } from "../../types/api";
 import type { RegistrationErrors, RegistrationPayload } from "../../types/registration";
 import { validateRegistrationDraft } from "../../utils/validation";
 
 type Nivel = "grado" | "master";
 
-const GRADOS = ["GIST", "GITT", "GISD", "GIB"];
-
 const DEPARTAMENTOS = ["Tech/Ingeniería", "Marketing/Comms", "Eventos/Logística"];
-
-const MASTERES = [
-  "Máster Universitario en Ciberseguridad",
-  "Máster Universitario en Energía Solar Fotovoltaica",
-  "Máster Universitario en Ingeniería Biomédica",
-  "Máster Universitario en Ingeniería de Redes y Servicios Telemáticos",
-  "Máster Universitario en Ingeniería de Sistemas Electrónicos",
-  "Máster Universitario en Tratamiento Estadístico Computacional de la Información",
-  "Master of Science Signal Theory and Communications",
-  "Máster Universitario en Neurología",
-  "Máster Universitario en Ingeniería de Radiofrecuencias",
-];
 
 const INITIAL_FORM = (evento: string): RegistrationPayload => ({
   nombre: "",
@@ -47,13 +34,15 @@ function buildEstudios(nivel: Nivel, programa: string): string {
 export function RegistrationForm({ evento, title }: { evento: string; title?: string }) {
   const navigate = useNavigate();
   const [form, setForm] = useState<RegistrationPayload>(() => INITIAL_FORM(evento));
+  const [escuela, setEscuela] = useState("");
   const [nivel, setNivel] = useState<Nivel>("grado");
   const [programa, setPrograma] = useState("");
   const [errors, setErrors] = useState<RegistrationErrors>({});
   const [message, setMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const programas = nivel === "grado" ? GRADOS : MASTERES;
+  const school = UPM_SCHOOLS.find((item) => item.code === escuela);
+  const programas = school ? (nivel === "grado" ? school.grados : school.masters) : [];
 
   function updateField<K extends keyof RegistrationPayload>(
     field: K,
@@ -61,6 +50,12 @@ export function RegistrationForm({ evento, title }: { evento: string; title?: st
   ) {
     setForm((current) => ({ ...current, [field]: value }));
     setErrors((current) => ({ ...current, [field]: undefined }));
+  }
+
+  function selectEscuela(value: string) {
+    setEscuela(value);
+    setPrograma("");
+    updateField("estudios", "");
   }
 
   function selectNivel(nextNivel: Nivel) {
@@ -95,6 +90,7 @@ export function RegistrationForm({ evento, title }: { evento: string; title?: st
 
       if (response.ok) {
         setForm(INITIAL_FORM(evento));
+        setEscuela("");
         setPrograma("");
         setNivel("grado");
         setErrors({});
@@ -204,6 +200,28 @@ export function RegistrationForm({ evento, title }: { evento: string; title?: st
             </div>
 
             <div className="field-group-react">
+              <label htmlFor="escuela">Escuela</label>
+              <select
+                id="escuela"
+                name="escuela"
+                value={escuela}
+                onChange={(event) => selectEscuela(event.target.value)}
+              >
+                <option value="" disabled>
+                  Elige tu escuela
+                </option>
+                {UPM_SCHOOLS.map((item) => (
+                  <option value={item.code} key={item.code}>
+                    {item.name}
+                  </option>
+                ))}
+              </select>
+              <p className="field-hint-react">
+                Hemos abierto las inscripciones a toda la UPM: elige la escuela en la que estudias.
+              </p>
+            </div>
+
+            <div className="field-group-react">
               <span className="field-label-react" id="nivel-label">
                 Grado o Máster
               </span>
@@ -237,14 +255,19 @@ export function RegistrationForm({ evento, title }: { evento: string; title?: st
                 id="programa"
                 name="programa"
                 value={programa}
+                disabled={!escuela}
                 onChange={(event) => selectPrograma(event.target.value)}
               >
                 <option value="" disabled>
-                  {nivel === "grado" ? "Elige tu grado" : "Elige tu máster"}
+                  {!escuela
+                    ? "Elige primero tu escuela"
+                    : nivel === "grado"
+                      ? "Elige tu grado"
+                      : "Elige tu máster"}
                 </option>
                 {programas.map((option) => (
-                  <option value={option} key={option}>
-                    {option}
+                  <option value={option.name} key={option.code}>
+                    {option.code} · {option.name}
                   </option>
                 ))}
               </select>

@@ -12,29 +12,64 @@ const TEAM: TeamMember[] = [
     name: "Mariano",
     photo: "/equipo-mariano.jpg",
     role: "Ex-presidente · Board Member",
-    program: "MUIT · HEC Paris, 2º año",
+    program: "MUIT · HEC Paris, 2º año · ETSIT",
     line: "Puso en marcha TelecoEmprende y ahora lo sigue de cerca desde HEC Paris.",
   },
   {
     name: "Jorge",
     photo: "/equipo-jorge.jpg",
     role: "Ex-vicepresidente · Board Member",
-    program: "MUIT · IIT, 2º año",
+    program: "MUIT · IIT, 2º año · ETSIT",
     line: "El del buen gusto del equipo: si algo tiene que quedar bien, pasa primero por él.",
   },
   {
     name: "Hammad",
     photo: "/equipo-hammad.jpg",
     role: "Presidente",
-    program: "GISD, 2º año",
+    program: "GISD, 2º año · ETSIT",
     line: "Coordina el día a día para que el resto del equipo pueda centrarse en construir.",
   },
   {
     name: "Alex",
     photo: "/equipo-alex.jpg",
     role: "Ex-secretario · Board Member",
-    program: "MUIT, 2º año",
+    program: "MUIT, 2º año · ETSIT",
     line: "Fue el secretario que mantenía todo en orden; ahora sigue dando apoyo desde la sombra.",
+  },
+  {
+    name: "Iker",
+    photo: "/equipo-iker.jpg",
+    role: "Miembro",
+    program: "GISD, 2º año · ETSIT",
+    line: "Segundo de GISD. Se mete de lleno en la parte técnica del club.",
+  },
+  {
+    name: "Abril",
+    photo: "/equipo-abril.jpg",
+    role: "Miembro",
+    program: "GISD, 2º año · ETSIT",
+    line: "También en 2º de GISD. Aterriza con ganas de aprender haciendo.",
+  },
+  {
+    name: "Alejandro",
+    photo: "/equipo-alejandro.jpg",
+    role: "Miembro",
+    program: "GITST · ETSIT",
+    line: "Estudia GITST en la ETSIT. Nuevo en el equipo este curso.",
+  },
+  {
+    name: "Mamoun",
+    photo: "/equipo-mamoun.jpg",
+    role: "Miembro",
+    program: "GII · ETSIInf",
+    line: "Ingeniería Informática en la ETSIInf. La mirada distinta que necesitábamos.",
+  },
+  {
+    name: "Diego",
+    photo: "/equipo-diego.jpg",
+    role: "Miembro",
+    program: "GIB · ETSIT",
+    line: "Ingeniería Biomédica. Se suma al equipo este curso.",
   },
 ];
 
@@ -44,15 +79,16 @@ export function AboutSection() {
       <div className="lp-container">
         <span className="lp-eyebrow">Quiénes somos</span>
         <h2 className="lp-heading">
-          Estudiantes de la ETSIT con un plan: acercar el emprendimiento a la escuela
+          Nacimos en la ETSIT con un plan: llevar el emprendimiento a toda la UPM
         </h2>
         <p className="lp-section-lead">
-          Somos estudiantes de ingeniería de la Escuela Técnica Superior de
-          Ingenieros de Telecomunicación (ETSIT-UPM). Nos une una idea sencilla: en teleco sobra
-          talento técnico y falta un lugar donde ese talento se atreva a montar
-          cosas. Por eso traemos el mundo del emprendimiento a la ETSIT y
-          construimos una comunidad alrededor: charlas, contactos y proyectos que
-          empiezan entre clase y clase.
+          Empezamos como estudiantes de la Escuela Técnica Superior de
+          Ingenieros de Telecomunicación (ETSIT-UPM). Nos unía una idea sencilla:
+          en ingeniería sobra talento técnico y falta un lugar donde ese talento
+          se atreva a montar cosas. Por eso trajimos el emprendimiento a nuestra
+          escuela, y este curso abrimos la comunidad a toda la UPM para
+          construirla entre todas las escuelas: charlas, contactos y proyectos
+          que empiezan entre clase y clase.
         </p>
 
         <div className="lp-team-grid">

@@ -59,7 +59,17 @@ describe("RegistrationForm", () => {
     expect(submitRegistration).not.toHaveBeenCalled();
   });
 
-  it("offers grado options by default and máster options after switching", async () => {
+  it("keeps the programa select disabled until an escuela is chosen", async () => {
+    render(
+      <MemoryRouter>
+        <RegistrationForm evento="telecoemprende-2026-27" />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByLabelText<HTMLSelectElement>("Programa")).toBeDisabled();
+  });
+
+  it("offers grado options for the chosen escuela and máster options after switching", async () => {
     const user = userEvent.setup();
     render(
       <MemoryRouter>
@@ -67,20 +77,30 @@ describe("RegistrationForm", () => {
       </MemoryRouter>,
     );
 
+    await user.selectOptions(
+      screen.getByLabelText("Escuela"),
+      "ETS de Ingeniería y Sistemas de Telecomunicación (ETSIST)",
+    );
+
     const select = screen.getByLabelText<HTMLSelectElement>("Programa");
+    expect(select).toBeEnabled();
     expect(
-      screen.getByRole("option", { name: "GIST" }),
+      screen.getByRole("option", {
+        name: "GIST · Grado en Ingeniería de Sistemas de Telecomunicación",
+      }),
     ).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Máster" }));
 
     expect(
       screen.getByRole("option", {
-        name: "Máster Universitario en Ciberseguridad",
+        name: "MUIoT · M.U. en Internet de las Cosas (Compartido)",
       }),
     ).toBeInTheDocument();
     expect(
-      screen.queryByRole("option", { name: "GIST" }),
+      screen.queryByRole("option", {
+        name: "GIST · Grado en Ingeniería de Sistemas de Telecomunicación",
+      }),
     ).not.toBeInTheDocument();
     expect(select.value).toBe("");
   });
@@ -110,7 +130,14 @@ describe("RegistrationForm", () => {
       screen.getByLabelText(/correo electrónico institucional/i),
       "juan@alumnos.upm.es",
     );
-    await user.selectOptions(screen.getByLabelText("Programa"), "GIST");
+    await user.selectOptions(
+      screen.getByLabelText("Escuela"),
+      "ETS de Ingeniería y Sistemas de Telecomunicación (ETSIST)",
+    );
+    await user.selectOptions(
+      screen.getByLabelText("Programa"),
+      "Grado en Ingeniería de Sistemas de Telecomunicación",
+    );
     await user.selectOptions(
       screen.getByLabelText(/a qué departamento/i),
       "Tech/Ingeniería",
@@ -136,7 +163,7 @@ describe("RegistrationForm", () => {
     expect(submitRegistration).toHaveBeenCalledWith({
       nombre: "Juan",
       apellidos: "Perez",
-      estudios: "Grado - GIST",
+      estudios: "Grado - Grado en Ingeniería de Sistemas de Telecomunicación",
       email: "juan@alumnos.upm.es",
       departamento: "Tech/Ingeniería",
       drive_link: "https://drive.google.com/drive/folders/abc123",
@@ -171,10 +198,14 @@ describe("RegistrationForm", () => {
       screen.getByLabelText(/correo electrónico institucional/i),
       "lucia@upm.es",
     );
+    await user.selectOptions(
+      screen.getByLabelText("Escuela"),
+      "ETS de Ingenieros de Telecomunicación (ETSIT)",
+    );
     await user.click(screen.getByRole("button", { name: "Máster" }));
     await user.selectOptions(
       screen.getByLabelText("Programa"),
-      "Máster Universitario en Ciberseguridad",
+      "M.U. en Ciberseguridad",
     );
     await user.selectOptions(
       screen.getByLabelText(/a qué departamento/i),
@@ -192,7 +223,7 @@ describe("RegistrationForm", () => {
     expect(await screen.findByText("Gracias, Lucía.")).toBeInTheDocument();
     expect(submitRegistration).toHaveBeenCalledWith(
       expect.objectContaining({
-        estudios: "Máster Universitario en Ciberseguridad",
+        estudios: "M.U. en Ciberseguridad",
         evento: "telecoemprende-2026-27",
       }),
     );

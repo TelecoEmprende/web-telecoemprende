@@ -16,11 +16,12 @@ export function HeroSection() {
           </h1>
 
           <p className="lp-hero-lead">
-            TelecoEmprende es la comunidad de emprendimiento de la ETSIT: gente
-            de teleco que trae fundadores a la escuela, comparte ideas a la
-            salida de clase y las convierte en proyectos de verdad. Se abren
-            las inscripciones para el curso 2026/27 — y esta es tu oportunidad
-            de estar dentro desde el día uno.
+            TelecoEmprende nació en la ETSIT como la comunidad de
+            emprendimiento de la escuela, y este curso abre sus puertas a toda
+            la UPM: gente que trae fundadores a clase, comparte ideas a la
+            salida y las convierte en proyectos de verdad. Se abren las
+            inscripciones para el curso 2026/27, y esta es tu oportunidad de
+            estar dentro desde el día uno, vengas de la escuela que vengas.
           </p>
 
           <div className="lp-hero-actions">
@@ -37,13 +38,6 @@ export function HeroSection() {
             <li>🤝 Networking de verdad</li>
             <li>🚀 Proyectos propios</li>
           </ul>
-        </div>
-
-        <div className="lp-hero-collage" aria-hidden="true">
-          <figure className="lp-hero-photo lp-hero-photo-solo">
-            <img src="/hero-badge-etsit.jpg" alt="" loading="eager" />
-          </figure>
-          <span className="lp-hero-sticker">Curso 26/27</span>
         </div>
       </div>
     </section>
