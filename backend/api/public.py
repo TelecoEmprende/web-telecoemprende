@@ -55,6 +55,8 @@ def create_registration():
 
     nombre = limpiar_texto(str(payload.get("nombre", "")))
     apellidos = limpiar_texto(str(payload.get("apellidos", "")))
+    escuela = limpiar_texto(str(payload.get("escuela", "")))
+    nivel = limpiar_texto(str(payload.get("nivel", "")))
     estudios = limpiar_texto(str(payload.get("estudios", "")))
     email = limpiar_texto(str(payload.get("email", ""))).lower()
     departamento = limpiar_texto(str(payload.get("departamento", "")))
@@ -74,8 +76,8 @@ def create_registration():
         errors["nombre"] = "Completa este campo."
     if not apellidos:
         errors["apellidos"] = "Completa este campo."
-    if not estudios:
-        errors["estudios"] = "Completa este campo."
+    if not escuela or not nivel or not estudios:
+        errors["estudios"] = "Selecciona tu escuela y titulación."
     if not email:
         errors["email"] = "Completa este campo."
     if not departamento:
@@ -99,7 +101,7 @@ def create_registration():
             400,
         )
 
-    if not longitud_valida(nombre, apellidos, estudios, email, drive_link):
+    if not longitud_valida(nombre, apellidos, estudios, email, drive_link, escuela, nivel):
         return (
             jsonify(build_response(
                 False,
@@ -134,13 +136,15 @@ def create_registration():
 
     if email_ya_registrado(email, evento):
         return (
-            jsonify(build_response(False, "Ese correo ya está registrado en este evento.")),
+            jsonify(build_response(False, "Ese correo ya está registrado.")),
             409,
         )
 
     guardar_registro(
         nombre=nombre,
         apellidos=apellidos,
+        escuela=escuela,
+        nivel=nivel,
         estudios=estudios,
         email=email,
         departamento=departamento,

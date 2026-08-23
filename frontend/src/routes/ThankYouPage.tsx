@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, Navigate, useLocation } from "react-router-dom";
 
 import { LandingFooter } from "../components/layout/LandingFooter";
 import { LandingNav } from "../components/home/LandingNav";
@@ -22,6 +22,10 @@ export function ThankYouPage() {
     window.scrollTo({ top: 0, left: 0, behavior: "auto" });
   }, []);
 
+  if (!attendeeEmail) {
+    return <Navigate to="/" replace />;
+  }
+
   return (
     <div className="lp-shell">
       <LandingNav />
@@ -29,25 +33,21 @@ export function ThankYouPage() {
         <section className="lp-thankyou">
           <div className="lp-container">
             <div className="lp-thankyou-card">
-              <span className="lp-eyebrow">Inscripción completada</span>
+              <span className="lp-eyebrow">Solicitud enviada</span>
               <h1 className="lp-heading">
-                {firstName ? `Gracias, ${firstName}.` : "Gracias por inscribirte."}
+                {firstName ? `Gracias, ${firstName}.` : "Gracias por enviar tu solicitud."}
               </h1>
               <p className="lp-section-lead lp-thankyou-lead">
-                Ya formas parte de TelecoEmprende 2026/27. Tu inscripción ha
-                quedado registrada correctamente.
+                Hemos recibido tu solicitud para unirte a TelecoEmprende
+                2026/27. La revisaremos y te escribiremos con la resolución.
               </p>
 
               <div className="lp-thankyou-note">
                 <strong>Te enviaremos un email con los próximos pasos y los primeros eventos del curso.</strong>
-                <p>
-                  {attendeeEmail
-                    ? `Lo recibirás en ${attendeeEmail}.`
-                    : "Lo recibirás en el correo electrónico con el que te has inscrito."}
-                </p>
+                <p>Lo recibirás en {attendeeEmail}.</p>
               </div>
 
-              <div className="lp-thankyou-meta" aria-label="Información de la inscripción">
+              <div className="lp-thankyou-meta" aria-label="Información de la solicitud">
                 <div className="lp-thankyou-meta-item">🎓 Curso 2026/27</div>
                 <div className="lp-thankyou-meta-item">📍 ETSIT · UPM</div>
                 <div className="lp-thankyou-meta-item">🚀 Comunidad TelecoEmprende</div>
@@ -55,8 +55,8 @@ export function ThankYouPage() {
 
               <div className="lp-thankyou-points">
                 <div className="lp-thankyou-point">
-                  <strong>⌛️ ¿Qué te espera?</strong>
-                  <span>Charlas con fundadores, networking de verdad y un sitio donde montar proyectos propios.</span>
+                  <strong>🔍 Revisamos tu solicitud</strong>
+                  <span>Leemos cada solicitud a mano y te avisamos por email con la resolución en los próximos días.</span>
                 </div>
                 <div className="lp-thankyou-point">
                   <strong>🪜 Siguiente paso</strong>

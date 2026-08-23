@@ -1,12 +1,12 @@
-# Teleco Builders 2026 - Registro de Evento
+# TelecoEmprende - Formulario de Inscripción
 
-Formulario de inscripción para **Teleco Builders 2026**, evento de tecnología, emprendimiento e inversión. Backend en Flask, frontend en React, base de datos PostgreSQL.
+Formulario de inscripción para **TelecoEmprende**, el club de emprendimiento nacido en la ETSIT-UPM y abierto a toda la UPM. Backend en Flask, frontend en React, base de datos PostgreSQL.
 
 ## Características
 
-- Formulario de inscripción con validaciones en frontend y backend
+- Formulario de inscripción con validaciones en frontend y backend (nombre, apellidos, escuela UPM, Grado/Máster, programa, email institucional, departamento, enlace de Drive)
 - Panel de administración con login protegido por contraseña
-- Edición y eliminación de registros directamente desde el panel admin (inline)
+- Edición y eliminación de registros directamente desde el panel admin (inline), incluyendo escuela, nivel (Grado/Máster) y programa
 - Exportación de registros a Excel
 - Protección anti bots con honeypot y rate limiting
 - Protección contra SQL injection y XSS
@@ -49,8 +49,11 @@ docker compose up --build -d
 # Ver logs en tiempo real
 docker compose logs -f
 
-# Parar servicios
+# Parar servicios (conserva los datos)
 docker compose down
+
+# Parar servicios y borrar también la base de datos
+docker compose down -v
 
 # Reconstruir sin caché
 docker compose build --no-cache
@@ -79,11 +82,11 @@ En desarrollo, Vite sirve el frontend en `http://localhost:5173` y hace proxy de
 
 ## Base de datos
 
-Los registros se guardan en PostgreSQL. Tabla principal: `registrations`.
+Los registros se guardan en PostgreSQL. Tabla principal: `registrations` (incluye `escuela`, `nivel` y `estudios` como campos separados, además de `email`, `departamento`, `drive_link`, `evento`, etc.).
 
 ```bash
 # Entrar al cliente de PostgreSQL
-docker exec -it formulario-telecoemprende-db-1 psql -U telecoemprende -d telecoemprende
+docker compose exec db psql -U telecoemprende -d telecoemprende
 
 # Ver todos los registros
 SELECT * FROM registrations;

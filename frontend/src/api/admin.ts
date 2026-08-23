@@ -29,6 +29,8 @@ export function updateRegistration(
   data: {
     nombre: string;
     apellidos: string;
+    escuela: string;
+    nivel: string;
     estudios: string;
     email: string;
     departamento: string;

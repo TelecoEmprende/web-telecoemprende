@@ -335,21 +335,33 @@
   padding: 96px 0;
 }
 
-.lp-team-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 26px;
+.lp-team-carousel {
+  position: relative;
   margin-top: 52px;
 }
 
-.lp-team-grid > :last-child:nth-child(4n + 1) {
-  grid-column: 1 / -1;
-  max-width: calc((100% - 3 * 26px) / 4);
-  margin: 0 auto;
+.lp-team-track {
+  display: flex;
+  gap: 26px;
+  margin: 0;
+  padding: 0 4px 10px;
+  list-style: none;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x mandatory;
+  scroll-padding-left: 4px;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.lp-team-track::-webkit-scrollbar {
+  display: none;
 }
 
 .lp-team-card {
   position: relative;
+  flex: 0 0 clamp(228px, 24vw, 278px);
+  scroll-snap-align: start;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: 24px;
@@ -435,6 +447,84 @@
   color: var(--color-text-muted);
   font-size: 0.98rem;
   line-height: 1.62;
+}
+
+.lp-team-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  margin-top: 28px;
+}
+
+.lp-team-arrow {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 999px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-navy);
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease, transform 0.15s ease;
+}
+
+.lp-team-arrow svg {
+  width: 20px;
+  height: 20px;
+}
+
+.lp-team-arrow:hover:not(:disabled) {
+  background: var(--color-navy);
+  border-color: var(--color-navy);
+  color: #f6f1e6;
+  transform: translateY(-2px);
+}
+
+.lp-team-arrow:focus-visible {
+  outline: 2px solid var(--color-orange);
+  outline-offset: 2px;
+}
+
+.lp-team-arrow:disabled {
+  opacity: 0.32;
+  cursor: not-allowed;
+}
+
+.lp-team-dots {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.lp-team-dot {
+  width: 8px;
+  height: 8px;
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  background: var(--color-border);
+  cursor: pointer;
+  transform: scaleX(1);
+  transform-origin: center;
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+
+.lp-team-dot:hover {
+  background: var(--color-steel);
+}
+
+.lp-team-dot.is-active {
+  transform: scaleX(2.75);
+  background: linear-gradient(90deg, var(--color-gold), var(--color-orange));
+}
+
+.lp-team-dot:focus-visible {
+  outline: 2px solid var(--color-orange);
+  outline-offset: 3px;
 }
 
 /* ---------- Eventos ---------- */
@@ -1036,15 +1126,8 @@
     padding: 64px 0 88px;
   }
 
-  .lp-team-grid,
   .lp-departments-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .lp-team-grid > :last-child:nth-child(2n + 1) {
-    grid-column: 1 / -1;
-    max-width: calc((100% - 26px) / 2);
-    margin: 0 auto;
   }
 
   .lp-events-grid {
@@ -1095,7 +1178,6 @@
     padding: 64px 0 72px;
   }
 
-  .lp-team-grid,
   .lp-departments-grid,
   .lp-requirements-grid,
   .lp-thankyou-points {
@@ -1104,10 +1186,16 @@
     margin-top: 36px;
   }
 
-  .lp-team-grid > :last-child:nth-child(2n + 1) {
-    grid-column: auto;
-    max-width: none;
-    margin: 0;
+  .lp-team-carousel {
+    margin-top: 36px;
+  }
+
+  .lp-team-track {
+    gap: 16px;
+  }
+
+  .lp-team-card {
+    flex-basis: 78vw;
   }
 
   .lp-thankyou-points {

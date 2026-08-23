@@ -14,7 +14,7 @@ export function validateRegistrationDraft(
   if (!payload.apellidos.trim()) {
     errors.apellidos = "Completa este campo.";
   }
-  if (!payload.estudios.trim()) {
+  if (!payload.escuela.trim() || !payload.estudios.trim()) {
     errors.estudios = "Selecciona tu titulación.";
   }
   if (!payload.departamento.trim()) {

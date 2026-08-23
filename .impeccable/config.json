@@ -1,0 +1,17 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "side-tab",
+        "value": "*",
+        "files": [
+          "frontend/src/styles/landing.css"
+        ],
+        "createdAt": "2026-08-23T13:27:44.735Z",
+        "reason": "pre-existing shipped accents (.lp-team-card::after, .lp-events::before, .lp-department-card::after) predate this session's carousel work; not introduced now, left as previously approved design"
+      }
+    ]
+  }
+}

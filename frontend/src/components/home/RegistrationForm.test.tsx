@@ -154,7 +154,7 @@ describe("RegistrationForm", () => {
     expect(await screen.findByText("Gracias, Juan.")).toBeInTheDocument();
     expect(
       screen.getByText(
-        "Ya formas parte de TelecoEmprende 2026/27. Tu inscripción ha quedado registrada correctamente.",
+        "Hemos recibido tu solicitud para unirte a TelecoEmprende 2026/27. La revisaremos y te escribiremos con la resolución.",
       ),
     ).toBeInTheDocument();
     expect(
@@ -163,6 +163,8 @@ describe("RegistrationForm", () => {
     expect(submitRegistration).toHaveBeenCalledWith({
       nombre: "Juan",
       apellidos: "Perez",
+      escuela: "ETS de Ingeniería y Sistemas de Telecomunicación (ETSIST)",
+      nivel: "Grado",
       estudios: "Grado - Grado en Ingeniería de Sistemas de Telecomunicación",
       email: "juan@alumnos.upm.es",
       departamento: "Tech/Ingeniería",

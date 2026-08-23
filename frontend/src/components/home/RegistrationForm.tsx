@@ -15,6 +15,8 @@ const DEPARTAMENTOS = ["Tech/Ingeniería", "Marketing/Comms", "Eventos/Logístic
 const INITIAL_FORM = (evento: string): RegistrationPayload => ({
   nombre: "",
   apellidos: "",
+  escuela: "",
+  nivel: "Grado",
   estudios: "",
   email: "",
   departamento: "",
@@ -55,6 +57,8 @@ export function RegistrationForm({ evento, title }: { evento: string; title?: st
   function selectEscuela(value: string) {
     setEscuela(value);
     setPrograma("");
+    const selectedSchool = UPM_SCHOOLS.find((item) => item.code === value);
+    updateField("escuela", selectedSchool?.name ?? "");
     updateField("estudios", "");
   }
 
@@ -64,6 +68,7 @@ export function RegistrationForm({ evento, title }: { evento: string; title?: st
     }
     setNivel(nextNivel);
     setPrograma("");
+    updateField("nivel", nextNivel === "grado" ? "Grado" : "Máster");
     updateField("estudios", "");
   }
 

@@ -92,7 +92,7 @@
 .records-table-react {
   width: 100%;
   border-collapse: collapse;
-  min-width: 760px;
+  min-width: 1080px;
 }
 
 .records-table-react th,
@@ -115,7 +115,8 @@
 }
 
 .records-table-react td:nth-child(3),
-.records-table-react td:nth-child(4) {
+.records-table-react td:nth-child(5),
+.records-table-react td:nth-child(6) {
   min-width: 220px;
 }
 

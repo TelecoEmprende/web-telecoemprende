@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { updateRegistration, deleteRegistration } from "../../api/admin";
+import { UPM_SCHOOLS } from "../../data/upmSchools";
 import type { Registro } from "../../types/admin";
 import type { ApiFailure } from "../../types/api";
 
 const DEPARTAMENTOS = ["Tech/Ingeniería", "Marketing/Comms", "Eventos/Logística"];
+const NIVELES = ["Grado", "Máster"];
 
 type RecordsTableProps = {
   registros: Registro[];
@@ -12,6 +14,8 @@ type RecordsTableProps = {
     data: {
       nombre: string;
       apellidos: string;
+      escuela: string;
+      nivel: string;
       estudios: string;
       email: string;
       departamento: string;
@@ -26,6 +30,8 @@ export function RecordsTable({ registros, onUpdate, onDelete }: RecordsTableProp
   const [editData, setEditData] = useState({
     nombre: "",
     apellidos: "",
+    escuela: "",
+    nivel: "",
     estudios: "",
     email: "",
     departamento: "",
@@ -41,6 +47,8 @@ export function RecordsTable({ registros, onUpdate, onDelete }: RecordsTableProp
     setEditData({
       nombre: r.nombre,
       apellidos: r.apellidos,
+      escuela: r.escuela,
+      nivel: r.nivel,
       estudios: r.estudios,
       email: r.email,
       departamento: r.departamento,
@@ -125,7 +133,9 @@ export function RecordsTable({ registros, onUpdate, onDelete }: RecordsTableProp
           <tr>
             <th>Nombre</th>
             <th>Apellidos</th>
-            <th>Estudios / Procedencia</th>
+            <th>Escuela</th>
+            <th>Nivel</th>
+            <th>Grado / Máster</th>
             <th>Email</th>
             <th>Departamento</th>
             <th>CV y pitch</th>
@@ -152,6 +162,34 @@ export function RecordsTable({ registros, onUpdate, onDelete }: RecordsTableProp
                       value={editData.apellidos}
                       onChange={(e) => setEditData({ ...editData, apellidos: e.target.value })}
                     />
+                  </td>
+                  <td>
+                    <select
+                      className="inline-edit-input"
+                      value={editData.escuela}
+                      onChange={(e) => setEditData({ ...editData, escuela: e.target.value })}
+                    >
+                      <option value="">—</option>
+                      {UPM_SCHOOLS.map((school) => (
+                        <option value={school.name} key={school.code}>
+                          {school.name}
+                        </option>
+                      ))}
+                    </select>
+                  </td>
+                  <td>
+                    <select
+                      className="inline-edit-input"
+                      value={editData.nivel}
+                      onChange={(e) => setEditData({ ...editData, nivel: e.target.value })}
+                    >
+                      <option value="">—</option>
+                      {NIVELES.map((option) => (
+                        <option value={option} key={option}>
+                          {option}
+                        </option>
+                      ))}
+                    </select>
                   </td>
                   <td>
                     <input
@@ -207,6 +245,8 @@ export function RecordsTable({ registros, onUpdate, onDelete }: RecordsTableProp
                 <>
                   <td>{registro.nombre}</td>
                   <td>{registro.apellidos}</td>
+                  <td>{registro.escuela || "—"}</td>
+                  <td>{registro.nivel || "—"}</td>
                   <td>{registro.estudios}</td>
                   <td>{registro.email}</td>
                   <td>{registro.departamento || "—"}</td>

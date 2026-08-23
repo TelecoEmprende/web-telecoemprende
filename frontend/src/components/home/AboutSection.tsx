@@ -1,3 +1,5 @@
+import { useEffect, useRef, useState } from "react";
+
 type TeamMember = {
   name: string;
   alias?: string;
@@ -71,9 +73,103 @@ const TEAM: TeamMember[] = [
     program: "GIB · ETSIT",
     line: "Ingeniería Biomédica. Se suma al equipo este curso.",
   },
+  {
+    name: "David",
+    photo: "/equipo-david.jpg",
+    role: "Miembro",
+    program: "GISD · ETSIT",
+    line: "Estudia GISD en la ETSIT. Se suma al equipo este curso.",
+  },
+  {
+    name: "Hugo",
+    photo: "/equipo-hugo.jpg",
+    role: "Miembro",
+    program: "GITST · ETSIT",
+    line: "Estudia GITST en la ETSIT. Se suma al equipo este curso.",
+  },
+  {
+    name: "Guillermo",
+    photo: "/equipo-guillermo.jpg",
+    role: "Miembro",
+    program: "GITST · ETSIT",
+    line: "Estudia GITST en la ETSIT. Se suma al equipo este curso.",
+  },
 ];
 
+function ArrowIcon({ direction }: { direction: "left" | "right" }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d={direction === "left" ? "M15 5l-7 7 7 7" : "M9 5l7 7-7 7"}
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 export function AboutSection() {
+  const trackRef = useRef<HTMLUListElement>(null);
+  const cardRefs = useRef<(HTMLLIElement | null)[]>([]);
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [atStart, setAtStart] = useState(true);
+  const [atEnd, setAtEnd] = useState(false);
+
+  useEffect(() => {
+    const track = trackRef.current;
+    if (!track) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting && entry.intersectionRatio >= 0.6) {
+            const index = cardRefs.current.findIndex((el) => el === entry.target);
+            if (index !== -1) {
+              setActiveIndex(index);
+            }
+          }
+        }
+      },
+      { root: track, threshold: [0.6] },
+    );
+
+    cardRefs.current.forEach((el) => el && observer.observe(el));
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    const track = trackRef.current;
+    if (!track) return;
+
+    function updateEdges() {
+      if (!track) return;
+      setAtStart(track.scrollLeft <= 4);
+      setAtEnd(track.scrollLeft + track.clientWidth >= track.scrollWidth - 4);
+    }
+
+    updateEdges();
+    track.addEventListener("scroll", updateEdges, { passive: true });
+    window.addEventListener("resize", updateEdges);
+    return () => {
+      track.removeEventListener("scroll", updateEdges);
+      window.removeEventListener("resize", updateEdges);
+    };
+  }, []);
+
+  function scrollToCard(index: number) {
+    const card = cardRefs.current[index];
+    const track = trackRef.current;
+    if (!card || !track) return;
+    track.scrollTo({ left: card.offsetLeft - track.offsetLeft, behavior: "smooth" });
+  }
+
+  function scrollByStep(direction: 1 | -1) {
+    const nextIndex = Math.min(Math.max(activeIndex + direction, 0), TEAM.length - 1);
+    scrollToCard(nextIndex);
+  }
+
   return (
     <section className="lp-about" id="quienes-somos">
       <div className="lp-container">
@@ -91,27 +187,75 @@ export function AboutSection() {
           que empiezan entre clase y clase.
         </p>
 
-        <div className="lp-team-grid">
-          {TEAM.map((member) => (
-            <article className="lp-team-card" key={member.name}>
-              <div className="lp-team-photo">
-                <img
-                  src={member.photo}
-                  alt={`Foto de ${member.name}`}
-                  loading="lazy"
+        <div
+          className="lp-team-carousel"
+          role="region"
+          aria-roledescription="carrusel"
+          aria-label="Miembros del equipo"
+        >
+          <ul className="lp-team-track" ref={trackRef}>
+            {TEAM.map((member, index) => (
+              <li
+                className="lp-team-card"
+                key={member.name}
+                ref={(el) => {
+                  cardRefs.current[index] = el;
+                }}
+              >
+                <div className="lp-team-photo">
+                  <img
+                    src={member.photo}
+                    alt={`Foto de ${member.name}`}
+                    loading="lazy"
+                  />
+                </div>
+                <div className="lp-team-body">
+                  <h3>
+                    {member.name}
+                    {member.alias ? <span className="lp-team-alias">“{member.alias}”</span> : null}
+                  </h3>
+                  <span className="lp-team-role">{member.role}</span>
+                  <span className="lp-team-program">{member.program}</span>
+                  <p>{member.line}</p>
+                </div>
+              </li>
+            ))}
+          </ul>
+
+          <div className="lp-team-controls">
+            <button
+              type="button"
+              className="lp-team-arrow"
+              onClick={() => scrollByStep(-1)}
+              disabled={atStart}
+              aria-label="Ver miembro anterior"
+            >
+              <ArrowIcon direction="left" />
+            </button>
+
+            <div className="lp-team-dots" role="group" aria-label="Ir a un miembro del equipo">
+              {TEAM.map((member, index) => (
+                <button
+                  key={member.name}
+                  type="button"
+                  className={`lp-team-dot${index === activeIndex ? " is-active" : ""}`}
+                  aria-label={`Ver a ${member.name}`}
+                  aria-current={index === activeIndex}
+                  onClick={() => scrollToCard(index)}
                 />
-              </div>
-              <div className="lp-team-body">
-                <h3>
-                  {member.name}
-                  {member.alias ? <span className="lp-team-alias">“{member.alias}”</span> : null}
-                </h3>
-                <span className="lp-team-role">{member.role}</span>
-                <span className="lp-team-program">{member.program}</span>
-                <p>{member.line}</p>
-              </div>
-            </article>
-          ))}
+              ))}
+            </div>
+
+            <button
+              type="button"
+              className="lp-team-arrow"
+              onClick={() => scrollByStep(1)}
+              disabled={atEnd}
+              aria-label="Ver siguiente miembro"
+            >
+              <ArrowIcon direction="right" />
+            </button>
+          </div>
         </div>
       </div>
     </section>

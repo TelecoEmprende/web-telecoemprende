@@ -1,6 +1,8 @@
 REGISTRATION_FIELDS = (
     "nombre",
     "apellidos",
+    "escuela",
+    "nivel",
     "estudios",
     "email",
     "departamento",
