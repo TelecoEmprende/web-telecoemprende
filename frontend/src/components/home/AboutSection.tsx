@@ -50,7 +50,7 @@ const TEAM: TeamMember[] = [
     photo: "/equipo-abril.jpg",
     role: "Miembro",
     program: "GISD, 2º año · ETSIT",
-    line: "También en 2º de GISD. Aterriza con ganas de aprender haciendo.",
+    line: "Disfruta convirtiendo ideas en proyectos que funcionen.",
   },
   {
     name: "Alejandro",
