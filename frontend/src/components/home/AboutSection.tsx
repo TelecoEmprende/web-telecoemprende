@@ -121,40 +121,30 @@ export function AboutSection() {
     const track = trackRef.current;
     if (!track) return;
 
-    const observer = new IntersectionObserver(
-      (entries) => {
-        for (const entry of entries) {
-          if (entry.isIntersecting && entry.intersectionRatio >= 0.6) {
-            const index = cardRefs.current.findIndex((el) => el === entry.target);
-            if (index !== -1) {
-              setActiveIndex(index);
-            }
-          }
-        }
-      },
-      { root: track, threshold: [0.6] },
-    );
-
-    cardRefs.current.forEach((el) => el && observer.observe(el));
-    return () => observer.disconnect();
-  }, []);
-
-  useEffect(() => {
-    const track = trackRef.current;
-    if (!track) return;
-
-    function updateEdges() {
+    function updateFromScroll() {
       if (!track) return;
       setAtStart(track.scrollLeft <= 4);
       setAtEnd(track.scrollLeft + track.clientWidth >= track.scrollWidth - 4);
+
+      let closestIndex = 0;
+      let closestDistance = Infinity;
+      cardRefs.current.forEach((card, index) => {
+        if (!card) return;
+        const distance = Math.abs(card.offsetLeft - track.offsetLeft - track.scrollLeft);
+        if (distance < closestDistance) {
+          closestDistance = distance;
+          closestIndex = index;
+        }
+      });
+      setActiveIndex(closestIndex);
     }
 
-    updateEdges();
-    track.addEventListener("scroll", updateEdges, { passive: true });
-    window.addEventListener("resize", updateEdges);
+    updateFromScroll();
+    track.addEventListener("scroll", updateFromScroll, { passive: true });
+    window.addEventListener("resize", updateFromScroll);
     return () => {
-      track.removeEventListener("scroll", updateEdges);
-      window.removeEventListener("resize", updateEdges);
+      track.removeEventListener("scroll", updateFromScroll);
+      window.removeEventListener("resize", updateFromScroll);
     };
   }, []);
 
