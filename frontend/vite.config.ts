@@ -12,4 +12,14 @@ export default defineConfig({
       },
     },
   },
+  build: {
+    rollupOptions: {
+      input: {
+        main: "index.html",
+        admin: "admin/index.html",
+        gracias: "gracias/index.html",
+        charlaSantiYPablo: "charla-santi-y-pablo/index.html",
+      },
+    },
+  },
 });

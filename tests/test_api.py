@@ -28,15 +28,20 @@ class ApiTestCase(unittest.TestCase):
 
         self.client = app.app.test_client()
 
-    def register(self, email="juan@example.com"):
+    def register(self, email="juan@alumnos.upm.es"):
         return self.client.post(
             "/api/registrations",
             json={
                 "nombre": "Juan",
                 "apellidos": "Perez",
-                "estudios": "ETSIT UPM",
+                "escuela": "ETSIT",
+                "nivel": "Grado",
+                "estudios": "Grado - Ingenieria de Tecnologias y Servicios de Telecomunicacion",
                 "email": email,
+                "departamento": "Tech/Ingeniería",
+                "drive_link": "https://drive.google.com/file/d/test",
                 "privacidad": True,
+                "evento": "telecoemprende-2026-27",
                 "telefono_oculto": "",
             },
         )
@@ -45,7 +50,9 @@ class ApiTestCase(unittest.TestCase):
         return self.client.post("/api/admin/login", json={"password": password})
 
     def test_registration_validation_error(self):
-        response = self.client.post("/api/registrations", json={})
+        response = self.client.post(
+            "/api/registrations", json={"evento": "telecoemprende-2026-27"}
+        )
 
         self.assertEqual(response.status_code, 400)
         payload = response.get_json()
@@ -79,7 +86,7 @@ class ApiTestCase(unittest.TestCase):
         self.assertEqual(registrations.status_code, 200)
         payload = registrations.get_json()
         self.assertEqual(payload["total"], 1)
-        self.assertEqual(payload["registros"][0]["email"], "juan@example.com")
+        self.assertEqual(payload["registros"][0]["email"], "juan@alumnos.upm.es")
 
     def test_admin_download_requires_auth_and_returns_file_when_authenticated(self):
         unauthorized = self.client.get("/api/admin/download")
@@ -91,7 +98,7 @@ class ApiTestCase(unittest.TestCase):
 
         self.assertEqual(authorized.status_code, 200)
         self.assertIn(
-            "attachment; filename=registros_telecoemprende.xlsx",
+            "attachment; filename=registros_todos.xlsx",
             authorized.headers["Content-Disposition"],
         )
         authorized.close()

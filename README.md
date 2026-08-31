@@ -17,10 +17,8 @@ Formulario de inscripción para **TelecoEmprende**, el club de emprendimiento na
 
 - **Backend:** Flask + Gunicorn
 - **Frontend:** React + TypeScript + Vite
-- **Base de datos:** PostgreSQL 16
-- **Servidor web:** Nginx
-- **Despliegue:** Docker Compose
-- **HTTPS:** Certbot / Let's Encrypt
+- **Base de datos:** PostgreSQL 16 (Supabase en producción sobre Vercel; contenedor propio con Docker Compose)
+- **Despliegue:** Vercel (frontend + backend como servicios, ver `vercel.json`) o Docker Compose + Nginx + Certbot
 
 ## Arquitectura
 
@@ -60,6 +58,21 @@ docker compose build --no-cache
 ```
 
 La aplicación queda disponible en `https://tudominio.com` (o `http://localhost` sin SSL).
+
+## Despliegue con Vercel + Supabase
+
+`vercel.json` define dos servicios: `backend` (esta app Flask, root `.`) y `frontend` (build de Vite, root `frontend/`). Los rewrites mandan `/api/*` al backend y el resto al frontend.
+
+```bash
+npx vercel@latest link --scope <tu-team>
+npx vercel@latest integration add supabase   # aprovisiona Postgres vía Marketplace
+npx vercel@latest env add DATABASE_URL production preview development   # usa POSTGRES_URL de Supabase SIN el parámetro &supa=base-pooler.x (psycopg2 no lo soporta)
+npx vercel@latest env add ADMIN_PASSWORD production preview development
+npx vercel@latest env add FLASK_SECRET_KEY production preview development
+npx vercel@latest deploy --prod
+```
+
+Las rutas de cliente sin archivo estático propio (`/admin`, `/gracias`, `/charla-santi-y-pablo`) tienen su propio `frontend/<ruta>/index.html` (mismo shell, distinto `<title>`) registrado como entry point extra en `frontend/vite.config.ts`. Si añades una ruta nueva a `App.tsx`, añade también su `index.html` correspondiente o dará 404 en Vercel.
 
 ## Desarrollo local
 

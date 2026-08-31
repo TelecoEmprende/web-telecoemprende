@@ -1,5 +1,7 @@
 # React + TypeScript Migration Plan
 
+> **Status: completed.** This plan describes the Flask→React migration that has already shipped — `templates/`/`static/` no longer exist, the API contracts, routes (`/`, `/admin`, `/gracias`, `/charla-santi-y-pablo`), field shapes (`escuela`, `nivel`, `departamento`, `drive_link`, `evento`, etc.) and DB backend described below have all moved on since this was written. Kept for historical context only; do not treat the checklists or contracts below as current. See `CLAUDE.md` for the current architecture.
+
 ## Goal
 
 Migrate the current server-rendered Flask UI to a React + TypeScript frontend while keeping Flask as the backend for validation, session auth, Excel persistence, downloads, and security headers.

@@ -17,11 +17,10 @@ The checklist is split into:
 
 ### 1. Remove insecure defaults for secrets and admin access
 
-Status now:
-- [`backend/config.py`](./backend/config.py) falls back to `ADMIN_PASSWORD = "telecoemprende2026"`
-- [`app.py`](./app.py) generates a temporary Flask secret key if `FLASK_SECRET_KEY` is missing
-- [`app.py`](./app.py) still has `SESSION_COOKIE_SECURE = False`
-- [`app.py`](./app.py) runs with `debug=True` in `__main__`
+**Status: mostly resolved.** `ADMIN_PASSWORD` now defaults to `""` (empty, not a real password) in [`backend/config.py`](./backend/config.py), and `SESSION_COOKIE_SECURE = True` is hardcoded in [`app.py`](./app.py). Remaining gaps:
+- [`app.py`](./app.py) still generates a temporary Flask secret key at import time if `FLASK_SECRET_KEY` is missing, instead of failing startup
+- [`app.py`](./app.py)'s `__main__` block still passes `debug=True` (only used for `python app.py` local dev — Docker/Vercel run through Gunicorn/the Vercel Python runtime instead, not this entrypoint)
+- Nothing currently fails startup if `ADMIN_PASSWORD`/`FLASK_SECRET_KEY` are unset in production
 
 Why this matters:
 - A default admin password is not acceptable in production
@@ -67,52 +66,11 @@ Validation:
 
 ### 2. Replace Excel storage with a real database
 
-Status now:
-- Registrations are stored in `registros_evento.xlsx`
-- Duplicate email detection is done by reading the spreadsheet
-- Writes are file-based and not concurrency-safe
+**Status: done.** [`backend/services/registrations.py`](./backend/services/registrations.py) stores registrations in PostgreSQL (`registrations` table, unique constraint on `(email, evento)`, `psycopg2` direct SQL, no ORM). Excel is only generated on demand from DB rows for the admin download (`generar_excel_en_memoria`) — nothing is read from or written to a spreadsheet at request time. Production Postgres is either the `db` container in `docker-compose.yml` or a Supabase project (see `CLAUDE.md`'s Vercel section).
 
-Why this matters:
-- File writes are fragile under concurrent requests
-- Duplicate checks are not atomic
-- Multiple app instances will not coordinate correctly
-- Backups, auditability, and reporting are harder than they need to be
-
-Recommended target:
-- PostgreSQL
-
-Minimum schema:
-- `registrations`
-  - `id`
-  - `nombre`
-  - `apellidos`
-  - `estudios`
-  - `email` with unique constraint
-  - `privacidad_aceptada`
-  - `ip_registro`
-  - `created_at`
-
-How to implement:
-1. Add a database client layer
-2. Create a `registrations` table with a unique index on `email`
-3. Replace spreadsheet reads/writes in [`backend/services/registrations.py`](./backend/services/registrations.py)
-4. Keep Excel export only as an admin download format generated from DB rows
-5. Update tests to use a temporary test database or transactional test setup
-
-Concrete steps:
-- Add dependency:
-  - SQLAlchemy or psycopg with direct SQL
-- Add migration tooling:
-  - Alembic if using SQLAlchemy
-- Replace:
-  - `email_ya_registrado(email)` with a DB query
-  - `guardar_registro(...)` with an `INSERT`
-  - `obtener_registros()` with a `SELECT`
-- Catch duplicate key violations and return the existing `409 Ese correo ya está registrado.`
-
-Validation:
-- Two simultaneous submissions with the same email must result in exactly one successful registration
-- Admin table and download must still work
+Still open from the original recommendation below:
+- No migration tooling (Alembic or similar) — schema changes are plain `ALTER TABLE IF NOT EXISTS` calls in `init_db()`
+- No load/concurrency test confirming two simultaneous same-email submissions produce exactly one success (the DB unique constraint should already guarantee this; not explicitly tested)
 
 ---
 
@@ -166,8 +124,9 @@ Validation:
 
 ### 4. Move rate limiting out of process memory
 
-Status now:
+Status now (still open):
 - [`backend/services/security.py`](./backend/services/security.py) uses an in-memory dict `request_log`
+- On the Vercel deployment this is weaker than under Docker's single long-lived Gunicorn process: Fluid Compute can spin up multiple concurrent function instances, each with its own `request_log`, so the effective limit is `MAX_REQUESTS_PER_MINUTE × (number of warm instances)`, not a hard per-IP cap
 
 Why this matters:
 - It resets on restart
@@ -198,11 +157,9 @@ Validation:
 
 ### 5. Add proper production deployment configuration
 
-Status now:
-- The repo explains local usage
-- There is no production deployment definition in the repo
+**Status: done, two ways.** The repo now deploys either via Docker Compose (Gunicorn + Nginx + Certbot, `docker-compose.yml`) or via Vercel (`vercel.json`, two services — Flask backend + static Vite frontend — with Supabase Postgres). See `README.md`'s "Despliegue" sections and `CLAUDE.md`.
 
-Why this matters:
+Why this mattered:
 - Production should be reproducible, not manually improvised
 
 Minimum production setup:

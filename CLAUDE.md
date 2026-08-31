@@ -38,6 +38,12 @@ docker compose down
 
 Requires a root `.env` with `ADMIN_PASSWORD`, `FLASK_SECRET_KEY`, `POSTGRES_PASSWORD`, `CERTBOT_EMAIL` (see `.env.example`).
 
+### Vercel + Supabase (alternate production deploy)
+
+The repo also deploys to Vercel via `vercel.json`, which defines two **services**: `backend` (this Flask app, `framework: flask`, `entrypoint: app.py`) and `frontend` (the Vite build, `root: frontend/`). Rewrites send `/api/*` to the backend and everything else to the frontend. Postgres is Supabase, provisioned through the Vercel Marketplace integration (`vercel integration add supabase`), which injects `POSTGRES_URL`/`POSTGRES_URL_NON_POOLING` etc. — `DATABASE_URL` must be set manually to the pooled `POSTGRES_URL` **with the trailing `&supa=base-pooler.x` query param stripped**, since `psycopg2` rejects that vendor-specific param. Use `vercel env add` / `vercel deploy --prod` (via `npx vercel@latest`, no global install needed).
+
+Because the frontend service serves static files with no built-in SPA fallback, the client-only routes (`/admin`, `/gracias`, `/charla-santi-y-pablo`) each have their own `frontend/<route>/index.html` (identical shell, just different `<title>`/meta tags) wired up as extra Rollup entry points in `frontend/vite.config.ts`'s `build.rollupOptions.input`. Adding a new top-level route in `App.tsx` requires adding a matching `frontend/<route>/index.html` + input entry, or it will 404 on Vercel (Docker/nginx does not need this — nginx already does `try_files ... /index.html`).
+
 ## Architecture
 
 - **`app.py`** is the Flask entrypoint. It registers the `public_api` and `admin_api` blueprints, applies security headers (CSP, X-Frame-Options, etc.) in `after_request`, and also serves the built frontend (`frontend/dist`) directly — `/`, `/admin`, `/assets/<file>`, `/logo.png` all read from the Vite build output. There is no separate static file server in dev; in prod Nginx sits in front (see `docker-compose.yml` / `frontend/` Dockerfile).

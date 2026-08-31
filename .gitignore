@@ -30,3 +30,10 @@ frontend/vite.config.d.ts
 
 # Logs
 *.log
+.vercel
+.env*
+
+# Claude Code local tooling state
+.claude/
+.agents/
+skills-lock.json

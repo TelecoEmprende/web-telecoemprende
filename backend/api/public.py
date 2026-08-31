@@ -17,10 +17,7 @@ from backend.services.security import (
 
 
 EVENTOS_VALIDOS = {
-    "taxdown",
     "charla-santi-y-pablo",
-    "cabify",
-    "samuel-gil",
     "telecoemprende-2026-27",
 }
 
