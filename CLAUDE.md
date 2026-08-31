@@ -6,6 +6,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Registration ("inscripción") site for **TelecoEmprende**, the entrepreneurship club born at ETSIT-UPM and now open to the whole UPM. Flask backend + PostgreSQL, React/TypeScript/Vite frontend, served together behind Nginx via Docker Compose. Copy and UI are in Spanish.
 
+Production is deployed on Vercel at the custom domain `telecoemprende.es` (`www.telecoemprende.es` also configured) — see the Vercel domains list, not this repo, for DNS/domain config itself.
+
 ## Commands
 
 ### Frontend (`frontend/`)

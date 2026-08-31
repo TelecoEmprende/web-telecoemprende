@@ -2,6 +2,8 @@
 
 Formulario de inscripción para **TelecoEmprende**, el club de emprendimiento nacido en la ETSIT-UPM y abierto a toda la UPM. Backend en Flask, frontend en React, base de datos PostgreSQL.
 
+**Producción:** [telecoemprende.es](https://telecoemprende.es) (desplegado en Vercel).
+
 ## Características
 
 - Formulario de inscripción con validaciones en frontend y backend (nombre, apellidos, escuela UPM, Grado/Máster, programa, email institucional, departamento, enlace de Drive)
@@ -57,7 +59,7 @@ docker compose down -v
 docker compose build --no-cache
 ```
 
-La aplicación queda disponible en `https://tudominio.com` (o `http://localhost` sin SSL).
+Este es el flujo usado para el dominio `telecoemprende.es` (ver `init-ssl.sh` y `frontend/nginx.conf`). La aplicación queda disponible en `https://telecoemprende.es` (o `http://localhost` sin SSL).
 
 ## Despliegue con Vercel + Supabase
 
@@ -73,6 +75,8 @@ npx vercel@latest deploy --prod
 ```
 
 Las rutas de cliente sin archivo estático propio (`/admin`, `/gracias`, `/charla-santi-y-pablo`) tienen su propio `frontend/<ruta>/index.html` (mismo shell, distinto `<title>`) registrado como entry point extra en `frontend/vite.config.ts`. Si añades una ruta nueva a `App.tsx`, añade también su `index.html` correspondiente o dará 404 en Vercel.
+
+El dominio de producción `telecoemprende.es` (y `www.telecoemprende.es`) está añadido como dominio custom del proyecto en Vercel (Project Settings → Domains); no requiere configuración adicional en el repo.
 
 ## Desarrollo local
 

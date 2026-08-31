@@ -7,7 +7,7 @@ if [ -f .env ]; then
   set +a
 fi
 
-DOMAIN="telecobuilders2026.com"
+DOMAIN="telecoemprende.es"
 EMAIL="${CERTBOT_EMAIL:-admin@$DOMAIN}"
 
 echo "==> Levantando frontend para el challenge ACME..."

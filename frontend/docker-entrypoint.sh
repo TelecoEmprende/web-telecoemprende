@@ -2,7 +2,7 @@
 set -e
 
 # If SSL certs exist, use the full HTTPS config. Otherwise, use HTTP-only for ACME.
-if [ -f /etc/letsencrypt/live/telecobuilders2026.com/fullchain.pem ]; then
+if [ -f /etc/letsencrypt/live/telecoemprende.es/fullchain.pem ]; then
     echo "SSL certificates found, enabling HTTPS."
     cp /etc/nginx/available/nginx-ssl.conf /etc/nginx/conf.d/default.conf
 else
