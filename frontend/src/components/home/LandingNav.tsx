@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
 
 const NAV_LINKS = [
@@ -9,8 +10,13 @@ const NAV_LINKS = [
 
 export function LandingNav() {
   const { pathname } = useLocation();
+  const [menuOpen, setMenuOpen] = useState(false);
   const onHomePage = pathname === "/";
   const toAnchor = (hash: string) => (onHomePage ? hash : `/${hash}`);
+
+  useEffect(() => {
+    setMenuOpen(false);
+  }, [pathname]);
 
   return (
     <header className="lp-nav">
@@ -22,15 +28,37 @@ export function LandingNav() {
           </span>
         </a>
 
-        <nav className="lp-nav-links" aria-label="Secciones de la página">
+        <nav
+          className={`lp-nav-links${menuOpen ? " is-open" : ""}`}
+          aria-label="Secciones de la página"
+        >
           {NAV_LINKS.map((link) => (
-            <a key={link.href} href={toAnchor(link.href)}>
+            <a key={link.href} href={toAnchor(link.href)} onClick={() => setMenuOpen(false)}>
               {link.label}
             </a>
           ))}
+          <a
+            href={toAnchor("#inscripcion")}
+            className="lp-nav-cta lp-nav-cta-mobile"
+            onClick={() => setMenuOpen(false)}
+          >
+            Envía tu solicitud
+          </a>
         </nav>
 
-        <a href={toAnchor("#inscripcion")} className="lp-nav-cta">
+        <button
+          type="button"
+          className={`lp-nav-toggle${menuOpen ? " is-open" : ""}`}
+          aria-label={menuOpen ? "Cerrar menú" : "Abrir menú"}
+          aria-expanded={menuOpen}
+          onClick={() => setMenuOpen((open) => !open)}
+        >
+          <span />
+          <span />
+          <span />
+        </button>
+
+        <a href={toAnchor("#inscripcion")} className="lp-nav-cta lp-nav-cta-desktop">
           Envía tu solicitud
         </a>
       </div>

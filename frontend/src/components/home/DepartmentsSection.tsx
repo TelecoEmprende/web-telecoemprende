@@ -29,7 +29,7 @@ const DEPARTMENTS: Department[] = [
     lines: [
       "Organizas los eventos de principio a fin: desde la idea hasta que se apagan las luces de la sala.",
       "Lideras una de las partes que más se nota del club: si algo sale bien el día del evento, es gracias a ti.",
-      "Te encargas de la logística — salas, horarios, ponentes, imprevistos — para que todo fluya sin que nadie note el esfuerzo detrás.",
+      "Te encargas de la logística (salas, horarios, ponentes, imprevistos) para que todo fluya sin que nadie note el esfuerzo detrás.",
     ],
   },
 ];
