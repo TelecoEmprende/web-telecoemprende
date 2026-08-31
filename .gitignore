@@ -19,7 +19,7 @@ __pycache__/
 # Datos locales / exportaciones
 registros_evento.xlsx
 *.xlsx
-data/
+/data/
 
 # Frontend build and dependency artifacts
 frontend/node_modules/
