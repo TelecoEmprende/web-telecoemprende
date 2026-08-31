@@ -48,7 +48,7 @@ Because the frontend service serves static files with no built-in SPA fallback, 
 
 - **`app.py`** is the Flask entrypoint. It registers the `public_api` and `admin_api` blueprints, applies security headers (CSP, X-Frame-Options, etc.) in `after_request`, and also serves the built frontend (`frontend/dist`) directly — `/`, `/admin`, `/assets/<file>`, `/logo.png` all read from the Vite build output. There is no separate static file server in dev; in prod Nginx sits in front (see `docker-compose.yml` / `frontend/` Dockerfile).
 - **`backend/api/public.py`** and **`backend/api/admin.py`** are the two Flask blueprints. Business logic is not inline in the routes — it lives in **`backend/services/`**:
-  - `services/registrations.py` — CRUD for registrations, Excel export (`openpyxl`) written to `EXCEL_FILE`.
+  - `services/registrations.py` — CRUD for registrations, Excel export (`openpyxl`) generated in memory on demand (`generar_excel_en_memoria`) for the admin download — nothing is read from or written to disk at request time. `EXCEL_FILE` in `backend/config.py` is unused leftover from the pre-Postgres era.
   - `services/security.py` — honeypot + rate limiting (`MAX_REQUESTS_PER_MINUTE` / `BLOCK_WINDOW_SECONDS` in `backend/config.py`), input sanitization against SQL injection/XSS.
   - `services/admin.py` — session-cookie based admin auth (`ADMIN_PASSWORD` env var, no user table).
   - `backend/schemas.py` — request/response validation shapes shared by both blueprints.
