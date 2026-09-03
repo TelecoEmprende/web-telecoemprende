@@ -6,11 +6,13 @@ from flask import (
 )
 import os
 import secrets
+from datetime import timedelta
 from pathlib import Path
 
 from backend.api.admin import admin_api
 from backend.api.public import public_api
-from backend.services.admin import is_admin_authenticated, logout_admin
+from backend.config import ADMIN_SESSION_LIFETIME_SECONDS
+from backend.services.admin import is_admin_authenticated
 from backend.services.registrations import crear_excel_si_no_existe, generar_excel_en_memoria
 
 app = Flask(__name__)
@@ -25,6 +27,8 @@ app.secret_key = os.environ.get("FLASK_SECRET_KEY", secrets.token_hex(32))
 app.config["SESSION_COOKIE_HTTPONLY"] = True
 app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
 app.config["SESSION_COOKIE_SECURE"] = True
+# La sesión de admin expira sola tras un rato de inactividad/tiempo absoluto.
+app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(seconds=ADMIN_SESSION_LIFETIME_SECONDS)
 
 FRONTEND_DIST_DIR = Path("frontend/dist")
 FRONTEND_ASSETS_DIR = FRONTEND_DIST_DIR / "assets"
@@ -45,6 +49,7 @@ def aplicar_headers_seguridad(response):
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
     response.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()"
     response.headers["Cache-Control"] = "no-store"
+    response.headers["Strict-Transport-Security"] = "max-age=63072000; includeSubDomains"
     # CSP sencilla. Si luego añades scripts inline o más servicios externos, habrá que ajustarla.
     response.headers["Content-Security-Policy"] = (
         "default-src 'self'; "
@@ -84,12 +89,6 @@ def frontend_logo():
         abort(503, description="Frontend build not found. Run `npm run build` in `frontend/`.")
 
     return send_from_directory(FRONTEND_DIST_DIR, "logo.png")
-
-
-@app.route("/admin/logout")
-def admin_logout():
-    logout_admin()
-    return serve_frontend_index()
 
 
 @app.route("/admin/descargar")

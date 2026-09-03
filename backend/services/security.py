@@ -1,3 +1,4 @@
+import ipaddress
 import re
 from html import escape
 from time import time
@@ -72,23 +73,40 @@ def longitud_valida(
 
 
 def obtener_ip_real() -> str:
+    # nginx (docker-compose) usa $proxy_add_x_forwarded_for, que AÑADE la IP real
+    # del cliente al final de la cabecera; el resto de la cadena puede venir
+    # directamente del cliente y no es de fiar (un atacante podría escribir
+    # cualquier cosa ahí para saltarse el rate limiting por IP o inyectar datos
+    # en el registro/Excel). Nos quedamos con el último valor -el que añade
+    # nuestro proxy- y solo lo usamos si tiene pinta de IP real.
     forwarded_for = request.headers.get("X-Forwarded-For", "")
     if forwarded_for:
-        return forwarded_for.split(",")[0].strip()
+        candidato = forwarded_for.split(",")[-1].strip()
+        try:
+            ipaddress.ip_address(candidato)
+            return candidato
+        except ValueError:
+            pass
     return request.remote_addr or "desconocida"
 
 
-def demasiadas_peticiones(ip: str) -> bool:
+def demasiadas_peticiones(
+    ip: str,
+    max_requests: int = MAX_REQUESTS_PER_MINUTE,
+    window_seconds: int = BLOCK_WINDOW_SECONDS,
+    bucket: str = "default",
+) -> bool:
     ahora = time()
+    key = f"{bucket}:{ip}"
 
-    if ip not in request_log:
-        request_log[ip] = []
+    if key not in request_log:
+        request_log[key] = []
 
-    request_log[ip] = [t for t in request_log[ip] if ahora - t < BLOCK_WINDOW_SECONDS]
+    request_log[key] = [t for t in request_log[key] if ahora - t < window_seconds]
 
-    if len(request_log[ip]) >= MAX_REQUESTS_PER_MINUTE:
+    if len(request_log[key]) >= max_requests:
         return True
 
-    request_log[ip].append(ahora)
+    request_log[key].append(ahora)
     return False
 
