@@ -19,6 +19,7 @@ const INITIAL_FORM = (evento: string): RegistrationPayload => ({
   nivel: "Grado",
   estudios: "",
   email: "",
+  telefono: "",
   departamento: "",
   drive_link: "",
   privacidad: false,
@@ -201,6 +202,22 @@ export function RegistrationForm({ evento, title }: { evento: string; title?: st
               <p className="field-hint-react">Debe terminar en @alumnos.upm.es o @upm.es.</p>
               {errors.email ? (
                 <p className="field-error-react">{errors.email}</p>
+              ) : null}
+            </div>
+
+            <div className="field-group-react">
+              <label htmlFor="telefono">Teléfono</label>
+              <input
+                type="tel"
+                id="telefono"
+                name="telefono"
+                placeholder="Ej. 600 123 456"
+                maxLength={20}
+                value={form.telefono}
+                onChange={(event) => updateField("telefono", event.target.value)}
+              />
+              {errors.telefono ? (
+                <p className="field-error-react">{errors.telefono}</p>
               ) : null}
             </div>
 

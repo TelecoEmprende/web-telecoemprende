@@ -22,10 +22,6 @@ export const UPM_SCHOOLS: School[] = [
         name: "Grado en Ingeniería de Tecnologías y Servicios de Telecomunicación (en extinción)",
       },
       { code: "GIB", name: "Grado en Ingeniería Biomédica" },
-      {
-        code: "GCDIA",
-        name: "Grado en Ciencia de Datos e Inteligencia Artificial (impartido en coordinación con ETSIINF y ETSISI)",
-      },
     ],
     masters: [
       { code: "MUIT", name: "Máster Universitario en Ingeniería de Telecomunicación (Habilitante)" },
