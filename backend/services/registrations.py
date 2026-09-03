@@ -45,6 +45,10 @@ def init_db():
                 ALTER TABLE registrations
                 ADD COLUMN IF NOT EXISTS nivel VARCHAR(20) NOT NULL DEFAULT ''
             """)
+            cur.execute("""
+                ALTER TABLE registrations
+                ADD COLUMN IF NOT EXISTS telefono VARCHAR(20) NOT NULL DEFAULT ''
+            """)
         conn.commit()
 
 
@@ -74,14 +78,15 @@ def guardar_registro(
     evento: str,
     escuela: str = "",
     nivel: str = "",
+    telefono: str = "",
 ):
     with _get_connection() as conn:
         with conn.cursor() as cur:
             cur.execute(
                 """
                 INSERT INTO registrations
-                    (nombre, apellidos, estudios, email, departamento, drive_link, privacidad_aceptada, ip_registro, created_at, evento, escuela, nivel)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    (nombre, apellidos, estudios, email, departamento, drive_link, privacidad_aceptada, ip_registro, created_at, evento, escuela, nivel, telefono)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 """,
                 (
                     nombre,
@@ -96,6 +101,7 @@ def guardar_registro(
                     evento,
                     escuela,
                     nivel,
+                    telefono,
                 ),
             )
         conn.commit()
@@ -116,7 +122,7 @@ def obtener_registros(evento: str | None = None):
                 cur.execute(
                     """
                     SELECT id, nombre, apellidos, estudios, email, departamento, drive_link,
-                           privacidad_aceptada, ip_registro, created_at, evento, escuela, nivel
+                           privacidad_aceptada, ip_registro, created_at, evento, escuela, nivel, telefono
                     FROM registrations
                     WHERE evento = %s
                     ORDER BY id
@@ -127,7 +133,7 @@ def obtener_registros(evento: str | None = None):
                 cur.execute(
                     """
                     SELECT id, nombre, apellidos, estudios, email, departamento, drive_link,
-                           privacidad_aceptada, ip_registro, created_at, evento, escuela, nivel
+                           privacidad_aceptada, ip_registro, created_at, evento, escuela, nivel, telefono
                     FROM registrations
                     ORDER BY id
                     """
@@ -149,6 +155,7 @@ def obtener_registros(evento: str | None = None):
             "evento": r[10],
             "escuela": r[11],
             "nivel": r[12],
+            "telefono": r[13],
         }
         for r in rows
     ]
@@ -164,6 +171,7 @@ def actualizar_registro(
     drive_link: str,
     escuela: str = "",
     nivel: str = "",
+    telefono: str = "",
 ) -> bool:
     with _get_connection() as conn:
         with conn.cursor() as cur:
@@ -178,7 +186,7 @@ def actualizar_registro(
                 """
                 UPDATE registrations
                 SET nombre = %s, apellidos = %s, estudios = %s, email = %s, departamento = %s, drive_link = %s,
-                    escuela = %s, nivel = %s
+                    escuela = %s, nivel = %s, telefono = %s
                 WHERE id = %s
                 """,
                 (
@@ -190,6 +198,7 @@ def actualizar_registro(
                     drive_link.strip(),
                     escuela.strip(),
                     nivel.strip(),
+                    telefono.strip(),
                     reg_id,
                 ),
             )
@@ -219,6 +228,7 @@ def generar_excel_en_memoria(evento: str | None = None) -> BytesIO:
         "Nivel",
         "Estudios / Procedencia",
         "Correo electrónico",
+        "Teléfono",
         "Departamento solicitado",
         "Enlace CV y pitch",
         "Acepta privacidad",
@@ -229,7 +239,7 @@ def generar_excel_en_memoria(evento: str | None = None) -> BytesIO:
 
     anchos = {
         "A": 20, "B": 25, "C": 45, "D": 12, "E": 35, "F": 32,
-        "G": 22, "H": 40, "I": 18, "J": 18, "K": 22, "L": 25,
+        "G": 18, "H": 22, "I": 40, "J": 18, "K": 18, "L": 22, "M": 25,
     }
     for col, ancho in anchos.items():
         ws.column_dimensions[col].width = ancho
@@ -242,6 +252,7 @@ def generar_excel_en_memoria(evento: str | None = None) -> BytesIO:
             r["nivel"],
             r["estudios"],
             r["email"],
+            r["telefono"],
             r["departamento"],
             r["drive_link"],
             r["privacidad"],

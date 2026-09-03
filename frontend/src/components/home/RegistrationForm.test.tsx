@@ -25,7 +25,7 @@ describe("RegistrationForm", () => {
       screen.getByRole("button", { name: /enviar solicitud de inscripción/i }),
     );
 
-    expect(await screen.findAllByText("Completa este campo.")).toHaveLength(4);
+    expect(await screen.findAllByText("Completa este campo.")).toHaveLength(5);
     expect(
       screen.getByText("Selecciona tu titulación."),
     ).toBeInTheDocument();
@@ -130,6 +130,7 @@ describe("RegistrationForm", () => {
       screen.getByLabelText(/correo electrónico institucional/i),
       "juan@alumnos.upm.es",
     );
+    await user.type(screen.getByLabelText("Teléfono"), "600123456");
     await user.selectOptions(
       screen.getByLabelText("Escuela"),
       "ETS de Ingeniería y Sistemas de Telecomunicación (ETSIST)",
@@ -167,6 +168,7 @@ describe("RegistrationForm", () => {
       nivel: "Grado",
       estudios: "Grado - Grado en Ingeniería de Sistemas de Telecomunicación",
       email: "juan@alumnos.upm.es",
+      telefono: "600123456",
       departamento: "Tech/Ingeniería",
       drive_link: "https://drive.google.com/drive/folders/abc123",
       privacidad: true,
@@ -200,6 +202,7 @@ describe("RegistrationForm", () => {
       screen.getByLabelText(/correo electrónico institucional/i),
       "lucia@upm.es",
     );
+    await user.type(screen.getByLabelText("Teléfono"), "611234567");
     await user.selectOptions(
       screen.getByLabelText("Escuela"),
       "ETS de Ingenieros de Telecomunicación (ETSIT)",

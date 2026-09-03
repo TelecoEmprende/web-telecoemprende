@@ -38,6 +38,7 @@ class ApiTestCase(unittest.TestCase):
                 "nivel": "Grado",
                 "estudios": "Grado - Ingenieria de Tecnologias y Servicios de Telecomunicacion",
                 "email": email,
+                "telefono": "600123456",
                 "departamento": "Tech/Ingeniería",
                 "drive_link": "https://drive.google.com/file/d/test",
                 "privacidad": True,

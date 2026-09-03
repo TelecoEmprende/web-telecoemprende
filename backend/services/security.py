@@ -14,6 +14,7 @@ from backend.config import (
     MAX_NIVEL_LEN,
     MAX_NOMBRE_LEN,
     MAX_REQUESTS_PER_MINUTE,
+    MAX_TELEFONO_LEN,
     UPM_EMAIL_DOMAINS,
 )
 
@@ -43,6 +44,11 @@ def drive_link_valido(url: str) -> bool:
     return re.match(patron, url.strip(), re.IGNORECASE) is not None
 
 
+def telefono_valido(telefono: str) -> bool:
+    patron = r"^\+?[0-9\s]{9,20}$"
+    return re.match(patron, telefono.strip()) is not None
+
+
 def longitud_valida(
     nombre: str,
     apellidos: str,
@@ -51,6 +57,7 @@ def longitud_valida(
     drive_link: str = "",
     escuela: str = "",
     nivel: str = "",
+    telefono: str = "",
 ) -> bool:
     return (
         len(nombre) <= MAX_NOMBRE_LEN
@@ -60,6 +67,7 @@ def longitud_valida(
         and len(drive_link) <= MAX_DRIVE_LINK_LEN
         and len(escuela) <= MAX_ESCUELA_LEN
         and len(nivel) <= MAX_NIVEL_LEN
+        and len(telefono) <= MAX_TELEFONO_LEN
     )
 
 

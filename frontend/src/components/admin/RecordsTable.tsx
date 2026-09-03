@@ -18,6 +18,7 @@ type RecordsTableProps = {
       nivel: string;
       estudios: string;
       email: string;
+      telefono: string;
       departamento: string;
       drive_link: string;
     },
@@ -34,6 +35,7 @@ export function RecordsTable({ registros, onUpdate, onDelete }: RecordsTableProp
     nivel: "",
     estudios: "",
     email: "",
+    telefono: "",
     departamento: "",
     drive_link: "",
   });
@@ -51,6 +53,7 @@ export function RecordsTable({ registros, onUpdate, onDelete }: RecordsTableProp
       nivel: r.nivel,
       estudios: r.estudios,
       email: r.email,
+      telefono: r.telefono,
       departamento: r.departamento,
       drive_link: r.drive_link,
     });
@@ -69,6 +72,7 @@ export function RecordsTable({ registros, onUpdate, onDelete }: RecordsTableProp
       !editData.apellidos ||
       !editData.estudios ||
       !editData.email ||
+      !editData.telefono ||
       !editData.departamento ||
       !editData.drive_link
     ) {
@@ -137,6 +141,7 @@ export function RecordsTable({ registros, onUpdate, onDelete }: RecordsTableProp
             <th>Nivel</th>
             <th>Grado / Máster</th>
             <th>Email</th>
+            <th>Teléfono</th>
             <th>Departamento</th>
             <th>CV y pitch</th>
             <th>Privacidad</th>
@@ -207,6 +212,14 @@ export function RecordsTable({ registros, onUpdate, onDelete }: RecordsTableProp
                     />
                   </td>
                   <td>
+                    <input
+                      className="inline-edit-input"
+                      type="tel"
+                      value={editData.telefono}
+                      onChange={(e) => setEditData({ ...editData, telefono: e.target.value })}
+                    />
+                  </td>
+                  <td>
                     <select
                       className="inline-edit-input"
                       value={editData.departamento}
@@ -249,6 +262,7 @@ export function RecordsTable({ registros, onUpdate, onDelete }: RecordsTableProp
                   <td>{registro.nivel || "—"}</td>
                   <td>{registro.estudios}</td>
                   <td>{registro.email}</td>
+                  <td>{registro.telefono || "—"}</td>
                   <td>{registro.departamento || "—"}</td>
                   <td>
                     {registro.drive_link ? (

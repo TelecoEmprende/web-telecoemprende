@@ -2,6 +2,7 @@ import type { RegistrationErrors, RegistrationPayload } from "../types/registrat
 
 const UPM_EMAIL_PATTERN = /^[^@\s]+@(alumnos\.upm\.es|upm\.es)$/i;
 const DRIVE_LINK_PATTERN = /^https?:\/\/(www\.)?drive\.google\.com\/.+/i;
+const TELEFONO_PATTERN = /^\+?[0-9\s]{9,20}$/;
 
 export function validateRegistrationDraft(
   payload: RegistrationPayload,
@@ -24,6 +25,11 @@ export function validateRegistrationDraft(
     errors.email = "Completa este campo.";
   } else if (!UPM_EMAIL_PATTERN.test(payload.email.trim())) {
     errors.email = "Usa tu correo institucional de la UPM (@alumnos.upm.es o @upm.es).";
+  }
+  if (!payload.telefono.trim()) {
+    errors.telefono = "Completa este campo.";
+  } else if (!TELEFONO_PATTERN.test(payload.telefono.trim())) {
+    errors.telefono = "Introduce un número de teléfono válido.";
   }
   if (!payload.drive_link.trim()) {
     errors.drive_link = "Completa este campo.";

@@ -5,6 +5,7 @@ REGISTRATION_FIELDS = (
     "nivel",
     "estudios",
     "email",
+    "telefono",
     "departamento",
     "drive_link",
     "privacidad",

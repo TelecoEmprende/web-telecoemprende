@@ -13,6 +13,7 @@ from backend.services.security import (
     limpiar_texto,
     longitud_valida,
     obtener_ip_real,
+    telefono_valido,
 )
 
 
@@ -56,6 +57,7 @@ def create_registration():
     nivel = limpiar_texto(str(payload.get("nivel", "")))
     estudios = limpiar_texto(str(payload.get("estudios", "")))
     email = limpiar_texto(str(payload.get("email", ""))).lower()
+    telefono = limpiar_texto(str(payload.get("telefono", "")))
     departamento = limpiar_texto(str(payload.get("departamento", "")))
     drive_link = limpiar_texto(str(payload.get("drive_link", "")))
     acepta_privacidad = payload.get("privacidad")
@@ -77,6 +79,8 @@ def create_registration():
         errors["estudios"] = "Selecciona tu escuela y titulación."
     if not email:
         errors["email"] = "Completa este campo."
+    if not telefono:
+        errors["telefono"] = "Completa este campo."
     if not departamento:
         errors["departamento"] = "Selecciona un departamento."
     elif departamento not in DEPARTAMENTOS_VALIDOS:
@@ -98,7 +102,7 @@ def create_registration():
             400,
         )
 
-    if not longitud_valida(nombre, apellidos, estudios, email, drive_link, escuela, nivel):
+    if not longitud_valida(nombre, apellidos, estudios, email, drive_link, escuela, nivel, telefono):
         return (
             jsonify(build_response(
                 False,
@@ -114,6 +118,18 @@ def create_registration():
                 "Hay errores de validación.",
                 errors={
                     "email": "Usa tu correo institucional de la UPM (@alumnos.upm.es o @upm.es).",
+                },
+            )),
+            400,
+        )
+
+    if not telefono_valido(telefono):
+        return (
+            jsonify(build_response(
+                False,
+                "Hay errores de validación.",
+                errors={
+                    "telefono": "Introduce un número de teléfono válido.",
                 },
             )),
             400,
@@ -144,6 +160,7 @@ def create_registration():
         nivel=nivel,
         estudios=estudios,
         email=email,
+        telefono=telefono,
         departamento=departamento,
         drive_link=drive_link,
         acepta_privacidad="Sí",
