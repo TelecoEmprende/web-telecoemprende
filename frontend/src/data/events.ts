@@ -9,6 +9,7 @@ export type ClubEvent = {
   tag: string;
   description?: string;
   photos: ClubEventPhoto[];
+  companyLogo?: { src: string; alt: string };
 };
 
 /**
@@ -31,6 +32,7 @@ export const CLUB_EVENTS: ClubEvent[] = [
     photos: [
       { src: "/evento-taxdown.jpg", alt: "Charla de TaxDown con varios ponentes y micrófonos" },
     ],
+    companyLogo: { src: "/logo-taxdown.svg", alt: "Logo de TaxDown" },
   },
   {
     id: "ignacio-garcia-carrillo-2026",
@@ -44,6 +46,7 @@ export const CLUB_EVENTS: ClubEvent[] = [
         alt: "Ignacio García Carrillo (AMD) junto al equipo de TelecoEmprende",
       },
     ],
+    companyLogo: { src: "/logo-amd.svg", alt: "Logo de AMD" },
   },
   {
     id: "samuel-gil-2026",
@@ -54,6 +57,7 @@ export const CLUB_EVENTS: ClubEvent[] = [
     photos: [
       { src: "/evento-samuel-gil.jpg", alt: "Charla de Samuel Gil, CEO de JME Ventures" },
     ],
+    companyLogo: { src: "/logo-jme.jpg", alt: "Logo de JME Ventures" },
   },
   {
     id: "cabify-2026",
@@ -64,5 +68,6 @@ export const CLUB_EVENTS: ClubEvent[] = [
     photos: [
       { src: "/evento-cabify.jpg", alt: "Charla con Carlos Herrera, CTO de Cabify" },
     ],
+    companyLogo: { src: "/logo-cabify.svg", alt: "Logo de Cabify" },
   },
 ];
