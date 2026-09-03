@@ -1,5 +1,12 @@
+import logging
+
 from flask import Blueprint, jsonify, make_response, render_template_string, request, send_file
 
+from backend.config import (
+    DEPARTAMENTOS_VALIDOS,
+    LOGIN_BLOCK_WINDOW_SECONDS,
+    MAX_LOGIN_ATTEMPTS_PER_WINDOW,
+)
 from backend.schemas import build_response
 from backend.services.admin import (
     admin_password_configured,
@@ -15,7 +22,17 @@ from backend.services.registrations import (
     obtener_eventos,
     obtener_registros,
 )
-from backend.services.security import demasiadas_peticiones, obtener_ip_real
+from backend.services.security import (
+    demasiadas_peticiones,
+    drive_link_valido,
+    email_upm_valido,
+    limpiar_texto,
+    longitud_valida,
+    obtener_ip_real,
+    telefono_valido,
+)
+
+logger = logging.getLogger("telecoemprende.admin")
 
 
 admin_api = Blueprint("admin_api", __name__, url_prefix="/api/admin")
@@ -195,9 +212,15 @@ def api_admin_login():
         )
 
     ip = obtener_ip_real()
-    if demasiadas_peticiones(ip):
+    if demasiadas_peticiones(
+        ip,
+        max_requests=MAX_LOGIN_ATTEMPTS_PER_WINDOW,
+        window_seconds=LOGIN_BLOCK_WINDOW_SECONDS,
+        bucket="admin_login",
+    ):
+        logger.warning("admin login rate-limited ip=%s", ip)
         return (
-            jsonify(build_response(False, "Demasiados intentos. Espera un minuto.")),
+            jsonify(build_response(False, "Demasiados intentos. Espera unos minutos.")),
             429,
         )
 
@@ -205,8 +228,10 @@ def api_admin_login():
     password = str(payload.get("password", ""))
 
     if login_admin(password):
+        logger.info("admin login success ip=%s", ip)
         return jsonify(build_response(True, "Sesión iniciada.")), 200
 
+    logger.warning("admin login failed ip=%s", ip)
     return jsonify(build_response(False, "Contraseña incorrecta.")), 401
 
 
@@ -262,22 +287,62 @@ def api_admin_update_registration(reg_id: int):
         return jsonify(build_response(False, "No autorizado.")), 401
 
     payload = request.get_json(silent=True) or {}
-    nombre = str(payload.get("nombre", "")).strip()
-    apellidos = str(payload.get("apellidos", "")).strip()
-    escuela = str(payload.get("escuela", "")).strip()
-    nivel = str(payload.get("nivel", "")).strip()
-    estudios = str(payload.get("estudios", "")).strip()
-    email = str(payload.get("email", "")).strip()
-    telefono = str(payload.get("telefono", "")).strip()
-    departamento = str(payload.get("departamento", "")).strip()
-    drive_link = str(payload.get("drive_link", "")).strip()
+    nombre = limpiar_texto(str(payload.get("nombre", "")))
+    apellidos = limpiar_texto(str(payload.get("apellidos", "")))
+    escuela = limpiar_texto(str(payload.get("escuela", "")))
+    nivel = limpiar_texto(str(payload.get("nivel", "")))
+    estudios = limpiar_texto(str(payload.get("estudios", "")))
+    email = limpiar_texto(str(payload.get("email", ""))).lower()
+    telefono = limpiar_texto(str(payload.get("telefono", "")))
+    departamento = limpiar_texto(str(payload.get("departamento", "")))
+    drive_link = limpiar_texto(str(payload.get("drive_link", "")))
 
     if not all([nombre, apellidos, estudios, email, telefono, departamento, drive_link]):
         return jsonify(build_response(False, "Todos los campos son obligatorios.")), 400
 
+    if departamento not in DEPARTAMENTOS_VALIDOS:
+        return jsonify(build_response(False, "Departamento no válido.")), 400
+
+    if not longitud_valida(nombre, apellidos, estudios, email, drive_link, escuela, nivel, telefono):
+        return (
+            jsonify(build_response(
+                False,
+                "Alguno de los campos supera la longitud permitida.",
+            )),
+            400,
+        )
+
+    if not email_upm_valido(email):
+        return (
+            jsonify(build_response(
+                False,
+                "Usa un correo institucional de la UPM (@alumnos.upm.es o @upm.es).",
+            )),
+            400,
+        )
+
+    if not telefono_valido(telefono):
+        return (
+            jsonify(build_response(
+                False,
+                "Introduce un número de teléfono válido.",
+            )),
+            400,
+        )
+
+    if not drive_link_valido(drive_link):
+        return (
+            jsonify(build_response(
+                False,
+                "Introduce un enlace de Google Drive válido (https://drive.google.com/...).",
+            )),
+            400,
+        )
+
     if actualizar_registro(
         reg_id, nombre, apellidos, estudios, email, departamento, drive_link, escuela, nivel, telefono
     ):
+        logger.info("admin update registration id=%s", reg_id)
         return jsonify(build_response(True, "Registro actualizado.")), 200
 
     return jsonify(build_response(False, "El email ya está registrado en otra inscripción.")), 409
@@ -289,6 +354,7 @@ def api_admin_delete_registration(reg_id: int):
         return jsonify(build_response(False, "No autorizado.")), 401
 
     if eliminar_registro(reg_id):
+        logger.info("admin delete registration id=%s", reg_id)
         return jsonify(build_response(True, "Registro eliminado.")), 200
 
     return jsonify(build_response(False, "Registro no encontrado.")), 404

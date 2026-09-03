@@ -6,6 +6,11 @@ import type { ApiFailure } from "../../types/api";
 
 const DEPARTAMENTOS = ["Tech/Ingeniería", "Marketing/Comms", "Eventos/Logística"];
 const NIVELES = ["Grado", "Máster"];
+// El backend ya valida el esquema al crear/editar, pero esto es defensa en
+// profundidad: nunca renderizar como enlace clicable un valor que no venga
+// de antemano garantizado como https://drive.google.com/... (por ejemplo,
+// filas antiguas insertadas antes de que existiera esa validación).
+const DRIVE_LINK_PATTERN = /^https:\/\/(www\.)?drive\.google\.com\//i;
 
 type RecordsTableProps = {
   registros: Registro[];
@@ -265,7 +270,7 @@ export function RecordsTable({ registros, onUpdate, onDelete }: RecordsTableProp
                   <td>{registro.telefono || "—"}</td>
                   <td>{registro.departamento || "—"}</td>
                   <td>
-                    {registro.drive_link ? (
+                    {registro.drive_link && DRIVE_LINK_PATTERN.test(registro.drive_link) ? (
                       <a href={registro.drive_link} target="_blank" rel="noreferrer">
                         Ver enlace
                       </a>

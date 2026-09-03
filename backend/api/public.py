@@ -1,5 +1,6 @@
 from flask import Blueprint, jsonify, request
 
+from backend.config import DEPARTAMENTOS_VALIDOS, EVENTOS_VALIDOS
 from backend.schemas import build_response
 from backend.services.registrations import (
     crear_excel_si_no_existe,
@@ -16,17 +17,6 @@ from backend.services.security import (
     telefono_valido,
 )
 
-
-EVENTOS_VALIDOS = {
-    "charla-santi-y-pablo",
-    "telecoemprende-2026-27",
-}
-
-DEPARTAMENTOS_VALIDOS = {
-    "Tech/Ingeniería",
-    "Marketing/Comms",
-    "Eventos/Logística",
-}
 
 public_api = Blueprint("public_api", __name__, url_prefix="/api")
 

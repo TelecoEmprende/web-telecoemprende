@@ -215,6 +215,19 @@ def eliminar_registro(reg_id: int) -> bool:
     return deleted
 
 
+_FORMULA_TRIGGER_CHARS = ("=", "+", "-", "@", "\t", "\r")
+
+
+def _celda_segura(valor):
+    """Neutraliza CSV/formula injection: Excel puede interpretar como fórmula
+    cualquier valor de celda que empiece por =, +, -, @, tab o retorno de carro,
+    ejecutando código en la máquina de quien abre el fichero. Como estos campos
+    vienen de un formulario público, se antepone un apóstrofo para forzar texto."""
+    if isinstance(valor, str) and valor.startswith(_FORMULA_TRIGGER_CHARS):
+        return "'" + valor
+    return valor
+
+
 def generar_excel_en_memoria(evento: str | None = None) -> BytesIO:
     registros = obtener_registros(evento)
 
@@ -246,15 +259,15 @@ def generar_excel_en_memoria(evento: str | None = None) -> BytesIO:
 
     for r in registros:
         ws.append([
-            r["nombre"],
-            r["apellidos"],
-            r["escuela"],
-            r["nivel"],
-            r["estudios"],
-            r["email"],
-            r["telefono"],
-            r["departamento"],
-            r["drive_link"],
+            _celda_segura(r["nombre"]),
+            _celda_segura(r["apellidos"]),
+            _celda_segura(r["escuela"]),
+            _celda_segura(r["nivel"]),
+            _celda_segura(r["estudios"]),
+            _celda_segura(r["email"]),
+            _celda_segura(r["telefono"]),
+            _celda_segura(r["departamento"]),
+            _celda_segura(r["drive_link"]),
             r["privacidad"],
             r["ip"],
             r["fecha"],
