@@ -23,6 +23,15 @@ export function EventsSection() {
                   loading="lazy"
                 />
                 <span className="lp-event-tag">{event.tag}</span>
+                {event.companyLogo ? (
+                  <span className="lp-event-logo">
+                    <img
+                      src={event.companyLogo.src}
+                      alt={event.companyLogo.alt}
+                      loading="lazy"
+                    />
+                  </span>
+                ) : null}
               </div>
 
               <div className="lp-event-body">
