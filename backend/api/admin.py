@@ -4,6 +4,7 @@ from flask import Blueprint, jsonify, make_response, render_template_string, req
 
 from backend.config import (
     DEPARTAMENTOS_VALIDOS,
+    ESTADOS_VALIDOS,
     LOGIN_BLOCK_WINDOW_SECONDS,
     MAX_LOGIN_ATTEMPTS_PER_WINDOW,
 )
@@ -14,12 +15,16 @@ from backend.services.admin import (
     login_admin,
     logout_admin,
 )
+from backend.services.email import enviar_email_estado
 from backend.services.registrations import (
+    actualizar_estado,
     actualizar_registro,
     crear_excel_si_no_existe,
     eliminar_registro,
     generar_excel_en_memoria,
+    marcar_notificado,
     obtener_eventos,
+    obtener_pendientes_notificacion,
     obtener_registros,
 )
 from backend.services.security import (
@@ -346,6 +351,55 @@ def api_admin_update_registration(reg_id: int):
         return jsonify(build_response(True, "Registro actualizado.")), 200
 
     return jsonify(build_response(False, "El email ya está registrado en otra inscripción.")), 409
+
+
+@admin_api.route("/registrations/<int:reg_id>/estado", methods=["PATCH"])
+def api_admin_update_estado(reg_id: int):
+    if not is_admin_authenticated():
+        return jsonify(build_response(False, "No autorizado.")), 401
+
+    payload = request.get_json(silent=True) or {}
+    estado = str(payload.get("estado", ""))
+
+    if estado not in ESTADOS_VALIDOS:
+        return jsonify(build_response(False, "Estado no válido.")), 400
+
+    registro = actualizar_estado(reg_id, estado)
+    if registro is None:
+        return jsonify(build_response(False, "Registro no encontrado.")), 404
+
+    logger.info("admin update estado id=%s estado=%s", reg_id, estado)
+    return jsonify(build_response(True, "Estado actualizado.")), 200
+
+
+@admin_api.route("/registrations/notificar", methods=["POST"])
+def api_admin_notificar():
+    """Envía (ahora, no antes) el email de estado a todos los registros del estado
+    dado que aún no han sido notificados. Clasificar (PATCH .../estado) nunca envía
+    solo por sí mismo: hace falta pulsar "Enviar notificaciones" en el panel."""
+    if not is_admin_authenticated():
+        return jsonify(build_response(False, "No autorizado.")), 401
+
+    payload = request.get_json(silent=True) or {}
+    estado = str(payload.get("estado", ""))
+
+    if estado not in ("aceptado", "rechazado", "waitlist"):
+        return jsonify(build_response(False, "Estado no válido para notificar.")), 400
+
+    pendientes = obtener_pendientes_notificacion(estado)
+    enviados = 0
+    for registro in pendientes:
+        if enviar_email_estado(registro, estado):
+            marcar_notificado(registro["id"])
+            enviados += 1
+
+    logger.info("admin notificar estado=%s total=%s enviados=%s", estado, len(pendientes), enviados)
+    return jsonify(build_response(
+        True,
+        f"{enviados} de {len(pendientes)} emails enviados.",
+        total=len(pendientes),
+        enviados=enviados,
+    )), 200
 
 
 @admin_api.route("/registrations/<int:reg_id>", methods=["DELETE"])

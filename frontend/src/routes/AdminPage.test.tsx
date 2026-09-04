@@ -55,6 +55,8 @@ describe("AdminPage", () => {
           privacidad: "Sí",
           fecha: "2026-04-16 11:00:00",
           evento: "telecoemprende-2026-27",
+          estado: "pendiente",
+          notificado: false,
         },
       ],
     });

@@ -1,5 +1,5 @@
 import { apiRequest } from "./client";
-import type { AdminRegistrationsResponse, AdminSessionResponse } from "../types/admin";
+import type { AdminRegistrationsResponse, AdminSessionResponse, Estado } from "../types/admin";
 import type { ApiResult } from "../types/api";
 
 export function loginAdmin(password: string) {
@@ -48,4 +48,21 @@ export function deleteRegistration(id: number) {
   return apiRequest<ApiResult>(`/api/admin/registrations/${id}`, {
     method: "DELETE",
   });
+}
+
+export function updateRegistrationEstado(id: number, estado: Estado) {
+  return apiRequest<ApiResult>(`/api/admin/registrations/${id}/estado`, {
+    method: "PATCH",
+    body: JSON.stringify({ estado }),
+  });
+}
+
+export function enviarNotificaciones(estado: Estado) {
+  return apiRequest<ApiResult & { total: number; enviados: number }>(
+    "/api/admin/registrations/notificar",
+    {
+      method: "POST",
+      body: JSON.stringify({ estado }),
+    },
+  );
 }

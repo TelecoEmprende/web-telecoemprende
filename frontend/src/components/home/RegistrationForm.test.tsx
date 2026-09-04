@@ -5,6 +5,7 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 
 import { RegistrationForm } from "./RegistrationForm";
 import { ThankYouPage } from "../../routes/ThankYouPage";
+import { LanguageProvider } from "../../i18n/LanguageContext";
 
 const submitRegistration = vi.fn();
 
@@ -16,9 +17,11 @@ describe("RegistrationForm", () => {
   it("shows inline validation errors before calling the API", async () => {
     const user = userEvent.setup();
     render(
-      <MemoryRouter>
-        <RegistrationForm evento="telecoemprende-2026-27" />
-      </MemoryRouter>,
+      <LanguageProvider>
+        <MemoryRouter>
+          <RegistrationForm evento="telecoemprende-2026-27" />
+        </MemoryRouter>
+      </LanguageProvider>,
     );
 
     await user.click(
@@ -38,9 +41,11 @@ describe("RegistrationForm", () => {
   it("rejects a non-UPM email", async () => {
     const user = userEvent.setup();
     render(
-      <MemoryRouter>
-        <RegistrationForm evento="telecoemprende-2026-27" />
-      </MemoryRouter>,
+      <LanguageProvider>
+        <MemoryRouter>
+          <RegistrationForm evento="telecoemprende-2026-27" />
+        </MemoryRouter>
+      </LanguageProvider>,
     );
 
     await user.type(
@@ -61,9 +66,11 @@ describe("RegistrationForm", () => {
 
   it("keeps the programa select disabled until an escuela is chosen", async () => {
     render(
-      <MemoryRouter>
-        <RegistrationForm evento="telecoemprende-2026-27" />
-      </MemoryRouter>,
+      <LanguageProvider>
+        <MemoryRouter>
+          <RegistrationForm evento="telecoemprende-2026-27" />
+        </MemoryRouter>
+      </LanguageProvider>,
     );
 
     expect(screen.getByLabelText<HTMLSelectElement>("Programa")).toBeDisabled();
@@ -72,9 +79,11 @@ describe("RegistrationForm", () => {
   it("offers grado options for the chosen escuela and máster options after switching", async () => {
     const user = userEvent.setup();
     render(
-      <MemoryRouter>
-        <RegistrationForm evento="telecoemprende-2026-27" />
-      </MemoryRouter>,
+      <LanguageProvider>
+        <MemoryRouter>
+          <RegistrationForm evento="telecoemprende-2026-27" />
+        </MemoryRouter>
+      </LanguageProvider>,
     );
 
     await user.selectOptions(
@@ -113,15 +122,17 @@ describe("RegistrationForm", () => {
 
     const user = userEvent.setup();
     render(
-      <MemoryRouter initialEntries={["/"]}>
-        <Routes>
-          <Route
-            path="/"
-            element={<RegistrationForm evento="telecoemprende-2026-27" />}
-          />
-          <Route path="/gracias" element={<ThankYouPage />} />
-        </Routes>
-      </MemoryRouter>,
+      <LanguageProvider>
+        <MemoryRouter initialEntries={["/"]}>
+          <Routes>
+            <Route
+              path="/"
+              element={<RegistrationForm evento="telecoemprende-2026-27" />}
+            />
+            <Route path="/gracias" element={<ThankYouPage />} />
+          </Routes>
+        </MemoryRouter>
+      </LanguageProvider>,
     );
 
     await user.type(screen.getByLabelText("Nombre"), "Juan");
@@ -185,15 +196,17 @@ describe("RegistrationForm", () => {
 
     const user = userEvent.setup();
     render(
-      <MemoryRouter initialEntries={["/"]}>
-        <Routes>
-          <Route
-            path="/"
-            element={<RegistrationForm evento="telecoemprende-2026-27" />}
-          />
-          <Route path="/gracias" element={<ThankYouPage />} />
-        </Routes>
-      </MemoryRouter>,
+      <LanguageProvider>
+        <MemoryRouter initialEntries={["/"]}>
+          <Routes>
+            <Route
+              path="/"
+              element={<RegistrationForm evento="telecoemprende-2026-27" />}
+            />
+            <Route path="/gracias" element={<ThankYouPage />} />
+          </Routes>
+        </MemoryRouter>
+      </LanguageProvider>,
     );
 
     await user.type(screen.getByLabelText("Nombre"), "Lucía");

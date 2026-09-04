@@ -1,11 +1,17 @@
 import { useState } from "react";
-import { updateRegistration, deleteRegistration } from "../../api/admin";
+import { updateRegistration, deleteRegistration, updateRegistrationEstado } from "../../api/admin";
 import { UPM_SCHOOLS } from "../../data/upmSchools";
-import type { Registro } from "../../types/admin";
+import type { Estado, Registro } from "../../types/admin";
 import type { ApiFailure } from "../../types/api";
 
 const DEPARTAMENTOS = ["Tech/Ingeniería", "Marketing/Comms", "Eventos/Logística"];
 const NIVELES = ["Grado", "Máster"];
+const ESTADO_BADGE_LABELS: Record<Estado, string> = {
+  pendiente: "Pendiente",
+  aceptado: "Aceptado",
+  rechazado: "Rechazado",
+  waitlist: "Waitlist",
+};
 // El backend ya valida el esquema al crear/editar, pero esto es defensa en
 // profundidad: nunca renderizar como enlace clicable un valor que no venga
 // de antemano garantizado como https://drive.google.com/... (por ejemplo,
@@ -29,10 +35,12 @@ type RecordsTableProps = {
     },
   ) => void;
   onDelete: (id: number) => void;
+  onEstadoChange: (id: number, estado: Estado) => void;
 };
 
-export function RecordsTable({ registros, onUpdate, onDelete }: RecordsTableProps) {
+export function RecordsTable({ registros, onUpdate, onDelete, onEstadoChange }: RecordsTableProps) {
   const [editingId, setEditingId] = useState<number | null>(null);
+  const [changingEstadoId, setChangingEstadoId] = useState<number | null>(null);
   const [editData, setEditData] = useState({
     nombre: "",
     apellidos: "",
@@ -100,6 +108,22 @@ export function RecordsTable({ registros, onUpdate, onDelete }: RecordsTableProp
     }
   }
 
+  async function changeEstado(id: number, estado: Estado) {
+    setChangingEstadoId(id);
+    setError(null);
+    try {
+      const res = await updateRegistrationEstado(id, estado);
+      if (res.ok) {
+        onEstadoChange(id, estado);
+      }
+    } catch (e) {
+      const apiErr = e as ApiFailure;
+      setError(apiErr.message || "Error al cambiar el estado.");
+    } finally {
+      setChangingEstadoId(null);
+    }
+  }
+
   async function confirmDelete() {
     if (confirmDeleteId === null) return;
     setDeleting(true);
@@ -151,6 +175,7 @@ export function RecordsTable({ registros, onUpdate, onDelete }: RecordsTableProp
             <th>CV y pitch</th>
             <th>Privacidad</th>
             <th>Fecha</th>
+            <th>Estado</th>
             <th>Acciones</th>
           </tr>
         </thead>
@@ -250,6 +275,12 @@ export function RecordsTable({ registros, onUpdate, onDelete }: RecordsTableProp
                   </td>
                   <td>{registro.privacidad}</td>
                   <td>{registro.fecha}</td>
+                  <td>
+                    <span className={`estado-badge estado-badge-${registro.estado}`}>
+                      {ESTADO_BADGE_LABELS[registro.estado]}
+                      {registro.estado !== "pendiente" && registro.notificado ? " ✓" : ""}
+                    </span>
+                  </td>
                   <td className="actions-cell">
                     <button className="btn-icon btn-save" title="Guardar" disabled={saving} onClick={saveEdit}>
                       {saving ? "…" : "✓"}
@@ -280,7 +311,39 @@ export function RecordsTable({ registros, onUpdate, onDelete }: RecordsTableProp
                   </td>
                   <td>{registro.privacidad}</td>
                   <td>{registro.fecha}</td>
+                  <td>
+                    <span className={`estado-badge estado-badge-${registro.estado}`}>
+                      {ESTADO_BADGE_LABELS[registro.estado]}
+                      {registro.estado !== "pendiente" && registro.notificado ? " ✓" : ""}
+                    </span>
+                  </td>
                   <td className="actions-cell">
+                    <div className="estado-actions-react">
+                      <button
+                        className="btn-estado btn-estado-aceptar"
+                        title="Aceptar"
+                        disabled={changingEstadoId === registro.id || registro.estado === "aceptado"}
+                        onClick={() => void changeEstado(registro.id, "aceptado")}
+                      >
+                        Aceptar
+                      </button>
+                      <button
+                        className="btn-estado btn-estado-rechazar"
+                        title="Rechazar"
+                        disabled={changingEstadoId === registro.id || registro.estado === "rechazado"}
+                        onClick={() => void changeEstado(registro.id, "rechazado")}
+                      >
+                        Rechazar
+                      </button>
+                      <button
+                        className="btn-estado btn-estado-waitlist"
+                        title="Waitlist"
+                        disabled={changingEstadoId === registro.id || registro.estado === "waitlist"}
+                        onClick={() => void changeEstado(registro.id, "waitlist")}
+                      >
+                        Waitlist
+                      </button>
+                    </div>
                     <button className="btn-icon btn-edit" title="Editar" onClick={() => startEdit(registro)}>
                       ✎
                     </button>

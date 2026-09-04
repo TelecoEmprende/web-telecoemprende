@@ -6,12 +6,16 @@
   margin: 0;
 }
 
+.admin-shell-react .container-react {
+  max-width: 1440px;
+}
+
 .admin-card-react {
   background: rgba(255, 255, 255, 0.82);
   border: 1px solid rgba(220, 227, 238, 0.95);
   border-radius: 30px;
   box-shadow: var(--shadow-soft);
-  padding: 28px;
+  padding: 34px;
 }
 
 .admin-login-box-react {
@@ -37,12 +41,99 @@
 }
 
 .admin-toolbar-react {
+  margin-top: 8px;
+  margin-bottom: 20px;
+}
+
+.admin-toolbar-top-react {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 18px;
-  margin-top: 8px;
-  margin-bottom: 24px;
+  margin-bottom: 20px;
+}
+
+.admin-evento-tabs-react,
+.admin-estado-tabs-react {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.admin-estado-tabs-react {
+  margin-bottom: 20px;
+}
+
+.admin-notify-bar-react {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+  padding: 14px 18px;
+  margin-bottom: 20px;
+  border-radius: 16px;
+  background: #f8fbff;
+  border: 1px solid #dde5f1;
+}
+
+.admin-notify-bar-react p {
+  margin: 0;
+  font-size: 0.92rem;
+  color: var(--color-text-muted);
+}
+
+.admin-tab-react,
+.admin-estado-tab-react {
+  border: 1px solid #d7dfeb;
+  background: #fff;
+  color: var(--color-text-muted);
+  font-weight: 800;
+  font-size: 0.9rem;
+  padding: 10px 16px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.admin-tab-active-react {
+  background: var(--color-navy);
+  border-color: var(--color-navy);
+  color: #fff;
+}
+
+.admin-estado-tab-count-react {
+  opacity: 0.7;
+  font-weight: 700;
+}
+
+.admin-estado-tab-active-react.admin-estado-tab-pendiente-react {
+  background: #64748b;
+  border-color: #64748b;
+  color: #fff;
+}
+
+.admin-estado-tab-active-react.admin-estado-tab-aceptado-react {
+  background: #1a9c5c;
+  border-color: #1a9c5c;
+  color: #fff;
+}
+
+.admin-estado-tab-active-react.admin-estado-tab-rechazado-react {
+  background: #e74c3c;
+  border-color: #e74c3c;
+  color: #fff;
+}
+
+.admin-estado-tab-active-react.admin-estado-tab-waitlist-react {
+  background: #e6a417;
+  border-color: #e6a417;
+  color: #fff;
+}
+
+.admin-estado-tab-active-react.admin-estado-tab-todos-react {
+  background: var(--color-navy);
+  border-color: var(--color-navy);
+  color: #fff;
 }
 
 .admin-actions-react {
@@ -73,13 +164,6 @@
 .secondary-btn-react:disabled {
   cursor: wait;
   opacity: 0.7;
-}
-
-.evento-select-react {
-  min-width: 180px;
-  padding: 0 14px;
-  appearance: auto;
-  font-size: 0.95rem;
 }
 
 .table-wrapper-react {
@@ -124,9 +208,72 @@
   background: #fbfdff;
 }
 
+.estado-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.estado-badge-pendiente {
+  background: #eef1f5;
+  color: #475569;
+}
+
+.estado-badge-aceptado {
+  background: #e3f7ec;
+  color: #1a9c5c;
+}
+
+.estado-badge-rechazado {
+  background: #fde8ea;
+  color: #b42318;
+}
+
+.estado-badge-waitlist {
+  background: #fdf1dc;
+  color: #a3690a;
+}
+
 /* Inline edit & action buttons */
 .actions-cell {
   white-space: nowrap;
+}
+
+.estado-actions-react {
+  display: inline-flex;
+  gap: 6px;
+  margin-right: 10px;
+}
+
+.btn-estado {
+  border: none;
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 0.78rem;
+  font-weight: 800;
+  cursor: pointer;
+  color: #fff;
+}
+
+.btn-estado:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.btn-estado-aceptar {
+  background: #1a9c5c;
+}
+
+.btn-estado-rechazar {
+  background: #e74c3c;
+}
+
+.btn-estado-waitlist {
+  background: #e6a417;
 }
 
 .btn-icon {
@@ -281,7 +428,7 @@
     border-radius: 24px;
   }
 
-  .admin-toolbar-react {
+  .admin-toolbar-top-react {
     flex-direction: column;
     margin-bottom: 18px;
   }

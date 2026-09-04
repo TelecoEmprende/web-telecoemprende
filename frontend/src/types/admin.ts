@@ -1,3 +1,5 @@
+export type Estado = "pendiente" | "aceptado" | "rechazado" | "waitlist";
+
 export type Registro = {
   id: number;
   nombre: string;
@@ -12,6 +14,8 @@ export type Registro = {
   privacidad: string;
   fecha: string;
   evento: string;
+  estado: Estado;
+  notificado: boolean;
 };
 
 export type AdminSessionResponse = {

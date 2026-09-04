@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 
 import {
+  enviarNotificaciones,
   getAdminRegistrations,
   getAdminSession,
   loginAdmin,
@@ -10,6 +11,7 @@ import { AlertBanner } from "../components/feedback/AlertBanner";
 import { Header } from "../components/layout/Header";
 import { AdminLoginForm } from "../components/admin/AdminLoginForm";
 import { AdminToolbar } from "../components/admin/AdminToolbar";
+import { EstadoTabs, type EstadoFiltro } from "../components/admin/EstadoTabs";
 import { RecordsTable } from "../components/admin/RecordsTable";
 import type { ApiFailure } from "../types/api";
 import type { Registro } from "../types/admin";
@@ -20,9 +22,11 @@ export function AdminPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoadingRecords, setIsLoadingRecords] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [isNotifying, setIsNotifying] = useState(false);
   const [registros, setRegistros] = useState<Registro[]>([]);
   const [eventos, setEventos] = useState<string[]>([]);
   const [eventoActivo, setEventoActivo] = useState<string>("");
+  const [estadoActivo, setEstadoActivo] = useState<EstadoFiltro>("todos");
   const [message, setMessage] = useState<string | null>(null);
   const [messageVariant, setMessageVariant] = useState<"info" | "success" | "error">(
     "info",
@@ -112,6 +116,26 @@ export function AdminPage() {
     }
   }
 
+  async function handleNotificar() {
+    if (estadoActivo === "todos" || estadoActivo === "pendiente") return;
+
+    setIsNotifying(true);
+    try {
+      const response = await enviarNotificaciones(estadoActivo);
+      if (response.ok) {
+        setMessageVariant("success");
+        setMessage(`${response.enviados} de ${response.total} emails enviados.`);
+        await loadRegistrations(eventoActivo);
+      }
+    } catch (error) {
+      const apiError = error as ApiFailure;
+      setMessageVariant("error");
+      setMessage(apiError.message || "No se pudieron enviar las notificaciones.");
+    } finally {
+      setIsNotifying(false);
+    }
+  }
+
   async function handleLogout() {
     setIsLoggingOut(true);
 
@@ -123,6 +147,7 @@ export function AdminPage() {
         setRegistros([]);
         setEventos([]);
         setEventoActivo("");
+        setEstadoActivo("todos");
         setMessageVariant("success");
         setMessage(response.message ?? "Sesión cerrada correctamente.");
       }
@@ -168,8 +193,42 @@ export function AdminPage() {
                     eventoActivo={eventoActivo}
                     isLoggingOut={isLoggingOut}
                     onLogout={handleLogout}
-                    onEventoChange={(e) => void handleEventoChange(e)}
+                    onEventoChange={(e) => {
+                      setEstadoActivo("todos");
+                      void handleEventoChange(e);
+                    }}
                   />
+
+                  <EstadoTabs
+                    registros={registros}
+                    estadoActivo={estadoActivo}
+                    onEstadoChange={setEstadoActivo}
+                  />
+
+                  {estadoActivo !== "todos" && estadoActivo !== "pendiente"
+                    ? (() => {
+                        const pendientesNotificar = registros.filter(
+                          (r) => r.estado === estadoActivo && !r.notificado,
+                        ).length;
+                        return (
+                          <div className="admin-notify-bar-react">
+                            <p>
+                              <strong>{pendientesNotificar}</strong> pendientes de enviar en esta
+                              pestaña. Reclasificar a alguien vuelve a dejarlo pendiente de un nuevo
+                              envío.
+                            </p>
+                            <button
+                              type="button"
+                              className="secondary-btn-react"
+                              disabled={isNotifying || pendientesNotificar === 0}
+                              onClick={() => void handleNotificar()}
+                            >
+                              {isNotifying ? "Enviando..." : "Enviar notificaciones"}
+                            </button>
+                          </div>
+                        );
+                      })()
+                    : null}
 
                   {isLoadingRecords ? (
                     <div className="section-card admin-placeholder">
@@ -178,7 +237,11 @@ export function AdminPage() {
                     </div>
                   ) : (
                     <RecordsTable
-                      registros={registros}
+                      registros={
+                        estadoActivo === "todos"
+                          ? registros
+                          : registros.filter((r) => r.estado === estadoActivo)
+                      }
                       onUpdate={(id, data) => {
                         setRegistros((prev) =>
                           prev.map((r) => (r.id === id ? { ...r, ...data } : r)),
@@ -186,6 +249,11 @@ export function AdminPage() {
                       }}
                       onDelete={(id) => {
                         setRegistros((prev) => prev.filter((r) => r.id !== id));
+                      }}
+                      onEstadoChange={(id, estado) => {
+                        setRegistros((prev) =>
+                          prev.map((r) => (r.id === id ? { ...r, estado, notificado: false } : r)),
+                        );
                       }}
                     />
                   )}
