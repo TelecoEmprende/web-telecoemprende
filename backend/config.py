@@ -1,10 +1,5 @@
 import os
-from pathlib import Path
 
-
-DATA_DIR = Path(os.environ.get("DATA_DIR", "."))
-DATA_DIR.mkdir(parents=True, exist_ok=True)
-EXCEL_FILE = DATA_DIR / "registros_evento.xlsx"
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "")
 DATABASE_URL = os.environ.get(
     "DATABASE_URL",
@@ -37,3 +32,11 @@ DEPARTAMENTOS_VALIDOS = {
     "Marketing/Comms",
     "Eventos/Logística",
 }
+
+ESTADOS_VALIDOS = {"pendiente", "aceptado", "rechazado", "waitlist"}
+
+# Envío de email transaccional (Resend, https://resend.com). Si RESEND_API_KEY
+# no está configurada, el envío se salta en silencio (ver services/email.py).
+RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "")
+RESEND_FROM_EMAIL = os.environ.get("RESEND_FROM_EMAIL", "inscripciones@telecoemprende.es")
+RESEND_FROM_NAME = os.environ.get("RESEND_FROM_NAME", "TelecoEmprende")

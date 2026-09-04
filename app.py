@@ -12,8 +12,7 @@ from pathlib import Path
 from backend.api.admin import admin_api
 from backend.api.public import public_api
 from backend.config import ADMIN_SESSION_LIFETIME_SECONDS
-from backend.services.admin import is_admin_authenticated
-from backend.services.registrations import crear_excel_si_no_existe, generar_excel_en_memoria
+from backend.services.registrations import crear_excel_si_no_existe
 
 app = Flask(__name__)
 app.register_blueprint(public_api)
@@ -89,20 +88,6 @@ def frontend_logo():
         abort(503, description="Frontend build not found. Run `npm run build` in `frontend/`.")
 
     return send_from_directory(FRONTEND_DIST_DIR, "logo.png")
-
-
-@app.route("/admin/descargar")
-def descargar_excel():
-    autenticado = is_admin_authenticated()
-    if not autenticado:
-        abort(401, description="No autorizado.")
-
-    return send_file(
-        generar_excel_en_memoria(),
-        as_attachment=True,
-        download_name="registros_telecoemprende.xlsx",
-        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    )
 
 
 if __name__ == "__main__":

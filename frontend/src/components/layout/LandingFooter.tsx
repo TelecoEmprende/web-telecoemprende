@@ -1,7 +1,10 @@
 import { useLocation } from "react-router-dom";
 
+import { useTranslation } from "../../i18n/translations";
+
 export function LandingFooter() {
   const { pathname } = useLocation();
+  const { t } = useTranslation();
   const onHomePage = pathname === "/";
   const toAnchor = (hash: string) => (onHomePage ? hash : `/${hash}`);
 
@@ -12,10 +15,7 @@ export function LandingFooter() {
           <img src="/logo.png" alt="Logo de TelecoEmprende" />
           <div>
             <strong>TelecoEmprende</strong>
-            <p>
-              Club de emprendimiento nacido en la ETSIT, abierto a
-              estudiantes de toda la UPM.
-            </p>
+            <p>{t.footer.tagline}</p>
             <p className="lp-footer-contact">
               <a href="mailto:telecoemprende.etsit@upm.es">
                 telecoemprende.etsit@upm.es
@@ -24,19 +24,22 @@ export function LandingFooter() {
           </div>
         </div>
 
-        <nav className="lp-footer-links" aria-label="Enlaces del pie de página">
-          <a href={toAnchor("#quienes-somos")}>Quiénes somos</a>
-          <a href={toAnchor("#departamentos")}>Departamentos</a>
-          <a href={toAnchor("#eventos")}>Eventos</a>
-          <a href={toAnchor("#inscripcion")}>Inscripción</a>
+        <nav className="lp-footer-links" aria-label={t.footer.linksLabel}>
+          <a href={toAnchor("#quienes-somos")}>{t.nav.quienesSomos}</a>
+          <a href={toAnchor("#departamentos")}>{t.nav.departamentos}</a>
+          <a href={toAnchor("#eventos")}>{t.nav.eventos}</a>
+          <a href={toAnchor("#inscripcion")}>{t.nav.inscripcion}</a>
+          <a href="https://alumni.etsit.upm.es/" target="_blank" rel="noreferrer">
+            {t.footer.alumniLink}
+          </a>
         </nav>
 
-        <div className="lp-footer-social" aria-label="Redes sociales de TelecoEmprende">
+        <div className="lp-footer-social" aria-label={t.footer.socialLabel}>
           <a
             href="https://www.instagram.com/telecoemprende/"
             target="_blank"
             rel="noreferrer"
-            aria-label="TelecoEmprende en Instagram"
+            aria-label={t.footer.instagramAria}
           >
             <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
               <path
@@ -49,7 +52,7 @@ export function LandingFooter() {
             href="https://www.linkedin.com/company/telecoemprende"
             target="_blank"
             rel="noreferrer"
-            aria-label="TelecoEmprende en LinkedIn"
+            aria-label={t.footer.linkedinAria}
           >
             <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
               <path
@@ -60,9 +63,7 @@ export function LandingFooter() {
           </a>
         </div>
 
-        <p className="lp-footer-note">
-          Hecho con ☕ entre clase y clase, desde la ETSIT para toda la UPM.
-        </p>
+        <p className="lp-footer-note">{t.footer.note}</p>
       </div>
     </footer>
   );

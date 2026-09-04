@@ -3,6 +3,7 @@ import { Link, Navigate, useLocation } from "react-router-dom";
 
 import { LandingFooter } from "../components/layout/LandingFooter";
 import { LandingNav } from "../components/home/LandingNav";
+import { useTranslation } from "../i18n/translations";
 
 type ThankYouState = {
   attendeeName?: string;
@@ -11,6 +12,7 @@ type ThankYouState = {
 };
 
 export function ThankYouPage() {
+  const { t } = useTranslation();
   const whatsappCommunityUrl = "https://chat.whatsapp.com/DdllRrRTg3REkyYW248uFP";
   const location = useLocation();
   const state = (location.state as ThankYouState | null) ?? null;
@@ -33,40 +35,39 @@ export function ThankYouPage() {
         <section className="lp-thankyou">
           <div className="lp-container">
             <div className="lp-thankyou-card">
-              <span className="lp-eyebrow">Solicitud enviada</span>
+              <span className="lp-eyebrow">{t.thankYou.eyebrow}</span>
               <h1 className="lp-heading">
-                {firstName ? `Gracias, ${firstName}.` : "Gracias por enviar tu solicitud."}
+                {firstName ? `${t.thankYou.headingNamed} ${firstName}.` : t.thankYou.headingGeneric}
               </h1>
-              <p className="lp-section-lead lp-thankyou-lead">
-                Hemos recibido tu solicitud para unirte a TelecoEmprende
-                2026/27. La revisaremos y te escribiremos con la resolución.
-              </p>
+              <p className="lp-section-lead lp-thankyou-lead">{t.thankYou.lead}</p>
 
               <div className="lp-thankyou-note">
-                <strong>Te enviaremos un email con los próximos pasos y los primeros eventos del curso.</strong>
-                <p>Lo recibirás en {attendeeEmail}.</p>
+                <strong>{t.thankYou.noteStrong}</strong>
+                <p>
+                  {t.thankYou.noteReceivedAt} {attendeeEmail}.
+                </p>
               </div>
 
-              <div className="lp-thankyou-meta" aria-label="Información de la solicitud">
-                <div className="lp-thankyou-meta-item">🎓 Curso 2026/27</div>
-                <div className="lp-thankyou-meta-item">📍 ETSIT · UPM</div>
-                <div className="lp-thankyou-meta-item">🚀 Comunidad TelecoEmprende</div>
+              <div className="lp-thankyou-meta" aria-label={t.thankYou.metaLabel}>
+                <div className="lp-thankyou-meta-item">{t.thankYou.meta1}</div>
+                <div className="lp-thankyou-meta-item">{t.thankYou.meta2}</div>
+                <div className="lp-thankyou-meta-item">{t.thankYou.meta3}</div>
               </div>
 
               <div className="lp-thankyou-points">
                 <div className="lp-thankyou-point">
-                  <strong>🔍 Revisamos tu solicitud</strong>
-                  <span>Leemos cada solicitud a mano y te avisamos por email con la resolución en los próximos días.</span>
+                  <strong>{t.thankYou.point1Title}</strong>
+                  <span>{t.thankYou.point1Body}</span>
                 </div>
                 <div className="lp-thankyou-point">
-                  <strong>🪜 Siguiente paso</strong>
-                  <span>Únete a la comunidad de WhatsApp para no perderte el arranque del curso.</span>
+                  <strong>{t.thankYou.point2Title}</strong>
+                  <span>{t.thankYou.point2Body}</span>
                 </div>
               </div>
 
               <div className="lp-thankyou-actions">
                 <Link to="/" className="lp-btn lp-btn-outline">
-                  Volver al inicio
+                  {t.thankYou.backHome}
                 </Link>
                 <a href={whatsappCommunityUrl} className="lp-btn lp-btn-whatsapp">
                   <span className="lp-btn-whatsapp-icon" aria-hidden="true">
@@ -77,7 +78,7 @@ export function ThankYouPage() {
                       />
                     </svg>
                   </span>
-                  Únete a la comunidad de WhatsApp!
+                  {t.thankYou.whatsappCta}
                 </a>
               </div>
             </div>

@@ -198,6 +198,83 @@ class ApiTestCase(unittest.TestCase):
 
         self.assertEqual(response.status_code, 400)
 
+    def test_admin_update_estado_flow(self):
+        self.register()
+        self.login()
+        registrations = self.client.get("/api/admin/registrations").get_json()
+        reg = registrations["registros"][0]
+        self.assertEqual(reg["estado"], "pendiente")
+        self.assertFalse(reg["notificado"])
+
+        response = self.client.patch(
+            f"/api/admin/registrations/{reg['id']}/estado",
+            json={"estado": "aceptado"},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.get_json()["ok"])
+
+        registrations = self.client.get("/api/admin/registrations").get_json()
+        self.assertEqual(registrations["registros"][0]["estado"], "aceptado")
+        # Clasificar no envía el email por sí solo: hace falta el botón "Enviar".
+        self.assertFalse(registrations["registros"][0]["notificado"])
+
+    def test_admin_notificar_sends_only_pending_and_marks_notificado(self):
+        self.register()
+        self.login()
+        reg_id = self.client.get("/api/admin/registrations").get_json()["registros"][0]["id"]
+        self.client.patch(f"/api/admin/registrations/{reg_id}/estado", json={"estado": "aceptado"})
+
+        response = self.client.post("/api/admin/registrations/notificar", json={"estado": "aceptado"})
+        self.assertEqual(response.status_code, 200)
+        payload = response.get_json()
+        self.assertTrue(payload["ok"])
+        self.assertEqual(payload["total"], 1)
+        self.assertEqual(payload["enviados"], 0)  # sin RESEND_API_KEY en tests, Resend no llega a llamarse
+
+        # Sin RESEND_API_KEY el envío falla y notificado sigue en False (para poder reintentar).
+        registrations = self.client.get("/api/admin/registrations").get_json()
+        self.assertFalse(registrations["registros"][0]["notificado"])
+
+        # Un segundo intento vuelve a considerarlo pendiente (no se marcó como enviado).
+        response = self.client.post("/api/admin/registrations/notificar", json={"estado": "aceptado"})
+        self.assertEqual(response.get_json()["total"], 1)
+
+    def test_admin_notificar_rejects_pendiente(self):
+        self.register()
+        self.login()
+        response = self.client.post("/api/admin/registrations/notificar", json={"estado": "pendiente"})
+        self.assertEqual(response.status_code, 400)
+
+    def test_admin_notificar_requires_auth(self):
+        self.register()
+        response = self.client.post("/api/admin/registrations/notificar", json={"estado": "aceptado"})
+        self.assertEqual(response.status_code, 401)
+
+    def test_admin_update_estado_rejects_invalid_value(self):
+        self.register()
+        self.login()
+        registrations = self.client.get("/api/admin/registrations").get_json()
+        reg_id = registrations["registros"][0]["id"]
+
+        response = self.client.patch(
+            f"/api/admin/registrations/{reg_id}/estado",
+            json={"estado": "no-es-un-estado"},
+        )
+        self.assertEqual(response.status_code, 400)
+
+    def test_admin_update_estado_requires_auth(self):
+        self.register()
+        self.login()
+        registrations = self.client.get("/api/admin/registrations").get_json()
+        reg_id = registrations["registros"][0]["id"]
+        self.client.post("/api/admin/logout")
+
+        response = self.client.patch(
+            f"/api/admin/registrations/{reg_id}/estado",
+            json={"estado": "aceptado"},
+        )
+        self.assertEqual(response.status_code, 401)
+
     def test_legacy_get_admin_logout_route_removed(self):
         # Era alcanzable con una navegación GET de nivel superior (cross-site),
         # forzando el logout del admin sin su intención. El logout real vive
