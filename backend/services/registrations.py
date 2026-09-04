@@ -49,6 +49,14 @@ def init_db():
                 ALTER TABLE registrations
                 ADD COLUMN IF NOT EXISTS telefono VARCHAR(20) NOT NULL DEFAULT ''
             """)
+            cur.execute("""
+                ALTER TABLE registrations
+                ADD COLUMN IF NOT EXISTS estado VARCHAR(20) NOT NULL DEFAULT 'pendiente'
+            """)
+            cur.execute("""
+                ALTER TABLE registrations
+                ADD COLUMN IF NOT EXISTS notificado BOOLEAN NOT NULL DEFAULT FALSE
+            """)
         conn.commit()
 
 
@@ -122,7 +130,8 @@ def obtener_registros(evento: str | None = None):
                 cur.execute(
                     """
                     SELECT id, nombre, apellidos, estudios, email, departamento, drive_link,
-                           privacidad_aceptada, ip_registro, created_at, evento, escuela, nivel, telefono
+                           privacidad_aceptada, ip_registro, created_at, evento, escuela, nivel, telefono,
+                           estado, notificado
                     FROM registrations
                     WHERE evento = %s
                     ORDER BY id
@@ -133,7 +142,8 @@ def obtener_registros(evento: str | None = None):
                 cur.execute(
                     """
                     SELECT id, nombre, apellidos, estudios, email, departamento, drive_link,
-                           privacidad_aceptada, ip_registro, created_at, evento, escuela, nivel, telefono
+                           privacidad_aceptada, ip_registro, created_at, evento, escuela, nivel, telefono,
+                           estado, notificado
                     FROM registrations
                     ORDER BY id
                     """
@@ -156,6 +166,8 @@ def obtener_registros(evento: str | None = None):
             "escuela": r[11],
             "nivel": r[12],
             "telefono": r[13],
+            "estado": r[14],
+            "notificado": r[15],
         }
         for r in rows
     ]
@@ -206,6 +218,43 @@ def actualizar_registro(
     return True
 
 
+def actualizar_estado(reg_id: int, estado: str) -> dict | None:
+    """Actualiza el estado de una inscripción y la marca como no notificada
+    (reclasificar siempre deja pendiente un nuevo envío manual desde el botón "Enviar")."""
+    with _get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "UPDATE registrations SET estado = %s, notificado = FALSE WHERE id = %s "
+                "RETURNING id, nombre, apellidos, email, evento",
+                (estado, reg_id),
+            )
+            row = cur.fetchone()
+        conn.commit()
+
+    if row is None:
+        return None
+    return {"id": row[0], "nombre": row[1], "apellidos": row[2], "email": row[3], "evento": row[4]}
+
+
+def obtener_pendientes_notificacion(estado: str) -> list[dict]:
+    with _get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT id, nombre, apellidos, email FROM registrations "
+                "WHERE estado = %s AND notificado = FALSE",
+                (estado,),
+            )
+            rows = cur.fetchall()
+    return [{"id": r[0], "nombre": r[1], "apellidos": r[2], "email": r[3]} for r in rows]
+
+
+def marcar_notificado(reg_id: int) -> None:
+    with _get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute("UPDATE registrations SET notificado = TRUE WHERE id = %s", (reg_id,))
+        conn.commit()
+
+
 def eliminar_registro(reg_id: int) -> bool:
     with _get_connection() as conn:
         with conn.cursor() as cur:
@@ -248,11 +297,12 @@ def generar_excel_en_memoria(evento: str | None = None) -> BytesIO:
         "IP registro",
         "Fecha de registro",
         "Evento",
+        "Estado",
     ])
 
     anchos = {
         "A": 20, "B": 25, "C": 45, "D": 12, "E": 35, "F": 32,
-        "G": 18, "H": 22, "I": 40, "J": 18, "K": 18, "L": 22, "M": 25,
+        "G": 18, "H": 22, "I": 40, "J": 18, "K": 18, "L": 22, "M": 25, "N": 16,
     }
     for col, ancho in anchos.items():
         ws.column_dimensions[col].width = ancho
@@ -272,6 +322,7 @@ def generar_excel_en_memoria(evento: str | None = None) -> BytesIO:
             r["ip"],
             r["fecha"],
             r["evento"],
+            r["estado"],
         ])
 
     output = BytesIO()

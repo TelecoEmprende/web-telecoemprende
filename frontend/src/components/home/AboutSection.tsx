@@ -1,98 +1,138 @@
 import { useEffect, useRef, useState } from "react";
 
+import { useTranslation } from "../../i18n/translations";
+
+type Bilingual = { es: string; en: string };
+
 type TeamMember = {
   name: string;
   alias?: string;
   photo: string;
-  role: string;
+  role: Bilingual;
   program: string;
-  line: string;
+  line: Bilingual;
 };
 
 const TEAM: TeamMember[] = [
   {
     name: "Mariano",
     photo: "/equipo-mariano.jpg",
-    role: "Ex-presidente · Board Member",
+    role: { es: "Ex-presidente · Board Member", en: "Former President · Board Member" },
     program: "MUIT · HEC Paris · ETSIT",
-    line: "Puso en marcha TelecoEmprende y ahora lo sigue de cerca desde HEC Paris.",
+    line: {
+      es: "Puso en marcha TelecoEmprende y ahora lo sigue de cerca desde HEC Paris.",
+      en: "Got TelecoEmprende off the ground and now follows it closely from HEC Paris.",
+    },
   },
   {
     name: "Jorge",
     photo: "/equipo-jorge.jpg",
-    role: "Ex-vicepresidente · Board Member",
+    role: { es: "Ex-vicepresidente · Board Member", en: "Former Vice President · Board Member" },
     program: "MUIT · IIT · ETSIT",
-    line: "El del buen gusto del equipo: si algo tiene que quedar bien, pasa primero por él.",
+    line: {
+      es: "El del buen gusto del equipo: si algo tiene que quedar bien, pasa primero por él.",
+      en: "The team's taste-maker: if something needs to look right, it goes through him first.",
+    },
   },
   {
     name: "Hammad",
     photo: "/equipo-hammad.jpg",
-    role: "Presidente",
+    role: { es: "Presidente", en: "President" },
     program: "GISD · ETSIT",
-    line: "Coordina el día a día para que el resto del equipo pueda centrarse en construir.",
+    line: {
+      es: "Coordina el día a día para que el resto del equipo pueda centrarse en construir.",
+      en: "Coordinates the day-to-day so the rest of the team can focus on building.",
+    },
   },
   {
     name: "Alex",
     photo: "/equipo-alex.jpg",
-    role: "Ex-secretario · Board Member",
+    role: { es: "Ex-secretario · Board Member", en: "Former Secretary · Board Member" },
     program: "MUIT · ETSIT",
-    line: "Fue el secretario que mantenía todo en orden; ahora sigue dando apoyo desde la sombra.",
+    line: {
+      es: "Fue el secretario que mantenía todo en orden; ahora sigue dando apoyo desde la sombra.",
+      en: "Was the secretary who kept everything in order; still supporting from behind the scenes.",
+    },
   },
   {
     name: "Iker",
     photo: "/equipo-iker.jpg",
-    role: "Miembro",
+    role: { es: "Miembro", en: "Member" },
     program: "GISD · ETSIT",
-    line: "Aunque estudiante del GISD, con gusto por la inversión.",
+    line: {
+      es: "Aunque estudiante del GISD, con gusto por la inversión.",
+      en: "A GISD student with a taste for investing.",
+    },
   },
   {
     name: "Abril",
     photo: "/equipo-abril.jpg",
-    role: "Miembro",
+    role: { es: "Miembro", en: "Member" },
     program: "GISD · ETSIT",
-    line: "Disfruta convirtiendo ideas en proyectos que funcionen.",
+    line: {
+      es: "Disfruta convirtiendo ideas en proyectos que funcionen.",
+      en: "Enjoys turning ideas into projects that actually work.",
+    },
   },
   {
     name: "Alejandro",
     photo: "/equipo-alejandro.jpg",
-    role: "Miembro",
+    role: { es: "Miembro", en: "Member" },
     program: "GITST · ETSIT",
-    line: "Aporta una mirada fresca al equipo.",
+    line: {
+      es: "Aporta una mirada fresca al equipo.",
+      en: "Brings a fresh perspective to the team.",
+    },
   },
   {
     name: "Mamoun",
     photo: "/equipo-mamoun.jpg",
-    role: "Miembro",
+    role: { es: "Miembro", en: "Member" },
     program: "GII · ETSIINF",
-    line: "Ingeniería Informática en la ETSIINF. La mirada distinta que necesitábamos.",
+    line: {
+      es: "Ingeniería Informática en la ETSIINF. La mirada distinta que necesitábamos.",
+      en: "Computer Engineering at ETSIINF. The different perspective we needed.",
+    },
   },
   {
     name: "Diego",
     photo: "/equipo-diego.jpg",
-    role: "Miembro",
+    role: { es: "Miembro", en: "Member" },
     program: "GIB · ETSIT",
-    line: "Le mola la IA, Data Analytics, ML, DL y la Ingeniería Biomédica.",
+    line: {
+      es: "Le mola la IA, Data Analytics, ML, DL y la Ingeniería Biomédica.",
+      en: "Into AI, Data Analytics, ML, DL and Biomedical Engineering.",
+    },
   },
   {
     name: "David",
     photo: "/equipo-david.jpg",
-    role: "Miembro",
+    role: { es: "Miembro", en: "Member" },
     program: "GISD · ETSIT",
-    line: "Ingeniero de día, piloto de noche.",
+    line: {
+      es: "Ingeniero de día, piloto de noche.",
+      en: "Engineer by day, pilot by night.",
+    },
   },
   {
     name: "Hugo",
     photo: "/equipo-hugo.jpg",
-    role: "Miembro",
+    role: { es: "Miembro", en: "Member" },
     program: "GITST · ETSIT",
-    line: "Suma energía nueva al equipo.",
+    line: {
+      es: "Suma energía nueva al equipo.",
+      en: "Adds fresh energy to the team.",
+    },
   },
   {
     name: "Guillermo",
     photo: "/equipo-guillermo.jpg",
-    role: "Miembro",
+    role: { es: "Miembro", en: "Member" },
     program: "GITST · ETSIT",
-    line: "Se une con muchas ganas de aportar.",
+    line: {
+      es: "Se une con muchas ganas de aportar.",
+      en: "Joins with plenty of drive to contribute.",
+    },
   },
 ];
 
@@ -111,6 +151,7 @@ function ArrowIcon({ direction }: { direction: "left" | "right" }) {
 }
 
 export function AboutSection() {
+  const { t, language } = useTranslation();
   const trackRef = useRef<HTMLUListElement>(null);
   const cardRefs = useRef<(HTMLLIElement | null)[]>([]);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -163,25 +204,15 @@ export function AboutSection() {
   return (
     <section className="lp-about" id="quienes-somos">
       <div className="lp-container">
-        <span className="lp-eyebrow">Quiénes somos</span>
-        <h2 className="lp-heading">
-          Nacimos en la ETSIT con un plan: llevar el emprendimiento a toda la UPM
-        </h2>
-        <p className="lp-section-lead">
-          Empezamos como estudiantes de la Escuela Técnica Superior de
-          Ingenieros de Telecomunicación (ETSIT-UPM). Nos unía una idea sencilla:
-          en ingeniería sobra talento técnico y falta un lugar donde ese talento
-          se atreva a montar cosas. Por eso trajimos el emprendimiento a nuestra
-          escuela, y este curso abrimos la comunidad a toda la UPM para
-          construirla entre todas las escuelas: charlas, contactos y proyectos
-          que empiezan entre clase y clase.
-        </p>
+        <span className="lp-eyebrow">{t.about.eyebrow}</span>
+        <h2 className="lp-heading">{t.about.heading}</h2>
+        <p className="lp-section-lead">{t.about.lead}</p>
 
         <div
           className="lp-team-carousel"
           role="region"
           aria-roledescription="carrusel"
-          aria-label="Miembros del equipo"
+          aria-label={t.about.carouselLabel}
         >
           <ul className="lp-team-track" ref={trackRef}>
             {TEAM.map((member, index) => (
@@ -195,7 +226,7 @@ export function AboutSection() {
                 <div className="lp-team-photo">
                   <img
                     src={member.photo}
-                    alt={`Foto de ${member.name}`}
+                    alt={`${t.about.photoAlt} ${member.name}`}
                     loading="lazy"
                   />
                 </div>
@@ -204,9 +235,9 @@ export function AboutSection() {
                     {member.name}
                     {member.alias ? <span className="lp-team-alias">“{member.alias}”</span> : null}
                   </h3>
-                  <span className="lp-team-role">{member.role}</span>
+                  <span className="lp-team-role">{member.role[language]}</span>
                   <span className="lp-team-program">{member.program}</span>
-                  <p>{member.line}</p>
+                  <p>{member.line[language]}</p>
                 </div>
               </li>
             ))}
@@ -218,18 +249,18 @@ export function AboutSection() {
               className="lp-team-arrow"
               onClick={() => scrollByStep(-1)}
               disabled={atStart}
-              aria-label="Ver miembro anterior"
+              aria-label={t.about.prevAria}
             >
               <ArrowIcon direction="left" />
             </button>
 
-            <div className="lp-team-dots" role="group" aria-label="Ir a un miembro del equipo">
+            <div className="lp-team-dots" role="group" aria-label={t.about.dotsLabel}>
               {TEAM.map((member, index) => (
                 <button
                   key={member.name}
                   type="button"
                   className={`lp-team-dot${index === activeIndex ? " is-active" : ""}`}
-                  aria-label={`Ver a ${member.name}`}
+                  aria-label={`${t.about.dotAria} ${member.name}`}
                   aria-current={index === activeIndex}
                   onClick={() => scrollToCard(index)}
                 />
@@ -241,7 +272,7 @@ export function AboutSection() {
               className="lp-team-arrow"
               onClick={() => scrollByStep(1)}
               disabled={atEnd}
-              aria-label="Ver siguiente miembro"
+              aria-label={t.about.nextAria}
             >
               <ArrowIcon direction="right" />
             </button>
