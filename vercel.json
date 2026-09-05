@@ -18,6 +18,8 @@
   },
   "rewrites": [
     { "source": "/api/(.*)", "destination": { "service": "backend" } },
+    { "source": "/demo", "destination": "https://demo-feriaclubes.vercel.app/demo" },
+    { "source": "/demo/(.*)", "destination": "https://demo-feriaclubes.vercel.app/demo/$1" },
     { "source": "/(.*)", "destination": { "service": "frontend" } }
   ],
   "headers": [

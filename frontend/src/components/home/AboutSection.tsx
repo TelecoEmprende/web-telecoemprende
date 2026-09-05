@@ -75,16 +75,6 @@ const TEAM: TeamMember[] = [
     },
   },
   {
-    name: "Alejandro",
-    photo: "/equipo-alejandro.jpg",
-    role: { es: "Miembro", en: "Member" },
-    program: "GITST · ETSIT",
-    line: {
-      es: "Aporta una mirada fresca al equipo.",
-      en: "Brings a fresh perspective to the team.",
-    },
-  },
-  {
     name: "Mamoun",
     photo: "/equipo-mamoun.jpg",
     role: { es: "Miembro", en: "Member" },
