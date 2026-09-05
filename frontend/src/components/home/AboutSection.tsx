@@ -120,8 +120,8 @@ const TEAM: TeamMember[] = [
     role: { es: "Miembro", en: "Member" },
     program: "GITST · ETSIT",
     line: {
-      es: "Se une con muchas ganas de aportar.",
-      en: "Joins with plenty of drive to contribute.",
+      es: "Estudiante de Teleco apasionado por la IA y la robótica. Curioso, ambicioso y con ganas de convertir ideas en proyectos reales.",
+      en: "Telecom engineering student passionate about AI and robotics. Curious, ambitious, and eager to turn ideas into real projects.",
     },
   },
 ];
