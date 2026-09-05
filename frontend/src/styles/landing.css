@@ -459,7 +459,10 @@
 /* ---------- Quiénes somos ---------- */
 
 .lp-about {
-  padding: 96px 0;
+  /* Menos que las demás secciones abajo: el carrusel ya termina en las
+     flechas/puntos, que pesan menos que un párrafo, y el padding-top de
+     .lp-departments (96px) se suma al de aquí sin colapsar. */
+  padding: 96px 0 40px;
 }
 
 .lp-team-carousel {
