@@ -438,6 +438,15 @@
   color: #a9bcc9;
 }
 
+.lp-reveal-word {
+  color: rgba(17, 37, 50, 0.3);
+  transition: color 0.4s ease;
+}
+
+.lp-reveal-word.is-revealed {
+  color: var(--color-navy);
+}
+
 /* ---------- Quiénes somos ---------- */
 
 .lp-about {
