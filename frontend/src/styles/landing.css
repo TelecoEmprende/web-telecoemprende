@@ -471,7 +471,10 @@
   display: flex;
   gap: 26px;
   margin: 0;
-  padding: 0 4px 10px;
+  /* overflow-x: auto obliga al navegador a recortar también en vertical
+     (overflow-y pasa a auto), así que sin este margen la sombra de las
+     tarjetas (0 16px 40px) se corta de golpe en vez de difuminarse. */
+  padding: 0 4px 56px;
   list-style: none;
   overflow-x: auto;
   overscroll-behavior-x: contain;
@@ -569,7 +572,9 @@
   align-items: center;
   justify-content: center;
   gap: 18px;
-  margin-top: 28px;
+  /* Negativo para compensar el padding-bottom extra de .lp-team-track (56px
+     en vez de 10px) y dejar la misma separación visual de antes. */
+  margin-top: -18px;
 }
 
 .lp-team-arrow {
