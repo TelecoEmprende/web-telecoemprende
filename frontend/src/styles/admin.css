@@ -64,6 +64,152 @@
   margin-bottom: 20px;
 }
 
+.admin-stats-react {
+  margin-bottom: 24px;
+}
+
+.admin-stats-cards-react {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.admin-stat-card-react {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 16px 18px;
+  border-radius: 18px;
+  background: #f8fbff;
+  border: 1px solid #e2e9f3;
+}
+
+.admin-stat-value-react {
+  font-size: 1.7rem;
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  color: var(--color-navy);
+}
+
+.admin-stat-label-react {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--color-text-muted);
+}
+
+.admin-stat-card-aceptado-react {
+  background: #eefaf2;
+  border-color: #cdedd9;
+}
+
+.admin-stat-card-aceptado-react .admin-stat-value-react {
+  color: #1a9c5c;
+}
+
+.admin-stat-card-waitlist-react {
+  background: #fef8ec;
+  border-color: #f5e3bc;
+}
+
+.admin-stat-card-waitlist-react .admin-stat-value-react {
+  color: #a3690a;
+}
+
+.admin-stat-card-rechazado-react {
+  background: #fdedee;
+  border-color: #f6cfd2;
+}
+
+.admin-stat-card-rechazado-react .admin-stat-value-react {
+  color: #b42318;
+}
+
+.admin-stat-card-pendiente-react .admin-stat-value-react {
+  color: #475569;
+}
+
+.admin-stats-charts-react {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 12px;
+}
+
+.admin-chart-card-react {
+  padding: 18px 20px;
+  border-radius: 18px;
+  background: #fff;
+  border: 1px solid #e2e9f3;
+}
+
+.admin-chart-card-react h2 {
+  margin: 0 0 14px;
+  font-size: 0.92rem;
+  font-weight: 800;
+  color: var(--color-text);
+}
+
+.admin-bars-react {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 96px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+
+.admin-bar-react {
+  flex: 0 0 8px;
+  min-width: 8px;
+  border-radius: 3px 3px 0 0;
+  background: linear-gradient(180deg, var(--color-orange), var(--color-gold));
+}
+
+.admin-breakdown-react {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.admin-breakdown-react li {
+  display: grid;
+  grid-template-columns: minmax(110px, 1.3fr) minmax(50px, 1fr) 28px;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.86rem;
+}
+
+.admin-breakdown-label-react {
+  color: var(--color-text);
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-breakdown-track-react {
+  height: 8px;
+  border-radius: 999px;
+  background: #eef2f7;
+  overflow: hidden;
+}
+
+.admin-breakdown-fill-react {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--color-navy);
+}
+
+.admin-breakdown-count-react {
+  text-align: right;
+  color: var(--color-text-muted);
+  font-weight: 700;
+}
+
 .admin-notify-bar-react {
   display: flex;
   align-items: center;
