@@ -17,12 +17,19 @@
       "rewrites": [
         { "source": "/(.*)", "destination": "/index.html" }
       ]
+    },
+    "demo": {
+      "root": "demo/",
+      "framework": "vite",
+      "rewrites": [
+        { "source": "/(.*)", "destination": "/index.html" }
+      ]
     }
   },
   "rewrites": [
     { "source": "/api/(.*)", "destination": { "service": "backend" } },
-    { "source": "/demo", "destination": "https://demo-feriaclubes.vercel.app/demo" },
-    { "source": "/demo/(.*)", "destination": "https://demo-feriaclubes.vercel.app/demo/$1" },
+    { "source": "/demo", "destination": { "service": "demo" } },
+    { "source": "/demo/(.*)", "destination": { "service": "demo" } },
     { "source": "/(.*)", "destination": { "service": "frontend" } }
   ],
   "headers": [

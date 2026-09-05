@@ -1,0 +1,1995 @@
+/* ==========================================================================
+   Estilos de la one-page de TelecoEmprende.
+   Los colores base están en index.css.
+   ========================================================================== */
+
+.marco,
+.barra,
+.portada,
+.depto,
+.pie {
+  --lateral: clamp(20px, 4vw, 68px);
+}
+
+/* --------------------------------------------------------------------------
+   Barra superior
+   -------------------------------------------------------------------------- */
+
+.barra {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 24px;
+  padding: 14px var(--lateral);
+  background: color-mix(in srgb, var(--papel) 88%, transparent);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid transparent;
+  transition:
+    border-color 0.2s var(--salida),
+    background 0.2s var(--salida);
+}
+
+.barra--compacta {
+  border-bottom-color: var(--linea);
+}
+
+.barra__marca {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  text-decoration: none;
+  color: inherit;
+}
+
+.barra__marca img {
+  width: 34px;
+  height: 34px;
+}
+
+/* "Emprende" en naranja, como en la web principal del club. Sobre fondo
+   claro hace falta el naranja oscuro —el del logo se queda en 1,9:1 y no se
+   lee—; sobre la tinta del pie sí va el del logo, que ahí da 8,2:1. */
+.marca__naranja {
+  color: var(--naranja-tinta);
+}
+
+.pie .marca__naranja {
+  color: var(--naranja);
+}
+
+.barra__marca b {
+  font-size: 16px;
+  font-variation-settings: 'wght' 700;
+  letter-spacing: -0.012em;
+}
+
+.barra__saltos {
+  display: flex;
+  justify-content: center;
+  gap: 4px;
+  opacity: 0;
+  pointer-events: none;
+  /* Aparece y desaparece cada vez que la portada entra o sale de pantalla,
+     o sea todo el rato mientras se desliza: cuanto menos, mejor. */
+  transition: opacity 0.18s var(--salida);
+}
+
+.barra--compacta .barra__saltos {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.barra__salto {
+  color: var(--texto);
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: transparent;
+  cursor: pointer;
+  font-size: 13px;
+  font-variation-settings: 'wght' 600;
+  color: var(--texto);
+  white-space: nowrap;
+  transition:
+    background 0.3s var(--salida),
+    color 0.3s var(--salida),
+    border-color 0.3s var(--salida);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .barra__salto:hover {
+    background: var(--papel-2);
+    color: var(--tinta);
+  }
+}
+
+.barra__salto[aria-current='true'] {
+  background: var(--tinta);
+  border-color: var(--tinta);
+  color: var(--papel);
+}
+
+.barra__salto-icono {
+  width: 17px;
+  height: 17px;
+}
+
+.barra__origen {
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--texto-tenue);
+  font-variation-settings:
+    'wdth' 86,
+    'wght' 600;
+  white-space: nowrap;
+}
+
+/* --------------------------------------------------------------------------
+   Portada: mensaje a la izquierda, tres puertas a la derecha
+   -------------------------------------------------------------------------- */
+
+.portada {
+  display: grid;
+  grid-template-columns: 0.88fr 1.12fr;
+  align-items: stretch;
+  gap: 0;
+  min-height: calc(100vh - 64px);
+  border-bottom: 1px solid var(--linea);
+}
+
+.portada__mensaje {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: clamp(44px, 6vw, 88px) clamp(32px, 4vw, 64px) clamp(44px, 6vw, 88px)
+    var(--lateral);
+  border-right: 1px solid var(--linea);
+}
+
+.portada__titular {
+  margin: 0 0 24px;
+  font-size: clamp(34px, 4.2vw, 60px);
+  line-height: 0.94;
+  letter-spacing: -0.038em;
+  font-variation-settings:
+    'wdth' 100,
+    'wght' 780;
+  text-wrap: balance;
+}
+
+.portada__titular em {
+  font-style: normal;
+  color: var(--naranja-tinta);
+}
+
+.portada__aclaracion {
+  margin: 0 0 28px;
+  padding: 16px 20px;
+  border-left: 1px solid var(--linea-fuerte);
+  background: var(--papel-2);
+  max-width: 50ch;
+  font-size: clamp(15px, 1.5vw, 17px);
+  line-height: 1.55;
+  color: var(--tinta);
+  font-variation-settings: 'wght' 560;
+}
+
+.portada__invitacion {
+  margin: 0;
+  padding-top: 18px;
+  border-top: 2px solid var(--linea-fuerte);
+  font-size: 12px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  font-variation-settings:
+    'wdth' 88,
+    'wght' 700;
+}
+
+/* --------------------------------------------------------------------------
+   Selector: las tres puertas de entrada
+   -------------------------------------------------------------------------- */
+
+/* En la portada las puertas son un acceso secundario: el protagonista es el
+   test. Filas compactas en lugar de tres bloques a altura completa. */
+.selector {
+  display: flex;
+  flex-direction: column;
+  margin-top: 12px;
+  border-top: 1px solid var(--linea);
+}
+
+.selector__fila {
+  /* Son enlaces, así que hay que quitarles el azul, el morado de visitado
+     y el subrayado que el navegador les pone por defecto. */
+  color: inherit;
+  text-decoration: none;
+  flex: 1;
+  display: grid;
+  grid-template-columns: 24px 1fr 18px;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: 15px 6px;
+  border: 0;
+  border-bottom: 1px solid var(--linea);
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  position: relative;
+  isolation: isolate;
+  transition:
+    transform 0.2s var(--salida),
+    color 0.3s var(--salida);
+}
+
+.selector__fila:last-child {
+  border-bottom: 0;
+}
+
+.selector__fila::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: var(--papel-2);
+  opacity: 0;
+  transition: opacity 0.2s var(--salida);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .selector__fila:hover::before {
+    opacity: 1;
+  }
+
+  /* Se desplaza con transform, no con padding: mover el relleno obliga al
+     navegador a recalcular la maquetación de una fila de altura completa
+     sesenta veces por segundo. Se ve igual y sale gratis. */
+  .selector__fila:hover {
+    transform: translateX(6px);
+  }
+}
+
+.selector__fila[aria-current='true'] {
+  background: var(--tinta);
+  color: var(--papel);
+  border-bottom-color: var(--tinta);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  /* La fila activa ya tiene su propio fondo: el velo del hover lo taparía
+     y dejaría el texto claro sobre claro. */
+  .selector__fila[aria-current='true']::before,
+  .selector__fila[aria-current='true']:hover::before {
+    opacity: 0;
+  }
+}
+
+.selector__fila[aria-current='true'] .selector__gancho {
+  color: #b9cadb;
+}
+
+.selector__fila[aria-current='true'] .selector__lema,
+.selector__fila[aria-current='true'] .selector__icono,
+.selector__fila[aria-current='true'] .selector__flecha {
+  color: var(--naranja);
+}
+
+.selector__icono {
+  width: 22px;
+  height: 22px;
+  color: var(--naranja-tinta);
+  transition: color 0.3s var(--salida);
+}
+
+.selector__cuerpo {
+  display: block;
+}
+
+.selector__nombre {
+  display: block;
+  font-size: clamp(16px, 1.5vw, 18px);
+  line-height: 1.1;
+  letter-spacing: -0.022em;
+  font-variation-settings: 'wght' 700;
+}
+
+/* Dice en tres palabras qué se hace en cada departamento: es lo que más
+   explica de toda la portada, así que no puede ser lo menos legible. */
+.selector__lema {
+  display: block;
+  margin-top: 3px;
+  font-size: 11.5px;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+  color: var(--naranja-tinta);
+  font-variation-settings:
+    'wdth' 92,
+    'wght' 700;
+  transition: color 0.3s var(--salida);
+}
+
+/* La frase larga no cabe en una fila compacta: vive en su departamento. */
+.selector__gancho {
+  display: none;
+}
+
+.selector__flecha {
+  width: 18px;
+  height: 18px;
+  color: var(--texto-tenue);
+  transition:
+    color 0.3s var(--salida),
+    transform 0.2s var(--salida);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .selector__fila:hover .selector__flecha {
+    color: var(--naranja-tinta);
+    transform: translateX(4px);
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Departamentos: los tres comparten una rejilla de tercios
+   -------------------------------------------------------------------------- */
+
+.depto {
+  padding: clamp(64px, 8vw, 120px) var(--lateral);
+  scroll-margin-top: 80px;
+}
+
+/* El de en medio va un punto más oscuro y los de fuera sobre el papel. Al
+   deslizar se nota que se cambia de departamento sin dibujar ninguna línea
+   de separación.
+
+   Va por posición y no por departamento porque el test los recoloca: si el
+   fondo fuera siempre el de Marketing, al ponerlo el primero quedarían dos
+   secciones claras seguidas. Dentro de <main> la portada es la sección 1,
+   así que la 3 es siempre el departamento de en medio. */
+main > section:nth-of-type(3) {
+  background: var(--papel-alt);
+}
+
+/* Un tercio de texto y dos tercios de material. Sin líneas que separen:
+   la rejilla se nota por la alineación, no por bordes. */
+.depto__reja {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: clamp(24px, 3vw, 44px);
+  align-items: start;
+}
+
+.cabecera {
+  grid-column: 1;
+  position: sticky;
+  top: 104px;
+}
+
+.cabecera__nombre {
+  margin: 0 0 14px;
+  font-size: clamp(28px, 3.4vw, 48px);
+  line-height: 1;
+  letter-spacing: -0.038em;
+  font-variation-settings:
+    'wdth' 102,
+    'wght' 760;
+}
+
+.cabecera__gancho {
+  margin: 0 0 20px;
+  padding-bottom: 18px;
+  border-bottom: 2px solid var(--linea-fuerte);
+  font-size: clamp(15px, 1.5vw, 18px);
+  line-height: 1.4;
+  color: var(--naranja-tinta);
+  font-variation-settings: 'wght' 620;
+}
+
+.cabecera__resumen {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.65;
+  color: var(--texto);
+}
+
+/* --- Tech: los proyectos ocupan los dos tercios, uno debajo del otro --- */
+
+.proyectos {
+  grid-column: 2 / 4;
+  display: grid;
+  gap: clamp(30px, 3.5vw, 48px);
+}
+
+.proyecto {
+  display: grid;
+  gap: 18px;
+}
+
+.proyecto__marco {
+  position: relative;
+}
+
+/* El logo de GitHub va sobre su captura, como el de la empresa en las charlas. */
+.proyecto__sello {
+  position: absolute;
+  right: -14px;
+  bottom: -14px;
+  width: clamp(46px, 4.4vw, 58px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: #fff;
+  border: 1px solid var(--linea);
+  box-shadow: 0 8px 20px -10px rgba(10, 31, 53, 0.4);
+  pointer-events: none;
+}
+
+.proyecto__sello img {
+  width: 62%;
+  height: 62%;
+  object-fit: contain;
+}
+
+.proyecto__texto {
+  display: grid;
+  gap: 8px;
+}
+
+.proyecto__estado {
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--naranja-tinta);
+  font-variation-settings:
+    'wdth' 86,
+    'wght' 700;
+}
+
+.proyecto__nombre {
+  margin: 0;
+  font-size: clamp(20px, 2.2vw, 28px);
+  letter-spacing: -0.028em;
+  line-height: 1.1;
+  font-variation-settings: 'wght' 720;
+}
+
+.proyecto__descripcion {
+  margin: 0;
+  max-width: 62ch;
+  font-size: 15px;
+  line-height: 1.58;
+  color: var(--texto);
+}
+
+.proyecto__enlace {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  justify-self: start;
+  color: var(--tinta);
+  font-size: 14px;
+  font-variation-settings: 'wght' 650;
+  text-decoration: none;
+  border-bottom: 1px solid var(--linea);
+  padding-bottom: 3px;
+  transition:
+    border-color 0.3s var(--salida),
+    color 0.3s var(--salida);
+}
+
+.proyecto__enlace svg {
+  width: 17px;
+  height: 17px;
+  transition: transform 0.2s var(--salida);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .proyecto__enlace:hover {
+    color: var(--naranja-tinta);
+    border-bottom-color: var(--naranja-tinta);
+  }
+
+  .proyecto__enlace:hover svg {
+    transform: translateX(4px);
+  }
+}
+
+/* --- Marketing: tres bloques de altura idéntica en los dos tercios --- */
+
+.marketing__visual {
+  grid-column: 2 / 4;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: clamp(16px, 2vw, 28px);
+  /* La altura la fija la reja, no el contenido: así los tres arrancan y
+     terminan a la vez en lugar de quedar escalonados. */
+  grid-auto-rows: clamp(340px, 30vw, 430px);
+}
+
+.redes,
+.carteles,
+.marketing__visual .reel {
+  min-height: 0;
+  height: 100%;
+}
+
+/* --- Eventos: dos columnas de dos charlas en los dos tercios --- */
+
+.charlas {
+  grid-column: 2 / 4;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: clamp(28px, 3.2vw, 44px) clamp(20px, 2.4vw, 32px);
+  align-items: start;
+}
+
+.charla {
+  display: grid;
+  gap: 0;
+}
+
+.charla__marco {
+  position: relative;
+}
+
+/* Botón de play sobre las charlas que tienen vídeo. No captura el clic:
+   la foto entera ya es el botón, y así el área de toque es enorme. */
+.charla__play {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 2;
+  width: clamp(52px, 5.5vw, 66px);
+  aspect-ratio: 1;
+  /* El centrado va por transform y no por un margen fijo: el ancho es
+     variable, así que restar 33px siempre lo descolocaba en pantallas
+     pequeñas. */
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: rgba(10, 31, 53, 0.82);
+  backdrop-filter: blur(3px);
+  color: var(--papel);
+  pointer-events: none;
+  transition:
+    transform 0.2s var(--salida),
+    background 0.2s var(--salida);
+}
+
+/* El triángulo ya está ópticamente centrado en su lienzo: cualquier
+   desplazamiento extra lo saca del círculo. */
+.charla__play svg {
+  width: 44%;
+  height: 44%;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .charla:hover .charla__play {
+    transform: translate(-50%, -50%) scale(1.08);
+    background: var(--naranja-tinta);
+  }
+}
+
+/* El sello con el logo, saliéndose de la esquina. Fondo blanco a propósito:
+   muchos logos vienen con fondo blanco propio y sobre el papel crema se les
+   vería el recorte. */
+.sello {
+  position: absolute;
+  right: -18px;
+  bottom: -18px;
+  width: clamp(58px, 6vw, 76px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: #fff;
+  border: 1px solid var(--linea);
+  box-shadow: 0 8px 20px -10px rgba(10, 31, 53, 0.4);
+  overflow: hidden;
+  transition: transform 0.2s var(--salida);
+}
+
+/* Los logos que son una tira alargada necesitan una pastilla, no un
+   círculo: dentro de un círculo saldrían ilegibles. */
+.sello--alargado {
+  width: clamp(112px, 11vw, 148px);
+  aspect-ratio: 2.9;
+  border-radius: 999px;
+  right: -14px;
+}
+
+.sello--alargado img {
+  width: 78%;
+  height: 62%;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .charla:hover .sello {
+    transform: scale(1.06);
+  }
+}
+
+.sello img {
+  width: 72%;
+  height: 72%;
+  object-fit: contain;
+}
+
+.sello__monograma {
+  font-size: clamp(15px, 1.6vw, 19px);
+  letter-spacing: 0.02em;
+  color: var(--tinta);
+  font-variation-settings:
+    'wdth' 92,
+    'wght' 760;
+}
+
+.charla__pie {
+  margin-top: 26px;
+}
+
+.charla__quien {
+  margin: 0 0 4px;
+  font-size: clamp(17px, 1.8vw, 22px);
+  letter-spacing: -0.026em;
+  line-height: 1.15;
+  font-variation-settings: 'wght' 720;
+}
+
+.charla__cargo {
+  margin: 0 0 6px;
+  font-size: 14.5px;
+  line-height: 1.35;
+  color: var(--naranja-tinta);
+  font-variation-settings: 'wght' 620;
+}
+
+.charla__tipo {
+  margin: 0;
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--texto-tenue);
+  font-variation-settings:
+    'wdth' 86,
+    'wght' 700;
+}
+
+/* --- Las capturas de las redes, pisándose --- */
+
+.redes {
+  display: grid;
+  isolation: isolate;
+}
+
+.red {
+  grid-area: 1 / 1;
+  margin: 0;
+  display: grid;
+  gap: 8px;
+  width: 72%;
+  align-content: start;
+}
+
+.red--1 {
+  justify-self: start;
+  align-self: start;
+  z-index: 1;
+}
+
+.red--2 {
+  justify-self: end;
+  align-self: end;
+  z-index: 2;
+}
+
+.red__pantalla {
+  width: 100%;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 20px 44px -24px rgba(10, 31, 53, 0.55);
+  transition:
+    transform 0.2s var(--salida),
+    box-shadow 0.2s var(--salida);
+}
+
+.red--1 .red__pantalla {
+  transform: rotate(-3.2deg);
+}
+
+.red--2 .red__pantalla {
+  transform: rotate(3.6deg);
+  box-shadow: 0 26px 54px -22px rgba(10, 31, 53, 0.65);
+}
+
+.red__pantalla img {
+  object-position: top;
+}
+
+.red__pantalla img,
+.red__pantalla .hueco {
+  border-radius: 16px;
+}
+
+.red:focus-within {
+  z-index: 3;
+}
+
+.red__pantalla:focus-visible {
+  transform: rotate(0deg) scale(1.02);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .red:hover {
+    z-index: 3;
+  }
+
+  .red:hover .red__pantalla {
+    transform: rotate(0deg) scale(1.02);
+  }
+}
+
+/* La etiqueta se gira igual que su captura, como si fuera parte de ella. */
+.red__etiqueta {
+  display: flex;
+  transition: transform 0.2s var(--salida);
+}
+
+.red--1 .red__etiqueta {
+  justify-content: flex-start;
+  transform: rotate(-3.2deg);
+}
+
+.red--2 .red__etiqueta {
+  justify-content: flex-end;
+  transform: rotate(3.6deg);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .red:hover .red__etiqueta {
+    transform: rotate(0deg);
+  }
+}
+
+.red__etiqueta a {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 2px;
+  font-size: 12.5px;
+  color: var(--texto);
+  font-variation-settings: 'wght' 620;
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  transition:
+    color 0.3s var(--salida),
+    border-color 0.3s var(--salida);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .red__etiqueta a:hover {
+    color: var(--tinta);
+    border-bottom-color: var(--linea);
+  }
+}
+
+.red__etiqueta img {
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+}
+
+/* --- Los carteles, en pila cruzada como las redes --- */
+
+.carteles {
+  display: grid;
+  isolation: isolate;
+}
+
+/* Cada cartel entra entero, a su proporción. Manda la altura —una fracción
+   de la fila— y el ancho lo deriva la propia imagen: así es imposible que se
+   salgan, por ancha que sea la columna. El desfase entre uno y otro lo da el
+   espacio que sobra, porque uno se ancla arriba y el otro abajo. */
+.carteles .cartel {
+  grid-area: 1 / 1;
+  height: 72%;
+  width: auto;
+  max-width: 100%;
+  min-height: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: 0 16px 34px -18px rgba(10, 31, 53, 0.55);
+  transition:
+    transform 0.2s var(--salida),
+    box-shadow 0.2s var(--salida);
+}
+
+/* Las reglas genéricas de .figura__boton van después en esta hoja y ganaban
+   por orden, así que el recorte seguía aplicándose. De ahí la especificidad. */
+.carteles .cartel img {
+  height: 100%;
+  width: auto;
+  max-width: 100%;
+  object-fit: contain;
+  border-radius: 2px;
+}
+
+.carteles .cartel .hueco {
+  height: 100%;
+  width: auto;
+  aspect-ratio: 4 / 5;
+}
+
+.carteles .cartel--1 {
+  justify-self: start;
+  align-self: start;
+  transform: rotate(-2.8deg);
+  z-index: 1;
+}
+
+.carteles .cartel--2 {
+  justify-self: end;
+  align-self: end;
+  transform: rotate(2.4deg);
+  z-index: 2;
+  box-shadow: 0 22px 46px -20px rgba(10, 31, 53, 0.65);
+}
+
+.carteles .cartel:focus-visible {
+  transform: rotate(0deg) scale(1.03);
+  z-index: 3;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .carteles .cartel:hover {
+    transform: rotate(0deg) scale(1.03);
+    z-index: 3;
+  }
+}
+
+/* --- El reel --- */
+
+.reel {
+  display: grid;
+  grid-template-rows: 1fr auto;
+  gap: 10px;
+  text-decoration: none;
+  color: inherit;
+  min-height: 0;
+}
+
+.reel__video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  object-fit: cover;
+  border-radius: 18px;
+  background: var(--tinta);
+  box-shadow: 0 22px 48px -26px rgba(10, 31, 53, 0.6);
+  transition:
+    transform 0.2s var(--salida),
+    box-shadow 0.2s var(--salida);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .reel--enlace:hover .reel__video {
+    transform: translateY(-4px);
+    box-shadow: 0 28px 56px -24px rgba(10, 31, 53, 0.7);
+  }
+}
+
+.reel__pie {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  color: var(--texto);
+  font-variation-settings: 'wght' 620;
+}
+
+.reel__pie::after {
+  content: '↗';
+  font-size: 13px;
+  transition: transform 0.2s var(--salida);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .reel--enlace:hover .reel__pie {
+    color: var(--naranja-tinta);
+  }
+
+  .reel--enlace:hover .reel__pie::after {
+    transform: translate(2px, -2px);
+  }
+}
+
+.reel .hueco {
+  border-radius: 18px;
+  height: 100%;
+}
+
+/* --------------------------------------------------------------------------
+   Imágenes
+   -------------------------------------------------------------------------- */
+
+.figura {
+  margin: 0;
+  min-width: 0;
+  display: block;
+}
+
+.figura--enlace {
+  cursor: pointer;
+}
+
+.figura__boton {
+  width: 100%;
+  padding: 0;
+  border: 1px solid var(--linea);
+  background: var(--papel-2);
+  cursor: zoom-in;
+  overflow: hidden;
+  transition:
+    border-color 0.2s var(--salida),
+    box-shadow 0.2s var(--salida);
+}
+
+.figura__boton img {
+  width: 100%;
+  object-fit: cover;
+  transition: transform 0.2s var(--salida);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .figura__boton:hover {
+    border-color: var(--tinta);
+    box-shadow: 0 16px 38px -20px rgba(10, 31, 53, 0.55);
+  }
+
+  .figura__boton:hover img {
+    transform: scale(1.03);
+  }
+}
+
+/* Hueco de una imagen que todavía no existe */
+.hueco {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 22px 18px;
+  border: 1px dashed var(--linea);
+  background: repeating-linear-gradient(
+    -45deg,
+    var(--papel-2),
+    var(--papel-2) 9px,
+    var(--papel-3) 9px,
+    var(--papel-3) 18px
+  );
+  text-align: center;
+}
+
+.hueco__icono {
+  width: 28px;
+  height: 28px;
+  color: var(--texto-tenue);
+  flex: none;
+}
+
+.hueco__texto {
+  margin: 0;
+  max-width: 30ch;
+  font-size: 13.5px;
+  line-height: 1.4;
+  color: var(--texto);
+}
+
+.hueco__archivo {
+  font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+  font-size: 11.5px;
+  padding: 4px 9px;
+  background: var(--papel);
+  border: 1px solid var(--linea);
+  color: var(--tinta);
+}
+
+.pendiente {
+  margin: clamp(32px, 4vw, 52px) 0 0;
+  padding: 14px 18px;
+  border: 1px dashed var(--linea);
+  background: var(--papel-2);
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--texto);
+}
+
+/* --------------------------------------------------------------------------
+   Visor a pantalla completa
+   -------------------------------------------------------------------------- */
+
+.visor {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(20px, 5vw, 64px);
+  background: rgba(10, 31, 53, 0.92);
+  backdrop-filter: blur(6px);
+  animation: aparecer 0.22s var(--salida);
+}
+
+@keyframes aparecer {
+  from {
+    opacity: 0;
+  }
+}
+
+.visor__cerrar {
+  position: absolute;
+  top: clamp(16px, 3vw, 32px);
+  right: clamp(16px, 3vw, 32px);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border: 1px solid rgba(244, 241, 236, 0.35);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--papel);
+  font-size: 13px;
+  font-variation-settings: 'wght' 600;
+  cursor: pointer;
+  transition:
+    background 0.3s var(--salida),
+    border-color 0.3s var(--salida);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .visor__cerrar:hover {
+    background: rgba(244, 241, 236, 0.12);
+    border-color: var(--papel);
+  }
+}
+
+.visor__cerrar svg {
+  width: 17px;
+  height: 17px;
+}
+
+.visor__marco {
+  margin: 0;
+  max-width: min(1100px, 100%);
+  max-height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  animation: subir 0.26s var(--salida);
+}
+
+@keyframes subir {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.985);
+  }
+}
+
+.visor__marco img {
+  max-height: 78vh;
+  width: auto;
+  object-fit: contain;
+  border: 1px solid rgba(244, 241, 236, 0.2);
+}
+
+/* El reproductor ocupa el ancho disponible manteniendo 16:9. */
+.visor__video {
+  width: min(1100px, 92vw);
+  aspect-ratio: 16 / 9;
+  max-height: 78vh;
+  border: 1px solid rgba(244, 241, 236, 0.2);
+  background: #000;
+}
+
+.visor__video iframe {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  display: block;
+}
+
+.visor__marco figcaption {
+  color: #c8d6e3;
+  font-size: 14px;
+  text-align: center;
+}
+
+/* --------------------------------------------------------------------------
+   Pie
+   -------------------------------------------------------------------------- */
+
+/*
+ * El pie va sobre tinta: toda la página se lee sobre papel, así que el
+ * cambio de fondo cierra el recorrido sin dibujar ninguna raya.
+ *
+ * Los dos tonos de texto están medidos contra la tinta: 9,6:1 el claro y
+ * 6,2:1 el tenue, los dos por encima del 4,5:1 que hace falta.
+ */
+.pie {
+  --pie-texto: #b6c2cf;
+  --pie-tenue: #8fa0b0;
+
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: clamp(26px, 4vw, 44px) clamp(32px, 6vw, 90px);
+  padding: clamp(44px, 6vw, 76px) var(--lateral);
+  background: var(--tinta);
+  color: var(--papel);
+}
+
+/* Quiénes somos, a la izquierda y ocupando las dos filas. */
+.pie__club {
+  grid-row: 1 / 3;
+  display: grid;
+  justify-items: start;
+  gap: 14px;
+  max-width: 44ch;
+}
+
+.pie__marca {
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+  text-decoration: none;
+  color: inherit;
+}
+
+/* El logo lleva tinta dentro, así que sobre este fondo necesita su papel. */
+.pie__marca img {
+  width: 46px;
+  height: 46px;
+  padding: 3px;
+  border-radius: 11px;
+  background: var(--papel);
+}
+
+.pie__marca b {
+  font-size: clamp(19px, 2vw, 23px);
+  letter-spacing: -0.01em;
+  font-variation-settings:
+    'wdth' 92,
+    'wght' 700;
+}
+
+.pie__descripcion {
+  margin: 0;
+  color: var(--pie-texto);
+  font-size: clamp(14px, 1.4vw, 16px);
+  line-height: 1.6;
+}
+
+.pie__correo {
+  color: var(--naranja);
+  text-decoration: none;
+  font-size: 15px;
+  font-variation-settings: 'wght' 600;
+  border-bottom: 1px solid transparent;
+  transition: border-color 0.3s var(--salida);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .pie__correo:hover {
+    border-bottom-color: var(--naranja);
+  }
+}
+
+.pie__redes {
+  display: flex;
+  gap: 12px;
+  margin-top: 6px;
+}
+
+.pie__red {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  color: var(--papel);
+  background: color-mix(in srgb, var(--papel) 10%, transparent);
+  transition:
+    background 0.3s var(--salida),
+    color 0.3s var(--salida);
+}
+
+.pie__red-icono {
+  width: 20px;
+  height: 20px;
+}
+
+/* Por dónde se puede seguir, arriba a la derecha. */
+.pie__enlaces {
+  justify-self: end;
+  align-self: start;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px clamp(18px, 2.4vw, 30px);
+}
+
+.pie__enlaces a {
+  color: var(--papel);
+  text-decoration: none;
+  font-size: clamp(14px, 1.4vw, 16px);
+  font-variation-settings: 'wght' 600;
+  transition: color 0.3s var(--salida);
+}
+
+.pie__nota {
+  grid-column: 2;
+  justify-self: end;
+  align-self: end;
+  margin: 0;
+  color: var(--pie-tenue);
+  font-size: 14px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .pie__red:hover {
+    background: var(--naranja);
+    color: var(--tinta);
+  }
+
+  .pie__enlaces a:hover {
+    color: var(--naranja);
+  }
+}
+
+/* En estrecho no caben dos columnas: todo en una, alineado a la izquierda. */
+@media (max-width: 860px) {
+  .pie {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .pie__club {
+    grid-row: auto;
+  }
+
+  .pie__enlaces,
+  .pie__nota {
+    grid-column: 1;
+    justify-self: start;
+    justify-content: flex-start;
+  }
+}
+
+/* En móvil los nombres llevan barra dentro ("Tech / Ingeniería"), así que
+   puestos en fila se leen como una lista revuelta. Uno debajo de otro. */
+@media (max-width: 560px) {
+  .pie__enlaces {
+    flex-direction: column;
+    gap: 12px;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Pantallas estrechas
+   -------------------------------------------------------------------------- */
+
+/* Por debajo de los tercios, dos columnas: el texto arriba a lo ancho. */
+@media (max-width: 1180px) {
+  .depto__reja {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .cabecera {
+    grid-column: 1 / -1;
+    position: static;
+    max-width: 62ch;
+  }
+
+  .proyectos,
+  .marketing__visual,
+  .charlas {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 900px) {
+  /* En vertical manda el mismo criterio que en ancho: el test primero, y
+     las tres puertas debajo como acceso secundario. El mensaje se descompone
+     en la misma rejilla para poder reordenarlo. */
+  .portada {
+    grid-template-columns: 1fr;
+    min-height: 0;
+    padding-top: clamp(26px, 6vw, 44px);
+  }
+
+  .portada__mensaje {
+    display: contents;
+  }
+
+  .portada__titular {
+    order: 1;
+    padding: 0 var(--lateral);
+    margin-bottom: 18px;
+  }
+
+  .portada__aclaracion {
+    order: 2;
+    margin: 0 var(--lateral) 26px;
+  }
+
+  .portada__test {
+    order: 3;
+    padding: clamp(28px, 7vw, 40px) var(--lateral);
+    gap: 14px;
+  }
+
+  .portada__invitacion {
+    order: 4;
+    margin: 26px var(--lateral) 0;
+    padding-top: 14px;
+  }
+
+  .selector {
+    order: 5;
+    margin-top: 14px;
+  }
+
+  .selector__fila {
+    padding: 16px var(--lateral);
+  }
+
+  /* Una sola columna y todo centrado: antes el reel y las capturas se iban
+     al borde izquierdo y quedaba descolgado. */
+  .depto__reja {
+    grid-template-columns: minmax(0, 1fr);
+    gap: clamp(30px, 7vw, 48px);
+    justify-items: center;
+  }
+
+  .cabecera {
+    justify-self: stretch;
+  }
+
+  .proyectos,
+  .charlas {
+    justify-self: stretch;
+    width: 100%;
+  }
+
+  .marketing__visual {
+    grid-template-columns: minmax(0, 1fr);
+    grid-auto-rows: auto;
+    justify-items: center;
+    width: 100%;
+  }
+
+  /* Cada bloque visual recupera su forma natural y se centra. */
+  .redes,
+  .carteles,
+  .marketing__visual .reel {
+    height: auto;
+    width: min(100%, 380px);
+  }
+
+  /* Las dos capturas se siguen pisando, como en ancho. Para que el desfase
+     exista hace falta que la caja sea más alta que una captura sola: en
+     ancho lo da la altura de la fila, y aquí lo da esta proporción. */
+  .redes {
+    aspect-ratio: 1 / 1.74;
+    height: auto;
+  }
+
+  /* Los carteles se cruzan igual que en ancho. Como aquí la fila ya no tiene
+     altura propia, se la damos con una proporción: si la caja no fuera más
+     alta que un cartel, no habría desfase y quedarían uno encima del otro. */
+  .carteles {
+    aspect-ratio: 1 / 1.34;
+    height: auto;
+  }
+
+  .carteles .cartel {
+    height: auto;
+    width: 74%;
+  }
+
+  .carteles .cartel img {
+    width: 100%;
+    height: auto;
+  }
+
+  .reel__video {
+    height: auto;
+    aspect-ratio: 9 / 16;
+  }
+
+  .charlas {
+    grid-template-columns: minmax(0, 1fr);
+    gap: clamp(30px, 7vw, 44px);
+  }
+
+  .charla {
+    width: min(100%, 420px);
+    justify-self: center;
+  }
+
+  /* La marca ocupaba lo que quisiera y empujaba los tres accesos fuera de
+     la barra, con lo que el de Tech quedaba cortado por debajo del nombre.
+     Ahora la marca cede espacio y los accesos no se encogen nunca. */
+  .barra {
+    grid-template-columns: minmax(0, auto) auto;
+    gap: 12px;
+  }
+
+  .barra__marca {
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  .barra__marca b {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .barra__origen {
+    display: none;
+  }
+
+  .barra__saltos {
+    justify-content: flex-end;
+    flex: none;
+  }
+
+  .barra--compacta .barra__saltos {
+    /* Con los accesos visibles, el nombre sobra antes que ellos. */
+    margin-left: auto;
+  }
+
+  /* `display: none` sacaba el nombre del árbol de accesibilidad y dejaba
+     tres botones sin nombre: se oculta a la vista, no a quien escucha. */
+  .barra__salto-nombre {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .barra__salto {
+    padding: 13px;
+  }
+
+  .barra__salto-icono {
+    width: 19px;
+    height: 19px;
+  }
+}
+
+@media (max-width: 560px) {
+  /* El nombre del club se queda puesto: es lo que dice de quién es esta
+     página. Para que quepa junto a los tres accesos se aprieta todo un
+     punto. Si aun así no cupiera, el nombre se corta con puntos
+     suspensivos antes que empujar a nadie fuera de la barra. */
+  .barra {
+    gap: 10px;
+  }
+
+  .barra__marca {
+    gap: 9px;
+  }
+
+  .barra__marca img {
+    width: 30px;
+    height: 30px;
+  }
+
+  .barra__marca b {
+    font-size: 15px;
+  }
+
+  .barra__salto {
+    padding: 11px;
+  }
+
+  .sello {
+    right: -12px;
+    bottom: -12px;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   El acceso al test: es lo primero que queremos que se toque
+   -------------------------------------------------------------------------- */
+
+.portada__test {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 18px;
+  padding: clamp(44px, 6vw, 88px) var(--lateral) clamp(44px, 6vw, 88px)
+    clamp(32px, 4vw, 64px);
+  background: var(--tinta);
+  color: var(--papel);
+}
+
+.portada__test-gancho {
+  margin: 0;
+  max-width: 16ch;
+  font-size: clamp(30px, 4.4vw, 62px);
+  line-height: 0.98;
+  letter-spacing: -0.04em;
+  font-variation-settings:
+    'wdth' 102,
+    'wght' 780;
+  text-wrap: balance;
+}
+
+.portada__test-texto {
+  margin: 0;
+  max-width: 42ch;
+  font-size: clamp(15px, 1.6vw, 19px);
+  line-height: 1.55;
+  color: #b9cadb;
+}
+
+.portada__test-boton {
+  align-self: start;
+  margin-top: 8px;
+  border: 0;
+  padding: clamp(16px, 1.7vw, 21px) clamp(28px, 3vw, 40px);
+  background: var(--naranja);
+  color: var(--tinta);
+  font-size: clamp(16px, 1.7vw, 19px);
+  font-variation-settings: 'wght' 750;
+  cursor: pointer;
+  transition:
+    background 0.3s var(--salida),
+    transform 0.3s var(--salida);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .portada__test-boton:hover {
+    background: #ffc27e;
+    transform: translateY(-3px);
+  }
+}
+
+.portada__test-boton:focus-visible {
+  outline-color: var(--naranja);
+}
+
+/* --------------------------------------------------------------------------
+   El test, a pantalla completa
+   -------------------------------------------------------------------------- */
+
+.test {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  display: grid;
+  /* `minmax(0, 1fr)` y no `1fr`: sin eso la fila crece hasta caber el
+     contenido, la capa entera se sale de la pantalla y el panel no llega a
+     desplazarse nunca. */
+  grid-template-rows: auto auto minmax(0, 1fr);
+  background: var(--papel);
+  animation: aparecer 0.2s var(--salida);
+}
+
+.test__barra {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 18px clamp(20px, 4vw, 56px);
+}
+
+.test__paso {
+  margin: 0;
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--texto-tenue);
+  font-variation-settings:
+    'wdth' 86,
+    'wght' 700;
+}
+
+.test__cerrar {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border: 1px solid var(--linea);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--texto);
+  font-size: 13px;
+  font-variation-settings: 'wght' 620;
+  cursor: pointer;
+  transition:
+    background 0.3s var(--salida),
+    border-color 0.3s var(--salida);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .test__cerrar:hover {
+    background: var(--papel-2);
+    border-color: var(--tinta);
+    color: var(--tinta);
+  }
+}
+
+.test__cerrar svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* Cuánto queda. Se mueve al cambiar de pregunta, no en bucle. */
+.test__progreso {
+  height: 3px;
+  background: var(--papel-2);
+  margin: 0 clamp(20px, 4vw, 56px);
+}
+
+/* Crece con `scaleX` y no con `width`: mover el ancho obliga al navegador a
+   recalcular la caja en cada fotograma, y esto pasa con la pregunta entera
+   en pantalla. La escala va sola en la tarjeta gráfica. */
+.test__progreso span {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: var(--naranja-tinta);
+  transform-origin: left;
+  transition: transform 0.25s var(--salida);
+}
+
+/*
+ * La pregunta va centrada en el hueco que queda, pero solo si cabe.
+ *
+ * Con `align-self: center` el panel se quedaba del alto de su contenido y
+ * se salía por arriba y por abajo a partes iguales: en un móvil, el título
+ * del resultado quedaba debajo de la barra y no había forma de subir hasta
+ * él, porque el panel nunca llegaba a tener desplazamiento. `safe` centra
+ * mientras sobra sitio y se pega arriba en cuanto falta.
+ */
+.test__panel {
+  width: min(760px, 100%);
+  margin: 0 auto;
+  padding: clamp(28px, 5vw, 56px) clamp(20px, 4vw, 56px);
+  overflow-y: auto;
+  display: grid;
+  align-content: safe center;
+}
+
+.test__titulo {
+  margin: 0 0 10px;
+  font-size: clamp(26px, 4vw, 44px);
+  line-height: 1;
+  letter-spacing: -0.04em;
+  font-variation-settings:
+    'wdth' 102,
+    'wght' 780;
+}
+
+.test__enunciado {
+  margin: 0 0 clamp(22px, 3vw, 34px);
+  max-width: 52ch;
+  font-size: clamp(16px, 1.7vw, 20px);
+  line-height: 1.5;
+  color: var(--texto);
+}
+
+.test__opciones {
+  list-style: none;
+  margin: 0 0 26px;
+  padding: 0;
+  display: grid;
+  gap: 12px;
+}
+
+/* Área de toque generosa: se contesta de pie y con prisa. */
+.test__opcion {
+  display: grid;
+  grid-template-columns: 34px 1fr;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+  padding: 20px 22px;
+  border: 1px solid var(--linea);
+  background: transparent;
+  text-align: left;
+  font-size: clamp(15px, 1.6vw, 17px);
+  line-height: 1.45;
+  color: var(--tinta);
+  cursor: pointer;
+  transition:
+    background 0.3s var(--salida),
+    border-color 0.3s var(--salida),
+    transform 0.3s var(--salida);
+}
+
+/* El hover solo con ratón. En una pantalla táctil el navegador deja el
+   dedo "encima" del último sitio que se tocó, y como la opción siguiente
+   aparece en ese mismo hueco, salía ya coloreada sin haberla pulsado. */
+@media (hover: hover) and (pointer: fine) {
+  .test__opcion:hover {
+    background: var(--tinta);
+    border-color: var(--tinta);
+    color: var(--papel);
+    transform: translateX(5px);
+  }
+}
+
+/* Tocando, el aviso de "la he pulsado" es este: dura lo que dura el dedo. */
+.test__opcion:active {
+  background: var(--tinta);
+  border-color: var(--tinta);
+  color: var(--papel);
+}
+
+.test__letra {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 1px solid var(--linea);
+  font-size: 13px;
+  font-variation-settings: 'wght' 700;
+  color: var(--naranja-tinta);
+  transition:
+    border-color 0.3s var(--salida),
+    color 0.3s var(--salida);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .test__opcion:hover .test__letra {
+    border-color: var(--naranja);
+    color: var(--naranja);
+  }
+}
+
+.test__opcion:active .test__letra {
+  border-color: var(--naranja);
+  color: var(--naranja);
+}
+
+.test__atras {
+  border: 0;
+  background: transparent;
+  padding: 6px 0;
+  color: var(--texto);
+  font-size: 14px;
+  font-variation-settings: 'wght' 600;
+  cursor: pointer;
+  border-bottom: 1px solid var(--linea);
+  transition: color 0.3s var(--salida);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .test__atras:hover {
+    color: var(--tinta);
+    border-bottom-color: var(--tinta);
+  }
+}
+
+/* --- El resultado --- */
+
+.marcador {
+  list-style: none;
+  margin: 0 0 clamp(26px, 3.5vw, 40px);
+  padding: 0;
+  display: grid;
+  gap: 16px;
+}
+
+.marcador__fila {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr) auto;
+  align-items: center;
+  gap: 16px;
+}
+
+.marcador__nombre {
+  font-size: clamp(15px, 1.6vw, 18px);
+  letter-spacing: -0.02em;
+  color: var(--texto);
+  font-variation-settings: 'wght' 620;
+}
+
+.marcador__fila[data-gana='true'] .marcador__nombre,
+.marcador__fila[data-gana='true'] .marcador__cifra {
+  color: var(--tinta);
+  font-variation-settings: 'wght' 760;
+}
+
+.marcador__barra {
+  height: 10px;
+  background: var(--papel-2);
+}
+
+/* Se llenan al aparecer. Tiene que ser `animation` y no `transition`: una
+   transición necesita un valor anterior del que salir, y estas barras nacen
+   ya con su ancho puesto, así que no se movían nunca.
+
+   Es el único sitio de la página que pasa de 300ms a propósito: se ve una
+   vez por visitante, al final del test, y el llenado es el resultado. */
+.marcador__barra span {
+  display: block;
+  height: 100%;
+  background: var(--linea);
+  transform-origin: left;
+  animation: llenar 0.42s var(--salida) backwards;
+}
+
+/* Cada barra entra un poco después que la de encima. */
+.marcador__fila:nth-child(2) .marcador__barra span {
+  animation-delay: 0.07s;
+}
+
+.marcador__fila:nth-child(3) .marcador__barra span {
+  animation-delay: 0.14s;
+}
+
+@keyframes llenar {
+  from {
+    transform: scaleX(0);
+  }
+}
+
+.marcador__fila[data-gana='true'] .marcador__barra span {
+  background: var(--naranja-tinta);
+}
+
+.marcador__cifra {
+  font-size: clamp(15px, 1.6vw, 18px);
+  color: var(--texto);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.marcador__cifra small {
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--texto-tenue);
+  font-variation-settings:
+    'wdth' 86,
+    'wght' 600;
+}
+
+/* --- El papel de equipo --- */
+
+/* Va sobre el papel oscuro y con una banda naranja al lado: es lo segundo
+   que se lee del resultado, después del marcador, y no puede competir con
+   los botones de salida que vienen debajo. */
+.papel {
+  margin: 0 0 clamp(24px, 3vw, 34px);
+  padding: clamp(18px, 2.4vw, 24px) clamp(18px, 2.4vw, 26px);
+  background: var(--papel-2);
+  border-left: 3px solid var(--naranja);
+}
+
+.papel__etiqueta {
+  margin: 0 0 4px;
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--texto-tenue);
+  font-variation-settings:
+    'wdth' 86,
+    'wght' 700;
+}
+
+.papel__nombre {
+  margin: 0 0 8px;
+  font-size: clamp(21px, 2.4vw, 27px);
+  letter-spacing: -0.02em;
+  font-variation-settings:
+    'wdth' 96,
+    'wght' 760;
+}
+
+.papel__texto {
+  margin: 0;
+  max-width: 52ch;
+  font-size: clamp(15px, 1.6vw, 17px);
+  line-height: 1.55;
+  color: var(--texto);
+}
+
+.papel__pie {
+  margin: 12px 0 0;
+  font-size: 12px;
+  color: var(--texto-tenue);
+}
+
+.test__salidas {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 22px;
+}
+
+.test__ir {
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+  justify-self: start;
+  padding: 16px 26px;
+  border: 0;
+  background: var(--tinta);
+  color: var(--papel);
+  font-size: clamp(15px, 1.7vw, 18px);
+  font-variation-settings: 'wght' 700;
+  cursor: pointer;
+  transition:
+    background 0.3s var(--salida),
+    transform 0.3s var(--salida);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .test__ir:hover {
+    background: var(--naranja-tinta);
+    transform: translateY(-2px);
+  }
+}
+
+.test__ir-icono {
+  width: 22px;
+  height: 22px;
+  color: var(--naranja);
+}
+
+.test__ir-flecha {
+  width: 18px;
+  height: 18px;
+  transition: transform 0.2s var(--salida);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .test__ir:hover .test__ir-flecha {
+    transform: translateX(4px);
+  }
+}
+
+.test__secundarias {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 24px;
+}
+
+@media (max-width: 560px) {
+  .marcador__fila {
+    grid-template-columns: 1fr auto;
+    gap: 6px 12px;
+  }
+
+  .marcador__barra {
+    grid-column: 1 / -1;
+    order: 3;
+  }
+
+  .test__ir {
+    justify-self: stretch;
+  }
+}
