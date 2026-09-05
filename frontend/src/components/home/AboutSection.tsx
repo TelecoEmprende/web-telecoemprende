@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 
 import { useTranslation } from "../../i18n/translations";
+import { ScrollRevealText } from "./ScrollRevealText";
 
 type Bilingual = { es: string; en: string };
 
@@ -196,7 +197,7 @@ export function AboutSection() {
       <div className="lp-container">
         <span className="lp-eyebrow">{t.about.eyebrow}</span>
         <h2 className="lp-heading">{t.about.heading}</h2>
-        <p className="lp-section-lead">{t.about.lead}</p>
+        <ScrollRevealText text={t.about.lead} className="lp-section-lead" />
 
         <div
           className="lp-team-carousel"
