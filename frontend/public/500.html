@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>500 · Error del servidor | TelecoEmprende</title>
+    <style>
+      :root {
+        --navy: #112532;
+        --gold: #f4b044;
+        --orange: #e0680e;
+        --cream: #faf5ec;
+        --border: #e8ddca;
+        --muted: #4e6373;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        padding: 24px;
+        font-family: "Inter", system-ui, sans-serif;
+        color: var(--navy);
+        background: linear-gradient(180deg, rgba(136, 165, 183, 0.1), transparent 60%), var(--cream);
+      }
+      .card {
+        max-width: 640px;
+        width: 100%;
+        text-align: center;
+        background: #fff;
+        border: 1px solid var(--border);
+        border-radius: 28px;
+        box-shadow: 0 16px 40px rgba(17, 37, 50, 0.08);
+        padding: 48px 40px;
+      }
+      .code {
+        font-size: clamp(3rem, 10vw, 5rem);
+        font-weight: 700;
+        letter-spacing: -0.04em;
+        color: var(--orange);
+        margin: 0 0 8px;
+      }
+      h1 {
+        margin: 0 0 16px;
+        font-size: clamp(1.4rem, 3vw, 2rem);
+        letter-spacing: -0.03em;
+      }
+      p {
+        margin: 0 0 28px;
+        color: var(--muted);
+        line-height: 1.7;
+      }
+      a.btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 48px;
+        padding: 0 24px;
+        border-radius: 999px;
+        border: 1px solid var(--border);
+        color: var(--navy);
+        text-decoration: none;
+        font-weight: 700;
+      }
+      a.btn:hover {
+        border-color: var(--orange);
+        color: var(--orange);
+      }
+    </style>
+  </head>
+  <body>
+    <main class="card">
+      <p class="code">500</p>
+      <h1>Algo ha fallado en el servidor.</h1>
+      <p>Ya lo sabemos y lo estamos revisando. Prueba de nuevo en unos minutos.</p>
+      <a class="btn" href="/">Volver al inicio</a>
+    </main>
+  </body>
+</html>

@@ -19,9 +19,38 @@ export function LandingNav() {
     { href: "#inscripcion", label: t.nav.inscripcion },
   ];
 
+  const [activeSection, setActiveSection] = useState("inicio");
+
   useEffect(() => {
     setMenuOpen(false);
   }, [pathname]);
+
+  useEffect(() => {
+    if (!onHomePage) return;
+
+    const sectionIds = ["inicio", ...navLinks.map((link) => link.href.slice(1))];
+    const sections = sectionIds
+      .map((id) => document.getElementById(id))
+      .filter((el): el is HTMLElement => el !== null);
+
+    if (sections.length === 0) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visible = entries.filter((entry) => entry.isIntersecting);
+        if (visible.length === 0) return;
+
+        const topMost = visible.reduce((a, b) =>
+          a.boundingClientRect.top < b.boundingClientRect.top ? a : b,
+        );
+        setActiveSection(topMost.target.id);
+      },
+      { rootMargin: "-45% 0px -50% 0px", threshold: 0 },
+    );
+
+    sections.forEach((section) => observer.observe(section));
+    return () => observer.disconnect();
+  }, [onHomePage]);
 
   return (
     <header className="lp-nav">
@@ -37,11 +66,20 @@ export function LandingNav() {
           className={`lp-nav-links${menuOpen ? " is-open" : ""}`}
           aria-label={t.nav.sectionsLabel}
         >
-          {navLinks.map((link) => (
-            <a key={link.href} href={toAnchor(link.href)} onClick={() => setMenuOpen(false)}>
-              {link.label}
-            </a>
-          ))}
+          {navLinks.map((link) => {
+            const isActive = onHomePage && link.href.slice(1) === activeSection;
+            return (
+              <a
+                key={link.href}
+                href={toAnchor(link.href)}
+                className={isActive ? "is-active" : undefined}
+                aria-current={isActive ? "location" : undefined}
+                onClick={() => setMenuOpen(false)}
+              >
+                {link.label}
+              </a>
+            );
+          })}
           <a
             href={toAnchor("#inscripcion")}
             className="lp-nav-cta lp-nav-cta-mobile"
