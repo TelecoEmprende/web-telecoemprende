@@ -1,0 +1,163 @@
+@import url('https://fonts.googleapis.com/css2?family=Archivo:ital,wdth,wght@0,62..125,100..900;1,62..125,100..900&display=swap');
+
+:root {
+  /* Colores del logo del club */
+  --azul: #004f93;
+  --naranja: #f2a65b;
+
+  /* Superficies */
+  --papel: #f4f1ec;
+  /* Un punto más oscuro que el papel, solo para alternar el fondo de una
+     sección a otra: al deslizar se nota el cambio sin necesidad de rayas. */
+  --papel-alt: #ece7dd;
+  --papel-2: #eae5dc;
+  --papel-3: #ded7ca;
+  --tinta: #0a1f35;
+
+  /* Texto. Los tonos están elegidos para pasar el contraste mínimo (4.5:1)
+     sobre --papel, incluso en las etiquetas pequeñas en mayúsculas. */
+  --texto: #3d5064; /* 7.4:1 */
+  --texto-tenue: #5a6b7d; /* 4.9:1 */
+  --naranja-tinta: #9a5610; /* 5.0:1 — el naranja del logo en versión legible */
+  --linea: #cbc4b8;
+  --linea-fuerte: #0a1f35;
+
+  --radio: 2px;
+  --salida: cubic-bezier(0.16, 1, 0.3, 1);
+
+  color-scheme: light;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 88px;
+}
+
+body {
+  margin: 0;
+  background: var(--papel);
+  color: var(--tinta);
+  font-family: 'Archivo', system-ui, -apple-system, sans-serif;
+  font-synthesis-weight: none;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+img {
+  max-width: 100%;
+  display: block;
+}
+
+/*
+ * Cómo se reparten los textos cuando ocupan más de una línea.
+ *
+ * `balance` deja las líneas de ancho parecido, en vez de una larga y una
+ * corta con dos palabras sueltas. Es para titulares y frases cortas: el
+ * navegador solo lo intenta en bloques de pocas líneas y lo ignora en los
+ * párrafos largos, así que ahí no sirve de nada.
+ *
+ * `pretty` es lo que sí funciona en los párrafos: no equilibra nada, pero
+ * evita que la última línea se quede con una palabra suelta.
+ *
+ * Los dos son mejoras: el navegador que no los entienda parte las líneas
+ * como siempre y no se rompe nada.
+ */
+p,
+li {
+  text-wrap: pretty;
+}
+
+h1,
+h2,
+h3,
+.portada__aclaracion,
+.portada__invitacion,
+.portada__test-texto,
+.cabecera__gancho,
+.charla__cargo,
+.charla__tipo,
+.selector__gancho,
+.selector__lema,
+.test__enunciado,
+.test__opcion,
+.marcador__nombre,
+.pie__descripcion,
+.pie__nota,
+.pendiente,
+.hueco__texto,
+.red__etiqueta {
+  text-wrap: balance;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+}
+
+::selection {
+  background: var(--naranja);
+  color: var(--tinta);
+}
+
+:focus-visible {
+  outline: 2px solid var(--azul);
+  outline-offset: 3px;
+  border-radius: var(--radio);
+}
+
+/* Sobre fondo oscuro el azul del logo se queda en 2:1 contra la tinta, por
+   debajo del 3:1 exigido: justo el control enfocado sería el que no se ve.
+   El naranja sobre tinta da 8,2:1. */
+[aria-current='true']:focus-visible,
+.pie :focus-visible,
+.visor :focus-visible,
+.visor__cerrar:focus-visible {
+  outline-color: var(--naranja);
+}
+
+::-webkit-scrollbar {
+  width: 12px;
+}
+::-webkit-scrollbar-track {
+  background: var(--papel-2);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--linea);
+  border: 3px solid var(--papel-2);
+  border-radius: 6px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--texto-tenue);
+}
+
+/*
+ * Quien activa "reducir movimiento" no pide que no pase nada: pide que nada
+ * se desplace. Así que se quitan los movimientos y las escalas, y se dejan
+ * los cambios de color y los desvanecidos. Anularlo todo dejaría las capas
+ * apareciendo de golpe, que es más brusco, no menos.
+ */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    transition-property: opacity, color, background-color, border-color, box-shadow !important;
+    transition-duration: 0.15s !important;
+    animation-iteration-count: 1 !important;
+  }
+
+  /* Las que sí desplazan se cambian por un desvanecido a secas. */
+  .visor__marco,
+  .marcador__barra span {
+    animation-name: aparecer !important;
+    animation-duration: 0.15s !important;
+    animation-delay: 0s !important;
+  }
+}
