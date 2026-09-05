@@ -28,6 +28,13 @@ frontend/*.tsbuildinfo
 frontend/vite.config.js
 frontend/vite.config.d.ts
 
+# Demo build and dependency artifacts
+demo/node_modules/
+demo/dist/
+demo/*.tsbuildinfo
+demo/vite.config.js
+demo/vite.config.d.ts
+
 # Logs
 *.log
 .vercel
