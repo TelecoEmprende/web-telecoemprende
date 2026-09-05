@@ -1,5 +1,7 @@
 from flask import (
     Flask,
+    jsonify,
+    request,
     send_file,
     send_from_directory,
     abort,
@@ -12,6 +14,7 @@ from pathlib import Path
 from backend.api.admin import admin_api
 from backend.api.public import public_api
 from backend.config import ADMIN_SESSION_LIFETIME_SECONDS
+from backend.schemas import build_response
 from backend.services.registrations import crear_excel_si_no_existe
 
 app = Flask(__name__)
@@ -88,6 +91,33 @@ def frontend_logo():
         abort(503, description="Frontend build not found. Run `npm run build` in `frontend/`.")
 
     return send_from_directory(FRONTEND_DIST_DIR, "logo.png")
+
+
+def error_response(status_code: int, message: str):
+    # /api/* lo consume fetch() en el front: le interesa JSON, no una página.
+    if request.path.startswith("/api/"):
+        return jsonify(build_response(False, message)), status_code
+
+    pagina = FRONTEND_DIST_DIR / f"{status_code}.html"
+    if pagina.exists():
+        return send_file(pagina), status_code
+
+    return message, status_code
+
+
+@app.errorhandler(400)
+def bad_request(_error):
+    return error_response(400, "Solicitud no válida.")
+
+
+@app.errorhandler(404)
+def not_found(_error):
+    return error_response(404, "Recurso no encontrado.")
+
+
+@app.errorhandler(500)
+def internal_error(_error):
+    return error_response(500, "Error interno del servidor.")
 
 
 if __name__ == "__main__":

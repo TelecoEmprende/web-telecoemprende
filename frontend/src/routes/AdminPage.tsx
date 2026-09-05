@@ -10,6 +10,7 @@ import {
 import { AlertBanner } from "../components/feedback/AlertBanner";
 import { Header } from "../components/layout/Header";
 import { AdminLoginForm } from "../components/admin/AdminLoginForm";
+import { AdminStats } from "../components/admin/AdminStats";
 import { AdminToolbar } from "../components/admin/AdminToolbar";
 import { EstadoTabs, type EstadoFiltro } from "../components/admin/EstadoTabs";
 import { RecordsTable } from "../components/admin/RecordsTable";
@@ -198,6 +199,8 @@ export function AdminPage() {
                       void handleEventoChange(e);
                     }}
                   />
+
+                  {isLoadingRecords ? null : <AdminStats registros={registros} />}
 
                   <EstadoTabs
                     registros={registros}
