@@ -156,6 +156,15 @@
   transform: translateX(100%);
 }
 
+/* Cross-fade nativo al cambiar de idioma (ver setLanguage en
+   LanguageContext.tsx): mismo tiempo/curva que el pill de arriba, para que
+   el cambio de contenido se sienta igual de suave que el propio toggle. */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 0.22s;
+  animation-timing-function: cubic-bezier(0.65, 0, 0.35, 1);
+}
+
 .lp-lang-toggle button {
   position: relative;
   z-index: 1;
@@ -519,9 +528,17 @@
   font-size: 0.94em;
 }
 
+.lp-team-role-slot {
+  /* Reserva sitio para dos líneas de rol (el más largo, "Ex-vicepresidente ·
+     Board Member", envuelve en las tarjetas estrechas) para que el programa
+     y la bio empiecen a la misma altura en todas las tarjetas del carrusel,
+     tengan el rol una o dos líneas. */
+  min-height: 46px;
+  margin: 2px 0 4px;
+}
+
 .lp-team-role {
   display: inline-block;
-  margin: 2px 0 4px;
   padding: 3px 10px;
   border-radius: 999px;
   background: rgba(224, 104, 14, 0.11);
