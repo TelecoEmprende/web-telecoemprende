@@ -22,6 +22,7 @@
       "root": "demo/",
       "framework": "vite",
       "rewrites": [
+        { "source": "/demo/:path*", "destination": "/:path*" },
         { "source": "/(.*)", "destination": "/index.html" }
       ]
     }
