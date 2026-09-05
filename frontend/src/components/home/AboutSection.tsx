@@ -226,7 +226,9 @@ export function AboutSection() {
                     {member.name}
                     {member.alias ? <span className="lp-team-alias">“{member.alias}”</span> : null}
                   </h3>
-                  <span className="lp-team-role">{member.role[language]}</span>
+                  <div className="lp-team-role-slot">
+                    <span className="lp-team-role">{member.role[language]}</span>
+                  </div>
                   <span className="lp-team-program">{member.program}</span>
                   <p>{member.line[language]}</p>
                 </div>
