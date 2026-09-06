@@ -270,6 +270,45 @@ body {
   animation: parpadeo 1s infinite steps(2, jump-none);
 }
 
+/* Opciones de respuesta cuando el personaje hace una pregunta. */
+.opciones-dialogo {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.opcion-dialogo {
+  width: 100%;
+  text-align: left;
+  padding: 10px 12px;
+  border: 2px solid var(--color-navy-soft);
+  border-radius: 6px;
+  background: rgba(11, 26, 36, 0.6);
+  color: var(--color-cream);
+  font-family: inherit;
+  font-size: 0.95rem;
+  line-height: 1.4;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .opcion-dialogo:hover {
+    border-color: var(--color-orange);
+    background: rgba(224, 104, 14, 0.16);
+  }
+}
+
+.opcion-dialogo:active {
+  transform: scale(0.99);
+}
+
+.opcion-dialogo:focus-visible {
+  outline: 2px solid var(--color-gold);
+  outline-offset: 2px;
+}
+
 @keyframes parpadeo {
   50% {
     opacity: 0;
@@ -327,4 +366,13 @@ body {
 
 [hidden] {
   display: none !important;
+}
+
+/* Aviso de la portada: los diálogos son una recreación, no citas literales. */
+.aviso {
+  max-width: 46ch;
+  margin: 22px auto 0;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: #7e93a3;
 }
