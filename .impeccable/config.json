@@ -20,6 +20,15 @@
         ],
         "createdAt": "2026-09-06T12:31:44.173Z",
         "reason": "Inter is the existing site-wide brand font (used in every other frontend/*/index.html); this new /privacidad page matches it for consistency, not a new choice"
+      },
+      {
+        "rule": "side-tab",
+        "value": "*",
+        "files": [
+          "demo/src/App.css"
+        ],
+        "createdAt": "2026-09-06T13:31:31.369Z",
+        "reason": "Pre-existing .papel role-card accent border in demo/, not touched or introduced by this session's changes (only App.tsx/contenido.ts edited for the juego button); has an explicit design rationale in the surrounding comment, not default AI styling"
       }
     ]
   }
