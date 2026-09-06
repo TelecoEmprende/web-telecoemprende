@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { rutaImagen, type Imagen } from '../data/contenido'
+import { interfaz, rutaImagen, type Imagen } from '../data/contenido'
+import { rellenar, useTexto } from '../i18n/texto'
 import { IconoImagen } from './Iconos'
 
 type Props = {
@@ -36,6 +37,8 @@ export function Figura({
   espera,
   href,
 }: Props) {
+  const t = useTexto()
+
   // Se guarda junto a la ruta: si la imagen cambia, la cuenta se reinicia
   // sola durante el propio renderizado, sin efectos ni renders de más.
   const [prueba, setPrueba] = useState({ src: imagen.src, intentos: 0 })
@@ -52,7 +55,7 @@ export function Figura({
       <div className={`figura figura--hueco ${className}`}>
         <div className="hueco" style={{ aspectRatio: caja ?? '4 / 3' }}>
           <IconoImagen className="hueco__icono" />
-          <p className="hueco__texto">{espera ?? imagen.alt}</p>
+          <p className="hueco__texto">{espera ?? t(imagen.alt)}</p>
           {!sinRuta && <code className="hueco__archivo">{nombreArchivo}</code>}
         </div>
       </div>
@@ -64,7 +67,7 @@ export function Figura({
         // Al reintentar, la ruta cambia y el navegador vuelve a pedirla
         // en lugar de servir el error que ya tenía guardado.
         src={intentos === 0 ? rutaImagen(imagen.src) : `${rutaImagen(imagen.src)}?reintento=${intentos}`}
-        alt={imagen.alt}
+        alt={t(imagen.alt)}
         loading="lazy"
         style={{ aspectRatio: caja }}
       onError={() => setPrueba({ src: imagen.src, intentos: intentos + 1 })}
@@ -78,7 +81,7 @@ export function Figura({
         href={href}
         target="_blank"
         rel="noopener noreferrer"
-        aria-label={`Abrir: ${imagen.alt}`}
+        aria-label={rellenar(t(interfaz.abrir), { que: t(imagen.alt) })}
       >
         {contenido}
       </a>
@@ -90,7 +93,7 @@ export function Figura({
       type="button"
       className={`figura figura__boton ${className}`}
       onClick={() => onAbrir?.(imagen)}
-      aria-label={`Ver más grande: ${imagen.alt}`}
+      aria-label={rellenar(t(interfaz.ampliar), { que: t(imagen.alt) })}
     >
       {contenido}
     </button>

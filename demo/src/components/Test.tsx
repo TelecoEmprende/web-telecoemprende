@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
-import { departamentos, test } from '../data/contenido'
+import { departamentos, interfaz, test } from '../data/contenido'
 import type { FichaDepartamento, Rol } from '../data/contenido'
+import { rellenar, useTexto } from '../i18n/texto'
 import { iconoDeDepartamento } from './iconosDepartamento'
 import { IconoCerrar, IconoFlecha } from './Iconos'
 
@@ -45,6 +46,7 @@ function ganadores(cuenta: Recuento): FichaDepartamento['id'][] {
  * cero sin tener que reiniciar nada a mano.
  */
 export function Test({ onCerrar, onElegir }: Props) {
+  const t = useTexto()
   const [respuestas, setRespuestas] = useState<FichaDepartamento['id'][]>([])
   const [rol, setRol] = useState<Rol['id'] | null>(null)
   const panelRef = useRef<HTMLDivElement>(null)
@@ -86,17 +88,17 @@ export function Test({ onCerrar, onElegir }: Props) {
   const soloUno = hayEmpate ? undefined : departamentos.find((d) => d.id === primeros[0])
 
   return (
-    <div className="test" role="dialog" aria-modal="true" aria-label={test.gancho}>
+    <div className="test" role="dialog" aria-modal="true" aria-label={t(test.gancho)}>
       <div className="test__barra">
         {!terminado && (
           <p className="test__paso">
-            Pregunta {indice + 1} de {TOTAL}
+            {rellenar(t(interfaz.paso), { n: indice + 1, total: TOTAL })}
           </p>
         )}
 
         <button ref={cerrarRef} type="button" className="test__cerrar" onClick={onCerrar}>
           <IconoCerrar />
-          <span>Cerrar</span>
+          <span>{t(interfaz.cerrar)}</span>
         </button>
       </div>
 
@@ -109,12 +111,12 @@ export function Test({ onCerrar, onElegir }: Props) {
       <div className="test__panel" ref={panelRef}>
         {pregunta ? (
           <>
-            <h2 className="test__titulo">{pregunta.titulo}</h2>
-            <p className="test__enunciado">{pregunta.enunciado}</p>
+            <h2 className="test__titulo">{t(pregunta.titulo)}</h2>
+            <p className="test__enunciado">{t(pregunta.enunciado)}</p>
 
             <ul className="test__opciones">
               {pregunta.opciones.map((opcion, i) => (
-                <li key={opcion.texto}>
+                <li key={opcion.texto.es}>
                   <button
                     type="button"
                     className="test__opcion"
@@ -123,7 +125,7 @@ export function Test({ onCerrar, onElegir }: Props) {
                     <span className="test__letra" aria-hidden="true">
                       {LETRAS[i]}
                     </span>
-                    {opcion.texto}
+                    {t(opcion.texto)}
                   </button>
                 </li>
               ))}
@@ -135,18 +137,18 @@ export function Test({ onCerrar, onElegir }: Props) {
                 className="test__atras"
                 onClick={() => setRespuestas(respuestas.slice(0, -1))}
               >
-                Volver a la anterior
+                {t(interfaz.volver)}
               </button>
             )}
           </>
         ) : tocaElRol ? (
           <>
-            <h2 className="test__titulo">{test.preguntaRol.titulo}</h2>
-            <p className="test__enunciado">{test.preguntaRol.enunciado}</p>
+            <h2 className="test__titulo">{t(test.preguntaRol.titulo)}</h2>
+            <p className="test__enunciado">{t(test.preguntaRol.enunciado)}</p>
 
             <ul className="test__opciones">
               {test.preguntaRol.opciones.map((opcion, i) => (
-                <li key={opcion.texto}>
+                <li key={opcion.texto.es}>
                   <button
                     type="button"
                     className="test__opcion"
@@ -155,7 +157,7 @@ export function Test({ onCerrar, onElegir }: Props) {
                     <span className="test__letra" aria-hidden="true">
                       {LETRAS[i]}
                     </span>
-                    {opcion.texto}
+                    {t(opcion.texto)}
                   </button>
                 </li>
               ))}
@@ -166,15 +168,15 @@ export function Test({ onCerrar, onElegir }: Props) {
               className="test__atras"
               onClick={() => setRespuestas(respuestas.slice(0, -1))}
             >
-              Volver a la anterior
+              {t(interfaz.volver)}
             </button>
           </>
         ) : (
           <div className="test__resultado">
             <h2 className="test__titulo">
               {soloUno
-                ? `${test.resultado.titulo} ${soloUno.nombre}`
-                : test.resultado.tituloEmpate}
+                ? `${t(test.resultado.titulo)} ${t(soloUno.nombre)}`
+                : t(test.resultado.tituloEmpate)}
             </h2>
 
             <ul className="marcador">
@@ -185,12 +187,12 @@ export function Test({ onCerrar, onElegir }: Props) {
 
                 return (
                   <li className="marcador__fila" key={depto.id} data-gana={gana}>
-                    <span className="marcador__nombre">{depto.nombre}</span>
+                    <span className="marcador__nombre">{t(depto.nombre)}</span>
                     <span className="marcador__barra" aria-hidden="true">
                       <span style={{ transform: `scaleX(${parte})` }} />
                     </span>
                     <span className="marcador__cifra">
-                      {porcentaje}% <small>{test.resultado.piePorcentaje}</small>
+                      {porcentaje}% <small>{t(test.resultado.piePorcentaje)}</small>
                     </span>
                   </li>
                 )
@@ -199,10 +201,10 @@ export function Test({ onCerrar, onElegir }: Props) {
 
             {ficha && (
               <div className="papel">
-                <p className="papel__etiqueta">{test.resultado.tituloRol}</p>
-                <p className="papel__nombre">{ficha.nombre}</p>
-                <p className="papel__texto">{ficha.texto}</p>
-                <p className="papel__pie">{test.resultado.pieRol}</p>
+                <p className="papel__etiqueta">{t(test.resultado.tituloRol)}</p>
+                <p className="papel__nombre">{t(ficha.nombre)}</p>
+                <p className="papel__texto">{t(ficha.texto)}</p>
+                <p className="papel__pie">{t(test.resultado.pieRol)}</p>
               </div>
             )}
 
@@ -223,7 +225,7 @@ export function Test({ onCerrar, onElegir }: Props) {
                     }}
                   >
                     <Icono className="test__ir-icono" />
-                    {test.resultado.verDepartamento} {depto.nombre}
+                    {t(test.resultado.verDepartamento)} {t(depto.nombre)}
                     <IconoFlecha className="test__ir-flecha" />
                   </button>
                 )
@@ -239,10 +241,10 @@ export function Test({ onCerrar, onElegir }: Props) {
                   setRol(null)
                 }}
               >
-                {test.resultado.repetir}
+                {t(test.resultado.repetir)}
               </button>
               <button type="button" className="test__atras" onClick={onCerrar}>
-                {test.resultado.explorar}
+                {t(test.resultado.explorar)}
               </button>
             </div>
           </div>

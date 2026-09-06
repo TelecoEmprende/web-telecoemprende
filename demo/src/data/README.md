@@ -149,6 +149,28 @@ haya. No hay ningún número escrito a mano en el código.
 Lo único que hay que acordarse de cambiar a mano es `test.descripcion`, que dice
 "Seis preguntas" en texto.
 
+## Los dos idiomas
+
+A la feria vienen erasmus, así que la página se lee en español y en inglés. Cada
+texto se escribe con los dos juntos:
+
+```ts
+titulo: { es: 'Te toca explicarlo tú', en: 'Your turn to explain it' },
+```
+
+Los dos tienen que estar puestos: si falta uno, TypeScript avisa al compilar. Lo
+que no es texto —las rutas de las imágenes, los enlaces, a qué departamento suma
+cada opción— va suelto y sin idiomas, para que no pueda descuadrarse.
+
+Los papeles de equipo llevan en inglés **el nombre original de Belbin**, no una
+traducción del español: Cerebro es *Plant*, Impulsor es *Shaper* y Cohesionador es
+*Teamworker*. Quien busque qué significa su resultado encontrará el término de
+verdad.
+
+El idioma se elige en la barra y se guarda en el navegador con la misma clave que
+la web del club (`teleco-language`), que está en el mismo dominio: quien ya eligió
+inglés en telecoemprende.es abre esta página en inglés directamente.
+
 ## Probarlo antes de enseñarlo
 
 Merece la pena hacer el test entero **tres veces**, contestando siempre lo mismo,

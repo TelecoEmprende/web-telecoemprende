@@ -121,12 +121,64 @@
   height: 17px;
 }
 
+/* El idioma y la solicitud van juntos en la esquina derecha. */
+.barra__acciones {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  justify-self: end;
+}
+
+/* Solo sirve en móvil, donde la barra es de dos filas. */
+.barra__corte {
+  display: none;
+}
+
+/* El cambio de idioma, con la misma forma que en la web del club: los dos
+   idiomas siempre a la vista y el puesto en tinta. Un solo botón que fuera
+   cambiando de etiqueta obliga a adivinar si dice en qué idioma estás o a
+   cuál vas a ir. */
+.barra__idioma {
+  display: flex;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid var(--linea);
+  border-radius: 999px;
+}
+
+.barra__idioma button {
+  border: 0;
+  background: transparent;
+  padding: 5px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  color: var(--texto-tenue);
+  font-variation-settings:
+    'wdth' 92,
+    'wght' 700;
+  cursor: pointer;
+  transition:
+    background 0.2s var(--salida),
+    color 0.2s var(--salida);
+}
+
+.barra__idioma button[aria-pressed='true'] {
+  background: var(--tinta);
+  color: var(--papel);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .barra__idioma button:not([aria-pressed='true']):hover {
+    color: var(--tinta);
+  }
+}
+
 /* La única llamada a la acción de la página, con la forma que ya tiene en la
    web del club (`.lp-nav-cta` en frontend/src/styles/landing.css): pastilla
    de oro y tinta encima. Redonda del todo para que no se confunda con el
    acceso activo a un departamento, que es una pastilla de tinta. */
 .barra__solicitud {
-  justify-self: end;
   display: inline-flex;
   align-items: center;
   padding: 11px 20px;
@@ -1505,34 +1557,53 @@ main > section:nth-of-type(3) {
   }
 }
 
-@media (max-width: 560px) {
-  /*
-   * Aquí no caben en una fila el nombre, los tres accesos y el botón, y
-   * ninguno de los tres sobra: el nombre dice de quién es la página, el
-   * botón es lo que se pide y los accesos son la navegación. Así que la
-   * barra pasa a dos filas —marca y botón arriba, accesos debajo— en vez de
-   * apretar a nadie hasta los puntos suspensivos.
-   */
+/*
+ * Aquí ya no caben en una fila el nombre, los tres accesos, el idioma y el
+ * botón, y ninguno sobra: el nombre dice de quién es la página, el botón es
+ * lo que se pide, los accesos son la navegación y el idioma es lo que trae a
+ * un erasmus hasta aquí. Así que la barra pasa a dos filas.
+ *
+ * Y deja de ser una rejilla para pasar a ser flex: en una rejilla la columna
+ * mide lo mismo en las dos filas, y el botón —"Submit your application" es
+ * más largo que "Envía tu solicitud"— le robaba el ancho al nombre del club
+ * hasta cortarlo con puntos suspensivos.
+ */
+@media (max-width: 760px) {
   .barra {
-    grid-template-columns: minmax(0, 1fr) auto;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
     gap: 10px;
   }
 
   .barra__marca {
-    grid-area: 1 / 1;
+    order: 1;
+    flex: 1 1 auto;
   }
 
-  .barra__solicitud {
-    grid-area: 1 / 2;
+  /* El grupo se deshace y sus dos hijos se colocan cada uno en su fila. */
+  .barra__acciones {
+    display: contents;
+  }
+
+  .barra__idioma {
+    order: 2;
+  }
+
+  .barra__corte {
+    display: block;
+    order: 3;
+    flex-basis: 100%;
+    height: 0;
   }
 
   /* La fila de accesos solo existe cuando se ve: si no, la barra se quedaría
      con una banda vacía debajo durante toda la portada. Ahí se cambia el
      desvanecido por aparecer y desaparecer, que es lo que pasa de verdad. */
   .barra__saltos {
+    order: 4;
     display: none;
-    grid-area: 2 / 1 / 3 / -1;
-    justify-content: center;
+    margin-left: 0;
   }
 
   .barra--compacta .barra__saltos {
@@ -1540,6 +1611,14 @@ main > section:nth-of-type(3) {
     margin-left: 0;
   }
 
+  /* Pegado a la derecha, esté o no la fila de accesos a su lado. */
+  .barra__solicitud {
+    order: 5;
+    margin-left: auto;
+  }
+}
+
+@media (max-width: 560px) {
   .barra__solicitud {
     padding: 10px 15px;
   }
@@ -1553,19 +1632,30 @@ main > section:nth-of-type(3) {
     height: 30px;
   }
 
-  /* Un punto más pequeño para que el nombre entre entero al lado del botón
-     también en las pantallas de 360px. */
   .barra__marca b {
     font-size: 15px;
   }
 
   .barra__salto {
-    padding: 11px;
+    padding: 10px;
   }
 
   .sello {
     right: -12px;
     bottom: -12px;
+  }
+}
+
+/* En los móviles más estrechos la segunda fila —accesos y botón— se queda a
+   un pelo de no caber en inglés. Un punto menos en los dos y entra. */
+@media (max-width: 400px) {
+  .barra__salto {
+    padding: 9px;
+  }
+
+  .barra__solicitud {
+    padding: 9px 13px;
+    font-size: 12.5px;
   }
 }
 

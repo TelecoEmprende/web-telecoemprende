@@ -1,9 +1,11 @@
 import { Fragment, useCallback, useEffect, useRef, useState } from 'react'
 import { flushSync } from 'react-dom'
 import './App.css'
-import { club, departamentos, rutaImagen, test } from './data/contenido'
+import { club, departamentos, interfaz, rutaImagen, test } from './data/contenido'
 import type { FichaDepartamento, Imagen } from './data/contenido'
+import { useTexto } from './i18n/texto'
 import { NombreClub } from './components/NombreClub'
+import { SelectorIdioma } from './components/SelectorIdioma'
 import { SelectorDepartamentos } from './components/SelectorDepartamentos'
 import { SeccionTech } from './components/SeccionTech'
 import { SeccionMarketing } from './components/SeccionMarketing'
@@ -26,6 +28,18 @@ function reordenar(id: FichaDepartamento['id']) {
   ]
 }
 
+/*
+ * Dónde hay que dejar la página para que un departamento quede justo debajo
+ * de la barra. La barra se mide, no se supone: en el móvil tiene dos filas y
+ * mide el doble que en el ordenador, y con una cifra fija el título del
+ * departamento se quedaba tapado.
+ */
+function alturaDeDestino(destino: HTMLElement) {
+  const barra = document.querySelector('.barra')
+  const alto = barra ? barra.getBoundingClientRect().height : 76
+  return destino.getBoundingClientRect().top + window.scrollY - alto - 8
+}
+
 /** Parte el titular para poder pintar en naranja el trozo destacado. */
 function partirTitular(titular: string, destacado: string) {
   const corte = titular.indexOf(destacado)
@@ -38,6 +52,8 @@ function partirTitular(titular: string, destacado: string) {
 }
 
 function App() {
+  const t = useTexto()
+
   // Al abrir /#marketing directamente, ese departamento arranca ya marcado.
   const [activo, setActivo] = useState<FichaDepartamento['id'] | null>(() => {
     const desdeLaUrl = window.location.hash.replace('#', '')
@@ -53,7 +69,7 @@ function App() {
   const [barraVisible, setBarraVisible] = useState(false)
   const portadaRef = useRef<HTMLElement>(null)
 
-  const { antes, medio, despues } = partirTitular(club.titular, club.titularDestacado)
+  const { antes, medio, despues } = partirTitular(t(club.titular), t(club.titularDestacado))
 
   /*
    * El enlace pone la dirección en la barra, pero el desplazamiento se hace
@@ -69,8 +85,7 @@ function App() {
     const destino = document.getElementById(id)
     if (!destino) return
 
-    const y = destino.getBoundingClientRect().top + window.scrollY - 80
-    window.scrollTo({ top: y, behavior: 'instant' })
+    window.scrollTo({ top: alturaDeDestino(destino), behavior: 'instant' })
   }, [])
 
   /*
@@ -107,8 +122,7 @@ function App() {
     if (!destino) return
 
     const saltar = () => {
-      const y = destino.getBoundingClientRect().top + window.scrollY - 80
-      window.scrollTo({ top: y, behavior: 'instant' })
+      window.scrollTo({ top: alturaDeDestino(destino), behavior: 'instant' })
     }
 
     saltar()
@@ -183,7 +197,7 @@ function App() {
           href={club.web}
           target="_blank"
           rel="noopener noreferrer"
-          title={`Ir a la web de ${club.nombre}`}
+          title={t(interfaz.irALaWeb)}
         >
           <img src={rutaImagen('/logo.png')} alt="" width={34} height={34} />
           <b>
@@ -191,7 +205,7 @@ function App() {
           </b>
         </a>
 
-        <nav className="barra__saltos" aria-label="Ir a un departamento">
+        <nav className="barra__saltos" aria-label={t(interfaz.saltos)}>
           {orden.map((depto) => {
             const Icono = iconoDeDepartamento[depto.id]
             return (
@@ -203,23 +217,35 @@ function App() {
                 onClick={() => irADepartamento(depto.id)}
               >
                 <Icono className="barra__salto-icono" />
-                <span className="barra__salto-nombre">{depto.nombre}</span>
+                <span className="barra__salto-nombre">{t(depto.nombre)}</span>
               </a>
             )
           })}
         </nav>
 
-        {/* Lo que se pide en esta página. La demo se ve en el stand y en el
-            móvil de quien pasa, así que el formulario se abre aparte y aquí
-            se sigue donde se estaba. */}
-        <a
-          className="barra__solicitud"
-          href={club.solicitud.url}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          {club.solicitud.texto}
-        </a>
+        {/* El idioma y lo que se pide, juntos en la esquina. En el móvil el
+            grupo se deshace (`display: contents`) y cada uno se coloca en su
+            fila: ver .barra en App.css. */}
+        <div className="barra__acciones">
+          <SelectorIdioma />
+
+          {/* La demo se ve en el stand y en el móvil de quien pasa, así que
+              el formulario se abre aparte y aquí se sigue donde se estaba. */}
+          <a
+            className="barra__solicitud"
+            href={club.solicitud.url}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            {t(club.solicitud.texto)}
+          </a>
+        </div>
+
+        {/* Corta la barra en dos filas cuando es de dos filas. Sin él, el
+            reparto depende de lo que ocupe cada idioma y a algún ancho los
+            accesos se subían a la primera fila. No se ve ni se lee: mide
+            cero. */}
+        <span className="barra__corte" aria-hidden="true" />
       </header>
 
       <main>
@@ -230,9 +256,9 @@ function App() {
               <em>{medio}</em>
               {despues}
             </h1>
-            <p className="portada__aclaracion">{club.aclaracion}</p>
+            <p className="portada__aclaracion">{t(club.aclaracion)}</p>
 
-            <p className="portada__invitacion">{club.invitacion}</p>
+            <p className="portada__invitacion">{t(club.invitacion)}</p>
             <SelectorDepartamentos
               departamentos={orden}
               activo={activo}
@@ -242,14 +268,14 @@ function App() {
 
           {/* El test manda en la portada: es lo que queremos que se toque. */}
           <div className="portada__test">
-            <p className="portada__test-gancho">{test.gancho}</p>
-            <p className="portada__test-texto">{test.descripcion}</p>
+            <p className="portada__test-gancho">{t(test.gancho)}</p>
+            <p className="portada__test-texto">{t(test.descripcion)}</p>
             <button
               type="button"
               className="portada__test-boton"
               onClick={() => setTestAbierto(true)}
             >
-              {test.boton}
+              {t(test.boton)}
             </button>
           </div>
         </section>
