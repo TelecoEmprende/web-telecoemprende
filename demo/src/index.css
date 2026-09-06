@@ -43,6 +43,15 @@ html {
   scroll-padding-top: 88px;
 }
 
+/* Debajo de 560px la barra pasa a dos filas (ver .barra en App.css) y crece
+   hasta 116px: con los 88px de siempre, el salto a un departamento lo dejaba
+   metido debajo de la barra. */
+@media (max-width: 560px) {
+  html {
+    scroll-padding-top: 124px;
+  }
+}
+
 body {
   margin: 0;
   background: var(--papel);

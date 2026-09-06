@@ -209,9 +209,17 @@ function App() {
           })}
         </nav>
 
-        <span className="barra__origen">
-          {club.procedencia} — {club.curso}
-        </span>
+        {/* Lo que se pide en esta página. La demo se ve en el stand y en el
+            móvil de quien pasa, así que el formulario se abre aparte y aquí
+            se sigue donde se estaba. */}
+        <a
+          className="barra__solicitud"
+          href={club.solicitud.url}
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          {club.solicitud.texto}
+        </a>
       </header>
 
       <main>

@@ -92,10 +92,16 @@ export const club = {
   nombre: 'TelecoEmprende',
   /** El trozo del nombre que va en naranja. Tiene que aparecer tal cual dentro de `nombre`. */
   nombreDestacado: 'Emprende',
-  procedencia: 'ETSIT · UPM',
   /** La web principal del club. El logo lleva aquí al pulsarlo. */
   web: 'https://telecoemprende.es',
-  curso: 'Curso 2026/27',
+  /*
+   * El botón de la barra: es lo único que se pide en esta página, así que
+   * lleva directo al formulario de la web del club, no a su portada.
+   */
+  solicitud: {
+    texto: 'Envía tu solicitud',
+    url: 'https://telecoemprende.es/#inscripcion',
+  },
   titular: 'En ingeniería sobra talento. Falta dónde montarlo.',
   /** La parte del titular que va en naranja. Tiene que aparecer tal cual dentro de `titular`. */
   titularDestacado: 'dónde montarlo',
