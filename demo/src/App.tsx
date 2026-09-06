@@ -294,19 +294,21 @@ function App() {
               {t(juego.boton)}
             </a>
 
-            {/* Captura del juego: llena el hueco de la derecha y enseña de qué
-                va antes de que nadie pulse nada. */}
-            <a
-              className="portada__juego-captura"
-              href={juego.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              tabIndex={-1}
-              aria-hidden="true"
-            >
-              <img src={rutaImagen('/img/juego-preview.jpg')} alt="" loading="lazy" />
-            </a>
           </div>
+
+          {/* Captura del juego. Va fuera del panel oscuro, como celda propia de
+              la rejilla de .portada, para llenar el hueco de la derecha en vez
+              de quedar colgando debajo del botón. */}
+          <a
+            className="portada__juego-captura"
+            href={juego.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            tabIndex={-1}
+            aria-hidden="true"
+          >
+            <img src={rutaImagen('/img/juego-preview.jpg')} alt="" loading="lazy" />
+          </a>
         </section>
 
         {/* El orden lo manda el test: por defecto Tech, Marketing y Eventos. */}
