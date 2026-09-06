@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { rutaImagen, type Charla } from '../data/contenido'
+import { useTexto } from '../i18n/texto'
 
 /*
  * Monograma de la empresa, para cuando todavía no hay logo.
@@ -27,6 +28,7 @@ function monograma(entidad: string) {
  * cuadrados, alargado para los alargados.
  */
 export function Sello({ charla }: { charla: Charla }) {
+  const t = useTexto()
   const [sinLogo, setSinLogo] = useState(charla.logo.src.trim() === '')
   const [alargado, setAlargado] = useState(false)
 
@@ -42,7 +44,7 @@ export function Sello({ charla }: { charla: Charla }) {
     <span className={`sello ${alargado ? 'sello--alargado' : ''}`} title={charla.entidad}>
       <img
         src={rutaImagen(charla.logo.src)}
-        alt={charla.logo.alt}
+        alt={t(charla.logo.alt)}
         onError={() => setSinLogo(true)}
         onLoad={(evento) => {
           const { naturalWidth, naturalHeight } = evento.currentTarget

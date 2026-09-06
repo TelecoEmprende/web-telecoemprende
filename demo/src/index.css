@@ -43,12 +43,13 @@ html {
   scroll-padding-top: 88px;
 }
 
-/* Debajo de 560px la barra pasa a dos filas (ver .barra en App.css) y crece
-   hasta 116px: con los 88px de siempre, el salto a un departamento lo dejaba
-   metido debajo de la barra. */
-@media (max-width: 560px) {
+/* Debajo de 760px la barra pasa a dos filas (ver .barra en App.css) y crece
+   hasta unos 130px: con los 88px de siempre, el salto a un departamento lo
+   dejaba metido debajo de la barra. Los saltos que hace la propia página no
+   dependen de esto: miden la barra (ver `alturaDeDestino` en App.tsx). */
+@media (max-width: 760px) {
   html {
-    scroll-padding-top: 124px;
+    scroll-padding-top: 142px;
   }
 }
 
