@@ -27,6 +27,8 @@ frontend/dist/
 frontend/*.tsbuildinfo
 frontend/vite.config.js
 frontend/vite.config.d.ts
+frontend/vitest.config.js
+frontend/vitest.config.d.ts
 
 # Demo build and dependency artifacts
 demo/node_modules/

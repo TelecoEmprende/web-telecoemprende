@@ -1,6 +1,6 @@
 import { apiRequest } from "./client";
 import type { ApiResult } from "../types/api";
-import type { EquipoLoginResponse, EquipoSessionResponse } from "../types/equipo";
+import type { EquipoLoginResponse, EquipoSessionResponse, EventoCalendario } from "../types/equipo";
 
 export function loginEquipo(email: string, password: string) {
   return apiRequest<EquipoLoginResponse>("/api/equipo/login", {
@@ -17,4 +17,8 @@ export function logoutEquipo() {
 
 export function getEquipoSession() {
   return apiRequest<EquipoSessionResponse>("/api/equipo/session");
+}
+
+export function getEquipoCalendario() {
+  return apiRequest<ApiResult & { eventos: EventoCalendario[] }>("/api/equipo/calendario");
 }

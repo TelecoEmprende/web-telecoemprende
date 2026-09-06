@@ -11,29 +11,41 @@ RESEND_ENDPOINT = "https://api.resend.com/emails"
 
 # Personalización: edita el asunto/cuerpo de cada estado aquí. {nombre} se
 # sustituye por el nombre de pila de la persona. El cuerpo admite HTML simple.
+_WHATSAPP_URL = "https://chat.whatsapp.com/DdllRrRTg3REkyYW248uFP"
+
 _ASUNTOS = {
-    "aceptado": "¡Bienvenido/a a TelecoEmprende! Tu inscripción ha sido aceptada",
-    "rechazado": "Tu inscripción a TelecoEmprende",
-    "waitlist": "Tu inscripción a TelecoEmprende está en lista de espera",
+    "aceptado": "¡Estás dentro! Bienvenido/a a TelecoEmprende",
+    "rechazado": "Tu solicitud a TelecoEmprende",
+    "waitlist": "Tu solicitud a TelecoEmprende: estás en lista de espera",
 }
 
 _CUERPOS = {
     "aceptado": (
         "Hola {nombre},<br><br>"
-        "¡Enhorabuena! Tu inscripción a TelecoEmprende ha sido <strong>aceptada</strong>. "
-        "En los próximos días te contactaremos con los siguientes pasos.<br><br>"
-        "Un saludo,<br>El equipo de TelecoEmprende"
+        "¡Enhorabuena! Tu solicitud para unirte a TelecoEmprende ha sido "
+        "<strong>aceptada</strong>. A partir de ahora formas parte del club, y este curso "
+        "lo construimos juntos.<br><br>"
+        "Los próximos pasos:<br>"
+        "1. Únete a la comunidad de WhatsApp para no perderte nada: "
+        f'<a href="{_WHATSAPP_URL}">{_WHATSAPP_URL}</a><br>'
+        "2. Muy pronto te escribiremos con la fecha del primer evento del curso.<br><br>"
+        "Bienvenido/a a bordo,<br>El equipo de TelecoEmprende"
     ),
     "rechazado": (
         "Hola {nombre},<br><br>"
-        "Gracias por tu interés en TelecoEmprende. Este año no hemos podido ofrecerte una plaza, "
-        "pero te animamos a seguir participando en nuestros eventos.<br><br>"
+        "Gracias por presentarte a TelecoEmprende y por el tiempo que le has dedicado a tu "
+        "solicitud. Este año no hemos podido ofrecerte una plaza: recibimos muchas más "
+        "solicitudes de las que teníamos hueco, y la decisión no ha sido fácil.<br><br>"
+        "Esto no es un adiós: nos encantaría verte en nuestros eventos abiertos durante el "
+        "curso, y puedes volver a presentarte en la próxima convocatoria.<br><br>"
         "Un saludo,<br>El equipo de TelecoEmprende"
     ),
     "waitlist": (
         "Hola {nombre},<br><br>"
-        "Gracias por tu interés en TelecoEmprende. Ahora mismo tu inscripción está en "
-        "<strong>lista de espera</strong>: si se libera una plaza, te contactaremos por este mismo correo.<br><br>"
+        "Gracias por tu solicitud a TelecoEmprende. Ahora mismo estás en "
+        "<strong>lista de espera</strong>: no hay plaza libre en este momento, pero tu "
+        "candidatura sigue viva. Si se libera un hueco, te escribiremos a este mismo correo "
+        "sin que tengas que hacer nada.<br><br>"
         "Un saludo,<br>El equipo de TelecoEmprende"
     ),
 }
