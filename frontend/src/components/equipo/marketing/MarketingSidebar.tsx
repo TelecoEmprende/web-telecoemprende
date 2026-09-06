@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import {
+  ArrowLeft,
   CalendarDays,
   Check,
   ChevronsUpDown,
@@ -52,6 +53,8 @@ const TEAM_LABEL: Record<Team, string> = {
 type Props = {
   seccion: Seccion;
   onSeccion: (seccion: Seccion) => void;
+  /** Vuelve a la pantalla intermedia de /equipo, sin recargar la página. */
+  onSalir: () => void;
 };
 
 /**
@@ -129,16 +132,16 @@ function SelectorDeEquipo() {
 /**
  * Sidebar del espacio de Marketing.
  *
- * Cuando este panel está abierto se lleva la pantalla entera, así que la
- * marca, "Inicio" y "Cerrar sesión" viven aquí: son las mismas acciones que
- * ofrece el shell de `/equipo`, que queda oculto mientras tanto (ver
+ * Cuando este panel está abierto se lleva la pantalla entera, así que
+ * "Volver" y "Cerrar sesión" viven aquí: son las mismas acciones que ofrece
+ * el shell de `/equipo`, que queda oculto mientras tanto (ver
  * `marketing.css`). No se tocan ni `EquipoPage.tsx` ni `equipo.css`.
  *
- * Volver al selector de equipos y cerrar sesión se hacen recargando `/equipo`:
- * el estado de qué equipo está abierto vive en EquipoPage, y una recarga lo
- * devuelve a su pantalla inicial sin que este componente tenga que conocerlo.
+ * "Volver" deshace el `entrado` de `MarketingDashboard` (sin recargar);
+ * cambiar de equipo desde el desplegable de arriba sí recarga `/equipo`,
+ * porque ese estado vive en `EquipoPage`, fuera de este componente.
  */
-export function MarketingSidebar({ seccion, onSeccion }: Props) {
+export function MarketingSidebar({ seccion, onSeccion, onSalir }: Props) {
   const { state, isMobile, setOpenMobile } = useSidebar();
   // El tooltip solo tiene sentido con el sidebar plegado a iconos: expandido
   // repetiría una etiqueta que ya se lee. Y de paso quita el TooltipTrigger de
@@ -200,6 +203,12 @@ export function MarketingSidebar({ seccion, onSeccion }: Props) {
 
       <SidebarFooter>
         <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton tooltip={ayuda("Volver")} onClick={onSalir}>
+              <ArrowLeft />
+              <span>Volver</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
           <SidebarMenuItem>
             <SidebarMenuButton
               tooltip={ayuda("Cerrar sesión")}
