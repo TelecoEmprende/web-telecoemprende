@@ -38,7 +38,6 @@ const es = {
     nextAria: "Ver siguiente miembro",
     photoAlt: "Foto de",
     dotAria: "Ver a",
-    privacyLinkText: "Consulta nuestra política de privacidad",
   },
   departments: {
     eyebrow: "Departamentos",
@@ -103,6 +102,7 @@ const es = {
     tagline: "Club de emprendimiento nacido en la ETSIT, abierto a estudiantes de toda la UPM.",
     linksLabel: "Enlaces del pie de página",
     alumniLink: "Red de alumni ETSIT",
+    privacyLink: "Política de privacidad",
     socialLabel: "Redes sociales de TelecoEmprende",
     instagramAria: "TelecoEmprende en Instagram",
     linkedinAria: "TelecoEmprende en LinkedIn",
@@ -163,7 +163,6 @@ const en = {
     nextAria: "Next member",
     photoAlt: "Photo of",
     dotAria: "View",
-    privacyLinkText: "Read our privacy policy",
   },
   departments: {
     eyebrow: "Departments",
@@ -228,6 +227,7 @@ const en = {
     tagline: "Entrepreneurship club born at ETSIT, open to students from the whole UPM.",
     linksLabel: "Footer links",
     alumniLink: "ETSIT alumni network",
+    privacyLink: "Privacy policy",
     socialLabel: "TelecoEmprende social media",
     instagramAria: "TelecoEmprende on Instagram",
     linkedinAria: "TelecoEmprende on LinkedIn",
