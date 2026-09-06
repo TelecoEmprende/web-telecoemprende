@@ -4,8 +4,8 @@
 // están en game.js.
 
 export const TILE_SIZE = 32;
-export const MAP_COLS = 20;
-export const MAP_ROWS = 14;
+export const MAP_COLS = 24;
+export const MAP_ROWS = 16;
 
 // Tiles no transitables. Todo lo que no esté aquí se puede pisar.
 const SOLIDOS = new Set(["scrub", "edificioC", "hall", "biblioteca", "secretaria", "arbol"]);
@@ -27,15 +27,15 @@ function construirMapa() {
   rect(mapa, 0, 0, 0, MAP_ROWS - 1, "scrub");
   rect(mapa, MAP_COLS - 1, 0, MAP_COLS - 1, MAP_ROWS - 1, "scrub");
 
-  rect(mapa, 1, 1, 4, 5, "edificioC"); // Edificio C
-  rect(mapa, 8, 1, 15, 2, "hall"); // Hall / nave larga
-  rect(mapa, 9, 4, 14, 8, "biblioteca"); // CEMDATIC + Biblioteca ETSIT
-  rect(mapa, 9, 8, 14, 9, "secretaria"); // Secretaría de Alumnos (pisa la fila 8)
-  rect(mapa, 1, 9, 3, 11, "sports"); // Sports Field, transitable
-  rect(mapa, 5, 6, 17, 7, "plaza"); // Plaza/paso central: corta la biblioteca en sus filas 6-7
+  rect(mapa, 3, 2, 6, 6, "edificioC"); // Edificio C
+  rect(mapa, 10, 2, 17, 3, "hall"); // Hall / nave larga
+  rect(mapa, 11, 5, 16, 9, "biblioteca"); // CEMDATIC + Biblioteca ETSIT
+  rect(mapa, 11, 9, 16, 10, "secretaria"); // Secretaría de Alumnos (pisa la fila 9)
+  rect(mapa, 3, 10, 5, 12, "sports"); // Sports Field, transitable
+  rect(mapa, 7, 7, 19, 8, "plaza"); // Plaza/paso central: corta la biblioteca en sus filas 7-8
 
-  mapa[3][6] = "arbol";
-  mapa[3][16] = "arbol";
+  mapa[4][8] = "arbol";
+  mapa[4][18] = "arbol";
 
   return mapa;
 }
