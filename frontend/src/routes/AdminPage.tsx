@@ -12,6 +12,7 @@ import { Header } from "../components/layout/Header";
 import { AdminLoginForm } from "../components/admin/AdminLoginForm";
 import { AdminStats } from "../components/admin/AdminStats";
 import { AdminToolbar } from "../components/admin/AdminToolbar";
+import { EquipoAccesosPanel } from "../components/admin/EquipoAccesosPanel";
 import { EstadoTabs, type EstadoFiltro } from "../components/admin/EstadoTabs";
 import { RecordsTable } from "../components/admin/RecordsTable";
 import type { ApiFailure } from "../types/api";
@@ -263,6 +264,8 @@ export function AdminPage() {
                 </>
               ) : null}
             </section>
+
+            {!isCheckingSession && isAuthenticated ? <EquipoAccesosPanel /> : null}
           </div>
         </section>
       </main>

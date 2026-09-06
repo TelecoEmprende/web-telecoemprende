@@ -20,6 +20,9 @@ export function HeroSection() {
           </h1>
 
           <p className="lp-hero-lead">{t.hero.lead}</p>
+          <p className="lp-hero-lead">
+            <mark className="lp-highlight">{t.hero.tempt}</mark>
+          </p>
 
           <div className="lp-hero-actions">
             <a href="#inscripcion" className="lp-btn lp-btn-gold">
