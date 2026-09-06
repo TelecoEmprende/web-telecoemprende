@@ -240,11 +240,23 @@
   box-shadow: 0 0 0 4px rgba(224, 104, 14, 0.12);
 }
 
+/* Al enviar con varios campos mal salen cuatro o cinco a la vez: entran
+   bajando cuatro píxeles para que se vea de dónde vienen. */
 .field-error-react {
   margin: 4px 0 0;
   color: #b42318;
   font-size: 0.92rem;
   font-weight: 700;
+  transition:
+    opacity var(--dur-fast) var(--ease-out),
+    transform var(--dur-fast) var(--ease-out);
+}
+
+@starting-style {
+  .field-error-react {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
 }
 
 .field-hint-react {
@@ -268,12 +280,21 @@
   border: 0;
   box-shadow: 0 20px 50px rgba(15, 92, 192, 0.12);
   cursor: pointer;
-  transition: transform 0.15s ease, filter 0.15s ease, opacity 0.15s ease;
+  transition: transform var(--dur-press) ease, filter var(--dur-press) ease,
+    opacity var(--dur-press) ease;
 }
 
-.submit-btn-react:hover {
-  transform: translateY(-1px);
-  filter: brightness(1.02);
+/* Una pantalla táctil dispara :hover al tocar y el estado se queda pegado
+   después: el movimiento del hover se reserva para quien tiene ratón. */
+@media (hover: hover) and (pointer: fine) {
+  .submit-btn-react:hover {
+    transform: translateY(-1px);
+    filter: brightness(1.02);
+  }
+}
+
+.submit-btn-react:active:not(:disabled) {
+  transform: scale(0.97);
 }
 
 .submit-btn-react:disabled {
