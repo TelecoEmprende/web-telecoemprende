@@ -706,6 +706,22 @@ export const test = {
   },
 }
 
+/*
+ * Botón que lleva al mini-juego de la web principal (telecoemprende.es/juego,
+ * todavía "Próximamente"). No es del test: se pinta debajo, como una segunda
+ * llamada a la acción en la portada.
+ */
+export const juego = {
+  gancho: { es: '¿Prefieres jugar antes de decidirte?', en: 'Fancy a game before you decide?' },
+  descripcion: {
+    es: 'Mientras te lo piensas, échale un ojo a nuestro mini-juego. Todavía lo estamos montando, pero ya puedes echar un vistazo.',
+    en: "While you think it over, check out our mini-game. We're still building it, but you can already take a peek.",
+  },
+  boton: { es: 'Jugar', en: 'Play' },
+  /** Ruta absoluta: el juego vive en telecoemprende.es/juego, fuera de /demo. */
+  url: 'https://telecoemprende.es/juego',
+}
+
 /* ------------------------------------------------------------------ */
 /* Textos sueltos de la interfaz                                       */
 /* ------------------------------------------------------------------ */
