@@ -1,3 +1,4 @@
+import { useInitialHashScroll } from "../hooks/useInitialHashScroll";
 import { LandingNav } from "../components/home/LandingNav";
 import { HeroSection } from "../components/home/HeroSection";
 import { AboutSection } from "../components/home/AboutSection";
@@ -9,6 +10,10 @@ import { RegistrationForm } from "../components/home/RegistrationForm";
 import { LandingFooter } from "../components/layout/LandingFooter";
 
 export function HomePage() {
+  // Al llegar de fuera con un ancla (/#inscripcion desde la demo, desde
+  // WhatsApp...) el navegador no baja solo: lo baja esto.
+  useInitialHashScroll();
+
   return (
     <div className="lp-shell">
       <LandingNav />
