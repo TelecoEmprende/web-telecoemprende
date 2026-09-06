@@ -30,5 +30,16 @@
   --radius-md: 14px;
   --container-width: 1180px;
 
+  /* Movimiento. Las curvas de fábrica (`ease`) son demasiado flojas para
+     movimiento deliberado; estas son las que usa el resto del proyecto
+     (ver `--salida` en demo/src/index.css). */
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+
+  /* Nada de la interfaz pasa de 300ms. */
+  --dur-press: 160ms;
+  --dur-fast: 150ms;
+  --dur-menu: 180ms;
+
   --font-display: "Space Grotesk", "Inter", sans-serif;
 }
