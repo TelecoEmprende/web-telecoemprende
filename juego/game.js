@@ -3,7 +3,8 @@ import { TILE_SIZE, MAP_COLS, MAP_ROWS, esSolido, dibujarFondo } from "./world.j
 
 const STORAGE_KEY = "te-juego-descubiertos";
 const VEL_TIPEO_MS = 28;
-const SPRITE_PX = 16; // lado del sprite pixelado offscreen (retratos reales)
+const SPRITE_PX = 16; // lado del sprite pixelado del mundo (se ve a 32px, muy pequeño)
+const RETRATO_PX = 64; // el retrato del diálogo se ve grande: necesita más píxeles para que la cara se lea
 const VELOCIDAD = 110; // px/segundo de movimiento del jugador
 const HITBOX = 20; // lado del hitbox de colisión, centrado en el tile del jugador
 const INICIO = { col: 11, row: 11 };
@@ -19,6 +20,7 @@ const dialogoRetrato = document.getElementById("dialogo-retrato");
 const dialogoNombre = document.getElementById("dialogo-nombre");
 const dialogoTexto = document.getElementById("dialogo-texto");
 const dialogoAvanzar = document.getElementById("dialogo-avanzar");
+const dialogoOpciones = document.getElementById("dialogo-opciones");
 const dialogoCaja = document.getElementById("dialogo-caja");
 const dialogoCierre = document.getElementById("dialogo-cierre");
 const dialogoEscena = document.getElementById("dialogo-escena");
@@ -27,7 +29,8 @@ canvas.width = MAP_COLS * TILE_SIZE;
 canvas.height = MAP_ROWS * TILE_SIZE;
 
 let personajeActual = null;
-let paginaActual = 0;
+let guion = []; // pasos de la conversación actual (ver construirGuion)
+let paginaActual = 0; // índice dentro de `guion`
 let tipeoTimer = null;
 let tipeoCompleto = false;
 
@@ -58,19 +61,35 @@ function marcarDescubierto(id) {
 // (game loop) y como retrato grande en la caja de diálogo (vía data URL +
 // `image-rendering: pixelated` en CSS).
 
+/* Recorta el cuadrado que indica `crop` (o el cuadrado centrado más grande si
+   no hay) y lo pixela a `px` de lado. El fondo se rellena antes con el color
+   del personaje: varias fotos vienen recortadas con fondo transparente, y así
+   la silueta se lee igual sobre el mapa o sobre la caja de diálogo. */
+function pixelar(img, p, px) {
+  const off = document.createElement("canvas");
+  off.width = px;
+  off.height = px;
+  const octx = off.getContext("2d");
+  octx.fillStyle = p.colorSprite;
+  octx.fillRect(0, 0, px, px);
+  octx.imageSmoothingEnabled = false;
+
+  const corto = Math.min(img.width, img.height);
+  const crop = p.crop || { cx: 0.5, cy: 0.5, size: 1 };
+  const lado = crop.size * corto;
+  const sx = Math.max(0, Math.min(crop.cx * img.width - lado / 2, img.width - lado));
+  const sy = Math.max(0, Math.min(crop.cy * img.height - lado / 2, img.height - lado));
+
+  octx.drawImage(img, sx, sy, lado, lado, 0, 0, px, px);
+  return off;
+}
+
 PERSONAJES.forEach((p) => {
   if (!p.retrato) return;
   const img = new Image();
   img.onload = () => {
-    const off = document.createElement("canvas");
-    off.width = SPRITE_PX;
-    off.height = SPRITE_PX;
-    const octx = off.getContext("2d");
-    octx.imageSmoothingEnabled = false;
-    const lado = Math.min(img.width, img.height);
-    octx.drawImage(img, (img.width - lado) / 2, 0, lado, lado, 0, 0, SPRITE_PX, SPRITE_PX);
-    p._sprite = off;
-    p._spriteURL = off.toDataURL();
+    p._sprite = pixelar(img, p, SPRITE_PX);
+    p._spriteURL = pixelar(img, p, RETRATO_PX).toDataURL();
   };
   img.src = p.retrato;
 });
@@ -269,11 +288,24 @@ function bucle(t) {
   rafId = requestAnimationFrame(bucle);
 }
 
-// ---------- Diálogo (igual que antes: máquina de escribir + cierre) ----------
+// ---------- Diálogo: máquina de escribir, pregunta con opciones, y cierre ----------
+//
+// La conversación se monta como un "guion": una lista de pasos, cada uno de
+// tipo "texto" o "pregunta". Al elegir una opción, sus páginas de respuesta se
+// insertan justo después de la pregunta, así el resto del guion (las páginas de
+// `despues`) sigue igual sea cual sea la elección.
+
+function construirGuion(p) {
+  const guion = p.paginas.map((texto) => ({ tipo: "texto", texto }));
+  if (p.pregunta) guion.push({ tipo: "pregunta", pregunta: p.pregunta });
+  (p.despues || []).forEach((texto) => guion.push({ tipo: "texto", texto }));
+  return guion;
+}
 
 function abrirDialogo(p) {
   pararMundo();
   personajeActual = p;
+  guion = construirGuion(p);
   paginaActual = 0;
   dialogoRetrato.innerHTML = renderAvatarHTML(p);
   dialogoNombre.textContent = `${p.nombre} · ${p.rol}`;
@@ -281,42 +313,92 @@ function abrirDialogo(p) {
   dialogoCaja.hidden = false;
   dialogoEscena.hidden = false;
   mostrarPantalla("dialogo");
-  mostrarPagina();
+  mostrarPaso();
 }
 
-function mostrarPagina() {
+function mostrarPaso() {
   clearTimeout(tipeoTimer);
-  const texto = personajeActual.paginas[paginaActual];
-  dialogoTexto.textContent = "";
+  const paso = guion[paginaActual];
+  dialogoOpciones.innerHTML = "";
+  dialogoOpciones.hidden = true;
   dialogoAvanzar.hidden = true;
   tipeoCompleto = false;
 
+  if (paso.tipo === "pregunta") {
+    escribir(paso.pregunta.texto, () => mostrarOpciones(paso.pregunta));
+  } else {
+    escribir(paso.texto, () => {
+      dialogoAvanzar.hidden = false;
+    });
+  }
+}
+
+/** Efecto máquina de escribir. Llama a `alTerminar` cuando acaba de escribir. */
+function escribir(texto, alTerminar) {
+  dialogoTexto.textContent = "";
   let i = 0;
-  function paso() {
+  function tick() {
     dialogoTexto.textContent = texto.slice(0, i);
     i++;
     if (i <= texto.length) {
-      tipeoTimer = setTimeout(paso, VEL_TIPEO_MS);
+      tipeoTimer = setTimeout(tick, VEL_TIPEO_MS);
     } else {
       tipeoCompleto = true;
-      dialogoAvanzar.hidden = false;
+      alTerminar();
     }
   }
-  paso();
+  tick();
+}
+
+function mostrarOpciones(pregunta) {
+  dialogoOpciones.innerHTML = "";
+  pregunta.opciones.forEach((opcion, i) => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "opcion-dialogo";
+    btn.textContent = opcion.texto;
+    btn.addEventListener("click", (evento) => {
+      evento.stopPropagation(); // si no, el clic también avanzaría la caja
+      elegirOpcion(i);
+    });
+    dialogoOpciones.appendChild(btn);
+  });
+  dialogoOpciones.hidden = false;
+}
+
+function elegirOpcion(i) {
+  const pregunta = guion[paginaActual].pregunta;
+  const respuesta = pregunta.opciones[i].respuesta.map((texto) => ({ tipo: "texto", texto }));
+  guion.splice(paginaActual + 1, 0, ...respuesta);
+  dialogoOpciones.hidden = true;
+  dialogoOpciones.innerHTML = "";
+  paginaActual++;
+  mostrarPaso();
 }
 
 function avanzarDialogo() {
+  const paso = guion[paginaActual];
+
   if (!tipeoCompleto) {
+    // Completar la página de golpe si se pulsa a mitad de escribirse.
     clearTimeout(tipeoTimer);
-    dialogoTexto.textContent = personajeActual.paginas[paginaActual];
     tipeoCompleto = true;
-    dialogoAvanzar.hidden = false;
+    if (paso.tipo === "pregunta") {
+      dialogoTexto.textContent = paso.pregunta.texto;
+      mostrarOpciones(paso.pregunta);
+    } else {
+      dialogoTexto.textContent = paso.texto;
+      dialogoAvanzar.hidden = false;
+    }
     return;
   }
 
+  // Con la pregunta en pantalla no se avanza: hay que elegir una opción.
+  if (paso.tipo === "pregunta") return;
+
   paginaActual++;
-  if (paginaActual < personajeActual.paginas.length) {
-    mostrarPagina();
+  if (paginaActual < guion.length) {
+    mostrarPaso();
   } else {
     marcarDescubierto(personajeActual.id);
     mostrarCierre();

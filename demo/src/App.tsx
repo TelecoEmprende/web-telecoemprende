@@ -293,6 +293,19 @@ function App() {
             >
               {t(juego.boton)}
             </a>
+
+            {/* Captura del juego: llena el hueco de la derecha y enseña de qué
+                va antes de que nadie pulse nada. */}
+            <a
+              className="portada__juego-captura"
+              href={juego.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              tabIndex={-1}
+              aria-hidden="true"
+            >
+              <img src={rutaImagen('/img/juego-preview.jpg')} alt="" loading="lazy" />
+            </a>
           </div>
         </section>
 
