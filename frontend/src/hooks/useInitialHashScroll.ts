@@ -15,7 +15,7 @@ import { useEffect } from "react";
  */
 
 /* Cuántas veces se repite el salto mientras la página termina de asentarse. */
-const REINTENTOS = [100, 400, 900];
+const REINTENTOS = [100, 400, 900, 1800];
 
 export function useInitialHashScroll() {
   useEffect(() => {
@@ -23,9 +23,16 @@ export function useInitialHashScroll() {
     if (!id) return;
 
     /*
-     * Se cancela en cuanto la persona toca la rueda o la pantalla: si ha
-     * empezado a leer por su cuenta, un salto tardío se le lleva la página de
-     * debajo de las manos.
+     * Se cancela si la persona empieza a desplazarse por su cuenta: un salto
+     * tardío le llevaría la página de debajo de las manos.
+     *
+     * Lo que cuenta es el desplazamiento, no el contacto. Cancelar con
+     * `touchstart` era demasiado: en el móvil, un dedo apoyado un instante
+     * sobre la pantalla mientras carga no dice que nadie quiera quedarse
+     * arriba, y dejaba la página a mitad de camino. La sección se mueve
+     * mucho mientras cargan las imágenes —la portada pasa de 7.200 a 9.900
+     * píxeles de alto—, así que quedarse sin reintentos deja a la persona a
+     * dos mil píxeles del formulario.
      */
     let cancelado = false;
     const cancelar = () => {
@@ -52,14 +59,28 @@ export function useInitialHashScroll() {
     saltar();
     const temporizadores = REINTENTOS.map((espera) => window.setTimeout(saltar, espera));
 
+    /*
+     * Y uno más cuando ha cargado todo. Con la wifi de la escuela las
+     * imágenes pueden tardar más que el último reintento, y son ellas las que
+     * mueven la sección: la portada pasa de 7.200 a 9.900 píxeles de alto
+     * mientras cargan. Si `load` ya ha pasado, se salta en el siguiente
+     * hueco, porque el evento ya no va a volver a dispararse.
+     */
+    if (document.readyState === "complete") {
+      temporizadores.push(window.setTimeout(saltar, 0));
+    } else {
+      window.addEventListener("load", saltar, { once: true });
+    }
+
     window.addEventListener("wheel", cancelar, { passive: true, once: true });
-    window.addEventListener("touchstart", cancelar, { passive: true, once: true });
+    window.addEventListener("touchmove", cancelar, { passive: true, once: true });
     window.addEventListener("keydown", cancelar, { once: true });
 
     return () => {
       temporizadores.forEach(window.clearTimeout);
+      window.removeEventListener("load", saltar);
       window.removeEventListener("wheel", cancelar);
-      window.removeEventListener("touchstart", cancelar);
+      window.removeEventListener("touchmove", cancelar);
       window.removeEventListener("keydown", cancelar);
     };
   }, []);
