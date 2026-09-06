@@ -1,5 +1,6 @@
 import { useState } from "react";
 
+import { Button } from "@/components/ui/button";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import {
   MarketingSidebar,
@@ -17,13 +18,17 @@ import { WeekPanel } from "./marketing/WeekPanel";
  *
  * Ocupa la pantalla entera: sidebar fijo al borde izquierdo y contenido a lo
  * ancho. La tarjeta centrada de `/equipo` se neutraliza desde `marketing.css`
- * con `:has(.mkt-react)` -- ni `EquipoPage.tsx` ni `equipo.css` se tocan, y en
- * cuanto se sale de Marketing el shell vuelve a comportarse como siempre.
+ * con `:has(.mkt-react)` -- ni `EquipoPage.tsx` ni `equipo.css` se tocan.
  *
- * Cada sección se monta solo cuando se abre, así que entrar hace una petición
- * y no cinco.
+ * Por eso no se monta directamente: para alguien con más de un departamento
+ * (Marketing + Ingeniería, por ejemplo), `.mkt-react` existiendo ya de
+ * entrada se comía su tarjeta de Ingeniería y el calendario compartido en
+ * cuanto cargaba la página, sin haber pedido entrar a Marketing. Con esta
+ * pantalla intermedia, `.mkt-react` no aparece en el DOM hasta que se pulsa
+ * el botón -- el resto de `/equipo` se ve normal hasta entonces.
  */
 export function MarketingDashboard() {
+  const [entrado, setEntrado] = useState(false);
   const [seccion, setSeccion] = useState<Seccion>("home");
   const [campaignInicial, setCampaignInicial] = useState<number | null>(null);
 
@@ -32,12 +37,27 @@ export function MarketingDashboard() {
     setSeccion("campanas");
   }
 
+  if (!entrado) {
+    return (
+      <div className="flex flex-col items-center gap-3 py-4 text-center">
+        <p className="text-sm text-muted-foreground">
+          Campañas, tareas y calendario del departamento de Marketing.
+        </p>
+        <Button onClick={() => setEntrado(true)}>Entrar a Marketing</Button>
+      </div>
+    );
+  }
+
   const titulo = SECCIONES.find((s) => s.id === seccion)?.label ?? "";
 
   return (
     <div className="mkt-react">
       <SidebarProvider>
-        <MarketingSidebar seccion={seccion} onSeccion={setSeccion} />
+        <MarketingSidebar
+          seccion={seccion}
+          onSeccion={setSeccion}
+          onSalir={() => setEntrado(false)}
+        />
 
         <main className="mkt-main-react">
           <header className="mkt-barra-react">

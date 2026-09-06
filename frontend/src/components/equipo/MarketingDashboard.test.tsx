@@ -74,6 +74,13 @@ function tareas(...lista: Partial<typeof TAREA>[]) {
   return lista.map((t, i) => ({ ...TAREA, id: i + 1, ...t }));
 }
 
+/** Monta el dashboard y pasa la pantalla intermedia ("Entrar a Marketing"),
+ *  que existe justamente para no montar el sidebar hasta que se pide. */
+async function renderMarketing() {
+  render(<MarketingDashboard />);
+  await userEvent.click(await screen.findByRole("button", { name: "Entrar a Marketing" }));
+}
+
 describe("MarketingDashboard", () => {
   beforeEach(() => {
     getCampaigns.mockReset().mockResolvedValue({ ok: true, campaigns: [] });
@@ -90,7 +97,7 @@ describe("MarketingDashboard", () => {
   it("abre en Home, no en el listado de miembros", async () => {
     getTasks.mockResolvedValue({ ok: true, tasks: tareas({}), usuario: YO });
 
-    render(<MarketingDashboard />);
+    await renderMarketing();
 
     // La pregunta con la que entra el usuario, no la estructura de los datos.
     expect(await screen.findByText(/cosa pendiente|cosas pendientes/)).toBeInTheDocument();
@@ -110,7 +117,7 @@ describe("MarketingDashboard", () => {
       ),
     });
 
-    render(<MarketingDashboard />);
+    await renderMarketing();
 
     // Vencidas sigue siendo su propio grupo, con encabezado real.
     expect(await screen.findByRole("heading", { name: /Vencidas/ })).toBeInTheDocument();
@@ -126,7 +133,7 @@ describe("MarketingDashboard", () => {
   it("cada tarea dice de qué contenido cuelga", async () => {
     getTasks.mockResolvedValue({ ok: true, tasks: tareas({}), usuario: YO });
 
-    render(<MarketingDashboard />);
+    await renderMarketing();
 
     // Sin esto el usuario ve cuatro filas llamadas "Guion" sin saber de cuál.
     expect(
@@ -144,7 +151,7 @@ describe("MarketingDashboard", () => {
       ),
     });
 
-    render(<MarketingDashboard />);
+    await renderMarketing();
     expect(await screen.findByText("De otra persona")).toBeInTheDocument();
 
     await userEvent.click(screen.getAllByLabelText(/Solo lo mío/i)[0]);
@@ -181,7 +188,7 @@ describe("MarketingDashboard", () => {
       ],
     });
 
-    render(<MarketingDashboard />);
+    await renderMarketing();
 
     // La publicación aparece como hito en su día del timeline, no en una
     // lista aparte. (El texto se repite: también es el "padre" de sus
@@ -197,7 +204,7 @@ describe("MarketingDashboard", () => {
       tasks: tareas({ titulo: "Escribir guion" }, { titulo: "Grabar", estado: "acabado" }),
     });
 
-    render(<MarketingDashboard />);
+    await renderMarketing();
     await screen.findByText(/cosa pendiente|cosas pendientes/);
 
     await userEvent.click(screen.getByRole("button", { name: "Tareas" }));
@@ -210,7 +217,7 @@ describe("MarketingDashboard", () => {
   it("al pulsar una tarea se abre en grande con su contenido", async () => {
     getTasks.mockResolvedValue({ ok: true, tasks: tareas({}), usuario: YO });
 
-    render(<MarketingDashboard />);
+    await renderMarketing();
     await screen.findByText(/cosa pendiente|cosas pendientes/);
     await userEvent.click(screen.getByRole("button", { name: "Tareas" }));
 
@@ -229,7 +236,7 @@ describe("MarketingDashboard", () => {
     getTasks.mockResolvedValue({ ok: true, tasks: tareas({}), usuario: YO });
     const confirmSpy = vi.spyOn(window, "confirm");
 
-    render(<MarketingDashboard />);
+    await renderMarketing();
     await screen.findByText(/cosa pendiente|cosas pendientes/);
     await userEvent.click(screen.getByRole("button", { name: "Tareas" }));
     await userEvent.click(
@@ -251,7 +258,7 @@ describe("MarketingDashboard", () => {
       tasks: tareas({ responsables: [YO, "hugo@telecoemprende.es"] }),
     });
 
-    render(<MarketingDashboard />);
+    await renderMarketing();
     await screen.findByText(/cosa pendiente|cosas pendientes/);
 
     // La foto se deduce del email contra las imágenes de public/.
@@ -260,7 +267,7 @@ describe("MarketingDashboard", () => {
   });
 
   it("el calendario deja crear una tarea desde un día", async () => {
-    render(<MarketingDashboard />);
+    await renderMarketing();
     await screen.findByText(/Nada pendiente/);
 
     await userEvent.click(screen.getByRole("button", { name: "Calendario" }));
@@ -284,7 +291,7 @@ describe("MarketingDashboard", () => {
       miembros: [{ email: YO, equipos: ["marketing"], activo: true }],
     });
 
-    render(<MarketingDashboard />);
+    await renderMarketing();
     await screen.findByText(/Nada pendiente/);
 
     await userEvent.click(screen.getByRole("button", { name: "Miembros" }));
@@ -295,7 +302,7 @@ describe("MarketingDashboard", () => {
   });
 
   it("muestra el estado vacío cuando no hay campañas", async () => {
-    render(<MarketingDashboard />);
+    await renderMarketing();
     await screen.findByText(/Nada pendiente/);
 
     await userEvent.click(screen.getByRole("button", { name: "Campañas" }));
@@ -304,7 +311,7 @@ describe("MarketingDashboard", () => {
   });
 
   it("la navegación marca la pestaña activa", async () => {
-    render(<MarketingDashboard />);
+    await renderMarketing();
     await screen.findByText(/Nada pendiente/);
 
     const nav = screen.getByRole("navigation", { name: "Secciones de Marketing" });
