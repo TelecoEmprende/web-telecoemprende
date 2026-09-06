@@ -1,4 +1,4 @@
-import { useLocation } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 
 import { useTranslation } from "../../i18n/translations";
 
@@ -32,6 +32,7 @@ export function LandingFooter() {
           <a href="https://alumni.etsit.upm.es/" target="_blank" rel="noreferrer">
             {t.footer.alumniLink}
           </a>
+          <Link to="/privacidad">{t.footer.privacyLink}</Link>
         </nav>
 
         <div className="lp-footer-social" aria-label={t.footer.socialLabel}>
