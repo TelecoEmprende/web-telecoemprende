@@ -1,0 +1,330 @@
+:root {
+  --color-navy: #112532;
+  --color-navy-deep: #0b1a24;
+  --color-navy-soft: #18374b;
+  --color-orange: #e0680e;
+  --color-orange-dark: #b95208;
+  --color-gold: #f4b044;
+  --color-cream: #faf5ec;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100vh;
+}
+
+body {
+  background: linear-gradient(175deg, var(--color-navy) 0%, var(--color-navy-deep) 100%);
+  color: var(--color-cream);
+  font-family: "Inter", system-ui, sans-serif;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow-x: hidden;
+}
+
+.pixel {
+  font-family: "Press Start 2P", monospace;
+}
+
+#app {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.screen {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+  text-align: center;
+}
+
+/* ---------- Intro ---------- */
+
+#screen-intro h1 {
+  font-size: clamp(1.4rem, 5vw, 2.4rem);
+  color: var(--color-gold);
+  line-height: 1.5;
+  margin: 0 0 24px;
+  text-shadow: 3px 3px 0 var(--color-navy-deep);
+}
+
+#screen-intro p {
+  max-width: 46ch;
+  color: #a9bcc9;
+  line-height: 1.7;
+  margin: 0 0 32px;
+}
+
+/* ---------- Botones estilo pixel ---------- */
+
+.btn-pixel {
+  font-family: "Press Start 2P", monospace;
+  font-size: 0.75rem;
+  color: var(--color-navy-deep);
+  background: var(--color-gold);
+  border: none;
+  border-bottom: 4px solid var(--color-orange-dark);
+  border-radius: 4px;
+  padding: 16px 28px;
+  cursor: pointer;
+  line-height: 1;
+  transition: transform 120ms ease, border-bottom-width 120ms ease;
+}
+
+.btn-pixel:hover,
+.btn-pixel:focus-visible {
+  transform: translateY(-2px);
+}
+
+.btn-pixel:active {
+  transform: translateY(2px);
+  border-bottom-width: 2px;
+}
+
+.btn-pixel.secondary {
+  background: transparent;
+  color: var(--color-cream);
+  border: 2px solid var(--color-cream);
+  border-bottom: 2px solid var(--color-cream);
+}
+
+.btn-pixel.secondary:active {
+  border-bottom-width: 2px;
+}
+
+/* ---------- Mundo (overworld navegable) ---------- */
+
+#screen-mundo {
+  gap: 12px;
+  padding: 16px 12px;
+}
+
+.mundo-wrap {
+  position: relative;
+  width: 100%;
+  max-width: 640px;
+}
+
+#canvas-mundo {
+  display: block;
+  width: 100%;
+  height: auto;
+  image-rendering: pixelated;
+  border: 3px solid var(--color-navy-soft);
+  border-radius: 8px;
+  background: #2f6b3d;
+  touch-action: none;
+}
+
+.dpad {
+  position: absolute;
+  bottom: 10px;
+  left: 10px;
+  display: grid;
+  grid-template-columns: repeat(3, 34px);
+  grid-template-rows: repeat(3, 34px);
+  gap: 2px;
+  opacity: 0.85;
+}
+
+.dpad-btn {
+  background: rgba(17, 37, 50, 0.75);
+  color: var(--color-gold);
+  border: 2px solid var(--color-gold);
+  border-radius: 6px;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  cursor: pointer;
+  user-select: none;
+}
+
+.dpad-up {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+.dpad-left {
+  grid-column: 1;
+  grid-row: 2;
+}
+
+.dpad-right {
+  grid-column: 3;
+  grid-row: 2;
+}
+
+.dpad-down {
+  grid-column: 2;
+  grid-row: 3;
+}
+
+#screen-mundo .hint {
+  color: #a9bcc9;
+  font-size: 0.8rem;
+  margin: 0;
+}
+
+.avatar-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: "Press Start 2P", monospace;
+  font-size: clamp(1rem, 4vw, 1.6rem);
+  color: var(--color-navy-deep);
+  background: linear-gradient(160deg, var(--color-gold), var(--color-orange));
+}
+
+.pixelated {
+  image-rendering: pixelated;
+}
+
+/* ---------- Diálogo ---------- */
+
+#screen-dialogo {
+  justify-content: flex-end;
+  padding: 16px;
+  gap: 0;
+  min-height: 100vh;
+}
+
+.dialogo-escena {
+  flex: 1;
+  width: 100%;
+  max-width: 720px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 12px;
+}
+
+.dialogo-retrato {
+  width: min(52vw, 240px);
+  aspect-ratio: 1;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 4px solid var(--color-navy-soft);
+  background: var(--color-navy-deep);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
+}
+
+.dialogo-retrato img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top center;
+  display: block;
+}
+
+.dialogo-retrato .avatar-placeholder {
+  font-size: clamp(1.8rem, 8vw, 3rem);
+}
+
+.dialogo-caja {
+  width: 100%;
+  max-width: 720px;
+  background: var(--color-navy-soft);
+  border: 3px solid var(--color-gold);
+  border-radius: 12px;
+  padding: 18px 20px;
+  text-align: left;
+  cursor: pointer;
+  user-select: none;
+}
+
+.dialogo-caja .nombre-hablante {
+  font-family: "Press Start 2P", monospace;
+  font-size: 0.7rem;
+  color: var(--color-gold);
+  margin: 0 0 10px;
+}
+
+.dialogo-caja .texto {
+  font-size: 1rem;
+  line-height: 1.6;
+  min-height: 4.8em;
+  margin: 0;
+}
+
+.dialogo-caja .avanzar {
+  display: block;
+  text-align: right;
+  margin-top: 8px;
+  font-size: 0.8rem;
+  color: var(--color-gold);
+  animation: parpadeo 1s infinite steps(2, jump-none);
+}
+
+@keyframes parpadeo {
+  50% {
+    opacity: 0;
+  }
+}
+
+.dialogo-salir {
+  position: fixed;
+  top: 14px;
+  right: 14px;
+  background: rgba(11, 26, 36, 0.7);
+  color: var(--color-cream);
+  border: 1px solid rgba(250, 245, 236, 0.3);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.dialogo-cierre {
+  width: 100%;
+  max-width: 720px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding-top: 16px;
+  margin-top: auto;
+  margin-bottom: auto;
+}
+
+.dialogo-cierre .departamentos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+}
+
+.chip-departamento {
+  background: rgba(244, 176, 68, 0.15);
+  border: 1px solid rgba(244, 176, 68, 0.4);
+  color: var(--color-gold);
+  padding: 8px 14px;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.dialogo-cierre .botones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: center;
+}
+
+[hidden] {
+  display: none !important;
+}
