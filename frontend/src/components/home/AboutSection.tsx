@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 
 import { useTranslation } from "../../i18n/translations";
 import { ScrollRevealText } from "./ScrollRevealText";
@@ -271,6 +272,10 @@ export function AboutSection() {
             </button>
           </div>
         </div>
+
+        <p className="lp-about-privacy">
+          <Link to="/privacidad">{t.about.privacyLinkText}</Link>
+        </p>
       </div>
     </section>
   );
