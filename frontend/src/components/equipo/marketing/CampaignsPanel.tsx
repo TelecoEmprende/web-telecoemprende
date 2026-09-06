@@ -15,6 +15,7 @@ import {
 import { AlertBanner } from "../../feedback/AlertBanner";
 import { AdjuntosDeContent } from "./AdjuntosDeContent";
 import { ContentEditor } from "./ContentEditor";
+import { Badge } from "@/components/ui/badge";
 import type { ApiFailure } from "../../../types/api";
 import {
   CONTENT_ESTADOS,
@@ -101,9 +102,9 @@ function TareasDeContent({
                   {task.titulo}
                 </span>
               </label>
-              <span className={`mkt-chip-react mkt-chip-${task.estado}-react`}>
+              <Badge variant="outline" className={`mkt-chip-${task.estado}-react`}>
                 {TASK_ESTADO_LABEL[task.estado]}
-              </span>
+              </Badge>
             </li>
           ))}
         </ul>

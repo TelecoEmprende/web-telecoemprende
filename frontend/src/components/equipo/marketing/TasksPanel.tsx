@@ -1,9 +1,10 @@
 import { FormEvent, useEffect, useState } from "react";
 
-import { createTask, getTasks } from "../../../api/marketing";
+import { createTask, getTasks, updateTask } from "../../../api/marketing";
 import { AvataresDeResponsables } from "./Avatares";
 import { TaskDialog } from "./TaskDialog";
 import { AlertBanner } from "../../feedback/AlertBanner";
+import { Badge } from "@/components/ui/badge";
 import type { ApiFailure } from "../../../types/api";
 import {
   PRIORIDADES,
@@ -14,12 +15,17 @@ import {
   formatearFecha,
   type Prioridad,
   type Task,
+  type TaskEstado,
 } from "../../../types/marketing";
 
+/** Tipo MIME propio para no confundir un drag de tarea con un drag de
+ *  archivo o de texto suelto que caiga sobre el tablero por error. */
+const TASK_MIME = "application/x-teleco-task-id";
+
 /**
- * Tablero por estado. Se mueve con un <select>, no arrastrando: drag & drop
- * exige teclado alternativo para ser accesible y aquí no aporta nada que el
- * desplegable no haga ya.
+ * Tablero por estado. Arrastrar una tarjeta cambia su estado; abrirla y
+ * elegir "Estado" en el diálogo hace lo mismo y es la vía accesible por
+ * teclado -- el drag es un atajo encima de eso, no lo sustituye.
  */
 export function TasksPanel() {
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -29,6 +35,8 @@ export function TasksPanel() {
   const [error, setError] = useState<string | null>(null);
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
   const [abierta, setAbierta] = useState<Task | null>(null);
+  const [arrastrando, setArrastrando] = useState<Task | null>(null);
+  const [sobreColumna, setSobreColumna] = useState<TaskEstado | null>(null);
 
   const [titulo, setTitulo] = useState("");
   const [prioridad, setPrioridad] = useState<Prioridad>("media");
@@ -75,6 +83,21 @@ export function TasksPanel() {
       await cargar();
     } catch (err) {
       setError((err as ApiFailure)?.message || "No se pudo crear la tarea.");
+    }
+  }
+
+  async function moverA(task: Task, estado: TaskEstado) {
+    setSobreColumna(null);
+    if (task.estado === estado) return;
+
+    setTasks((actuales) =>
+      actuales.map((t) => (t.id === task.id ? { ...t, estado } : t)),
+    );
+    try {
+      await updateTask(task.id, { estado });
+    } catch (err) {
+      setError((err as ApiFailure)?.message || "No se pudo mover la tarea.");
+      await cargar();
     }
   }
 
@@ -171,10 +194,34 @@ export function TasksPanel() {
           const columna = visibles.filter((task) => task.estado === estado);
 
           return (
-            <div key={estado} className="mkt-columna-react" data-estado={estado}>
+            <div
+              key={estado}
+              className={`mkt-columna-react${sobreColumna === estado ? " mkt-columna-sobre-react" : ""}`}
+              data-estado={estado}
+              onDragOver={(event) => {
+                // El tipo MIME viaja siempre, aunque `getData` no se pueda
+                // leer hasta soltar: así el `preventDefault` (necesario para
+                // que "drop" llegue a disparar) no depende del estado de
+                // React, que en un drag real puede no haberse repintado
+                // todavía cuando llega el primer "dragover".
+                if (!event.dataTransfer.types.includes(TASK_MIME)) return;
+                event.preventDefault();
+                if (sobreColumna !== estado) setSobreColumna(estado);
+              }}
+              onDragLeave={() => setSobreColumna((actual) => (actual === estado ? null : actual))}
+              onDrop={(event) => {
+                event.preventDefault();
+                setSobreColumna(null);
+                const id = Number(event.dataTransfer.getData(TASK_MIME));
+                const task = tasks.find((t) => t.id === id);
+                if (task) void moverA(task, estado);
+              }}
+            >
               <h4>
                 {TASK_ESTADO_LABEL[estado]}
-                <span className="mkt-contador-react">{columna.length}</span>
+                <Badge variant="outline" className="mkt-contador-react">
+                  {columna.length}
+                </Badge>
               </h4>
 
               {columna.length === 0 ? (
@@ -189,15 +236,25 @@ export function TasksPanel() {
                     <button
                       key={task.id}
                       type="button"
-                      className="mkt-task-card-react"
+                      className={`mkt-task-card-react${arrastrando?.id === task.id ? " mkt-task-card-arrastrando-react" : ""}`}
+                      draggable
+                      onDragStart={(event) => {
+                        event.dataTransfer.setData(TASK_MIME, String(task.id));
+                        event.dataTransfer.effectAllowed = "move";
+                        setArrastrando(task);
+                      }}
+                      onDragEnd={() => {
+                        setArrastrando(null);
+                        setSobreColumna(null);
+                      }}
                       onClick={() => setAbierta(task)}
                     >
                       {task.tags.length > 0 ? (
                         <span className="mkt-etiquetas-react">
                           {task.tags.map((tag) => (
-                            <span key={tag} className="mkt-etiqueta-react">
+                            <Badge key={tag} variant="secondary">
                               {tag}
-                            </span>
+                            </Badge>
                           ))}
                         </span>
                       ) : null}
@@ -213,11 +270,9 @@ export function TasksPanel() {
                       <span className="mkt-task-pie-react">
                         <span className="mkt-task-senales-react">
                           {task.prioridad !== "media" ? (
-                            <span
-                              className={`mkt-chip-react mkt-chip-prioridad-${task.prioridad}-react`}
-                            >
+                            <Badge variant={task.prioridad === "alta" ? "destructive" : "outline"}>
                               {PRIORIDAD_LABEL[task.prioridad]}
-                            </span>
+                            </Badge>
                           ) : null}
                           {task.deadline ? (
                             <span
