@@ -466,19 +466,9 @@
   outline-offset: 1px;
 }
 
-/* ---------- Chips de estado ---------- */
-
-.mkt-chip-react {
-  display: inline-block;
-  padding: 3px 10px;
-  border-radius: 999px;
-  background: var(--color-background);
-  color: var(--color-text-muted);
-  font-size: 0.74rem;
-  font-weight: 800;
-  letter-spacing: 0.02em;
-  white-space: nowrap;
-}
+/* ---------- Chips de estado ----------
+   La forma y el tamaño ahora los da <Badge> de shadcn; estas clases solo
+   ponen el color de cada estado de contenido, encima del Badge. */
 
 .mkt-chip-en_progreso-react {
   background: var(--color-info-bg);
@@ -495,21 +485,6 @@
   color: var(--color-success-text);
 }
 
-.mkt-chip-prioridad-alta-react {
-  background: var(--color-error-bg);
-  color: var(--color-error-text);
-}
-
-.mkt-chip-prioridad-media-react {
-  background: var(--color-info-bg);
-  color: var(--color-info-text);
-}
-
-.mkt-chip-prioridad-baja-react {
-  background: var(--color-background);
-  color: var(--color-text-muted);
-}
-
 /* ---------- Tablero de tareas ---------- */
 
 .mkt-tablero-react {
@@ -523,6 +498,13 @@
   border-radius: var(--radius-lg);
   background: var(--color-background);
   min-height: 160px;
+  border: 2px solid transparent;
+  transition: border-color var(--dur-fast) var(--ease-out);
+}
+
+/* Zona de destino mientras se arrastra una tarjeta encima. */
+.mkt-columna-sobre-react {
+  border-color: var(--color-orange);
 }
 
 /* Un vistazo al tablero debe bastar para saber qué columna es cuál, sin leer
@@ -578,11 +560,10 @@
   letter-spacing: 0.04em;
 }
 
+/* La forma (pill, tamaño, padding) la da <Badge>; esto solo pone el fondo
+   por defecto, que las reglas de abajo recolorean por columna. */
 .mkt-contador-react {
-  padding: 2px 8px;
-  border-radius: 999px;
   background: var(--color-surface);
-  font-size: 0.78rem;
 }
 
 .mkt-task-card-react {
@@ -1416,7 +1397,17 @@ button.mkt-evento-react:hover {
    Arreglo sin tocar su archivo: fuera de cualquier `@layer` (así sin capa
    vuelve a ganarle a todo, incluidas las utilidades) pero excluyendo con
    `:not()` los estados que Tailwind necesita controlar. En reposo manda este
-   reset; en hover/activo, el selector deja de matchear y manda la utilidad. */
+   reset; en hover/activo, el selector deja de matchear y manda la utilidad.
+
+   Segunda vuelta de este mismo problema: los `:not()` SÍ suman especificidad
+   (la del pseudo-clase que llevan dentro), así que este reset y la regla que
+   pinta el icono del trigger en navy (arriba del archivo) quedaban EMPATADAS
+   en especificidad -- y por ir después en el archivo, este reset ganaba y su
+   `color: inherit` se comía el navy, dejando el icono del trigger en el
+   crema/casi blanco que hereda de la raíz oscura de Hammad. Todo el selector
+   va envuelto en un `:where()` exterior para que también los `:not()` cuenten
+   como especificidad cero -- sigue matcheando exactamente igual, pero ya no
+   compite con nada. */
 :where([data-slot="sidebar"]) ul,
 :where([data-slot="sidebar"]) ol {
   list-style: none;
@@ -1424,11 +1415,13 @@ button.mkt-evento-react:hover {
   padding: 0;
 }
 
-:where([data-slot="sidebar"])
-  button:not(:hover):not(:focus-visible):not(:active):not(
-    [data-active="true"]
-  ),
-:where([data-slot="sidebar-trigger"]):not(:hover):not(:focus-visible) {
+:where(
+  [data-slot="sidebar"]
+    button:not(:hover):not(:focus-visible):not(:active):not(
+      [data-active="true"]
+    )
+),
+:where([data-slot="sidebar-trigger"]:not(:hover):not(:focus-visible)) {
   background-color: transparent;
   background-image: none;
   border: 0;
@@ -1503,10 +1496,13 @@ button.mkt-evento-react:hover {
 /* Mismo mini-reset que el sidebar (ver el comentario largo de más arriba):
    sin Preflight, los botones de los adjuntos salen con el fondo gris del
    navegador, pero `@layer base` le gana a `hover:` en este proyecto en vez
-   de perder. Fuera de capa + `:not()` en los estados en vez de `@layer`. */
-:where([data-slot="attachment"])
-  button:not(:hover):not(:focus-visible):not(:active),
-:where([data-slot="attachment-action"]):not(:hover):not(:focus-visible) {
+   de perder. Fuera de capa + `:not()` en los estados en vez de `@layer`, y
+   todo envuelto en `:where()` para que esos `:not()` no sumen especificidad
+   y no puedan empatar (y ganar por orden) contra una regla futura. */
+:where(
+  [data-slot="attachment"] button:not(:hover):not(:focus-visible):not(:active)
+),
+:where([data-slot="attachment-action"]:not(:hover):not(:focus-visible)) {
   background-color: transparent;
   background-image: none;
   border: 0;
@@ -1555,6 +1551,13 @@ button.mkt-evento-react:hover {
   transform: translateY(-1px);
 }
 
+/* La tarjeta que se está arrastrando: el navegador ya pinta un "fantasma"
+   con el aspecto original, así que esta se queda atenuada en su columna de
+   origen para que se vea claro que es la que se está moviendo. */
+.mkt-task-card-arrastrando-react {
+  opacity: 0.4;
+}
+
 .mkt-task-card-react .mkt-task-titulo-react {
   font-size: 0.93rem;
   font-weight: 700;
@@ -1562,22 +1565,12 @@ button.mkt-evento-react:hover {
   line-height: 1.4;
 }
 
-/* Etiquetas de color arriba, como las de Trello. */
+/* Etiquetas de color arriba, como las de Trello. El pill en sí ahora es un
+   <Badge>; esto solo coloca el grupo. */
 .mkt-etiquetas-react {
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
-}
-
-.mkt-etiqueta-react {
-  padding: 2px 8px;
-  border-radius: 6px;
-  background: var(--color-info-bg);
-  color: var(--color-info-text);
-  font-size: 0.68rem;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
 }
 
 .mkt-task-pie-react {
@@ -1879,9 +1872,12 @@ button.mkt-evento-react {
 }
 
 /* Mismo mini-reset acotado, ahora también para diálogo y avatares (ver el
-   comentario largo junto al del sidebar: fuera de `@layer` a propósito). */
-:where([data-slot="dialog-content"])
-  button:not(:hover):not(:focus-visible):not(:active) {
+   comentario largo junto al del sidebar: fuera de `@layer` a propósito, y
+   los `:not()` dentro de `:where()` para que no sumen especificidad). */
+:where(
+  [data-slot="dialog-content"]
+    button:not(:hover):not(:focus-visible):not(:active)
+) {
   background-color: transparent;
   background-image: none;
   border: 0;
