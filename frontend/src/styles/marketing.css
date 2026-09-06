@@ -1,0 +1,1895 @@
+/* Espacio de trabajo de Marketing dentro de /equipo.
+   Hereda paleta, radios y sombras de tokens.css: no hay sistema visual nuevo,
+   solo las piezas que el panel de equipo todavía no tenía (tablero, calendario,
+   modal). Prefijo `mkt-` para no chocar con `.equipo-*` ni con `.lp-*`. */
+
+.mkt-react {
+  margin-top: 24px;
+}
+
+/* `.shadcn-scope` (index.css de Hammad) re-encadena estos mismos nombres --
+   --color-background, --color-border, --radius-lg/md/xl -- a las variables
+   internas de shadcn (--background, --border, --radius) para que sus propios
+   componentes salgan en marca. El efecto colateral: dentro de /equipo estos
+   nombres ya NO significan lo que tokens.css dice (el fondo crema se
+   convierte en el navy oscuro de shadcn, casi negro), y marketing.css los usa
+   por todas partes dando por hecho el valor de tokens.css. Se restauran aquí,
+   igual que el bloque de --sidebar* de abajo: variables CSS normales, no del
+   @theme de Tailwind, así que se pueden reescribir en este contenedor sin
+   tocar su archivo. */
+.mkt-react {
+  --color-background: #f6efe3;
+  --color-border: #e8ddca;
+  --radius-lg: 20px;
+  --radius-md: 14px;
+  --radius-xl: 28px;
+}
+
+/* El disparador que abre/pliega el sidebar hereda `color` de la raíz de
+   Hammad (`.shadcn-scope.dark`), que es crema -- invisible sobre la barra
+   blanca del contenido. Es el único control para llegar a la navegación en
+   móvil, así que no puede depender de una herencia accidental. */
+.mkt-react [data-slot="sidebar-trigger"] {
+  color: var(--color-navy);
+}
+
+/* El sidebar de shadcn habla en `--sidebar*` (grises por defecto, definidos
+   en index.css de Hammad). Se re-encadenan aquí a los tokens de marca, igual
+   que él hace con `--primary`/`--background` en `.shadcn-scope`: son
+   variables CSS normales, no del `@theme` de Tailwind, así que sí se pueden
+   sobrescribir en un contenedor sin tocar su archivo. */
+.mkt-react {
+  --sidebar: var(--color-navy);
+  --sidebar-foreground: var(--color-cream);
+  --sidebar-primary: var(--color-orange);
+  --sidebar-primary-foreground: #ffffff;
+  /* navy-soft sobre navy no se distingue: el item activo tiene que leerse de
+     un vistazo, es la única pista de dónde estás. */
+  --sidebar-accent: var(--color-orange);
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: var(--color-navy-soft);
+  --sidebar-ring: var(--color-orange);
+}
+
+/* ---------- Pestañas ---------- */
+
+.mkt-tabs-react {
+  display: flex;
+  gap: 6px;
+  padding-bottom: 14px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid var(--color-border);
+  /* Una sola fila: al partirse en dos, la pestaña activa quedaba sola abajo
+     y se leía como un fallo de render. */
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.mkt-tabs-react::-webkit-scrollbar {
+  display: none;
+}
+
+.mkt-tab-react {
+  flex-shrink: 0;
+  min-height: 44px;
+  padding: 9px 16px;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--color-text-muted);
+  font-family: inherit;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out);
+}
+
+.mkt-tab-react:hover {
+  background: var(--color-background);
+  color: var(--color-navy);
+}
+
+.mkt-tab-activa-react,
+.mkt-tab-activa-react:hover {
+  background: var(--color-navy);
+  color: var(--color-cream);
+}
+
+/* ---------- Estructura de panel ---------- */
+
+.mkt-panel-header-react {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.mkt-panel-header-react h3,
+.mkt-detalle-header-react h3 {
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  color: var(--color-navy);
+}
+
+.mkt-detalle-header-react {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.mkt-detalle-header-react p {
+  margin: 6px 0 0;
+  color: var(--color-text-muted);
+  line-height: 1.6;
+}
+
+.mkt-meta-react {
+  margin: 6px 0 0;
+  color: var(--color-text-muted);
+  font-size: 0.88rem;
+}
+
+.mkt-cargando-react,
+.mkt-vacio-react {
+  margin: 20px 0;
+  color: var(--color-text-muted);
+  line-height: 1.7;
+}
+
+.mkt-vacio-inline-react {
+  margin: 8px 0;
+  color: var(--color-text-muted);
+  font-size: 0.88rem;
+  font-style: italic;
+}
+
+/* ---------- Botones ---------- */
+
+.mkt-btn-react {
+  min-height: 44px;
+  padding: 11px 20px;
+  border: none;
+  border-radius: var(--radius-md);
+  background: var(--color-orange);
+  color: #fff;
+  font-family: inherit;
+  font-size: 0.95rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: background var(--dur-press) var(--ease-out);
+}
+
+.mkt-btn-react:hover:not(:disabled) {
+  background: var(--color-orange-dark);
+}
+
+.mkt-btn-react:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.mkt-btn-mini-react,
+.mkt-btn-mini-peligro-react {
+  min-height: 44px;
+  padding: 6px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-surface);
+  color: var(--color-navy);
+  font-family: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: border-color var(--dur-fast) var(--ease-out);
+}
+
+.mkt-btn-mini-react:hover:not(:disabled) {
+  border-color: var(--color-orange);
+}
+
+.mkt-btn-mini-peligro-react {
+  color: var(--color-error-text);
+}
+
+.mkt-btn-mini-peligro-react:hover {
+  border-color: var(--color-error-text);
+  background: var(--color-error-bg);
+}
+
+.mkt-btn-mini-react:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.mkt-volver-react {
+  min-height: 44px;
+  padding: 0;
+  margin-bottom: 6px;
+  border: none;
+  background: none;
+  color: var(--color-text-muted);
+  font-family: inherit;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.mkt-volver-react:hover {
+  color: var(--color-orange);
+}
+
+/* ---------- Formularios ---------- */
+
+.mkt-form-react {
+  padding: 20px;
+  margin-bottom: 22px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-background);
+}
+
+.mkt-form-fila-react {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.mkt-form-react input[type="text"],
+.mkt-form-react input[type="date"],
+.mkt-form-react textarea,
+.mkt-form-react select {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-family: inherit;
+  font-size: 0.95rem;
+  resize: vertical;
+}
+
+.mkt-form-react input[type="text"]:focus,
+.mkt-form-react input[type="date"]:focus,
+.mkt-form-react textarea:focus,
+.mkt-form-react select:focus {
+  outline: 2px solid var(--color-orange);
+  outline-offset: 1px;
+}
+
+/* ---------- Campañas ---------- */
+
+.mkt-campaigns-react {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.mkt-campaigns-react li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.mkt-campaign-card-react {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 18px 20px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  text-align: left;
+  font-family: inherit;
+  cursor: pointer;
+  transition: border-color var(--dur-fast) var(--ease-out),
+    box-shadow var(--dur-fast) var(--ease-out);
+}
+
+.mkt-campaign-card-react:hover {
+  border-color: var(--color-orange);
+  box-shadow: var(--shadow-soft);
+}
+
+.mkt-campaign-nombre-react {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--color-navy);
+}
+
+.mkt-campaign-objetivo-react {
+  color: var(--color-text-muted);
+  font-size: 0.92rem;
+}
+
+/* ---------- Progreso ---------- */
+
+.mkt-progreso-react {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.mkt-progreso-barra-react {
+  flex: 1;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--color-border);
+  overflow: hidden;
+}
+
+.mkt-progreso-barra-react span {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--color-orange);
+  transform-origin: left;
+  transition: transform var(--dur-menu) var(--ease-out);
+}
+
+.mkt-progreso-texto-react {
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* ---------- Contenidos ---------- */
+
+.mkt-contents-react {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.mkt-content-card-react {
+  padding: 20px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+}
+
+.mkt-content-card-react > header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.mkt-content-card-react h4 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--color-navy);
+}
+
+.mkt-content-acciones-react {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mkt-content-acciones-react select {
+  min-height: 44px;
+  padding: 6px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-family: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+/* ---------- Tareas dentro de un contenido ---------- */
+
+.mkt-tareas-react {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--color-border);
+}
+
+.mkt-tareas-lista-react {
+  list-style: none;
+  margin: 0 0 12px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.mkt-tareas-lista-react li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.mkt-tareas-lista-react label {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+  padding: 4px 0;
+  cursor: pointer;
+  font-size: 0.93rem;
+}
+
+.mkt-tareas-lista-react input[type="checkbox"] {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  accent-color: var(--color-orange);
+  cursor: pointer;
+}
+
+.mkt-tachado-react {
+  text-decoration: line-through;
+  color: var(--color-text-muted);
+}
+
+.mkt-tarea-nueva-react {
+  display: flex;
+  gap: 8px;
+}
+
+.mkt-tarea-nueva-react input {
+  flex: 1;
+  min-height: 44px;
+  padding: 9px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-family: inherit;
+  font-size: 0.88rem;
+}
+
+.mkt-tarea-nueva-react input:focus {
+  outline: 2px solid var(--color-orange);
+  outline-offset: 1px;
+}
+
+/* ---------- Chips de estado ---------- */
+
+.mkt-chip-react {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--color-background);
+  color: var(--color-text-muted);
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.mkt-chip-en_progreso-react {
+  background: var(--color-info-bg);
+  color: var(--color-info-text);
+}
+
+.mkt-chip-por_revisar-react {
+  background: rgba(136, 165, 183, 0.28);
+  color: var(--color-navy);
+}
+
+.mkt-chip-acabado-react {
+  background: var(--color-success-bg);
+  color: var(--color-success-text);
+}
+
+.mkt-chip-prioridad-alta-react {
+  background: var(--color-error-bg);
+  color: var(--color-error-text);
+}
+
+.mkt-chip-prioridad-media-react {
+  background: var(--color-info-bg);
+  color: var(--color-info-text);
+}
+
+.mkt-chip-prioridad-baja-react {
+  background: var(--color-background);
+  color: var(--color-text-muted);
+}
+
+/* ---------- Tablero de tareas ---------- */
+
+.mkt-tablero-react {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.mkt-columna-react {
+  padding: 14px;
+  border-radius: var(--radius-lg);
+  background: var(--color-background);
+  min-height: 160px;
+}
+
+/* Un vistazo al tablero debe bastar para saber qué columna es cuál, sin leer
+   la cabecera: gris-azulado neutro para lo que aún no se ha tocado, naranja
+   cada vez más intenso según se acerca a publicarse, y verde para lo ya
+   acabado (mismo verde que el resto del sitio usa para "éxito", no un
+   naranja forzado ahí donde no pega). */
+.mkt-columna-react[data-estado="pendiente"] {
+  background: rgba(136, 165, 183, 0.14);
+}
+
+.mkt-columna-react[data-estado="en_progreso"] {
+  background: var(--color-info-bg);
+}
+
+.mkt-columna-react[data-estado="por_revisar"] {
+  background: rgba(224, 104, 14, 0.14);
+}
+
+.mkt-columna-react[data-estado="acabado"] {
+  background: var(--color-success-bg);
+}
+
+.mkt-columna-react[data-estado="pendiente"] .mkt-contador-react {
+  background: var(--color-steel);
+  color: #fff;
+}
+
+.mkt-columna-react[data-estado="en_progreso"] .mkt-contador-react {
+  background: var(--color-gold);
+  color: var(--color-navy);
+}
+
+.mkt-columna-react[data-estado="por_revisar"] .mkt-contador-react {
+  background: var(--color-orange);
+  color: #fff;
+}
+
+.mkt-columna-react[data-estado="acabado"] .mkt-contador-react {
+  background: var(--color-success-text);
+  color: #fff;
+}
+
+.mkt-columna-react h4 {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0 0 12px;
+  font-size: 0.9rem;
+  font-weight: 800;
+  color: var(--color-navy);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.mkt-contador-react {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--color-surface);
+  font-size: 0.78rem;
+}
+
+.mkt-task-card-react {
+  padding: 13px 14px;
+  margin-bottom: 10px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+.mkt-task-titulo-react {
+  margin: 0;
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--color-navy);
+  line-height: 1.45;
+}
+
+.mkt-task-acciones-react {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.mkt-task-acciones-react select {
+  flex: 1;
+  min-width: 0;
+  min-height: 44px;
+  padding: 5px 8px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-family: inherit;
+  font-size: 0.78rem;
+}
+
+/* ---------- Calendario ---------- */
+
+.mkt-calendario-nav-react {
+  display: flex;
+  gap: 8px;
+}
+
+.mkt-calendario-react {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 4px;
+  margin-top: 16px;
+}
+
+.mkt-calendario-cabecera-react {
+  padding: 8px 4px;
+  text-align: center;
+  color: var(--color-text-muted);
+  font-size: 0.76rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.mkt-dia-react {
+  min-height: 88px;
+  padding: 6px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-surface);
+}
+
+.mkt-dia-vacio-react {
+  min-height: 88px;
+}
+
+.mkt-dia-hoy-react {
+  border-color: var(--color-orange);
+  box-shadow: 0 0 0 2px rgba(224, 104, 14, 0.14);
+}
+
+.mkt-dia-numero-react {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--color-text-muted);
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+
+.mkt-evento-react {
+  display: block;
+  margin-bottom: 3px;
+  padding: 3px 6px;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mkt-evento-content-react {
+  background: var(--color-info-bg);
+  color: var(--color-info-text);
+}
+
+.mkt-evento-task-react {
+  background: rgba(136, 165, 183, 0.28);
+  color: var(--color-navy);
+}
+
+.mkt-leyenda-react {
+  display: flex;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.mkt-leyenda-react .mkt-evento-react {
+  display: inline-block;
+  margin: 0;
+}
+
+/* ---------- Miembros ---------- */
+
+.mkt-miembros-react {
+  list-style: none;
+  margin: 0 0 16px;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 12px;
+}
+
+.mkt-miembro-react {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+}
+
+.mkt-avatar-react {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--color-navy);
+  color: var(--color-cream);
+  font-size: 1.05rem;
+  font-weight: 800;
+}
+
+.mkt-miembro-email-react {
+  margin: 0;
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--color-navy);
+  overflow-wrap: anywhere;
+}
+
+/* ---------- Modal del editor de contenido ---------- */
+
+.mkt-modal-fondo-react {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(17, 37, 50, 0.55);
+  overflow-y: auto;
+}
+
+.mkt-modal-react {
+  width: min(100%, 720px);
+  max-height: 90vh;
+  overflow-y: auto;
+  padding: 26px;
+  border-radius: var(--radius-xl);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-soft);
+}
+
+.mkt-modal-header-react {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.mkt-modal-header-react h3 {
+  margin: 0;
+  font-size: 1.3rem;
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  color: var(--color-navy);
+}
+
+.mkt-modal-acciones-react {
+  display: flex;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+/* ---------- Responsive ---------- */
+
+@media (max-width: 900px) {
+  .mkt-tablero-react {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 620px) {
+  .mkt-form-fila-react {
+    grid-template-columns: 1fr;
+  }
+
+  /* Apilar las 4 columnas en vertical obligaba a pasar las 8 tarjetas de
+     "Pendiente" antes de llegar a "Por revisar"/"Acabado" -- justo lo
+     contrario de "qué falta para el jueves". Desplazable en horizontal, como
+     el calendario un poco más abajo: cada columna sigue entera, se llega a
+     cualquiera con un swipe en vez de un scroll larguísimo. */
+  .mkt-tablero-react {
+    display: flex;
+    overflow-x: auto;
+    scroll-snap-type: x proximity;
+    padding-bottom: 4px;
+  }
+
+  .mkt-columna-react {
+    flex: 0 0 260px;
+    scroll-snap-align: start;
+  }
+
+  /* El calendario mensual no cabe en 7 columnas en un móvil: se deja
+     desplazable en horizontal en vez de aplastarlo hasta hacerlo ilegible. */
+  .mkt-calendario-react {
+    min-width: 560px;
+  }
+
+  .mkt-panel-react:has(.mkt-calendario-react) {
+    overflow-x: auto;
+  }
+
+  .mkt-campaigns-react li {
+    flex-wrap: wrap;
+  }
+}
+
+/* ==========================================================================
+   Esta semana — la pantalla de entrada
+   ========================================================================== */
+
+.mkt-resumen-react {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--color-navy);
+}
+
+.mkt-resumen-react strong {
+  font-size: 1.5rem;
+  font-weight: 900;
+  letter-spacing: -0.03em;
+}
+
+.mkt-resumen-alerta-react {
+  color: var(--color-error-text);
+  font-weight: 800;
+}
+
+/* Filtro "solo lo mío": una casilla, no un menú. */
+.mkt-toggle-react {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-surface);
+  color: var(--color-navy);
+  font-size: 0.88rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.mkt-toggle-react:hover {
+  border-color: var(--color-orange);
+}
+
+.mkt-toggle-react input {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--color-orange);
+  cursor: pointer;
+}
+
+.mkt-grupo-react {
+  margin-bottom: 26px;
+}
+
+.mkt-grupo-titulo-react {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 10px;
+  font-size: 0.82rem;
+  font-weight: 800;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.mkt-grupo-urgente-react {
+  color: var(--color-error-text);
+}
+
+.mkt-filas-react,
+.mkt-publicaciones-react {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.mkt-fila-react,
+.mkt-publicacion-react {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 10px 16px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+.mkt-fila-check-react {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 44px;
+  cursor: pointer;
+}
+
+.mkt-fila-check-react input {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  accent-color: var(--color-orange);
+  cursor: pointer;
+}
+
+.mkt-fila-texto-react {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+/* De qué cuelga la cosa, encima de su nombre. Sin esto el usuario lee cuatro
+   filas llamadas "Guion" y tiene que reconstruir de memoria a cuál va cada una. */
+.mkt-fila-padre-react,
+.mkt-task-padre-react {
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mkt-task-padre-react {
+  margin: 0 0 3px;
+}
+
+.mkt-fila-titulo-react {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--color-navy);
+  line-height: 1.4;
+}
+
+/* El "cuándo" lleva la urgencia en el texto, no solo en el color. */
+.mkt-cuando-react {
+  flex-shrink: 0;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 800;
+  white-space: nowrap;
+  background: var(--color-background);
+  color: var(--color-text-muted);
+}
+
+.mkt-cuando-tarde-react {
+  background: var(--color-error-bg);
+  color: var(--color-error-text);
+}
+
+.mkt-cuando-hoy-react {
+  background: var(--color-orange);
+  color: #fff;
+}
+
+.mkt-cuando-pronto-react {
+  background: var(--color-info-bg);
+  color: var(--color-info-text);
+}
+
+.mkt-publicacion-estado-react {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.mkt-listo-react {
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: var(--color-success-text);
+  white-space: nowrap;
+}
+
+.mkt-pendientes-react {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+.mkt-vencida-react {
+  color: var(--color-error-text);
+  font-weight: 800;
+}
+
+/* ==========================================================================
+   Acciones destructivas
+   ========================================================================== */
+
+/* Eliminar dejaba de pesar lo mismo que la acción principal: apagado hasta que
+   se busca, y nunca del mismo rojo que la confirmación real. */
+.mkt-btn-borrar-react {
+  min-height: 44px;
+  padding: 6px 12px;
+  /* Un borde visible pero tenue: sigue pesando menos que la acción
+     principal, pero sin llegar a `opacity` + borde transparente, que en
+     reposo se leía como deshabilitado en vez de secundario. */
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: none;
+  color: var(--color-text-muted);
+  font-family: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: color var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out);
+}
+
+.mkt-btn-borrar-react:hover,
+.mkt-btn-borrar-react:focus-visible {
+  opacity: 1;
+  color: var(--color-error-text);
+  border-color: var(--color-error-bg);
+}
+
+.mkt-zona-peligro-react {
+  margin-top: 28px;
+  padding-top: 18px;
+  border-top: 1px solid var(--color-border);
+}
+
+/* La confirmación vive en la página, en español y con Cancelar visible. Un
+   window.confirm en móvil se encabeza con el dominio y dice "OK": se lee como
+   una advertencia del navegador, no como una pregunta del producto. */
+.mkt-confirmar-react {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 0;
+  padding: 14px 16px;
+  border: 1px solid var(--color-error-text);
+  border-radius: var(--radius-md);
+  background: var(--color-error-bg);
+  color: var(--color-error-text);
+  font-size: 0.9rem;
+  font-weight: 700;
+  line-height: 1.5;
+}
+
+/* ==========================================================================
+   Calendario accionable
+   ========================================================================== */
+
+.mkt-leyenda-nota-react {
+  margin-left: auto;
+  color: var(--color-text-muted);
+  font-size: 0.82rem;
+}
+
+.mkt-leyenda-react {
+  align-items: center;
+  flex-wrap: wrap;
+  margin: 0 0 12px;
+}
+
+/* El número del día es el sitio donde se pulsa para añadir algo. */
+.mkt-dia-numero-react {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  margin-bottom: 4px;
+  padding: 2px 4px;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  color: var(--color-text-muted);
+  font-family: inherit;
+  font-size: 0.76rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.mkt-dia-numero-react:hover {
+  background: var(--color-background);
+  color: var(--color-navy);
+}
+
+.mkt-dia-mas-react {
+  opacity: 0;
+  font-size: 1rem;
+  line-height: 1;
+  color: var(--color-orange);
+}
+
+.mkt-dia-react:hover .mkt-dia-mas-react,
+.mkt-dia-numero-react:focus-visible .mkt-dia-mas-react {
+  opacity: 1;
+}
+
+/* Los eventos son botones: llevan a su campaña. */
+button.mkt-evento-react {
+  width: 100%;
+  border: none;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+button.mkt-evento-react:hover {
+  filter: brightness(0.94);
+}
+
+.mkt-evento-alta-react {
+  background: var(--color-error-bg);
+  color: var(--color-error-text);
+}
+
+.mkt-dia-mas-eventos-react {
+  display: block;
+  padding: 2px 6px;
+  color: var(--color-text-muted);
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.mkt-dia-form-react {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.mkt-dia-form-react input {
+  width: 100%;
+  min-width: 0;
+  padding: 6px 8px;
+  border: 1px solid var(--color-orange);
+  border-radius: 6px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-family: inherit;
+  font-size: 0.76rem;
+}
+
+.mkt-dia-form-react .mkt-btn-mini-react {
+  min-height: 32px;
+  padding: 4px 8px;
+  font-size: 0.74rem;
+}
+
+/* Las celdas crecían con su contenido y rompían el ritmo de la fila. */
+.mkt-dia-react {
+  display: flex;
+  flex-direction: column;
+  min-height: 108px;
+}
+
+@media (max-width: 620px) {
+  .mkt-fila-react,
+  .mkt-publicacion-react {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .mkt-panel-header-react {
+    align-items: stretch;
+  }
+
+  .mkt-leyenda-nota-react {
+    margin-left: 0;
+    width: 100%;
+  }
+}
+
+/* ==========================================================================
+   Marketing a pantalla completa
+   ==========================================================================
+
+   El shell de /equipo (EquipoPage.tsx, de Hammad) ahora mete Marketing en un
+   Tabs + Card, junto con el calendario del club y el acceso a /admin como
+   hermanos. Sin editar ese archivo, todo esto se neutraliza desde aquí con
+   :has() y los `data-slot` que ya trae shadcn (más estables que apuntar a
+   clases de Tailwind, que cambian con cualquier retoque de estilo) -- salvo
+   la fila de título/"Cerrar sesión" y el propio ancho, que no tienen
+   `data-slot` y se cogen por posición: si Hammad cambia esa estructura,
+   dejan de aplicar en silencio y hay que revisar esta sección. */
+
+/* El header del sitio repite el título con el del propio dashboard. */
+.equipo-shell-react:has(.mkt-react) .site-header-react {
+  display: none;
+}
+
+.equipo-shell-react:has(.mkt-react) {
+  background: var(--color-background);
+}
+
+/* Las pestañas Marketing/Eventos y el resto de tarjetas del panel (acceso a
+   /admin, calendario del club) sobran cuando Marketing ya tiene su propia
+   navegación en el sidebar. */
+[data-slot="tabs"]:has(.mkt-react) > [data-slot="tabs-list"] {
+  display: none;
+}
+
+.equipo-content-react:has(.mkt-react) [data-slot="card"]:not(:has(.mkt-react)) {
+  display: none;
+}
+
+/* La Card que envuelve Marketing deja de parecer una tarjeta: sin borde, sin
+   sombra (el `ring` de shadcn es un box-shadow), sin el padding que reparte
+   a través de `--card-spacing`. */
+[data-slot="card"]:has(.mkt-react) {
+  background: transparent;
+  box-shadow: none;
+  border-radius: 0;
+  overflow: visible;
+  --card-spacing: 0px;
+}
+
+/* Fila de título + "Cerrar sesión" y contenedor de max-w-3xl: sin
+   `data-slot`, se cogen por posición (primer y único hijo directo de
+   `.equipo-content-react` cuando Marketing está montado). */
+.equipo-content-react:has(.mkt-react) > div {
+  max-width: none;
+  margin: 0;
+}
+
+.equipo-content-react:has(.mkt-react) > div > div:first-child {
+  display: none;
+}
+
+.equipo-content-react:has(.mkt-react) {
+  max-width: none;
+  margin: 0;
+  padding: 0;
+}
+
+.mkt-react {
+  margin-top: 0;
+}
+
+/* ---------- Marca en la cabecera del sidebar ---------- */
+
+.mkt-marca-react {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 4px;
+  min-width: 0;
+}
+
+.mkt-marca-logo-react {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  border-radius: 8px;
+  background: #fff;
+  object-fit: contain;
+}
+
+.mkt-marca-texto-react {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.25;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.mkt-marca-texto-react strong {
+  font-size: 1rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.mkt-marca-texto-react span {
+  font-size: 0.82rem;
+  opacity: 0.7;
+  white-space: nowrap;
+}
+
+/* Plegado a iconos: el texto de la marca estorba, solo queda el logo. */
+[data-state="collapsed"] .mkt-marca-texto-react {
+  display: none;
+}
+
+/* ---------- Contenido ---------- */
+
+.mkt-main-react {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-background);
+}
+
+/* Barra superior con el disparador del sidebar y en qué sección estás. */
+.mkt-barra-react {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 60px;
+  padding: 0 20px;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+
+.mkt-barra-react h2 {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  color: var(--color-navy);
+}
+
+.mkt-contenido-react {
+  flex: 1;
+  padding: 26px 24px 60px;
+  /* Las media queries miden la ventana, pero lo que se estrecha aquí es la
+     columna: el sidebar le quita 16rem. Las container queries miden eso. */
+  container-type: inline-size;
+}
+
+@media (max-width: 620px) {
+  .mkt-contenido-react {
+    padding: 18px 14px 44px;
+  }
+}
+
+@container (max-width: 940px) {
+  .mkt-tablero-react {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@container (max-width: 560px) {
+  .mkt-form-fila-react {
+    grid-template-columns: 1fr;
+  }
+
+  /* Mismo motivo que en el `@media` de más abajo: en columna estrecha (con
+     el sidebar expandido) el tablero pasa a desplazarse en horizontal en vez
+     de apilar las 4 columnas una debajo de otra. */
+  .mkt-tablero-react {
+    display: flex;
+    overflow-x: auto;
+    scroll-snap-type: x proximity;
+    padding-bottom: 4px;
+  }
+
+  .mkt-columna-react {
+    flex: 0 0 260px;
+    scroll-snap-align: start;
+  }
+}
+
+/* Mini-reset acotado al sidebar.
+   Los componentes de shadcn se escriben dando por hecho el Preflight de
+   Tailwind, que aquí está desactivado para no reescribir la landing ni el
+   panel de Hammad. Sin él, los <li> salen con viñeta y los <button> con el
+   fondo gris del navegador.
+
+   Iba dentro de `@layer base` para perder contra las utilidades de Tailwind
+   (`hover:bg-sidebar-accent` y similares) -- pero index.css de Hammad usa
+   "utilities" antes que "base" (su primer `@layer base {...}` es su propio
+   bloque de `.shadcn-scope`, que aparece después de importar utilities), así
+   que por orden de primera aparición "base" queda por ENCIMA de "utilities"
+   en la cascada. Ninguna declaración `@layer theme, base, components,
+   utilities;` posterior puede arreglar eso: el orden entre capas ya usadas
+   no se puede reescribir, solo fijar para las que aún no tenían posición.
+   Resultado real: con `@layer base`, este reset le ganaba a los estados
+   `:hover`/`:active`/activo del sidebar en vez de perder -- el naranja al
+   pasar el ratón dejaba de verse.
+
+   Arreglo sin tocar su archivo: fuera de cualquier `@layer` (así sin capa
+   vuelve a ganarle a todo, incluidas las utilidades) pero excluyendo con
+   `:not()` los estados que Tailwind necesita controlar. En reposo manda este
+   reset; en hover/activo, el selector deja de matchear y manda la utilidad. */
+:where([data-slot="sidebar"]) ul,
+:where([data-slot="sidebar"]) ol {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+:where([data-slot="sidebar"])
+  button:not(:hover):not(:focus-visible):not(:active):not(
+    [data-active="true"]
+  ),
+:where([data-slot="sidebar-trigger"]):not(:hover):not(:focus-visible) {
+  background-color: transparent;
+  background-image: none;
+  border: 0;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+}
+
+:where([data-slot="sidebar"]) svg,
+:where([data-slot="sidebar-trigger"]) svg {
+  display: block;
+  flex-shrink: 0;
+}
+
+/* ---------- Selector de equipo (cabecera del sidebar) ---------- */
+
+.mkt-selector-react {
+  gap: 10px;
+}
+
+/* El texto del sidebar salía en `text-sm` de Tailwind (0.875rem), pequeño
+   para una nav de cinco secciones que se usa constantemente. Fuera de
+   `@layer` para ganarle a esa utilidad sin más (ver el porqué en el
+   comentario largo del mini-reset del sidebar, más abajo). */
+.mkt-react [data-slot="sidebar-menu-button"] {
+  font-size: 0.95rem;
+}
+
+.mkt-react [data-slot="sidebar-group-label"] {
+  font-size: 0.8rem;
+}
+
+.mkt-selector-flecha-react {
+  margin-left: auto;
+  opacity: 0.6;
+}
+
+[data-state="collapsed"] .mkt-selector-flecha-react {
+  display: none;
+}
+
+/* ---------- Adjuntos de un contenido ---------- */
+
+.mkt-adjuntos-react {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--color-border);
+}
+
+.mkt-adjuntos-titulo-react {
+  margin: 0 0 10px;
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+/* Separador entre bloques de un formulario largo (ContentEditor): sin esto
+   son 12 campos seguidos sin ninguna pausa visual. Mismo rótulo que
+   `.mkt-adjuntos-titulo-react`, con un borde encima para partir la lectura. */
+.mkt-form-seccion-react {
+  margin-top: 22px;
+  padding-top: 16px;
+  border-top: 1px solid var(--color-border);
+}
+
+.mkt-enlace-nuevo-react {
+  margin-top: 10px;
+}
+
+/* Mismo mini-reset que el sidebar (ver el comentario largo de más arriba):
+   sin Preflight, los botones de los adjuntos salen con el fondo gris del
+   navegador, pero `@layer base` le gana a `hover:` en este proyecto en vez
+   de perder. Fuera de capa + `:not()` en los estados en vez de `@layer`. */
+:where([data-slot="attachment"])
+  button:not(:hover):not(:focus-visible):not(:active),
+:where([data-slot="attachment-action"]):not(:hover):not(:focus-visible) {
+  background-color: transparent;
+  background-image: none;
+  border: 0;
+  color: inherit;
+  font: inherit;
+}
+
+:where([data-slot="attachment"]) svg {
+  display: block;
+  flex-shrink: 0;
+}
+
+.mkt-adjuntos-lista-react {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* ==========================================================================
+   Tarjetas de tarea (tablero) y resumen de Home
+   ========================================================================== */
+
+/* La tarjeta entera es pulsable y abre la tarea en grande, como en Trello. */
+.mkt-task-card-react {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+  width: 100%;
+  padding: 12px 14px;
+  margin-bottom: 10px;
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  background: var(--color-surface);
+  text-align: left;
+  font-family: inherit;
+  cursor: pointer;
+  box-shadow: 0 1px 2px rgba(17, 37, 50, 0.06);
+  transition: border-color var(--dur-fast) var(--ease-out),
+    box-shadow var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out);
+}
+
+.mkt-task-card-react:hover {
+  border-color: var(--color-orange);
+  box-shadow: 0 6px 16px rgba(17, 37, 50, 0.1);
+  transform: translateY(-1px);
+}
+
+.mkt-task-card-react .mkt-task-titulo-react {
+  font-size: 0.93rem;
+  font-weight: 700;
+  color: var(--color-navy);
+  line-height: 1.4;
+}
+
+/* Etiquetas de color arriba, como las de Trello. */
+.mkt-etiquetas-react {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.mkt-etiqueta-react {
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: var(--color-info-bg);
+  color: var(--color-info-text);
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.mkt-task-pie-react {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+.mkt-task-senales-react {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.mkt-fecha-react {
+  color: var(--color-text-muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.mkt-fila-derecha-react {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+/* ---------- Tarjetas de resumen (Home) ---------- */
+
+.mkt-tiles-react {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.mkt-tile-react {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 16px 18px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+}
+
+.mkt-tile-alerta-react {
+  border-color: var(--color-error-text);
+  background: var(--color-error-bg);
+}
+
+.mkt-tile-numero-react {
+  font-size: 1.7rem;
+  font-weight: 900;
+  letter-spacing: -0.04em;
+  color: var(--color-navy);
+  line-height: 1.1;
+}
+
+.mkt-tile-alerta-react .mkt-tile-numero-react,
+.mkt-tile-alerta-react .mkt-tile-label-react {
+  color: var(--color-error-text);
+}
+
+.mkt-tile-label-react {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--color-text-muted);
+}
+
+@container (max-width: 720px) {
+  .mkt-tiles-react {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* ---------- Resumen del departamento (Home) ---------- */
+
+/* Antes solo se veía entrando campaña por campaña; aquí es lo primero que
+   se lee, como en /admin: cuántas campañas hay y en qué fase está el
+   contenido de todo el equipo, no solo el mío. */
+.mkt-resumen-depto-react {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  margin-bottom: 20px;
+  padding: 12px 16px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  font-size: 0.86rem;
+  color: var(--color-text-muted);
+}
+
+.mkt-resumen-depto-numero-react {
+  font-family: inherit;
+  font-size: 1rem;
+  font-weight: 900;
+  color: var(--color-navy);
+}
+
+.mkt-pipeline-react {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.mkt-pipeline-chip-react {
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--color-background);
+  font-size: 0.74rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.mkt-pipeline-en_diseno-react {
+  background: var(--color-info-bg);
+  color: var(--color-info-text);
+}
+
+.mkt-pipeline-en_revision-react {
+  background: rgba(224, 104, 14, 0.16);
+  color: var(--color-orange-dark);
+}
+
+.mkt-pipeline-programado-react,
+.mkt-pipeline-publicado-react {
+  background: var(--color-success-bg);
+  color: var(--color-success-text);
+}
+
+/* ---------- Timeline (Home) ---------- */
+
+/* Antes las tareas se agrupaban por urgencia y las publicaciones vivían en
+   una lista aparte ("Se publica pronto"). Aquí comparten día: se lee como
+   una agenda, no como dos secciones que hay que cruzar mentalmente. */
+.mkt-tl-react {
+  position: relative;
+  padding-left: 22px;
+}
+
+.mkt-tl-react::before {
+  content: "";
+  position: absolute;
+  left: 5px;
+  top: 6px;
+  bottom: 6px;
+  width: 2px;
+  background: var(--color-border);
+}
+
+.mkt-tl-dia-react {
+  position: relative;
+  margin-bottom: 22px;
+}
+
+.mkt-tl-dia-react::before {
+  content: "";
+  position: absolute;
+  left: -22px;
+  top: 4px;
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  background: var(--color-surface);
+  border: 3px solid var(--color-steel);
+}
+
+.mkt-tl-dia-hoy-react::before {
+  border-color: var(--color-orange);
+  background: var(--color-orange);
+}
+
+/* El día de una publicación es un hito, no un día más: rombo en vez de
+   punto, igual que un evento marcado a mano en un calendario de papel. */
+.mkt-tl-dia-hito-react::before {
+  border-radius: 3px;
+  transform: rotate(45deg);
+  width: 11px;
+  height: 11px;
+  border-color: var(--color-orange-dark);
+  background: var(--color-gold);
+}
+
+.mkt-tl-etiqueta-react {
+  margin: 0 0 8px;
+  font-size: 0.76rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-muted);
+}
+
+.mkt-tl-dia-hoy-react .mkt-tl-etiqueta-react {
+  color: var(--color-orange-dark);
+}
+
+.mkt-tl-hito-react {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 14px;
+  margin-bottom: 8px;
+  border: 1.5px solid var(--color-gold);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+.mkt-tl-hito-titulo-react {
+  font-size: 0.93rem;
+  font-weight: 700;
+  color: var(--color-navy);
+}
+
+/* ---------- Avatares ---------- */
+
+/* El Avatar de shadcn no trae `object-fit` propio (solo `aspect-square
+   size-full`): sin esto, una foto que no sea ya cuadrada se estira para
+   rellenar el círculo en vez de recortarse, y se ve deformada. */
+[data-slot="avatar-image"] {
+  object-fit: cover;
+}
+
+.mkt-avatares-dialogo-react {
+  margin-bottom: 8px;
+}
+
+.mkt-evento-avatares-react {
+  flex-shrink: 0;
+}
+
+button.mkt-evento-react {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.mkt-evento-texto-react {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---------- Diálogo de tarea ---------- */
+
+.mkt-dialogo-react {
+  max-width: 640px;
+  max-height: 88vh;
+  overflow-y: auto;
+}
+
+.mkt-form-dialogo-react {
+  margin-bottom: 0;
+  border: 0;
+  padding: 0;
+  background: transparent;
+}
+
+.mkt-checklist-react {
+  margin: 6px 0 16px;
+  padding: 14px;
+  border-radius: var(--radius-md);
+  background: var(--color-background);
+}
+
+.mkt-checklist-fila-react {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.mkt-checklist-fila-react label {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 40px;
+  cursor: pointer;
+  font-size: 0.92rem;
+}
+
+.mkt-checklist-fila-react input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--color-orange);
+  cursor: pointer;
+}
+
+.mkt-borrar-derecha-react {
+  margin-left: auto;
+}
+
+/* Mismo mini-reset acotado, ahora también para diálogo y avatares (ver el
+   comentario largo junto al del sidebar: fuera de `@layer` a propósito). */
+:where([data-slot="dialog-content"])
+  button:not(:hover):not(:focus-visible):not(:active) {
+  background-color: transparent;
+  background-image: none;
+  border: 0;
+  color: inherit;
+  font: inherit;
+}
+
+:where([data-slot="dialog-content"]) svg,
+:where([data-slot="avatar"]) img {
+  display: block;
+}
