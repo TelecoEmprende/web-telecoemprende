@@ -46,3 +46,9 @@ demo/vite.config.d.ts
 .claude/
 .agents/
 skills-lock.json
+
+# Entorno virtual de Python local
+.venv/
+
+# Borradores locales (código archivado, no forma parte del producto)
+_drafts/
