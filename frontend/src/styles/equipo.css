@@ -1,4 +1,5 @@
-/* Panel /equipo: fondo navy sólido, tarjetas claras encima. */
+/* Panel /equipo: fondo navy sólido (el resto del layout de la pantalla de
+   equipo vive en shadcn/Tailwind, ver EquipoPage.tsx e index.css). */
 
 .equipo-shell-react {
   min-height: 100vh;
@@ -7,86 +8,7 @@
 
 .equipo-content-react {
   width: 100%;
-  max-width: 720px;
+  max-width: 880px;
   margin: 0 auto;
   padding: 48px 20px 64px;
-}
-
-.equipo-status-react {
-  color: var(--color-cream);
-  text-align: center;
-}
-
-.equipo-login-box-react,
-.equipo-home-react {
-  background: rgba(255, 255, 255, 0.94);
-  border-radius: 30px;
-  box-shadow: var(--shadow-soft);
-  padding: 34px;
-}
-
-.equipo-login-box-react h1 {
-  margin: 0 0 10px;
-  font-size: 2rem;
-  font-weight: 900;
-  letter-spacing: -0.04em;
-}
-
-.equipo-login-box-react p {
-  margin: 0;
-  color: var(--color-text-muted);
-  line-height: 1.7;
-}
-
-.equipo-login-form-react {
-  margin-top: 24px;
-}
-
-.equipo-login-error-react {
-  margin: 16px 0 0;
-  color: var(--color-error-text);
-  font-weight: 700;
-}
-
-.equipo-home-header-react {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 24px;
-}
-
-.equipo-home-header-react h1 {
-  margin: 0;
-  font-size: 1.6rem;
-  font-weight: 900;
-  letter-spacing: -0.03em;
-  color: var(--color-navy);
-}
-
-.equipo-cards-react {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 14px;
-  margin-bottom: 24px;
-}
-
-.equipo-card-react {
-  padding: 16px 26px;
-  border: 1px solid var(--color-border);
-  border-radius: 16px;
-  background: var(--color-surface);
-  color: var(--color-navy);
-  font-weight: 700;
-  cursor: pointer;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
-}
-
-.equipo-card-react:hover {
-  border-color: var(--color-orange);
-}
-
-.equipo-card-active-react {
-  border-color: var(--color-orange);
-  box-shadow: 0 0 0 3px rgba(224, 104, 14, 0.15);
 }

@@ -7,13 +7,31 @@ import {
   updateEquipoAcceso,
 } from "../../api/admin";
 import { AlertBanner } from "../feedback/AlertBanner";
+import { Badge } from "../ui/badge";
+import { Button } from "../ui/button";
+import { Checkbox } from "../ui/checkbox";
+import { Input } from "../ui/input";
+import { Label } from "../ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../ui/select";
 import type { ApiFailure } from "../../types/api";
-import type { EquipoAcceso, Team } from "../../types/equipo";
+import type { Cargo, EquipoAcceso, Team } from "../../types/equipo";
 
 const EQUIPOS: { value: Team; label: string }[] = [
   { value: "marketing", label: "Marketing" },
   { value: "eventos", label: "Eventos" },
   { value: "ingenieria", label: "Ingeniería (acceso admin)" },
+];
+
+const CARGOS: { value: Cargo; label: string }[] = [
+  { value: "", label: "Ninguno" },
+  { value: "presidente", label: "Presidente" },
+  { value: "boardmember", label: "Board member" },
 ];
 
 function EquiposCheckboxes({
@@ -32,18 +50,60 @@ function EquiposCheckboxes({
   }
 
   return (
-    <div className="equipo-accesos-checkboxes-react">
-      {EQUIPOS.map((equipo) => (
-        <label key={equipo.value} htmlFor={`${idPrefix}-${equipo.value}`}>
-          <input
-            type="checkbox"
-            id={`${idPrefix}-${equipo.value}`}
-            checked={selected.includes(equipo.value)}
-            onChange={() => toggle(equipo.value)}
-          />
-          {equipo.label}
-        </label>
-      ))}
+    <div className="flex flex-wrap gap-3">
+      {EQUIPOS.map((equipo) => {
+        const id = `${idPrefix}-${equipo.value}`;
+        return (
+          <div key={equipo.value} className="flex items-center gap-1.5">
+            <Checkbox
+              id={id}
+              checked={selected.includes(equipo.value)}
+              onCheckedChange={() => toggle(equipo.value)}
+            />
+            <Label htmlFor={id} className="text-sm font-normal">
+              {equipo.label}
+            </Label>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function VpDeCheckboxes({
+  equipos,
+  selected,
+  onChange,
+  idPrefix,
+}: {
+  equipos: Team[];
+  selected: Team[];
+  onChange: (vpDe: Team[]) => void;
+  idPrefix: string;
+}) {
+  function toggle(team: Team) {
+    onChange(selected.includes(team) ? selected.filter((e) => e !== team) : [...selected, team]);
+  }
+
+  return (
+    <div className="flex flex-wrap gap-3">
+      {EQUIPOS.map((equipo) => {
+        const disabled = !equipos.includes(equipo.value);
+        const id = `${idPrefix}-vp-${equipo.value}`;
+        return (
+          <div key={equipo.value} className="flex items-center gap-1.5">
+            <Checkbox
+              id={id}
+              disabled={disabled}
+              checked={!disabled && selected.includes(equipo.value)}
+              onCheckedChange={() => toggle(equipo.value)}
+            />
+            <Label htmlFor={id} className="text-sm font-normal text-muted-foreground">
+              {equipo.label}
+            </Label>
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -58,6 +118,8 @@ export function EquipoAccesosPanel() {
   const [nuevoEmail, setNuevoEmail] = useState("");
   const [nuevaPassword, setNuevaPassword] = useState("");
   const [nuevosEquipos, setNuevosEquipos] = useState<Team[]>([]);
+  const [nuevoVpDe, setNuevoVpDe] = useState<Team[]>([]);
+  const [nuevoCargo, setNuevoCargo] = useState<Cargo>("");
 
   async function cargar() {
     setIsLoading(true);
@@ -85,13 +147,21 @@ export function EquipoAccesosPanel() {
     setMessage(null);
 
     try {
-      const response = await createEquipoAcceso(nuevoEmail, nuevaPassword, nuevosEquipos);
+      const response = await createEquipoAcceso(
+        nuevoEmail,
+        nuevaPassword,
+        nuevosEquipos,
+        nuevoVpDe,
+        nuevoCargo,
+      );
       if (response.ok) {
         setMessageVariant("success");
         setMessage("Acceso creado.");
         setNuevoEmail("");
         setNuevaPassword("");
         setNuevosEquipos([]);
+        setNuevoVpDe([]);
+        setNuevoCargo("");
         await cargar();
       }
     } catch (error) {
@@ -105,9 +175,40 @@ export function EquipoAccesosPanel() {
 
   async function handleEquiposChange(acceso: EquipoAcceso, equipos: Team[]) {
     try {
-      const response = await updateEquipoAcceso(acceso.id, { equipos });
+      // Al quitar un equipo, el backend rechaza vp_de que ya no esté en
+      // equipos: se recorta aquí también para no depender solo del 400.
+      const vpDe = acceso.vp_de.filter((v) => equipos.includes(v));
+      const response = await updateEquipoAcceso(acceso.id, { equipos, vp_de: vpDe });
       if (response.ok) {
-        setAccesos((prev) => prev.map((a) => (a.id === acceso.id ? { ...a, equipos } : a)));
+        setAccesos((prev) =>
+          prev.map((a) => (a.id === acceso.id ? { ...a, equipos, vp_de: vpDe } : a)),
+        );
+      }
+    } catch (error) {
+      const apiError = error as ApiFailure;
+      setMessageVariant("error");
+      setMessage(apiError.message || "No se pudo actualizar el acceso.");
+    }
+  }
+
+  async function handleVpDeChange(acceso: EquipoAcceso, vpDe: Team[]) {
+    try {
+      const response = await updateEquipoAcceso(acceso.id, { vp_de: vpDe });
+      if (response.ok) {
+        setAccesos((prev) => prev.map((a) => (a.id === acceso.id ? { ...a, vp_de: vpDe } : a)));
+      }
+    } catch (error) {
+      const apiError = error as ApiFailure;
+      setMessageVariant("error");
+      setMessage(apiError.message || "No se pudo actualizar el acceso.");
+    }
+  }
+
+  async function handleCargoChange(acceso: EquipoAcceso, cargo: Cargo) {
+    try {
+      const response = await updateEquipoAcceso(acceso.id, { cargo });
+      if (response.ok) {
+        setAccesos((prev) => prev.map((a) => (a.id === acceso.id ? { ...a, cargo } : a)));
       }
     } catch (error) {
       const apiError = error as ApiFailure;
@@ -145,7 +246,7 @@ export function EquipoAccesosPanel() {
   }
 
   return (
-    <section className="admin-card-react equipo-accesos-panel-react">
+    <section className="admin-card-react equipo-accesos-panel-react shadcn-scope">
       <h2>Accesos de equipo (/equipo)</h2>
       <p>
         Quien tenga el equipo <strong>Ingeniería</strong> también recibe acceso a este panel
@@ -157,90 +258,160 @@ export function EquipoAccesosPanel() {
       {isLoading ? (
         <p>Cargando accesos...</p>
       ) : (
-        <table className="equipo-accesos-table-react">
-          <thead>
-            <tr>
-              <th>Email</th>
-              <th>Equipos</th>
-              <th>Activo</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {accesos.map((acceso) => (
-              <tr key={acceso.id}>
-                <td>{acceso.email}</td>
-                <td>
-                  <EquiposCheckboxes
-                    idPrefix={`acceso-${acceso.id}`}
-                    selected={acceso.equipos}
-                    onChange={(equipos) => void handleEquiposChange(acceso, equipos)}
-                  />
-                </td>
-                <td>
-                  <button
-                    type="button"
-                    className="secondary-btn-react"
-                    onClick={() => void handleToggleActivo(acceso)}
-                  >
-                    {acceso.activo ? "Desactivar" : "Activar"}
-                  </button>
-                </td>
-                <td>
-                  <button
-                    type="button"
-                    className="secondary-btn-react"
-                    onClick={() => void handleEliminar(acceso)}
-                  >
-                    Eliminar
-                  </button>
-                </td>
+        <div className="mt-4 overflow-x-auto">
+          <table className="w-full min-w-[720px] border-separate border-spacing-y-2 text-sm">
+            <thead>
+              <tr className="text-left text-muted-foreground">
+                <th className="px-2 font-medium">Email</th>
+                <th className="px-2 font-medium">Equipos</th>
+                <th className="px-2 font-medium">VP de</th>
+                <th className="px-2 font-medium">Cargo</th>
+                <th className="px-2 font-medium">Activo</th>
+                <th className="px-2"></th>
               </tr>
-            ))}
-            {accesos.length === 0 ? (
-              <tr>
-                <td colSpan={4}>Todavía no hay accesos de equipo dados de alta.</td>
-              </tr>
-            ) : null}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {accesos.map((acceso) => (
+                <tr key={acceso.id} className="rounded-lg bg-card align-top ring-1 ring-foreground/10">
+                  <td className="p-2 font-medium">
+                    {acceso.email}
+                    {acceso.cargo ? (
+                      <Badge variant="secondary" className="ml-2 align-middle">
+                        {acceso.cargo === "presidente" ? "Presidente" : "Board"}
+                      </Badge>
+                    ) : null}
+                  </td>
+                  <td className="p-2">
+                    <EquiposCheckboxes
+                      idPrefix={`acceso-${acceso.id}`}
+                      selected={acceso.equipos}
+                      onChange={(equipos) => void handleEquiposChange(acceso, equipos)}
+                    />
+                  </td>
+                  <td className="p-2">
+                    <VpDeCheckboxes
+                      idPrefix={`acceso-${acceso.id}`}
+                      equipos={acceso.equipos}
+                      selected={acceso.vp_de}
+                      onChange={(vpDe) => void handleVpDeChange(acceso, vpDe)}
+                    />
+                  </td>
+                  <td className="p-2">
+                    <Select
+                      value={acceso.cargo || "none"}
+                      onValueChange={(value) =>
+                        void handleCargoChange(acceso, value === "none" ? "" : (value as Cargo))
+                      }
+                    >
+                      <SelectTrigger size="sm">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {CARGOS.map((cargo) => (
+                          <SelectItem key={cargo.value || "none"} value={cargo.value || "none"}>
+                            {cargo.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </td>
+                  <td className="p-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => void handleToggleActivo(acceso)}
+                    >
+                      {acceso.activo ? "Desactivar" : "Activar"}
+                    </Button>
+                  </td>
+                  <td className="p-2">
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => void handleEliminar(acceso)}
+                    >
+                      Eliminar
+                    </Button>
+                  </td>
+                </tr>
+              ))}
+              {accesos.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="p-2 text-muted-foreground">
+                    Todavía no hay accesos de equipo dados de alta.
+                  </td>
+                </tr>
+              ) : null}
+            </tbody>
+          </table>
+        </div>
       )}
 
-      <form className="equipo-accesos-form-react" onSubmit={handleCrear}>
+      <form className="mt-6 flex flex-col gap-4" onSubmit={handleCrear}>
         <h3>Añadir nueva persona</h3>
-        <div className="field-group-react">
-          <label htmlFor="nuevo-equipo-email">Email</label>
-          <input
-            type="email"
-            id="nuevo-equipo-email"
-            value={nuevoEmail}
-            onChange={(event) => setNuevoEmail(event.target.value)}
-            required
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="nuevo-equipo-email">Email</Label>
+            <Input
+              type="email"
+              id="nuevo-equipo-email"
+              value={nuevoEmail}
+              onChange={(event) => setNuevoEmail(event.target.value)}
+              required
+            />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="nuevo-equipo-password">Contraseña</Label>
+            <Input
+              type="password"
+              id="nuevo-equipo-password"
+              value={nuevaPassword}
+              onChange={(event) => setNuevaPassword(event.target.value)}
+              minLength={8}
+              required
+            />
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-1.5">
+          <Label>Equipos</Label>
+          <EquiposCheckboxes idPrefix="nuevo-equipo" selected={nuevosEquipos} onChange={setNuevosEquipos} />
+        </div>
+
+        <div className="flex flex-col gap-1.5">
+          <Label>VP de</Label>
+          <VpDeCheckboxes
+            idPrefix="nuevo-equipo"
+            equipos={nuevosEquipos}
+            selected={nuevoVpDe}
+            onChange={setNuevoVpDe}
           />
         </div>
-        <div className="field-group-react">
-          <label htmlFor="nuevo-equipo-password">Contraseña</label>
-          <input
-            type="password"
-            id="nuevo-equipo-password"
-            value={nuevaPassword}
-            onChange={(event) => setNuevaPassword(event.target.value)}
-            minLength={8}
-            required
-          />
+
+        <div className="flex flex-col gap-1.5 sm:w-56">
+          <Label>Cargo</Label>
+          <Select
+            value={nuevoCargo || "none"}
+            onValueChange={(value) => setNuevoCargo(value === "none" ? "" : (value as Cargo))}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {CARGOS.map((cargo) => (
+                <SelectItem key={cargo.value || "none"} value={cargo.value || "none"}>
+                  {cargo.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
-        <EquiposCheckboxes
-          idPrefix="nuevo-equipo"
-          selected={nuevosEquipos}
-          onChange={setNuevosEquipos}
-        />
-        <button
-          type="submit"
-          className="submit-btn-react"
-          disabled={isSaving || nuevosEquipos.length === 0}
-        >
+
+        <Button type="submit" disabled={isSaving || nuevosEquipos.length === 0} className="sm:w-fit">
           {isSaving ? "Creando..." : "Crear acceso"}
-        </button>
+        </Button>
       </form>
     </section>
   );

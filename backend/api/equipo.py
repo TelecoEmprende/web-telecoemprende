@@ -5,9 +5,10 @@ from flask import Blueprint, jsonify, request
 from backend.config import LOGIN_BLOCK_WINDOW_SECONDS, MAX_LOGIN_ATTEMPTS_PER_WINDOW
 from backend.schemas import build_response
 from backend.services.equipo import (
-    equipo_teams,
+    equipo_session_info,
     init_equipo_db,
     is_equipo_authenticated,
+    listar_eventos_calendario,
     login_equipo,
     logout_equipo,
 )
@@ -40,10 +41,10 @@ def api_equipo_login():
     email = limpiar_texto(str(payload.get("email", ""))).lower()
     password = str(payload.get("password", ""))
 
-    equipos = login_equipo(email, password)
-    if equipos is not None:
+    info = login_equipo(email, password)
+    if info is not None:
         logger.info("equipo login success ip=%s", ip)
-        return jsonify(build_response(True, "Sesión iniciada.", teams=equipos)), 200
+        return jsonify(build_response(True, "Sesión iniciada.", **info)), 200
 
     # Mensaje genérico: no revela si el email existe o no.
     logger.warning("equipo login failed ip=%s", ip)
@@ -59,8 +60,14 @@ def api_equipo_logout():
 @equipo_api.route("/session", methods=["GET"])
 def api_equipo_session():
     authenticated = is_equipo_authenticated()
-    return jsonify({
-        "ok": True,
-        "authenticated": authenticated,
-        "teams": equipo_teams() if authenticated else [],
-    }), 200
+    info = equipo_session_info() if authenticated else {"teams": [], "vp_de": [], "cargo": ""}
+    return jsonify({"ok": True, "authenticated": authenticated, **info}), 200
+
+
+@equipo_api.route("/calendario", methods=["GET"])
+def api_equipo_calendario():
+    if not is_equipo_authenticated():
+        return jsonify(build_response(False, "No autorizado.")), 401
+
+    init_equipo_db()
+    return jsonify({"ok": True, "eventos": listar_eventos_calendario()}), 200

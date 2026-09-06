@@ -2,7 +2,7 @@ import psycopg2
 from flask import session
 from werkzeug.security import check_password_hash, generate_password_hash
 
-from backend.config import DATABASE_URL, EQUIPO_CON_PERMISOS_ADMIN, EQUIPOS_VALIDOS
+from backend.config import CARGOS_VALIDOS, DATABASE_URL, EQUIPO_CON_PERMISOS_ADMIN, EQUIPOS_VALIDOS
 
 # Hash "de relleno" para cuando el email no existe: sin esto, saltarse
 # check_password_hash en ese caso haría que la respuesta fuera más rápida
@@ -27,15 +27,43 @@ def init_equipo_db():
                     created_at TIMESTAMP NOT NULL DEFAULT NOW()
                 )
             """)
+            # vp_de: subconjunto de `equipos` donde la persona es VP (gestiona
+            # el dashboard de ese equipo). cargo: 'presidente'/'boardmember'/''
+            # (dirección, independiente del departamento).
+            cur.execute("""
+                ALTER TABLE equipo_accesos
+                ADD COLUMN IF NOT EXISTS vp_de TEXT[] NOT NULL DEFAULT '{}'
+            """)
+            cur.execute("""
+                ALTER TABLE equipo_accesos
+                ADD COLUMN IF NOT EXISTS cargo VARCHAR(20) NOT NULL DEFAULT ''
+            """)
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS calendario_eventos (
+                    id SERIAL PRIMARY KEY,
+                    titulo VARCHAR(150) NOT NULL,
+                    descripcion VARCHAR(500) NOT NULL DEFAULT '',
+                    fecha DATE NOT NULL,
+                    hora VARCHAR(5) NOT NULL DEFAULT '',
+                    created_at TIMESTAMP NOT NULL DEFAULT NOW()
+                )
+            """)
         conn.commit()
 
 
-def login_equipo(email: str, password: str) -> list[str] | None:
+def _tiene_permisos_admin(equipos: list[str], cargo: str) -> bool:
+    return EQUIPO_CON_PERMISOS_ADMIN in equipos or cargo in CARGOS_VALIDOS
+
+
+def login_equipo(email: str, password: str) -> dict | None:
     email = email.strip().lower()
     with _get_connection() as conn:
         with conn.cursor() as cur:
             cur.execute(
-                "SELECT password_hash, equipos FROM equipo_accesos WHERE email = %s AND activo = TRUE",
+                """
+                SELECT password_hash, equipos, vp_de, cargo
+                FROM equipo_accesos WHERE email = %s AND activo = TRUE
+                """,
                 (email,),
             )
             row = cur.fetchone()
@@ -47,6 +75,8 @@ def login_equipo(email: str, password: str) -> list[str] | None:
         return None
 
     equipos = [e for e in row[1] if e in EQUIPOS_VALIDOS]
+    vp_de = [e for e in row[2] if e in equipos]
+    cargo = row[3] if row[3] in CARGOS_VALIDOS else ""
 
     # session.clear() por higiene ante fijación de sesión (mismo criterio que
     # login_admin).
@@ -54,20 +84,26 @@ def login_equipo(email: str, password: str) -> list[str] | None:
     session.permanent = True
     session["equipo_email"] = email
     session["equipo_teams"] = equipos
-    # El equipo de ingeniería también recibe acceso al panel /admin: reutiliza
-    # la misma clave de sesión que usa login_admin, así is_admin_authenticated()
-    # funciona igual venga la sesión de /admin o de /equipo.
-    if EQUIPO_CON_PERMISOS_ADMIN in equipos:
+    session["equipo_vp_de"] = vp_de
+    session["equipo_cargo"] = cargo
+    # Ingeniería, presidencia y board reciben también sesión de /admin:
+    # reutiliza la misma clave de sesión que usa login_admin, así
+    # is_admin_authenticated() funciona igual venga de /admin o de /equipo.
+    if _tiene_permisos_admin(equipos, cargo):
         session["admin_auth"] = True
-    return equipos
+    return {"teams": equipos, "vp_de": vp_de, "cargo": cargo}
 
 
 def is_equipo_authenticated() -> bool:
     return "equipo_email" in session
 
 
-def equipo_teams() -> list[str]:
-    return session.get("equipo_teams", [])
+def equipo_session_info() -> dict:
+    return {
+        "teams": session.get("equipo_teams", []),
+        "vp_de": session.get("equipo_vp_de", []),
+        "cargo": session.get("equipo_cargo", ""),
+    }
 
 
 def logout_equipo() -> None:
@@ -78,7 +114,10 @@ def listar_equipo_accesos() -> list[dict]:
     with _get_connection() as conn:
         with conn.cursor() as cur:
             cur.execute(
-                "SELECT id, email, equipos, activo, created_at FROM equipo_accesos ORDER BY email"
+                """
+                SELECT id, email, equipos, vp_de, cargo, activo, created_at
+                FROM equipo_accesos ORDER BY email
+                """
             )
             filas = cur.fetchall()
 
@@ -87,18 +126,33 @@ def listar_equipo_accesos() -> list[dict]:
             "id": f[0],
             "email": f[1],
             "equipos": f[2],
-            "activo": f[3],
-            "created_at": f[4].isoformat(),
+            "vp_de": f[3],
+            "cargo": f[4],
+            "activo": f[5],
+            "created_at": f[6].isoformat(),
         }
         for f in filas
     ]
 
 
-def crear_equipo_acceso(email: str, password: str, equipos: list[str]) -> dict | None:
-    """Devuelve None si el email ya existe o si algún equipo no es válido."""
+def _equipos_y_vp_validos(equipos: list[str], vp_de: list[str]) -> bool:
+    if not equipos or any(e not in EQUIPOS_VALIDOS for e in equipos):
+        return False
+    return all(v in equipos for v in vp_de)
+
+
+def crear_equipo_acceso(
+    email: str, password: str, equipos: list[str], vp_de: list[str] | None = None, cargo: str = ""
+) -> dict | None:
+    """Devuelve None si el email ya existe o si equipos/vp_de/cargo no son válidos."""
     email = email.strip().lower()
     equipos = sorted(set(equipos))
-    if not equipos or any(e not in EQUIPOS_VALIDOS for e in equipos):
+    vp_de = sorted(set(vp_de or []))
+    cargo = cargo or ""
+
+    if not _equipos_y_vp_validos(equipos, vp_de):
+        return None
+    if cargo and cargo not in CARGOS_VALIDOS:
         return None
 
     with _get_connection() as conn:
@@ -109,11 +163,11 @@ def crear_equipo_acceso(email: str, password: str, equipos: list[str]) -> dict |
 
             cur.execute(
                 """
-                INSERT INTO equipo_accesos (email, password_hash, equipos)
-                VALUES (%s, %s, %s)
-                RETURNING id, email, equipos, activo, created_at
+                INSERT INTO equipo_accesos (email, password_hash, equipos, vp_de, cargo)
+                VALUES (%s, %s, %s, %s, %s)
+                RETURNING id, email, equipos, vp_de, cargo, activo, created_at
                 """,
-                (email, generate_password_hash(password), equipos),
+                (email, generate_password_hash(password), equipos, vp_de, cargo),
             )
             fila = cur.fetchone()
         conn.commit()
@@ -122,29 +176,60 @@ def crear_equipo_acceso(email: str, password: str, equipos: list[str]) -> dict |
         "id": fila[0],
         "email": fila[1],
         "equipos": fila[2],
-        "activo": fila[3],
-        "created_at": fila[4].isoformat(),
+        "vp_de": fila[3],
+        "cargo": fila[4],
+        "activo": fila[5],
+        "created_at": fila[6].isoformat(),
     }
 
 
 def actualizar_equipo_acceso(
     acceso_id: int,
     equipos: list[str] | None = None,
+    vp_de: list[str] | None = None,
+    cargo: str | None = None,
     activo: bool | None = None,
     password: str | None = None,
 ) -> bool:
     """Actualiza solo los campos que se pasan. Devuelve False si el id no existe
-    o si `equipos` incluye algún valor no válido."""
+    o si equipos/vp_de/cargo no son válidos.
+
+    `vp_de` se valida contra `equipos`: si se cambia uno sin el otro en la misma
+    llamada, se valida contra el `equipos` ya guardado en la fila.
+    """
     if equipos is not None:
         equipos = sorted(set(equipos))
-        if not equipos or any(e not in EQUIPOS_VALIDOS for e in equipos):
-            return False
+    if vp_de is not None:
+        vp_de = sorted(set(vp_de))
+    if cargo is not None and cargo and cargo not in CARGOS_VALIDOS:
+        return False
 
     campos = []
     valores: list = []
-    if equipos is not None:
-        campos.append("equipos = %s")
-        valores.append(equipos)
+
+    if equipos is not None or vp_de is not None:
+        with _get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT equipos, vp_de FROM equipo_accesos WHERE id = %s", (acceso_id,))
+                fila = cur.fetchone()
+        if fila is None:
+            return False
+
+        equipos_finales = equipos if equipos is not None else fila[0]
+        vp_de_finales = vp_de if vp_de is not None else fila[1]
+        if not _equipos_y_vp_validos(equipos_finales, vp_de_finales):
+            return False
+
+        if equipos is not None:
+            campos.append("equipos = %s")
+            valores.append(equipos)
+        if vp_de is not None:
+            campos.append("vp_de = %s")
+            valores.append(vp_de)
+
+    if cargo is not None:
+        campos.append("cargo = %s")
+        valores.append(cargo)
     if activo is not None:
         campos.append("activo = %s")
         valores.append(activo)
@@ -172,6 +257,86 @@ def eliminar_equipo_acceso(acceso_id: int) -> bool:
     with _get_connection() as conn:
         with conn.cursor() as cur:
             cur.execute("DELETE FROM equipo_accesos WHERE id = %s", (acceso_id,))
+            eliminado = cur.rowcount > 0
+        conn.commit()
+
+    return eliminado
+
+
+# ---------------------------------------------------------------------------
+# Calendario compartido: lo gestiona admin, lo ve cualquiera logueado en /equipo.
+# ---------------------------------------------------------------------------
+
+
+def listar_eventos_calendario() -> list[dict]:
+    with _get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT id, titulo, descripcion, fecha, hora
+                FROM calendario_eventos ORDER BY fecha, hora
+                """
+            )
+            filas = cur.fetchall()
+
+    return [
+        {
+            "id": f[0],
+            "titulo": f[1],
+            "descripcion": f[2],
+            "fecha": f[3].isoformat(),
+            "hora": f[4],
+        }
+        for f in filas
+    ]
+
+
+def crear_evento_calendario(titulo: str, descripcion: str, fecha: str, hora: str) -> dict:
+    with _get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                INSERT INTO calendario_eventos (titulo, descripcion, fecha, hora)
+                VALUES (%s, %s, %s, %s)
+                RETURNING id, titulo, descripcion, fecha, hora
+                """,
+                (titulo.strip(), descripcion.strip(), fecha, hora.strip()),
+            )
+            fila = cur.fetchone()
+        conn.commit()
+
+    return {
+        "id": fila[0],
+        "titulo": fila[1],
+        "descripcion": fila[2],
+        "fecha": fila[3].isoformat(),
+        "hora": fila[4],
+    }
+
+
+def actualizar_evento_calendario(
+    evento_id: int, titulo: str, descripcion: str, fecha: str, hora: str
+) -> bool:
+    with _get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                UPDATE calendario_eventos
+                SET titulo = %s, descripcion = %s, fecha = %s, hora = %s
+                WHERE id = %s
+                """,
+                (titulo.strip(), descripcion.strip(), fecha, hora.strip(), evento_id),
+            )
+            actualizado = cur.rowcount > 0
+        conn.commit()
+
+    return actualizado
+
+
+def eliminar_evento_calendario(evento_id: int) -> bool:
+    with _get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute("DELETE FROM calendario_eventos WHERE id = %s", (evento_id,))
             eliminado = cur.rowcount > 0
         conn.commit()
 
