@@ -113,7 +113,7 @@ body {
 .mundo-wrap {
   position: relative;
   width: 100%;
-  max-width: 640px;
+  max-width: 768px;
 }
 
 #canvas-mundo {

@@ -200,6 +200,10 @@ export function AboutSection() {
         <h2 className="lp-heading">{t.about.heading}</h2>
         <ScrollRevealText text={t.about.lead} className="lp-section-lead" />
 
+        <p className="lp-about-privacy">
+          <Link to="/privacidad">{t.about.privacyLinkText}</Link>
+        </p>
+
         <div
           className="lp-team-carousel"
           role="region"
@@ -272,10 +276,6 @@ export function AboutSection() {
             </button>
           </div>
         </div>
-
-        <p className="lp-about-privacy">
-          <Link to="/privacidad">{t.about.privacyLinkText}</Link>
-        </p>
       </div>
     </section>
   );
