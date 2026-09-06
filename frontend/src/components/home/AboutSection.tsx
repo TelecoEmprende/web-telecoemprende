@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from "react";
-import { Link } from "react-router-dom";
 
 import { useTranslation } from "../../i18n/translations";
 import { ScrollRevealText } from "./ScrollRevealText";
@@ -199,10 +198,6 @@ export function AboutSection() {
         <span className="lp-eyebrow">{t.about.eyebrow}</span>
         <h2 className="lp-heading">{t.about.heading}</h2>
         <ScrollRevealText text={t.about.lead} className="lp-section-lead" />
-
-        <p className="lp-about-privacy">
-          <Link to="/privacidad">{t.about.privacyLinkText}</Link>
-        </p>
 
         <div
           className="lp-team-carousel"
