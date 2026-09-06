@@ -28,7 +28,6 @@
     },
     "juego": {
       "root": "juego/",
-      "framework": null,
       "rewrites": [
         { "source": "/juego/:path*", "destination": "/:path*" },
         { "source": "/(.*)", "destination": "/index.html" }
