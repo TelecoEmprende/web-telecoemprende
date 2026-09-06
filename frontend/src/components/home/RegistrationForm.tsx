@@ -347,7 +347,21 @@ export function RegistrationForm({ evento, title }: { evento: string; title?: st
                 checked={form.privacidad}
                 onChange={(event) => updateField("privacidad", event.target.checked)}
               />
-              <span>{t.form.privacidadLabel}</span>
+              <span>
+                {(() => {
+                  const corte = t.form.privacidadLabel.indexOf(t.form.privacidadLinkText);
+                  if (corte === -1) return t.form.privacidadLabel;
+                  return (
+                    <>
+                      {t.form.privacidadLabel.slice(0, corte)}
+                      <a href="/privacidad" target="_blank" rel="noopener noreferrer">
+                        {t.form.privacidadLinkText}
+                      </a>
+                      {t.form.privacidadLabel.slice(corte + t.form.privacidadLinkText.length)}
+                    </>
+                  );
+                })()}
+              </span>
             </label>
             {errors.privacidad ? (
               <p className="field-error-react">{errors.privacidad}</p>

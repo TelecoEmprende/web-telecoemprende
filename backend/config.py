@@ -35,6 +35,10 @@ DEPARTAMENTOS_VALIDOS = {
 
 ESTADOS_VALIDOS = {"pendiente", "aceptado", "rechazado", "waitlist"}
 
+EQUIPOS_VALIDOS = {"marketing", "eventos", "ingenieria"}
+# Quien tenga este equipo recibe también sesión de admin al hacer login en /equipo.
+EQUIPO_CON_PERMISOS_ADMIN = "ingenieria"
+
 # Envío de email transaccional (Resend, https://resend.com). Si RESEND_API_KEY
 # no está configurada, el envío se salta en silencio (ver services/email.py).
 RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "")

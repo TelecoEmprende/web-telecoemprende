@@ -12,6 +12,7 @@ from datetime import timedelta
 from pathlib import Path
 
 from backend.api.admin import admin_api
+from backend.api.equipo import equipo_api
 from backend.api.public import public_api
 from backend.config import ADMIN_SESSION_LIFETIME_SECONDS
 from backend.schemas import build_response
@@ -20,6 +21,7 @@ from backend.services.registrations import crear_excel_si_no_existe
 app = Flask(__name__)
 app.register_blueprint(public_api)
 app.register_blueprint(admin_api)
+app.register_blueprint(equipo_api)
 
 # Usa una clave segura desde variable de entorno.
 # Si no existe, genera una temporal para desarrollo.
@@ -77,6 +79,16 @@ def admin():
     return serve_frontend_index()
 
 
+@app.route("/equipo", methods=["GET"])
+def equipo():
+    return serve_frontend_index()
+
+
+@app.route("/privacidad", methods=["GET"])
+def privacidad():
+    return serve_frontend_index()
+
+
 @app.route("/assets/<path:filename>", methods=["GET"])
 def frontend_assets(filename):
     if not FRONTEND_ASSETS_DIR.exists():
@@ -91,6 +103,14 @@ def frontend_logo():
         abort(503, description="Frontend build not found. Run `npm run build` in `frontend/`.")
 
     return send_from_directory(FRONTEND_DIST_DIR, "logo.png")
+
+
+@app.route("/robots.txt", methods=["GET"])
+def frontend_robots():
+    if not FRONTEND_DIST_DIR.exists():
+        abort(503, description="Frontend build not found. Run `npm run build` in `frontend/`.")
+
+    return send_from_directory(FRONTEND_DIST_DIR, "robots.txt")
 
 
 def error_response(status_code: int, message: str):

@@ -9,6 +9,7 @@ import "./styles/layout.css";
 import "./styles/home.css";
 import "./styles/admin.css";
 import "./styles/landing.css";
+import "./styles/equipo.css";
 
 const container = document.getElementById("root");
 
