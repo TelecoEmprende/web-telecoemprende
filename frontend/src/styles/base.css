@@ -13,9 +13,23 @@ html {
   scroll-padding-top: 92px;
 }
 
+/*
+ * Quien activa "reducir movimiento" no pide que no pase nada: pide que nada
+ * se desplace. Así que se quitan los desplazamientos y las escalas, y se
+ * dejan los cambios de color y los desvanecidos, que son los que dicen que
+ * algo ha pasado.
+ */
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    transition-property: opacity, color, background-color, border-color, box-shadow, filter !important;
+    transition-duration: 0.15s !important;
+    animation-iteration-count: 1 !important;
   }
 }
 
@@ -51,11 +65,23 @@ p {
   margin-top: 0;
 }
 
+/* Aparece tras un envío fallido, empujando el formulario hacia abajo: un
+   fundido corto evita que el salto pille por sorpresa. */
 .alert-banner {
   margin-top: 20px;
   padding: 14px 16px;
   border-radius: var(--radius-md);
   font-weight: 700;
+  transition:
+    opacity var(--dur-fast) var(--ease-out),
+    transform var(--dur-fast) var(--ease-out);
+}
+
+@starting-style {
+  .alert-banner {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
 }
 
 .alert-info {
