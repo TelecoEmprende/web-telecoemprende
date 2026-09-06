@@ -1,4 +1,5 @@
 import { rutaImagen, tech } from '../data/contenido'
+import { useTexto } from '../i18n/texto'
 import { CabeceraDepartamento } from './CabeceraDepartamento'
 import { Figura } from './Figura'
 import { IconoFlecha } from './Iconos'
@@ -9,6 +10,8 @@ import { IconoFlecha } from './Iconos'
  * ligeramente girado, como fichas dejadas una sobre otra.
  */
 export function SeccionTech() {
+  const t = useTexto()
+
   return (
     <section className="depto depto--tech" id={tech.id}>
       <div className="depto__reja">
@@ -20,7 +23,7 @@ export function SeccionTech() {
 
         <div className="proyectos">
           {tech.proyectos.map((proyecto, indice) => (
-            <article className="proyecto" key={proyecto.nombre} data-orden={indice}>
+            <article className="proyecto" key={proyecto.nombre.es} data-orden={indice}>
               <div className="proyecto__marco">
                 <Figura
                   imagen={proyecto.imagen}
@@ -30,15 +33,15 @@ export function SeccionTech() {
                 />
                 {proyecto.logo && (
                   <span className="proyecto__sello">
-                    <img src={rutaImagen(proyecto.logo.src)} alt={proyecto.logo.alt} />
+                    <img src={rutaImagen(proyecto.logo.src)} alt={t(proyecto.logo.alt)} />
                   </span>
                 )}
               </div>
 
               <div className="proyecto__texto">
-                <span className="proyecto__estado">{proyecto.estado}</span>
-                <h3 className="proyecto__nombre">{proyecto.nombre}</h3>
-                <p className="proyecto__descripcion">{proyecto.descripcion}</p>
+                <span className="proyecto__estado">{t(proyecto.estado)}</span>
+                <h3 className="proyecto__nombre">{t(proyecto.nombre)}</h3>
+                <p className="proyecto__descripcion">{t(proyecto.descripcion)}</p>
 
                 <a
                   className="proyecto__enlace"

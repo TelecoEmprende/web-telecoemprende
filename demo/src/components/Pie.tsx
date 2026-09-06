@@ -1,5 +1,6 @@
-import { club, marketing, rutaImagen } from '../data/contenido'
+import { club, interfaz, marketing, rutaImagen } from '../data/contenido'
 import type { FichaDepartamento } from '../data/contenido'
+import { useTexto } from '../i18n/texto'
 import { NombreClub } from './NombreClub'
 import { IconoInstagram, IconoLinkedin, IconoRed } from './Iconos'
 
@@ -24,6 +25,8 @@ const iconoDeRed: Record<string, typeof IconoRed> = {
  * "esto se ha terminado" sin necesidad de una raya.
  */
 export function Pie({ departamentos, onElegir }: Props) {
+  const t = useTexto()
+
   return (
     <footer className="pie">
       <div className="pie__club">
@@ -34,7 +37,7 @@ export function Pie({ departamentos, onElegir }: Props) {
           </b>
         </a>
 
-        <p className="pie__descripcion">{club.descripcion}</p>
+        <p className="pie__descripcion">{t(club.descripcion)}</p>
 
         <a className="pie__correo" href={`mailto:${club.correo}`}>
           {club.correo}
@@ -50,7 +53,7 @@ export function Pie({ departamentos, onElegir }: Props) {
                 href={red.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                aria-label={`${red.red} de ${club.nombre}`}
+                aria-label={`${red.red} · ${club.nombre}`}
               >
                 <Icono className="pie__red-icono" />
               </a>
@@ -59,25 +62,25 @@ export function Pie({ departamentos, onElegir }: Props) {
         </div>
       </div>
 
-      <nav className="pie__enlaces" aria-label="Enlaces del pie">
+      <nav className="pie__enlaces" aria-label={t(interfaz.enlacesPie)}>
         {departamentos.map((depto) => (
           <a
             key={depto.id}
             href={`#${depto.id}`}
             onClick={() => onElegir(depto.id)}
           >
-            {depto.nombre}
+            {t(depto.nombre)}
           </a>
         ))}
 
         {club.enlacesPie.map((enlace) => (
           <a key={enlace.url} href={enlace.url} target="_blank" rel="noopener noreferrer">
-            {enlace.texto}
+            {t(enlace.texto)}
           </a>
         ))}
       </nav>
 
-      <p className="pie__nota">{club.nota}</p>
+      <p className="pie__nota">{t(club.nota)}</p>
     </footer>
   )
 }

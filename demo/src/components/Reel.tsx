@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import { rutaImagen, type Imagen } from '../data/contenido'
+import { interfaz, rutaImagen, type Imagen } from '../data/contenido'
+import { useTexto } from '../i18n/texto'
 import { IconoImagen } from './Iconos'
 
 type Props = {
@@ -21,6 +22,7 @@ type Props = {
  * enlace a Instagram.
  */
 export function Reel({ reel, enlace }: Props) {
+  const t = useTexto()
   const [falla, setFalla] = useState(false)
   const [quietud, setQuietud] = useState(false)
   const videoRef = useRef<HTMLVideoElement>(null)
@@ -81,7 +83,7 @@ export function Reel({ reel, enlace }: Props) {
       <div className="reel">
         <div className="hueco" style={{ aspectRatio: '9 / 16' }}>
           <IconoImagen className="hueco__icono" />
-          <p className="hueco__texto">{reel.alt}</p>
+          <p className="hueco__texto">{t(reel.alt)}</p>
           <code className="hueco__archivo">{reel.src.split('/').pop()}</code>
         </div>
       </div>
@@ -93,7 +95,7 @@ export function Reel({ reel, enlace }: Props) {
       ref={videoRef}
       className="reel__video"
       src={rutaImagen(reel.src)}
-      aria-label={reel.alt}
+      aria-label={t(reel.alt)}
       loop
       muted
       playsInline
@@ -115,7 +117,7 @@ export function Reel({ reel, enlace }: Props) {
       rel="noopener noreferrer"
     >
       {video}
-      <span className="reel__pie">Ver en Instagram</span>
+      <span className="reel__pie">{t(interfaz.verEnInstagram)}</span>
     </a>
   )
 }
