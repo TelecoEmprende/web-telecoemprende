@@ -7,12 +7,14 @@ from flask import (
     abort,
 )
 import os
+import re
 import secrets
 from datetime import timedelta
 from pathlib import Path
 
 from backend.api.admin import admin_api
 from backend.api.equipo import equipo_api
+from backend.api.marketing import marketing_api
 from backend.api.public import public_api
 from backend.config import ADMIN_SESSION_LIFETIME_SECONDS
 from backend.schemas import build_response
@@ -22,6 +24,7 @@ app = Flask(__name__)
 app.register_blueprint(public_api)
 app.register_blueprint(admin_api)
 app.register_blueprint(equipo_api)
+app.register_blueprint(marketing_api)
 
 # Usa una clave segura desde variable de entorno.
 # Si no existe, genera una temporal para desarrollo.
@@ -111,6 +114,26 @@ def frontend_robots():
         abort(503, description="Frontend build not found. Run `npm run build` in `frontend/`.")
 
     return send_from_directory(FRONTEND_DIST_DIR, "robots.txt")
+
+
+# Imágenes sueltas de `frontend/dist` (fotos del equipo, logos de eventos...).
+# En Vercel y en Nginx se sirve todo el directorio; aquí había solo reglas para
+# /logo.png y /robots.txt, así que /equipo-abril.jpg daba 404 en local y las
+# fotos de perfil salían como iniciales.
+NOMBRE_IMAGEN = re.compile(r"^[\w.-]+\.(png|jpe?g|svg|webp|gif|ico)$")
+
+
+@app.route("/<filename>", methods=["GET"])
+def frontend_public_image(filename):
+    # El patrón excluye "/" y "..", y send_from_directory vuelve a comprobarlo:
+    # no se puede salir de dist con un nombre creativo.
+    if not NOMBRE_IMAGEN.match(filename):
+        abort(404)
+
+    if not FRONTEND_DIST_DIR.exists():
+        abort(503, description="Frontend build not found. Run `npm run build` in `frontend/`.")
+
+    return send_from_directory(FRONTEND_DIST_DIR, filename)
 
 
 def error_response(status_code: int, message: str):

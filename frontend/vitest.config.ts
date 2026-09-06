@@ -12,5 +12,8 @@ export default defineConfig({
   test: {
     environment: "jsdom",
     setupFiles: "./src/test/setup.ts",
+    // 1s (el defecto) se queda corto montando los componentes de Radix en
+    // jsdom: daba fallos intermitentes que no eran fallos de código.
+    testTimeout: 8000,
   },
 });
