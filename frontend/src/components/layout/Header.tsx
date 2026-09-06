@@ -3,17 +3,18 @@ import { Link, NavLink, useLocation } from "react-router-dom";
 
 type HeaderProps = {
   adminMode?: boolean;
+  teamMode?: boolean;
   hidePublicNav?: boolean;
 };
 
-export function Header({ adminMode = false, hidePublicNav = false }: HeaderProps) {
+export function Header({ adminMode = false, teamMode = false, hidePublicNav = false }: HeaderProps) {
   const location = useLocation();
   const [activePublicTab, setActivePublicTab] = useState<"evento" | "registro">(
     "evento",
   );
 
   useEffect(() => {
-    if (adminMode || location.pathname !== "/") {
+    if (adminMode || teamMode || location.pathname !== "/") {
       return;
     }
 
@@ -40,7 +41,7 @@ export function Header({ adminMode = false, hidePublicNav = false }: HeaderProps
       window.removeEventListener("scroll", updateActiveTab);
       window.removeEventListener("resize", updateActiveTab);
     };
-  }, [adminMode, location.pathname]);
+  }, [adminMode, teamMode, location.pathname]);
 
   return (
     <header className="site-header-react">
@@ -48,7 +49,7 @@ export function Header({ adminMode = false, hidePublicNav = false }: HeaderProps
         <Link to="/" className="brand-react">
           <img src="/logo.png" alt="Logo TelecoEmprende" className="brand-logo-react" />
           <span className="brand-name-react">
-            {adminMode ? "TelecoEmprende Admin" : "TelecoEmprende"}
+            {adminMode ? "TelecoEmprende Admin" : teamMode ? "TelecoEmprende Equipo" : "TelecoEmprende"}
           </span>
         </Link>
 
@@ -58,6 +59,8 @@ export function Header({ adminMode = false, hidePublicNav = false }: HeaderProps
               <NavLink to="/">Inicio</NavLink>
               <NavLink to="/admin">Admin</NavLink>
             </>
+          ) : teamMode ? (
+            <NavLink to="/">Inicio</NavLink>
           ) : hidePublicNav ? null : (
             <div
               className={`public-tab-slider-react public-tab-slider-${activePublicTab}`}

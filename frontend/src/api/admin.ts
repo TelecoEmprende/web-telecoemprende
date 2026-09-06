@@ -1,6 +1,7 @@
 import { apiRequest } from "./client";
 import type { AdminRegistrationsResponse, AdminSessionResponse, Estado } from "../types/admin";
 import type { ApiResult } from "../types/api";
+import type { EquipoAcceso, Team } from "../types/equipo";
 
 export function loginAdmin(password: string) {
   return apiRequest<ApiResult>("/api/admin/login", {
@@ -65,4 +66,31 @@ export function enviarNotificaciones(estado: Estado) {
       body: JSON.stringify({ estado }),
     },
   );
+}
+
+export function getEquipoAccesos() {
+  return apiRequest<ApiResult & { accesos: EquipoAcceso[] }>("/api/admin/equipo");
+}
+
+export function createEquipoAcceso(email: string, password: string, equipos: Team[]) {
+  return apiRequest<ApiResult & { acceso: EquipoAcceso }>("/api/admin/equipo", {
+    method: "POST",
+    body: JSON.stringify({ email, password, equipos }),
+  });
+}
+
+export function updateEquipoAcceso(
+  id: number,
+  data: { equipos?: Team[]; activo?: boolean; password?: string },
+) {
+  return apiRequest<ApiResult>(`/api/admin/equipo/${id}`, {
+    method: "PUT",
+    body: JSON.stringify(data),
+  });
+}
+
+export function deleteEquipoAcceso(id: number) {
+  return apiRequest<ApiResult>(`/api/admin/equipo/${id}`, {
+    method: "DELETE",
+  });
 }

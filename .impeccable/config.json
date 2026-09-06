@@ -11,6 +11,15 @@
         ],
         "createdAt": "2026-08-23T13:27:44.735Z",
         "reason": "pre-existing shipped accents (.lp-team-card::after, .lp-events::before, .lp-department-card::after) predate this session's carousel work; not introduced now, left as previously approved design"
+      },
+      {
+        "rule": "overused-font",
+        "value": "inter",
+        "files": [
+          "frontend/privacidad/index.html"
+        ],
+        "createdAt": "2026-09-06T12:31:44.173Z",
+        "reason": "Inter is the existing site-wide brand font (used in every other frontend/*/index.html); this new /privacidad page matches it for consistency, not a new choice"
       }
     ]
   }

@@ -9,10 +9,12 @@ os.environ["DATABASE_URL"] = os.environ.get(
 
 import app  # noqa: E402
 import backend.services.admin as admin_service  # noqa: E402
+import backend.services.equipo as equipo_service  # noqa: E402
 import backend.services.registrations as registration_service  # noqa: E402
 import backend.services.security as security_service  # noqa: E402
 from backend.config import MAX_LOGIN_ATTEMPTS_PER_WINDOW  # noqa: E402
 from openpyxl import load_workbook  # noqa: E402
+from werkzeug.security import generate_password_hash  # noqa: E402
 
 
 class ApiTestCase(unittest.TestCase):
@@ -21,14 +23,29 @@ class ApiTestCase(unittest.TestCase):
         security_service.request_log.clear()
 
         registration_service.init_db()
+        equipo_service.init_equipo_db()
 
         conn = registration_service._get_connection()
         with conn.cursor() as cur:
             cur.execute("DELETE FROM registrations")
+            cur.execute("DELETE FROM equipo_accesos")
         conn.commit()
         conn.close()
 
         self.client = app.app.test_client()
+
+    def seed_equipo(self, email="marketing@example.com", password="test-equipo", equipos=None, activo=True):
+        conn = registration_service._get_connection()
+        with conn.cursor() as cur:
+            cur.execute(
+                "INSERT INTO equipo_accesos (email, password_hash, equipos, activo) VALUES (%s, %s, %s, %s)",
+                (email, generate_password_hash(password), equipos or ["marketing"], activo),
+            )
+        conn.commit()
+        conn.close()
+
+    def equipo_login(self, email="marketing@example.com", password="test-equipo"):
+        return self.client.post("/api/equipo/login", json={"email": email, "password": password})
 
     def register(self, email="juan@alumnos.upm.es"):
         return self.client.post(
@@ -333,6 +350,145 @@ class ApiTestCase(unittest.TestCase):
 
         self.assertFalse(nombre_cell.startswith("="))
         self.assertTrue(nombre_cell.startswith("'"))
+
+    def test_equipo_login_session_logout_flow(self):
+        self.seed_equipo(equipos=["marketing", "eventos"])
+
+        session_before = self.client.get("/api/equipo/session")
+        self.assertEqual(session_before.status_code, 200)
+        self.assertFalse(session_before.get_json()["authenticated"])
+        self.assertEqual(session_before.get_json()["teams"], [])
+
+        login = self.equipo_login()
+        self.assertEqual(login.status_code, 200)
+        self.assertEqual(sorted(login.get_json()["teams"]), ["eventos", "marketing"])
+
+        session_after = self.client.get("/api/equipo/session")
+        self.assertTrue(session_after.get_json()["authenticated"])
+        self.assertEqual(sorted(session_after.get_json()["teams"]), ["eventos", "marketing"])
+
+        logout = self.client.post("/api/equipo/logout")
+        self.assertEqual(logout.status_code, 200)
+        session_out = self.client.get("/api/equipo/session")
+        self.assertFalse(session_out.get_json()["authenticated"])
+        self.assertEqual(session_out.get_json()["teams"], [])
+
+    def test_equipo_login_wrong_password(self):
+        self.seed_equipo()
+
+        response = self.equipo_login(password="wrong-password")
+        self.assertEqual(response.status_code, 401)
+        self.assertEqual(response.get_json()["message"], "Credenciales incorrectas.")
+
+    def test_equipo_login_unknown_email(self):
+        response = self.equipo_login(email="no-existe@example.com")
+        self.assertEqual(response.status_code, 401)
+        self.assertEqual(response.get_json()["message"], "Credenciales incorrectas.")
+
+    def test_equipo_login_inactive_account_rejected(self):
+        self.seed_equipo(activo=False)
+
+        response = self.equipo_login()
+        self.assertEqual(response.status_code, 401)
+
+    def test_equipo_login_rate_limited_after_repeated_failures(self):
+        self.seed_equipo()
+
+        for _ in range(MAX_LOGIN_ATTEMPTS_PER_WINDOW):
+            attempt = self.equipo_login(password="wrong-password")
+            self.assertEqual(attempt.status_code, 401)
+
+        blocked = self.equipo_login(password="wrong-password")
+        self.assertEqual(blocked.status_code, 429)
+
+        # Un intento correcto tras agotar el cupo también debe quedar bloqueado.
+        still_blocked = self.equipo_login()
+        self.assertEqual(still_blocked.status_code, 429)
+
+    def test_equipo_login_uses_its_own_rate_limit_bucket(self):
+        # Agotar el cupo del login de admin no debe bloquear el de equipo:
+        # cada endpoint sensible tiene su propio contador por IP.
+        self.seed_equipo()
+        for _ in range(MAX_LOGIN_ATTEMPTS_PER_WINDOW):
+            self.login(password="wrong-password")
+
+        response = self.equipo_login()
+        self.assertEqual(response.status_code, 200)
+
+    def test_equipo_login_admin_session_mutually_exclusive(self):
+        # session.clear() en login_equipo/login_admin: no pueden coexistir
+        # una sesión admin y una de equipo en el mismo navegador.
+        self.seed_equipo()
+        self.login()
+        self.equipo_login()
+
+        admin_session = self.client.get("/api/admin/session")
+        self.assertFalse(admin_session.get_json()["authenticated"])
+
+    def test_equipo_login_ingenieria_grants_admin_session(self):
+        self.seed_equipo(email="dev@example.com", equipos=["ingenieria"])
+
+        response = self.equipo_login(email="dev@example.com")
+        self.assertTrue(response.get_json()["ok"])
+
+        admin_session = self.client.get("/api/admin/session")
+        self.assertTrue(admin_session.get_json()["authenticated"])
+
+    def test_admin_equipo_endpoints_require_auth(self):
+        self.assertEqual(self.client.get("/api/admin/equipo").status_code, 401)
+        self.assertEqual(self.client.post("/api/admin/equipo", json={}).status_code, 401)
+        self.assertEqual(self.client.put("/api/admin/equipo/1", json={}).status_code, 401)
+        self.assertEqual(self.client.delete("/api/admin/equipo/1").status_code, 401)
+
+    def test_admin_equipo_crud_flow(self):
+        self.login()
+
+        create = self.client.post(
+            "/api/admin/equipo",
+            json={"email": "nueva@example.com", "password": "contrasena-larga", "equipos": ["eventos"]},
+        )
+        self.assertEqual(create.status_code, 201)
+        acceso_id = create.get_json()["acceso"]["id"]
+
+        listado = self.client.get("/api/admin/equipo")
+        emails = [a["email"] for a in listado.get_json()["accesos"]]
+        self.assertIn("nueva@example.com", emails)
+
+        update = self.client.put(
+            f"/api/admin/equipo/{acceso_id}",
+            json={"equipos": ["eventos", "marketing"], "activo": False},
+        )
+        self.assertEqual(update.status_code, 200)
+
+        listado_tras_update = self.client.get("/api/admin/equipo").get_json()["accesos"]
+        actualizado = next(a for a in listado_tras_update if a["id"] == acceso_id)
+        self.assertEqual(sorted(actualizado["equipos"]), ["eventos", "marketing"])
+        self.assertFalse(actualizado["activo"])
+
+        delete = self.client.delete(f"/api/admin/equipo/{acceso_id}")
+        self.assertEqual(delete.status_code, 200)
+
+        listado_final = self.client.get("/api/admin/equipo").get_json()["accesos"]
+        self.assertNotIn(acceso_id, [a["id"] for a in listado_final])
+
+    def test_admin_equipo_create_rejects_duplicate_email(self):
+        self.login()
+        self.seed_equipo(email="ya-existe@example.com")
+
+        response = self.client.post(
+            "/api/admin/equipo",
+            json={"email": "ya-existe@example.com", "password": "contrasena-larga", "equipos": ["marketing"]},
+        )
+        self.assertEqual(response.status_code, 409)
+
+    def test_admin_equipo_create_rejects_invalid_team(self):
+        self.login()
+
+        response = self.client.post(
+            "/api/admin/equipo",
+            json={"email": "x@example.com", "password": "contrasena-larga", "equipos": ["no-existe"]},
+        )
+        self.assertEqual(response.status_code, 400)
 
     def test_obtener_ip_real_ignores_spoofed_forwarded_header(self):
         with app.app.test_request_context(
