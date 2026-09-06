@@ -354,7 +354,12 @@ export function RegistrationForm({ evento, title }: { evento: string; title?: st
                   return (
                     <>
                       {t.form.privacidadLabel.slice(0, corte)}
-                      <a href="/privacidad" target="_blank" rel="noopener noreferrer">
+                      <a
+                        href="/privacidad"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="link-clickable-react"
+                      >
                         {t.form.privacidadLinkText}
                       </a>
                       {t.form.privacidadLabel.slice(corte + t.form.privacidadLinkText.length)}
