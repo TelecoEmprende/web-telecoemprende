@@ -309,13 +309,22 @@
   border: 0;
   box-shadow: 0 20px 50px rgba(15, 92, 192, 0.12);
   cursor: pointer;
-  transition: transform 0.15s ease, filter 0.15s ease;
+  transition: transform var(--dur-press) ease, filter var(--dur-press) ease;
 }
 
-.primary-btn-react:hover,
-.panel-btn-react:hover {
-  transform: translateY(-1px);
-  filter: brightness(1.02);
+/* Una pantalla táctil dispara :hover al tocar y el estado se queda pegado
+   después: el movimiento del hover se reserva para quien tiene ratón. */
+@media (hover: hover) and (pointer: fine) {
+  .primary-btn-react:hover,
+  .panel-btn-react:hover {
+    transform: translateY(-1px);
+    filter: brightness(1.02);
+  }
+}
+
+.primary-btn-react:active,
+.panel-btn-react:active {
+  transform: scale(0.97);
 }
 
 .secondary-link-react {
@@ -550,9 +559,11 @@
   transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
-.trust-item-react:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 16px 30px rgba(15, 23, 42, 0.07);
+@media (hover: hover) and (pointer: fine) {
+  .trust-item-react:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 16px 30px rgba(15, 23, 42, 0.07);
+  }
 }
 
 .trust-label-react {
