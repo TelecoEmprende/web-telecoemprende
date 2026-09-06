@@ -48,3 +48,23 @@ CARGOS_VALIDOS = {"presidente", "boardmember"}
 RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "")
 RESEND_FROM_EMAIL = os.environ.get("RESEND_FROM_EMAIL", "inscripciones@telecoemprende.es")
 RESEND_FROM_NAME = os.environ.get("RESEND_FROM_NAME", "TelecoEmprende")
+
+# --- Workspace de equipo: Marketing (campañas, contenidos, tareas) ---
+# Ciclo de vida de una tarea: trabajo que alguien tiene que hacer.
+TASK_ESTADOS = ("pendiente", "en_progreso", "por_revisar", "acabado")
+TASK_PRIORIDADES = ("baja", "media", "alta")
+# Ciclo de vida de un contenido: la pieza de comunicación en sí. Es distinto
+# del de las tareas a propósito (un reel puede estar "en diseño" mientras su
+# tarea de guion ya está "acabada").
+CONTENT_ESTADOS = (
+    "idea",
+    "generado",
+    "en_diseno",
+    "en_revision",
+    "programado",
+    "publicado",
+)
+MAX_TITULO_LEN = 160
+MAX_TEXTO_LARGO_LEN = 5000
+MAX_RESPONSABLES = 20
+MAX_ENLACES = 20
