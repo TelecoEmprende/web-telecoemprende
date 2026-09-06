@@ -307,7 +307,10 @@ function App() {
             tabIndex={-1}
             aria-hidden="true"
           >
-            <img src={rutaImagen('/img/juego-preview.jpg')} alt="" loading="lazy" />
+            <span className="portada__juego-marco">
+              <img src={rutaImagen('/img/juego-preview.jpg')} alt="" loading="lazy" />
+              <span className="portada__juego-encima">{t(juego.boton)}</span>
+            </span>
           </a>
         </section>
 
