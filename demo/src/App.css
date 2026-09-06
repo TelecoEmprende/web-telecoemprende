@@ -1548,33 +1548,42 @@ main > section:nth-of-type(3) {
   max-width: 42ch;
   font-size: clamp(15px, 1.6vw, 19px);
   line-height: 1.55;
-  color: #b9cadb;
+  color: var(--acero-claro);
 }
 
+/* El botón principal es el mismo que el de la portada de la web del club
+   (`.lp-btn-gold` en frontend/src/styles/landing.css): esquinas de 14px,
+   degradado de oro a naranja y tinta encima. Es el único elemento redondeado
+   de la página —todo lo demás va a 2px— y por eso se lee como el botón. */
 .portada__test-boton {
   align-self: start;
   margin-top: 8px;
   border: 0;
+  border-radius: 14px;
   padding: clamp(16px, 1.7vw, 21px) clamp(28px, 3vw, 40px);
-  background: var(--naranja);
+  background: linear-gradient(120deg, var(--oro), #f7c065 55%, #f0902e);
   color: var(--tinta);
+  /* La sombra es la misma de la web del club, pero más corta: aquí cae sobre
+     la tinta y una estela larga se vuelve un halo marrón. */
+  box-shadow: 0 10px 26px rgba(224, 104, 14, 0.22);
   font-size: clamp(16px, 1.7vw, 19px);
   font-variation-settings: 'wght' 750;
   cursor: pointer;
   transition:
-    background 0.3s var(--salida),
+    filter 0.3s var(--salida),
     transform 0.3s var(--salida);
 }
 
 @media (hover: hover) and (pointer: fine) {
   .portada__test-boton:hover {
-    background: #ffc27e;
+    filter: brightness(1.06);
     transform: translateY(-3px);
   }
 }
 
 .portada__test-boton:focus-visible {
-  outline-color: var(--naranja);
+  outline-color: var(--oro);
+  border-radius: 14px;
 }
 
 /* --------------------------------------------------------------------------
