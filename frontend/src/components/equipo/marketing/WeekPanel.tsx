@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { getCalendario, getCampaigns, getTasks, updateTask } from "../../../api/marketing";
 import { AlertBanner } from "../../feedback/AlertBanner";
 import { AvataresDeResponsables } from "./Avatares";
+import { Badge } from "@/components/ui/badge";
 import type { ApiFailure } from "../../../types/api";
 import {
   CONTENT_ESTADOS,
@@ -240,9 +241,13 @@ export function WeekPanel() {
         {pipeline.length > 0 ? (
           <span className="mkt-pipeline-react">
             {pipeline.map(({ estado, total }) => (
-              <span key={estado} className={`mkt-pipeline-chip-react mkt-pipeline-${estado}-react`}>
+              <Badge
+                key={estado}
+                variant="outline"
+                className={`mkt-pipeline-chip-react mkt-pipeline-${estado}-react`}
+              >
                 {total} {CONTENT_ESTADO_LABEL[estado].toLowerCase()}
-              </span>
+              </Badge>
             ))}
           </span>
         ) : null}
@@ -287,7 +292,7 @@ export function WeekPanel() {
         <div className="mkt-grupo-react">
           <h4 className="mkt-grupo-titulo-react mkt-grupo-urgente-react">
             Vencidas
-            <span className="mkt-contador-react">{vencidas.length}</span>
+            <Badge variant="destructive">{vencidas.length}</Badge>
           </h4>
           <ul className="mkt-filas-react">
             {vencidas.map((task) => (
@@ -334,7 +339,7 @@ export function WeekPanel() {
         <div className="mkt-grupo-react">
           <h4 className="mkt-grupo-titulo-react">
             Sin fecha
-            <span className="mkt-contador-react">{sinFecha.length}</span>
+            <Badge variant="outline">{sinFecha.length}</Badge>
           </h4>
           <ul className="mkt-filas-react">
             {sinFecha.map((task) => (
