@@ -39,6 +39,10 @@ EQUIPOS_VALIDOS = {"marketing", "eventos", "ingenieria"}
 # Quien tenga este equipo recibe también sesión de admin al hacer login en /equipo.
 EQUIPO_CON_PERMISOS_ADMIN = "ingenieria"
 
+# Cargos de dirección, independientes del departamento: dan acceso a /admin
+# igual que EQUIPO_CON_PERMISOS_ADMIN, sea cual sea su equipo (o ninguno).
+CARGOS_VALIDOS = {"presidente", "boardmember"}
+
 # Envío de email transaccional (Resend, https://resend.com). Si RESEND_API_KEY
 # no está configurada, el envío se salta en silencio (ver services/email.py).
 RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "")

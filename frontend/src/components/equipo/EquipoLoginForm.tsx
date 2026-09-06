@@ -1,5 +1,10 @@
 import { FormEvent, useState } from "react";
 
+import { Button } from "../ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
+import { Input } from "../ui/input";
+import { Label } from "../ui/label";
+
 type EquipoLoginFormProps = {
   isSubmitting: boolean;
   errorMessage: string | null;
@@ -20,42 +25,48 @@ export function EquipoLoginForm({
   }
 
   return (
-    <div className="equipo-login-box-react">
-      <h1>Acceso equipo</h1>
-      <p>Inicia sesión con tu cuenta de equipo para ver tu panel.</p>
+    <Card className="mx-auto w-full max-w-sm">
+      <CardHeader>
+        <CardTitle className="text-xl">Acceso equipo</CardTitle>
+        <CardDescription>
+          Inicia sesión con tu cuenta de equipo para ver tu panel.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        {errorMessage ? (
+          <p className="mb-4 text-sm font-medium text-destructive">{errorMessage}</p>
+        ) : null}
 
-      {errorMessage ? <p className="equipo-login-error-react">{errorMessage}</p> : null}
+        <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="equipo-email">Email</Label>
+            <Input
+              type="email"
+              id="equipo-email"
+              name="email"
+              placeholder="tucorreo@ejemplo.com"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+            />
+          </div>
 
-      <form className="equipo-login-form-react" onSubmit={handleSubmit}>
-        <div className="field-group-react">
-          <label htmlFor="equipo-email">Email</label>
-          <input
-            type="email"
-            id="equipo-email"
-            name="email"
-            placeholder="tucorreo@ejemplo.com"
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-          />
-        </div>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="equipo-password">Contraseña</Label>
+            <Input
+              type="password"
+              id="equipo-password"
+              name="password"
+              placeholder="Contraseña"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+            />
+          </div>
 
-        <div className="field-group-react">
-          <label htmlFor="equipo-password">Contraseña</label>
-          <input
-            type="password"
-            id="equipo-password"
-            name="password"
-            placeholder="Contraseña"
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-          />
-        </div>
-
-        <button type="submit" className="submit-btn-react" disabled={isSubmitting}>
-          {isSubmitting ? "Entrando..." : "Entrar"}
-          <span aria-hidden="true">→</span>
-        </button>
-      </form>
-    </div>
+          <Button type="submit" disabled={isSubmitting} className="mt-2">
+            {isSubmitting ? "Entrando..." : "Entrar"}
+          </Button>
+        </form>
+      </CardContent>
+    </Card>
   );
 }

@@ -1,8 +1,10 @@
 import logging
+import re
 
 from flask import Blueprint, jsonify, make_response, render_template_string, request, send_file
 
 from backend.config import (
+    CARGOS_VALIDOS,
     DEPARTAMENTOS_VALIDOS,
     ESTADOS_VALIDOS,
     EQUIPOS_VALIDOS,
@@ -20,10 +22,14 @@ from backend.services.admin import (
 from backend.services.email import enviar_email_estado
 from backend.services.equipo import (
     actualizar_equipo_acceso,
+    actualizar_evento_calendario,
     crear_equipo_acceso,
+    crear_evento_calendario,
     eliminar_equipo_acceso,
+    eliminar_evento_calendario,
     init_equipo_db,
     listar_equipo_accesos,
+    listar_eventos_calendario,
 )
 from backend.services.registrations import (
     actualizar_estado,
@@ -442,6 +448,8 @@ def api_admin_crear_equipo():
     email = limpiar_texto(str(payload.get("email", ""))).lower()
     password = str(payload.get("password", ""))
     equipos = payload.get("equipos")
+    vp_de = payload.get("vp_de") or []
+    cargo = str(payload.get("cargo", "") or "")
 
     # No exigimos que sea correo UPM (puede ser gente externa colaborando en un
     # equipo): solo que tenga forma de email.
@@ -457,7 +465,13 @@ def api_admin_crear_equipo():
     if not isinstance(equipos, list) or not equipos or any(e not in EQUIPOS_VALIDOS for e in equipos):
         return jsonify(build_response(False, "Selecciona al menos un equipo válido.")), 400
 
-    acceso = crear_equipo_acceso(email, password, equipos)
+    if not isinstance(vp_de, list) or any(v not in equipos for v in vp_de):
+        return jsonify(build_response(False, "VP solo puede marcarse en un equipo ya seleccionado.")), 400
+
+    if cargo and cargo not in CARGOS_VALIDOS:
+        return jsonify(build_response(False, "Cargo no válido.")), 400
+
+    acceso = crear_equipo_acceso(email, password, equipos, vp_de=vp_de, cargo=cargo)
     if acceso is None:
         return jsonify(build_response(False, "Ese email ya tiene acceso de equipo.")), 409
 
@@ -472,6 +486,8 @@ def api_admin_actualizar_equipo(acceso_id: int):
 
     payload = request.get_json(silent=True) or {}
     equipos = payload.get("equipos")
+    vp_de = payload.get("vp_de")
+    cargo = payload.get("cargo")
     activo = payload.get("activo")
     password = str(payload.get("password", "")) or None
 
@@ -480,17 +496,25 @@ def api_admin_actualizar_equipo(acceso_id: int):
     ):
         return jsonify(build_response(False, "Selecciona al menos un equipo válido.")), 400
 
+    if vp_de is not None and not isinstance(vp_de, list):
+        return jsonify(build_response(False, "Valor de 'vp_de' no válido.")), 400
+
+    if cargo is not None and cargo and cargo not in CARGOS_VALIDOS:
+        return jsonify(build_response(False, "Cargo no válido.")), 400
+
     if activo is not None and not isinstance(activo, bool):
         return jsonify(build_response(False, "Valor de 'activo' no válido.")), 400
 
     if password is not None and len(password) < 8:
         return jsonify(build_response(False, "La contraseña debe tener al menos 8 caracteres.")), 400
 
-    if actualizar_equipo_acceso(acceso_id, equipos=equipos, activo=activo, password=password):
+    if actualizar_equipo_acceso(
+        acceso_id, equipos=equipos, vp_de=vp_de, cargo=cargo, activo=activo, password=password
+    ):
         logger.info("admin actualiza acceso equipo id=%s", acceso_id)
         return jsonify(build_response(True, "Acceso actualizado.")), 200
 
-    return jsonify(build_response(False, "Acceso no encontrado o sin cambios que aplicar.")), 404
+    return jsonify(build_response(False, "Acceso no encontrado, o equipos/vp_de/cargo no válidos.")), 404
 
 
 @admin_api.route("/equipo/<int:acceso_id>", methods=["DELETE"])
@@ -503,3 +527,90 @@ def api_admin_eliminar_equipo(acceso_id: int):
         return jsonify(build_response(True, "Acceso eliminado.")), 200
 
     return jsonify(build_response(False, "Acceso no encontrado.")), 404
+
+
+_FECHA_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+_HORA_RE = re.compile(r"^([01]\d|2[0-3]):[0-5]\d$")
+
+
+def _validar_evento_calendario(payload: dict) -> str | None:
+    """Devuelve un mensaje de error, o None si el evento es válido."""
+    titulo = str(payload.get("titulo", "")).strip()
+    fecha = str(payload.get("fecha", "")).strip()
+    hora = str(payload.get("hora", "")).strip()
+    descripcion = str(payload.get("descripcion", "")).strip()
+
+    if not titulo or len(titulo) > 150:
+        return "El título es obligatorio y debe tener como máximo 150 caracteres."
+    if len(descripcion) > 500:
+        return "La descripción debe tener como máximo 500 caracteres."
+    if not _FECHA_RE.match(fecha):
+        return "La fecha debe tener el formato AAAA-MM-DD."
+    if hora and not _HORA_RE.match(hora):
+        return "La hora debe tener el formato HH:MM, o dejarse vacía."
+    return None
+
+
+@admin_api.route("/calendario", methods=["GET"])
+def api_admin_listar_calendario():
+    if not is_admin_authenticated():
+        return jsonify(build_response(False, "No autorizado.")), 401
+
+    init_equipo_db()
+    return jsonify({"ok": True, "eventos": listar_eventos_calendario()}), 200
+
+
+@admin_api.route("/calendario", methods=["POST"])
+def api_admin_crear_calendario():
+    if not is_admin_authenticated():
+        return jsonify(build_response(False, "No autorizado.")), 401
+
+    init_equipo_db()
+    payload = request.get_json(silent=True) or {}
+    error = _validar_evento_calendario(payload)
+    if error:
+        return jsonify(build_response(False, error)), 400
+
+    evento = crear_evento_calendario(
+        limpiar_texto(str(payload.get("titulo", ""))),
+        limpiar_texto(str(payload.get("descripcion", ""))),
+        str(payload.get("fecha", "")).strip(),
+        str(payload.get("hora", "")).strip(),
+    )
+    logger.info("admin crea evento calendario id=%s", evento["id"])
+    return jsonify(build_response(True, "Evento creado.", evento=evento)), 201
+
+
+@admin_api.route("/calendario/<int:evento_id>", methods=["PUT"])
+def api_admin_actualizar_calendario(evento_id: int):
+    if not is_admin_authenticated():
+        return jsonify(build_response(False, "No autorizado.")), 401
+
+    payload = request.get_json(silent=True) or {}
+    error = _validar_evento_calendario(payload)
+    if error:
+        return jsonify(build_response(False, error)), 400
+
+    if actualizar_evento_calendario(
+        evento_id,
+        limpiar_texto(str(payload.get("titulo", ""))),
+        limpiar_texto(str(payload.get("descripcion", ""))),
+        str(payload.get("fecha", "")).strip(),
+        str(payload.get("hora", "")).strip(),
+    ):
+        logger.info("admin actualiza evento calendario id=%s", evento_id)
+        return jsonify(build_response(True, "Evento actualizado.")), 200
+
+    return jsonify(build_response(False, "Evento no encontrado.")), 404
+
+
+@admin_api.route("/calendario/<int:evento_id>", methods=["DELETE"])
+def api_admin_eliminar_calendario(evento_id: int):
+    if not is_admin_authenticated():
+        return jsonify(build_response(False, "No autorizado.")), 401
+
+    if eliminar_evento_calendario(evento_id):
+        logger.info("admin elimina evento calendario id=%s", evento_id)
+        return jsonify(build_response(True, "Evento eliminado.")), 200
+
+    return jsonify(build_response(False, "Evento no encontrado.")), 404
