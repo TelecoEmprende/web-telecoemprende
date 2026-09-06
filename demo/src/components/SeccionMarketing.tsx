@@ -1,5 +1,6 @@
-import { marketing, rutaImagen } from '../data/contenido'
+import { interfaz, marketing, rutaImagen } from '../data/contenido'
 import type { Imagen } from '../data/contenido'
+import { rellenar, useTexto } from '../i18n/texto'
 import { CabeceraDepartamento } from './CabeceraDepartamento'
 import { Figura } from './Figura'
 import { Carteles } from './Carteles'
@@ -21,6 +22,8 @@ type Props = {
  * diagonal. Así caben enteras, sin recortar, en el ancho de una columna.
  */
 export function SeccionMarketing({ onAbrirImagen }: Props) {
+  const t = useTexto()
+
   return (
     <section className="depto depto--marketing" id={marketing.id}>
       <div className="depto__reja">
@@ -53,7 +56,7 @@ export function SeccionMarketing({ onAbrirImagen }: Props) {
                     relacion="9 / 15"
                     className="red__pantalla"
                     onAbrir={onAbrirImagen}
-                    espera={`Captura de ${red.red}`}
+                    espera={rellenar(t(interfaz.captura), { red: red.red })}
                   />
                   {indice === 1 && etiqueta}
                 </figure>

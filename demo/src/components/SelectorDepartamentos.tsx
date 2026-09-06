@@ -1,4 +1,5 @@
-import type { FichaDepartamento } from '../data/contenido'
+import { interfaz, type FichaDepartamento } from '../data/contenido'
+import { useTexto } from '../i18n/texto'
 import { IconoFlecha } from './Iconos'
 import { iconoDeDepartamento } from './iconosDepartamento'
 
@@ -23,8 +24,10 @@ type Props = {
  * desplazarse. De paso funcionan el botón atrás y abrir en pestaña nueva.
  */
 export function SelectorDepartamentos({ departamentos, activo, onElegir }: Props) {
+  const t = useTexto()
+
   return (
-    <nav className="selector" aria-label="Departamentos del club">
+    <nav className="selector" aria-label={t(interfaz.departamentos)}>
       {departamentos.map((depto) => {
         const Icono = iconoDeDepartamento[depto.id]
         const estaActivo = activo === depto.id
@@ -40,9 +43,9 @@ export function SelectorDepartamentos({ departamentos, activo, onElegir }: Props
             <Icono className="selector__icono" />
 
             <span className="selector__cuerpo">
-              <span className="selector__nombre">{depto.nombre}</span>
-              <span className="selector__lema">{depto.lema}</span>
-              <span className="selector__gancho">{depto.gancho}</span>
+              <span className="selector__nombre">{t(depto.nombre)}</span>
+              <span className="selector__lema">{t(depto.lema)}</span>
+              <span className="selector__gancho">{t(depto.gancho)}</span>
             </span>
 
             <IconoFlecha className="selector__flecha" />

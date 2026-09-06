@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
-import { rutaImagen, type Imagen } from '../data/contenido'
+import { interfaz, rutaImagen, type Imagen } from '../data/contenido'
+import { useTexto } from '../i18n/texto'
 import { IconoCerrar } from './Iconos'
 
 type Props = {
@@ -27,6 +28,7 @@ function idDeYoutube(url: string) {
  * Se cierra con Escape, con el botón o tocando fuera.
  */
 export function Visor({ imagen, onCerrar }: Props) {
+  const t = useTexto()
   const cerrarRef = useRef<HTMLButtonElement>(null)
 
   useEffect(() => {
@@ -69,12 +71,12 @@ export function Visor({ imagen, onCerrar }: Props) {
       className="visor"
       role="dialog"
       aria-modal="true"
-      aria-label={imagen.alt}
+      aria-label={t(imagen.alt)}
       onClick={onCerrar}
     >
       <button ref={cerrarRef} type="button" className="visor__cerrar" onClick={onCerrar}>
         <IconoCerrar />
-        <span>Cerrar</span>
+        <span>{t(interfaz.cerrar)}</span>
       </button>
 
       <figure className="visor__marco" onClick={(evento) => evento.stopPropagation()}>
@@ -82,15 +84,15 @@ export function Visor({ imagen, onCerrar }: Props) {
           <div className="visor__video">
             <iframe
               src={`https://www.youtube-nocookie.com/embed/${idVideo}?autoplay=1&rel=0`}
-              title={imagen.alt}
+              title={t(imagen.alt)}
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; picture-in-picture"
               allowFullScreen
             />
           </div>
         ) : (
-          <img src={rutaImagen(imagen.src)} alt={imagen.alt} />
+          <img src={rutaImagen(imagen.src)} alt={t(imagen.alt)} />
         )}
-        <figcaption>{imagen.alt}</figcaption>
+        <figcaption>{t(imagen.alt)}</figcaption>
       </figure>
     </div>
   )

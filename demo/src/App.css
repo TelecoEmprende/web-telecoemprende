@@ -50,8 +50,8 @@
 }
 
 /* "Emprende" en naranja, como en la web principal del club. Sobre fondo
-   claro hace falta el naranja oscuro —el del logo se queda en 1,9:1 y no se
-   lee—; sobre la tinta del pie sí va el del logo, que ahí da 8,2:1. */
+   claro hace falta el naranja oscuro —el de marca se queda en 3,1:1 y no
+   llega—; sobre la tinta del pie sí va el de marca, que ahí da 4,6:1. */
 .marca__naranja {
   color: var(--naranja-tinta);
 }
@@ -121,15 +121,85 @@
   height: 17px;
 }
 
-.barra__origen {
-  font-size: 11px;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
+/* El idioma y la solicitud van juntos en la esquina derecha. */
+.barra__acciones {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  justify-self: end;
+}
+
+/* Solo sirve en móvil, donde la barra es de dos filas. */
+.barra__corte {
+  display: none;
+}
+
+/* El cambio de idioma, con la misma forma que en la web del club: los dos
+   idiomas siempre a la vista y el puesto en tinta. Un solo botón que fuera
+   cambiando de etiqueta obliga a adivinar si dice en qué idioma estás o a
+   cuál vas a ir. */
+.barra__idioma {
+  display: flex;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid var(--linea);
+  border-radius: 999px;
+}
+
+.barra__idioma button {
+  border: 0;
+  background: transparent;
+  padding: 5px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  letter-spacing: 0.08em;
   color: var(--texto-tenue);
   font-variation-settings:
-    'wdth' 86,
-    'wght' 600;
+    'wdth' 92,
+    'wght' 700;
+  cursor: pointer;
+  transition:
+    background 0.2s var(--salida),
+    color 0.2s var(--salida);
+}
+
+.barra__idioma button[aria-pressed='true'] {
+  background: var(--tinta);
+  color: var(--papel);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .barra__idioma button:not([aria-pressed='true']):hover {
+    color: var(--tinta);
+  }
+}
+
+/* La única llamada a la acción de la página, con la forma que ya tiene en la
+   web del club (`.lp-nav-cta` en frontend/src/styles/landing.css): pastilla
+   de oro y tinta encima. Redonda del todo para que no se confunda con el
+   acceso activo a un departamento, que es una pastilla de tinta. */
+.barra__solicitud {
+  display: inline-flex;
+  align-items: center;
+  padding: 11px 20px;
+  border-radius: 999px;
+  background: var(--oro);
+  color: var(--tinta);
+  text-decoration: none;
+  font-size: 14px;
+  font-variation-settings: 'wght' 750;
   white-space: nowrap;
+  box-shadow: 0 8px 22px rgba(244, 176, 68, 0.28);
+  transition:
+    filter 0.3s var(--salida),
+    transform 0.3s var(--salida);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .barra__solicitud:hover {
+    filter: brightness(1.05);
+    transform: translateY(-1px);
+  }
 }
 
 /* --------------------------------------------------------------------------
@@ -274,7 +344,7 @@
 }
 
 .selector__fila[aria-current='true'] .selector__gancho {
-  color: #b9cadb;
+  color: var(--acero-claro);
 }
 
 .selector__fila[aria-current='true'] .selector__lema,
@@ -1112,7 +1182,7 @@ main > section:nth-of-type(3) {
 }
 
 .visor__marco figcaption {
-  color: #c8d6e3;
+  color: var(--acero-claro);
   font-size: 14px;
   text-align: center;
 }
@@ -1125,12 +1195,12 @@ main > section:nth-of-type(3) {
  * El pie va sobre tinta: toda la página se lee sobre papel, así que el
  * cambio de fondo cierra el recorrido sin dibujar ninguna raya.
  *
- * Los dos tonos de texto están medidos contra la tinta: 9,6:1 el claro y
- * 6,2:1 el tenue, los dos por encima del 4,5:1 que hace falta.
+ * Los dos tonos de texto están medidos contra la tinta: 10,5:1 el claro y
+ * 6,1:1 el tenue, los dos por encima del 4,5:1 que hace falta.
  */
 .pie {
-  --pie-texto: #b6c2cf;
-  --pie-tenue: #8fa0b0;
+  --pie-texto: var(--acero-claro);
+  --pie-tenue: var(--acero);
 
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
@@ -1432,7 +1502,7 @@ main > section:nth-of-type(3) {
      la barra, con lo que el de Tech quedaba cortado por debajo del nombre.
      Ahora la marca cede espacio y los accesos no se encogen nunca. */
   .barra {
-    grid-template-columns: minmax(0, auto) auto;
+    grid-template-columns: minmax(0, auto) auto auto;
     gap: 12px;
   }
 
@@ -1447,8 +1517,11 @@ main > section:nth-of-type(3) {
     white-space: nowrap;
   }
 
-  .barra__origen {
-    display: none;
+  /* El botón se queda —es lo que se pide en esta página—, así que la barra
+     sigue teniendo tres columnas y quien cede espacio es el nombre. */
+  .barra__solicitud {
+    padding: 10px 16px;
+    font-size: 13px;
   }
 
   .barra__saltos {
@@ -1484,13 +1557,70 @@ main > section:nth-of-type(3) {
   }
 }
 
-@media (max-width: 560px) {
-  /* El nombre del club se queda puesto: es lo que dice de quién es esta
-     página. Para que quepa junto a los tres accesos se aprieta todo un
-     punto. Si aun así no cupiera, el nombre se corta con puntos
-     suspensivos antes que empujar a nadie fuera de la barra. */
+/*
+ * Aquí ya no caben en una fila el nombre, los tres accesos, el idioma y el
+ * botón, y ninguno sobra: el nombre dice de quién es la página, el botón es
+ * lo que se pide, los accesos son la navegación y el idioma es lo que trae a
+ * un erasmus hasta aquí. Así que la barra pasa a dos filas.
+ *
+ * Y deja de ser una rejilla para pasar a ser flex: en una rejilla la columna
+ * mide lo mismo en las dos filas, y el botón —"Submit your application" es
+ * más largo que "Envía tu solicitud"— le robaba el ancho al nombre del club
+ * hasta cortarlo con puntos suspensivos.
+ */
+@media (max-width: 760px) {
   .barra {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
     gap: 10px;
+  }
+
+  .barra__marca {
+    order: 1;
+    flex: 1 1 auto;
+  }
+
+  /* El grupo se deshace y sus dos hijos se colocan cada uno en su fila. */
+  .barra__acciones {
+    display: contents;
+  }
+
+  .barra__idioma {
+    order: 2;
+  }
+
+  .barra__corte {
+    display: block;
+    order: 3;
+    flex-basis: 100%;
+    height: 0;
+  }
+
+  /* La fila de accesos solo existe cuando se ve: si no, la barra se quedaría
+     con una banda vacía debajo durante toda la portada. Ahí se cambia el
+     desvanecido por aparecer y desaparecer, que es lo que pasa de verdad. */
+  .barra__saltos {
+    order: 4;
+    display: none;
+    margin-left: 0;
+  }
+
+  .barra--compacta .barra__saltos {
+    display: flex;
+    margin-left: 0;
+  }
+
+  /* Pegado a la derecha, esté o no la fila de accesos a su lado. */
+  .barra__solicitud {
+    order: 5;
+    margin-left: auto;
+  }
+}
+
+@media (max-width: 560px) {
+  .barra__solicitud {
+    padding: 10px 15px;
   }
 
   .barra__marca {
@@ -1507,12 +1637,25 @@ main > section:nth-of-type(3) {
   }
 
   .barra__salto {
-    padding: 11px;
+    padding: 10px;
   }
 
   .sello {
     right: -12px;
     bottom: -12px;
+  }
+}
+
+/* En los móviles más estrechos la segunda fila —accesos y botón— se queda a
+   un pelo de no caber en inglés. Un punto menos en los dos y entra. */
+@media (max-width: 400px) {
+  .barra__salto {
+    padding: 9px;
+  }
+
+  .barra__solicitud {
+    padding: 9px 13px;
+    font-size: 12.5px;
   }
 }
 
@@ -1548,33 +1691,42 @@ main > section:nth-of-type(3) {
   max-width: 42ch;
   font-size: clamp(15px, 1.6vw, 19px);
   line-height: 1.55;
-  color: #b9cadb;
+  color: var(--acero-claro);
 }
 
+/* El botón principal es el mismo que el de la portada de la web del club
+   (`.lp-btn-gold` en frontend/src/styles/landing.css): esquinas de 14px,
+   degradado de oro a naranja y tinta encima. Es el único elemento redondeado
+   de la página —todo lo demás va a 2px— y por eso se lee como el botón. */
 .portada__test-boton {
   align-self: start;
   margin-top: 8px;
   border: 0;
+  border-radius: 14px;
   padding: clamp(16px, 1.7vw, 21px) clamp(28px, 3vw, 40px);
-  background: var(--naranja);
+  background: linear-gradient(120deg, var(--oro), #f7c065 55%, #f0902e);
   color: var(--tinta);
+  /* La sombra es la misma de la web del club, pero más corta: aquí cae sobre
+     la tinta y una estela larga se vuelve un halo marrón. */
+  box-shadow: 0 10px 26px rgba(224, 104, 14, 0.22);
   font-size: clamp(16px, 1.7vw, 19px);
   font-variation-settings: 'wght' 750;
   cursor: pointer;
   transition:
-    background 0.3s var(--salida),
+    filter 0.3s var(--salida),
     transform 0.3s var(--salida);
 }
 
 @media (hover: hover) and (pointer: fine) {
   .portada__test-boton:hover {
-    background: #ffc27e;
+    filter: brightness(1.06);
     transform: translateY(-3px);
   }
 }
 
 .portada__test-boton:focus-visible {
-  outline-color: var(--naranja);
+  outline-color: var(--oro);
+  border-radius: 14px;
 }
 
 /* --------------------------------------------------------------------------
