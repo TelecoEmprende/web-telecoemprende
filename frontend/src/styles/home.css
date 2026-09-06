@@ -738,6 +738,15 @@
   line-height: 1.6;
 }
 
+.link-clickable-react {
+  color: var(--color-primary);
+  font-weight: 700;
+  text-decoration: underline;
+  text-decoration-color: var(--color-gold);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 2px;
+}
+
 .checkbox-row-react input {
   margin-top: 3px;
   width: 18px;

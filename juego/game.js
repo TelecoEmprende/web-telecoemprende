@@ -6,7 +6,7 @@ const VEL_TIPEO_MS = 28;
 const SPRITE_PX = 16; // lado del sprite pixelado offscreen (retratos reales)
 const VELOCIDAD = 110; // px/segundo de movimiento del jugador
 const HITBOX = 20; // lado del hitbox de colisión, centrado en el tile del jugador
-const INICIO = { col: 9, row: 10 };
+const INICIO = { col: 11, row: 11 };
 const COLOR_ORANGE = "#e0680e";
 const COLOR_GOLD = "#f4b044";
 
