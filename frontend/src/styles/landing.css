@@ -493,16 +493,6 @@
   margin-top: 52px;
 }
 
-.lp-about-privacy {
-  margin: 32px 0 0;
-  text-align: center;
-}
-
-.lp-about-privacy a {
-  color: var(--color-text-muted);
-  font-size: 0.9rem;
-  text-decoration: underline;
-}
 
 .lp-team-track {
   display: flex;
