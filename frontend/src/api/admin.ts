@@ -1,7 +1,7 @@
 import { apiRequest } from "./client";
 import type { AdminRegistrationsResponse, AdminSessionResponse, Estado } from "../types/admin";
 import type { ApiResult } from "../types/api";
-import type { EquipoAcceso, Team } from "../types/equipo";
+import type { Cargo, EquipoAcceso, EventoCalendario, Team } from "../types/equipo";
 
 export function loginAdmin(password: string) {
   return apiRequest<ApiResult>("/api/admin/login", {
@@ -72,16 +72,22 @@ export function getEquipoAccesos() {
   return apiRequest<ApiResult & { accesos: EquipoAcceso[] }>("/api/admin/equipo");
 }
 
-export function createEquipoAcceso(email: string, password: string, equipos: Team[]) {
+export function createEquipoAcceso(
+  email: string,
+  password: string,
+  equipos: Team[],
+  vp_de: Team[] = [],
+  cargo: Cargo = "",
+) {
   return apiRequest<ApiResult & { acceso: EquipoAcceso }>("/api/admin/equipo", {
     method: "POST",
-    body: JSON.stringify({ email, password, equipos }),
+    body: JSON.stringify({ email, password, equipos, vp_de, cargo }),
   });
 }
 
 export function updateEquipoAcceso(
   id: number,
-  data: { equipos?: Team[]; activo?: boolean; password?: string },
+  data: { equipos?: Team[]; vp_de?: Team[]; cargo?: Cargo; activo?: boolean; password?: string },
 ) {
   return apiRequest<ApiResult>(`/api/admin/equipo/${id}`, {
     method: "PUT",
@@ -91,6 +97,38 @@ export function updateEquipoAcceso(
 
 export function deleteEquipoAcceso(id: number) {
   return apiRequest<ApiResult>(`/api/admin/equipo/${id}`, {
+    method: "DELETE",
+  });
+}
+
+export function getCalendarioEventos() {
+  return apiRequest<ApiResult & { eventos: EventoCalendario[] }>("/api/admin/calendario");
+}
+
+export function createCalendarioEvento(data: {
+  titulo: string;
+  descripcion: string;
+  fecha: string;
+  hora: string;
+}) {
+  return apiRequest<ApiResult & { evento: EventoCalendario }>("/api/admin/calendario", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+export function updateCalendarioEvento(
+  id: number,
+  data: { titulo: string; descripcion: string; fecha: string; hora: string },
+) {
+  return apiRequest<ApiResult>(`/api/admin/calendario/${id}`, {
+    method: "PUT",
+    body: JSON.stringify(data),
+  });
+}
+
+export function deleteCalendarioEvento(id: number) {
+  return apiRequest<ApiResult>(`/api/admin/calendario/${id}`, {
     method: "DELETE",
   });
 }

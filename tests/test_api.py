@@ -29,17 +29,36 @@ class ApiTestCase(unittest.TestCase):
         with conn.cursor() as cur:
             cur.execute("DELETE FROM registrations")
             cur.execute("DELETE FROM equipo_accesos")
+            cur.execute("DELETE FROM calendario_eventos")
         conn.commit()
         conn.close()
 
         self.client = app.app.test_client()
 
-    def seed_equipo(self, email="marketing@example.com", password="test-equipo", equipos=None, activo=True):
+    def seed_equipo(
+        self,
+        email="marketing@example.com",
+        password="test-equipo",
+        equipos=None,
+        activo=True,
+        vp_de=None,
+        cargo="",
+    ):
         conn = registration_service._get_connection()
         with conn.cursor() as cur:
             cur.execute(
-                "INSERT INTO equipo_accesos (email, password_hash, equipos, activo) VALUES (%s, %s, %s, %s)",
-                (email, generate_password_hash(password), equipos or ["marketing"], activo),
+                """
+                INSERT INTO equipo_accesos (email, password_hash, equipos, activo, vp_de, cargo)
+                VALUES (%s, %s, %s, %s, %s, %s)
+                """,
+                (
+                    email,
+                    generate_password_hash(password),
+                    equipos or ["marketing"],
+                    activo,
+                    vp_de or [],
+                    cargo,
+                ),
             )
         conn.commit()
         conn.close()
@@ -433,6 +452,147 @@ class ApiTestCase(unittest.TestCase):
 
         admin_session = self.client.get("/api/admin/session")
         self.assertTrue(admin_session.get_json()["authenticated"])
+
+    def test_equipo_login_presidente_cargo_grants_admin_session(self):
+        self.seed_equipo(email="presi@example.com", equipos=["eventos"], cargo="presidente")
+
+        response = self.equipo_login(email="presi@example.com")
+        body = response.get_json()
+        self.assertTrue(body["ok"])
+        self.assertEqual(body["cargo"], "presidente")
+
+        admin_session = self.client.get("/api/admin/session")
+        self.assertTrue(admin_session.get_json()["authenticated"])
+
+    def test_equipo_login_regular_member_does_not_grant_admin(self):
+        self.seed_equipo(email="miembro@example.com", equipos=["marketing"])
+
+        self.equipo_login(email="miembro@example.com")
+
+        admin_session = self.client.get("/api/admin/session")
+        self.assertFalse(admin_session.get_json()["authenticated"])
+
+    def test_equipo_login_reports_vp_de(self):
+        self.seed_equipo(email="vp@example.com", equipos=["marketing", "eventos"], vp_de=["marketing"])
+
+        response = self.equipo_login(email="vp@example.com")
+        self.assertEqual(response.get_json()["vp_de"], ["marketing"])
+
+    def test_admin_equipo_create_rejects_vp_de_outside_equipos(self):
+        self.login()
+
+        response = self.client.post(
+            "/api/admin/equipo",
+            json={
+                "email": "malo@example.com",
+                "password": "contrasena-larga",
+                "equipos": ["marketing"],
+                "vp_de": ["eventos"],
+            },
+        )
+        self.assertEqual(response.status_code, 400)
+
+    def test_admin_equipo_create_rejects_invalid_cargo(self):
+        self.login()
+
+        response = self.client.post(
+            "/api/admin/equipo",
+            json={
+                "email": "malo2@example.com",
+                "password": "contrasena-larga",
+                "equipos": ["marketing"],
+                "cargo": "no-existe",
+            },
+        )
+        self.assertEqual(response.status_code, 400)
+
+    def test_admin_equipo_create_with_vp_and_cargo(self):
+        self.login()
+
+        create = self.client.post(
+            "/api/admin/equipo",
+            json={
+                "email": "vp2@example.com",
+                "password": "contrasena-larga",
+                "equipos": ["eventos", "marketing"],
+                "vp_de": ["eventos"],
+                "cargo": "boardmember",
+            },
+        )
+        self.assertEqual(create.status_code, 201)
+        acceso = create.get_json()["acceso"]
+        self.assertEqual(acceso["vp_de"], ["eventos"])
+        self.assertEqual(acceso["cargo"], "boardmember")
+
+    def test_admin_calendario_endpoints_require_auth(self):
+        self.assertEqual(self.client.get("/api/admin/calendario").status_code, 401)
+        self.assertEqual(self.client.post("/api/admin/calendario", json={}).status_code, 401)
+        self.assertEqual(self.client.put("/api/admin/calendario/1", json={}).status_code, 401)
+        self.assertEqual(self.client.delete("/api/admin/calendario/1").status_code, 401)
+
+    def test_admin_calendario_crud_flow(self):
+        self.login()
+
+        create = self.client.post(
+            "/api/admin/calendario",
+            json={
+                "titulo": "Reunión de equipo",
+                "descripcion": "Kickoff del curso",
+                "fecha": "2026-10-01",
+                "hora": "18:30",
+            },
+        )
+        self.assertEqual(create.status_code, 201)
+        evento_id = create.get_json()["evento"]["id"]
+
+        listado = self.client.get("/api/admin/calendario")
+        titulos = [e["titulo"] for e in listado.get_json()["eventos"]]
+        self.assertIn("Reunión de equipo", titulos)
+
+        update = self.client.put(
+            f"/api/admin/calendario/{evento_id}",
+            json={
+                "titulo": "Reunión de equipo (actualizada)",
+                "descripcion": "",
+                "fecha": "2026-10-02",
+                "hora": "",
+            },
+        )
+        self.assertEqual(update.status_code, 200)
+
+        delete = self.client.delete(f"/api/admin/calendario/{evento_id}")
+        self.assertEqual(delete.status_code, 200)
+
+        listado_final = self.client.get("/api/admin/calendario").get_json()["eventos"]
+        self.assertNotIn(evento_id, [e["id"] for e in listado_final])
+
+    def test_admin_calendario_rejects_invalid_fecha(self):
+        self.login()
+
+        response = self.client.post(
+            "/api/admin/calendario",
+            json={"titulo": "X", "descripcion": "", "fecha": "01-10-2026", "hora": ""},
+        )
+        self.assertEqual(response.status_code, 400)
+
+    def test_equipo_calendario_requires_equipo_auth(self):
+        self.assertEqual(self.client.get("/api/equipo/calendario").status_code, 401)
+
+    def test_equipo_calendario_visible_to_logged_in_member(self):
+        self.login()
+        self.client.post(
+            "/api/admin/calendario",
+            json={"titulo": "Charla", "descripcion": "", "fecha": "2026-11-05", "hora": "17:00"},
+        )
+        self.client.post("/api/admin/logout")
+
+        self.seed_equipo()
+        self.equipo_login()
+
+        response = self.client.get("/api/equipo/calendario")
+        self.assertEqual(response.status_code, 200)
+        titulos = [e["titulo"] for e in response.get_json()["eventos"]]
+        self.assertIn("Charla", titulos)
 
     def test_admin_equipo_endpoints_require_auth(self):
         self.assertEqual(self.client.get("/api/admin/equipo").status_code, 401)
