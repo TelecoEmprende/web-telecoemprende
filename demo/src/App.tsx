@@ -1,7 +1,7 @@
 import { Fragment, useCallback, useEffect, useRef, useState } from 'react'
 import { flushSync } from 'react-dom'
 import './App.css'
-import { club, departamentos, interfaz, rutaImagen, test } from './data/contenido'
+import { club, departamentos, interfaz, juego, rutaImagen, test } from './data/contenido'
 import type { FichaDepartamento, Imagen } from './data/contenido'
 import { useTexto } from './i18n/texto'
 import { NombreClub } from './components/NombreClub'
@@ -277,6 +277,22 @@ function App() {
             >
               {t(test.boton)}
             </button>
+          </div>
+
+          {/* Segunda llamada a la acción, debajo del test: el mini-juego de
+              la web principal. Mismo estilo que el test, para que se lea
+              como parte del mismo bloque de la portada. */}
+          <div className="portada__test">
+            <p className="portada__test-gancho">{t(juego.gancho)}</p>
+            <p className="portada__test-texto">{t(juego.descripcion)}</p>
+            <a
+              className="portada__test-boton"
+              href={juego.url}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              {t(juego.boton)}
+            </a>
           </div>
         </section>
 

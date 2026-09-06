@@ -38,6 +38,7 @@ const es = {
     nextAria: "Ver siguiente miembro",
     photoAlt: "Foto de",
     dotAria: "Ver a",
+    privacyLinkText: "Consulta nuestra política de privacidad",
   },
   departments: {
     eyebrow: "Departamentos",
@@ -54,11 +55,6 @@ const es = {
     eyebrow: "Antes de enviar tu solicitud",
     heading: "Qué necesitamos para valorarla",
     lead: "Súbelo todo a una carpeta de Google Drive, activa el acceso por enlace y pega el enlace en el formulario. Así de sencillo.",
-  },
-  game: {
-    gancho: "¿Prefieres jugar antes de decidirte?",
-    texto: "Mientras te lo piensas, échale un ojo a nuestro mini-juego. Todavía lo estamos montando, pero ya puedes echar un vistazo.",
-    boton: "Jugar",
   },
   form: {
     eyebrow: "Solicitud",
@@ -167,6 +163,7 @@ const en = {
     nextAria: "Next member",
     photoAlt: "Photo of",
     dotAria: "View",
+    privacyLinkText: "Read our privacy policy",
   },
   departments: {
     eyebrow: "Departments",
@@ -183,11 +180,6 @@ const en = {
     eyebrow: "Before you apply",
     heading: "What we need to review your application",
     lead: "Upload everything to a Google Drive folder, turn on link access, and paste the link in the form. That simple.",
-  },
-  game: {
-    gancho: "Fancy a game before you decide?",
-    texto: "While you think it over, check out our mini-game. We're still building it, but you can already take a peek.",
-    boton: "Play",
   },
   form: {
     eyebrow: "Application",
