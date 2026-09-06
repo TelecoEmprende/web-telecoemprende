@@ -2146,29 +2146,117 @@ main > section:nth-of-type(3) {
   }
 }
 
-/* Captura del mini-juego, junto a su botón en la portada. */
+/* Captura del mini-juego: ocupa la celda libre de la derecha en la rejilla de
+   .portada, centrada sobre el papel. Al pasar por encima se desenfoca y sale
+   el botón de jugar. */
 .portada__juego-captura {
-  display: block;
-  margin-top: clamp(18px, 2.4vw, 28px);
-  max-width: 520px;
-  border: 3px solid rgba(250, 245, 236, 0.18);
-  border-radius: 6px;
-  overflow: hidden;
-  line-height: 0;
-  transition: border-color 0.3s var(--salida), transform 0.3s var(--salida);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(16px, 2.4vw, 32px) clamp(16px, 2.4vw, 32px);
+  background: var(--papel);
+  text-decoration: none;
 }
 
-.portada__juego-captura img {
+.portada__juego-marco {
+  position: relative;
+  display: block;
+  width: 100%;
+  max-width: 760px;
+  line-height: 0;
+  border: 3px solid color-mix(in srgb, var(--tinta) 22%, transparent);
+  border-radius: 8px;
+  overflow: hidden;
+  transition:
+    border-color 0.3s var(--salida),
+    transform 0.3s var(--salida);
+}
+
+.portada__juego-marco img {
   width: 100%;
   height: auto;
   display: block;
   image-rendering: pixelated;
+  transition: filter 0.3s var(--salida), transform 0.4s var(--salida);
+}
+
+/* El rótulo que aparece encima al pasar el ratón. */
+.portada__juego-encima {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in srgb, var(--tinta) 45%, transparent);
+  color: var(--papel);
+  font-size: clamp(20px, 2.6vw, 34px);
+  font-variation-settings: 'wght' 780;
+  letter-spacing: -0.02em;
+  line-height: 1;
+  opacity: 0;
+  transition: opacity 0.3s var(--salida);
+}
+
+.portada__juego-encima::before {
+  content: '';
+  position: absolute;
+  inset: auto auto 50% 50%;
+  transform: translate(-50%, 46px);
+  width: clamp(58px, 7vw, 84px);
+  height: 3px;
+  background: var(--naranja);
+  opacity: 0;
+  transition: opacity 0.3s var(--salida), transform 0.4s var(--salida);
 }
 
 @media (hover: hover) and (pointer: fine) {
-  .portada__juego-captura:hover {
+  .portada__juego-captura:hover .portada__juego-marco,
+  .portada__juego-captura:focus-visible .portada__juego-marco {
     border-color: var(--naranja);
-    transform: translateY(-3px);
+    transform: translateY(-4px);
+  }
+
+  .portada__juego-captura:hover img,
+  .portada__juego-captura:focus-visible img {
+    filter: blur(4px) brightness(0.75);
+    transform: scale(1.03);
+  }
+
+  .portada__juego-captura:hover .portada__juego-encima,
+  .portada__juego-captura:focus-visible .portada__juego-encima {
+    opacity: 1;
+  }
+
+  .portada__juego-captura:hover .portada__juego-encima::before,
+  .portada__juego-captura:focus-visible .portada__juego-encima::before {
+    opacity: 1;
+    transform: translate(-50%, 30px);
+  }
+}
+
+/* Sin ratón no hay hover posible: el rótulo se queda puesto, discreto. */
+@media (hover: none) {
+  .portada__juego-encima {
+    opacity: 1;
+    background: color-mix(in srgb, var(--tinta) 30%, transparent);
+  }
+}
+
+/* Quien pide menos movimiento se queda con el desenfoque, sin desplazamientos. */
+@media (prefers-reduced-motion: reduce) {
+  .portada__juego-marco,
+  .portada__juego-marco img,
+  .portada__juego-encima::before {
+    transition: opacity 0.3s var(--salida);
+    transform: none !important;
+  }
+}
+
+/* En móvil la rejilla se apila: la captura va justo debajo de su bloque. */
+@media (max-width: 860px) {
+  .portada__juego-captura {
+    order: 6;
+    padding-top: 0;
   }
 }
 
