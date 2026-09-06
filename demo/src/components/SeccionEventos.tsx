@@ -1,5 +1,6 @@
 import { eventos } from '../data/contenido'
 import type { Imagen } from '../data/contenido'
+import { useTexto } from '../i18n/texto'
 import { CabeceraDepartamento } from './CabeceraDepartamento'
 import { Figura } from './Figura'
 import { IconoPlay } from './Iconos'
@@ -18,6 +19,8 @@ type Props = {
  * así entran enteras y no se recorta ninguna cara.
  */
 export function SeccionEventos({ onAbrirImagen }: Props) {
+  const t = useTexto()
+
   return (
     <section className="depto depto--eventos" id={eventos.id}>
       <div className="depto__reja">
@@ -48,8 +51,8 @@ export function SeccionEventos({ onAbrirImagen }: Props) {
               <div className="charla__pie">
                 {/* Manda el nombre de la persona; si vino un equipo, la empresa. */}
                 <h3 className="charla__quien">{charla.ponente || charla.entidad}</h3>
-                {charla.cargo && <p className="charla__cargo">{charla.cargo}</p>}
-                {charla.titulo && <p className="charla__tipo">{charla.titulo}</p>}
+                {t(charla.cargo) && <p className="charla__cargo">{t(charla.cargo)}</p>}
+                {t(charla.titulo) && <p className="charla__tipo">{t(charla.titulo)}</p>}
               </div>
             </article>
           ))}
