@@ -50,8 +50,8 @@
 }
 
 /* "Emprende" en naranja, como en la web principal del club. Sobre fondo
-   claro hace falta el naranja oscuro —el del logo se queda en 1,9:1 y no se
-   lee—; sobre la tinta del pie sí va el del logo, que ahí da 8,2:1. */
+   claro hace falta el naranja oscuro —el de marca se queda en 3,1:1 y no
+   llega—; sobre la tinta del pie sí va el de marca, que ahí da 4,6:1. */
 .marca__naranja {
   color: var(--naranja-tinta);
 }
@@ -274,7 +274,7 @@
 }
 
 .selector__fila[aria-current='true'] .selector__gancho {
-  color: #b9cadb;
+  color: var(--acero-claro);
 }
 
 .selector__fila[aria-current='true'] .selector__lema,
@@ -1112,7 +1112,7 @@ main > section:nth-of-type(3) {
 }
 
 .visor__marco figcaption {
-  color: #c8d6e3;
+  color: var(--acero-claro);
   font-size: 14px;
   text-align: center;
 }
@@ -1125,12 +1125,12 @@ main > section:nth-of-type(3) {
  * El pie va sobre tinta: toda la página se lee sobre papel, así que el
  * cambio de fondo cierra el recorrido sin dibujar ninguna raya.
  *
- * Los dos tonos de texto están medidos contra la tinta: 9,6:1 el claro y
- * 6,2:1 el tenue, los dos por encima del 4,5:1 que hace falta.
+ * Los dos tonos de texto están medidos contra la tinta: 10,5:1 el claro y
+ * 6,1:1 el tenue, los dos por encima del 4,5:1 que hace falta.
  */
 .pie {
-  --pie-texto: #b6c2cf;
-  --pie-tenue: #8fa0b0;
+  --pie-texto: var(--acero-claro);
+  --pie-tenue: var(--acero);
 
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
