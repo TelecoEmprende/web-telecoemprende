@@ -3,7 +3,8 @@ import { TILE_SIZE, MAP_COLS, MAP_ROWS, esSolido, dibujarFondo } from "./world.j
 
 const STORAGE_KEY = "te-juego-descubiertos";
 const VEL_TIPEO_MS = 28;
-const SPRITE_PX = 16; // lado del sprite pixelado offscreen (retratos reales)
+const SPRITE_PX = 16; // lado del sprite pixelado del mundo (se ve a 32px, muy pequeño)
+const RETRATO_PX = 64; // el retrato del diálogo se ve grande: necesita más píxeles para que la cara se lea
 const VELOCIDAD = 110; // px/segundo de movimiento del jugador
 const HITBOX = 20; // lado del hitbox de colisión, centrado en el tile del jugador
 const INICIO = { col: 11, row: 11 };
@@ -58,19 +59,35 @@ function marcarDescubierto(id) {
 // (game loop) y como retrato grande en la caja de diálogo (vía data URL +
 // `image-rendering: pixelated` en CSS).
 
+/* Recorta el cuadrado que indica `crop` (o el cuadrado centrado más grande si
+   no hay) y lo pixela a `px` de lado. El fondo se rellena antes con el color
+   del personaje: varias fotos vienen recortadas con fondo transparente, y así
+   la silueta se lee igual sobre el mapa o sobre la caja de diálogo. */
+function pixelar(img, p, px) {
+  const off = document.createElement("canvas");
+  off.width = px;
+  off.height = px;
+  const octx = off.getContext("2d");
+  octx.fillStyle = p.colorSprite;
+  octx.fillRect(0, 0, px, px);
+  octx.imageSmoothingEnabled = false;
+
+  const corto = Math.min(img.width, img.height);
+  const crop = p.crop || { cx: 0.5, cy: 0.5, size: 1 };
+  const lado = crop.size * corto;
+  const sx = Math.max(0, Math.min(crop.cx * img.width - lado / 2, img.width - lado));
+  const sy = Math.max(0, Math.min(crop.cy * img.height - lado / 2, img.height - lado));
+
+  octx.drawImage(img, sx, sy, lado, lado, 0, 0, px, px);
+  return off;
+}
+
 PERSONAJES.forEach((p) => {
   if (!p.retrato) return;
   const img = new Image();
   img.onload = () => {
-    const off = document.createElement("canvas");
-    off.width = SPRITE_PX;
-    off.height = SPRITE_PX;
-    const octx = off.getContext("2d");
-    octx.imageSmoothingEnabled = false;
-    const lado = Math.min(img.width, img.height);
-    octx.drawImage(img, (img.width - lado) / 2, 0, lado, lado, 0, 0, SPRITE_PX, SPRITE_PX);
-    p._sprite = off;
-    p._spriteURL = off.toDataURL();
+    p._sprite = pixelar(img, p, SPRITE_PX);
+    p._spriteURL = pixelar(img, p, RETRATO_PX).toDataURL();
   };
   img.src = p.retrato;
 });

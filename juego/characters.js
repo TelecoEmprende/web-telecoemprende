@@ -1,10 +1,15 @@
 // Datos de los 8 personajes del juego "Elige tu camino".
-// Cada personaje: { id, nombre, rol, retrato, iniciales, colorSprite, paginas, cierre, departamentos, posicion }
-// - retrato: ruta ABSOLUTA (empieza por /juego/...) a una foto real, o null si
-//   no hay foto (se dibuja un sprite pixel-art placeholder con las iniciales y
+// Cada personaje: { id, nombre, rol, retrato, crop, iniciales, colorSprite, paginas, cierre, departamentos, posicion }
+// - retrato: ruta ABSOLUTA (empieza por /juego/...) a su foto, o null si no hay
+//   foto (entonces se dibuja un sprite pixel-art con las iniciales y
 //   `colorSprite`, ver game.js). Tiene que ser absoluta: se usa como
 //   `img.src` desde JS, que resuelve contra la URL de la página (/juego), no
 //   contra este módulo — una ruta relativa aquí se rompía en producción.
+// - crop: qué cuadrado de la foto se pixela, para encuadrar la cara. `cx`/`cy`
+//   son el centro (fracción del ancho/alto) y `size` el lado del cuadrado como
+//   fracción del lado corto de la imagen. Sin `crop` se usa el cuadrado
+//   centrado más grande posible. Ajusta estos números si una cara queda
+//   descuadrada: no hace falta reeditar la foto.
 // - colorSprite: color de acento del sprite/retrato pixelado (placeholder o marco de la foto real).
 // - paginas: la historia contada en primera persona por el propio personaje,
 //   se muestra página a página con efecto máquina de escribir.
@@ -18,7 +23,10 @@
 // Economia3, El Español, taxdown.es/blog), Rebeca Minguela (Wikipedia, WEF,
 // Crunchbase, Santander biography), Nuria Oliver (ellisalicante.org,
 // ResearchGate), Samuel Gil (LinkedIn, TheOrg, El Español), Ignacio
-// García-Carrillo (LinkedIn, ETSIT alumni "Conversaciones Alumni").
+// García-Carrillo (LinkedIn, ETSIT alumni "Conversaciones Alumni"), Natalia
+// Rodríguez Núñez-Milara (Wikipedia, ICEX, innovaspain, saturnolabs.com).
+//
+// Las fotos las aportó el club (carpeta UPM/TelecoEmprende 2026-2027).
 
 export const DEPARTAMENTOS = {
   tech: { nombre: "Tech/Ingeniería", icono: "💻" },
@@ -31,7 +39,8 @@ export const PERSONAJES = [
     id: "juan-de-antonio",
     nombre: "Juan de Antonio",
     rol: "Founder & CEO de Cabify",
-    retrato: null,
+    retrato: "/juego/public/retratos/juan-de-antonio.png",
+    crop: { cx: 0.528, cy: 0.238, size: 0.476 },
     iniciales: "JA",
     colorSprite: "#e0680e",
     paginas: [
@@ -50,6 +59,7 @@ export const PERSONAJES = [
     nombre: "Ignacio García-Carrillo",
     rol: "Account Executive en AMD",
     retrato: "/juego/public/retratos/ignacio-garcia-carrillo.jpg",
+    crop: { cx: 0.5, cy: 0.411, size: 0.821 },
     iniciales: "IG",
     colorSprite: "#88a5b7",
     paginas: [
@@ -67,7 +77,8 @@ export const PERSONAJES = [
     id: "samuel-gil",
     nombre: "Samuel Gil",
     rol: "Managing Partner y CEO de JME Ventures",
-    retrato: "/juego/public/retratos/samuel-gil.jpg",
+    retrato: "/juego/public/retratos/samuel-gil.png",
+    crop: { cx: 0.462, cy: 0.314, size: 0.575 },
     iniciales: "SG",
     colorSprite: "#f4b044",
     paginas: [
@@ -85,7 +96,8 @@ export const PERSONAJES = [
     id: "enrique-garcia-moreno",
     nombre: "Enrique García Moreno",
     rol: "Founder & CEO de TaxDown",
-    retrato: null,
+    retrato: "/juego/public/retratos/enrique-garcia-moreno.png",
+    crop: { cx: 0.496, cy: 0.313, size: 0.583 },
     iniciales: "EG",
     colorSprite: "#1a9c5c",
     paginas: [
@@ -103,7 +115,8 @@ export const PERSONAJES = [
     id: "joaquin-fernandez",
     nombre: "Joaquín Fernández",
     rol: "Founder & CTO de TaxDown",
-    retrato: null,
+    retrato: "/juego/public/retratos/joaquin-fernandez.png",
+    crop: { cx: 0.66, cy: 0.218, size: 0.596 },
     iniciales: "JF",
     colorSprite: "#0f8a6f",
     paginas: [
@@ -121,7 +134,8 @@ export const PERSONAJES = [
     id: "rebeca-minguela",
     nombre: "Rebeca Minguela",
     rol: "Founder & CEO de Clarity AI",
-    retrato: null,
+    retrato: "/juego/public/retratos/rebeca-minguela.png",
+    crop: { cx: 0.493, cy: 0.262, size: 0.667 },
     iniciales: "RM",
     colorSprite: "#b95208",
     paginas: [
@@ -139,7 +153,8 @@ export const PERSONAJES = [
     id: "nuria-oliver",
     nombre: "Nuria Oliver",
     rol: "Directora Científica y cofundadora de ELLIS Alicante",
-    retrato: null,
+    retrato: "/juego/public/retratos/nuria-oliver.jpg",
+    crop: { cx: 0.5, cy: 0.5, size: 1 },
     iniciales: "NO",
     colorSprite: "#18374b",
     paginas: [
@@ -156,24 +171,20 @@ export const PERSONAJES = [
   {
     id: "natalia-rodriguez",
     nombre: "Natalia Rodríguez",
-    rol: "Emprendedora",
-    // TODO: verificar biografía exacta de Natalia Rodríguez antes de publicar —
-    // hay varias personas con este nombre en el ecosistema español y no hay
-    // datos verificados que confirmen a cuál se refiere. Ver nota en
-    // CONTEXTO_EQUIPO.md o preguntar a Hammad. No inventar cargos, empresas
-    // ni cifras hasta confirmarlo.
-    retrato: null,
+    rol: "Founder & CEO de Saturno Labs",
+    retrato: "/juego/public/retratos/natalia-rodriguez.png",
+    crop: { cx: 0.461, cy: 0.337, size: 0.464 },
     iniciales: "NR",
     colorSprite: "#9a5b06",
     paginas: [
-      "Soy Natalia Rodríguez y formo parte del ecosistema emprendedor español, ese espacio donde una idea se convierte poco a poco en un proyecto real.",
-      "Mi camino, como el de tantos emprendedores, no fue una línea recta: estuvo hecho de intentos, ajustes y aprender sobre la marcha.",
-      "Lo que define a alguien así no es un único logro, sino la manera de sostener un proyecto cuando todavía nadie más cree en él.",
-      "Esa misma actitud, la de construir algo desde cero y contarlo bien, es la que quiero acercaros hoy.",
+      "Soy Natalia Rodríguez Núñez-Milara, Ingeniera de Telecomunicación por la ETSIT-UPM, con un doble máster en tratamiento de señal, machine learning y big data en la misma escuela.",
+      "En 2019 fundé Saturno Labs, un laboratorio de innovación que aplica inteligencia artificial a productos con impacto social: medicina, psicología y servicios sociales.",
+      "Hemos creado más de 20 soluciones tecnológicas: herramientas para monitorizar pacientes hospitalizados, apps, plataformas educativas y chatbots. Fuimos la primera empresa española seleccionada para el Alexa Prize de Amazon.",
+      "En 2021 Forbes me incluyó en su lista de 'Los 21 protagonistas del cambio', y en 2023 recibí el Premio Nacional de Innovación en la categoría de Talento Innovador Joven: la primera mujer en recibirlo.",
     ],
     cierre:
-      "Si te gusta contar historias como la de un proyecto que arranca desde cero, el departamento de Marketing/Comms te espera.",
-    departamentos: ["marketing"],
+      "Salí de estas mismas aulas y hoy construyo tecnología que ayuda a la gente. Si te imaginas usando la ingeniería para resolver problemas que importan, el departamento de Tech/Ingeniería es tu sitio.",
+    departamentos: ["tech"],
     posicion: { col: 4, row: 9 },
   },
 ];
