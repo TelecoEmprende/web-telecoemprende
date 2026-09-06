@@ -25,12 +25,22 @@
         { "source": "/demo/:path*", "destination": "/:path*" },
         { "source": "/(.*)", "destination": "/index.html" }
       ]
+    },
+    "juego": {
+      "root": "juego/",
+      "framework": null,
+      "rewrites": [
+        { "source": "/juego/:path*", "destination": "/:path*" },
+        { "source": "/(.*)", "destination": "/index.html" }
+      ]
     }
   },
   "rewrites": [
     { "source": "/api/(.*)", "destination": { "service": "backend" } },
     { "source": "/demo", "destination": { "service": "demo" } },
     { "source": "/demo/(.*)", "destination": { "service": "demo" } },
+    { "source": "/juego", "destination": { "service": "juego" } },
+    { "source": "/juego/(.*)", "destination": { "service": "juego" } },
     { "source": "/(.*)", "destination": { "service": "frontend" } }
   ],
   "headers": [

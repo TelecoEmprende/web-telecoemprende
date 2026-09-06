@@ -5,7 +5,9 @@ from flask import Blueprint, jsonify, make_response, render_template_string, req
 from backend.config import (
     DEPARTAMENTOS_VALIDOS,
     ESTADOS_VALIDOS,
+    EQUIPOS_VALIDOS,
     LOGIN_BLOCK_WINDOW_SECONDS,
+    MAX_EMAIL_LEN,
     MAX_LOGIN_ATTEMPTS_PER_WINDOW,
 )
 from backend.schemas import build_response
@@ -16,6 +18,13 @@ from backend.services.admin import (
     logout_admin,
 )
 from backend.services.email import enviar_email_estado
+from backend.services.equipo import (
+    actualizar_equipo_acceso,
+    crear_equipo_acceso,
+    eliminar_equipo_acceso,
+    init_equipo_db,
+    listar_equipo_accesos,
+)
 from backend.services.registrations import (
     actualizar_estado,
     actualizar_registro,
@@ -412,3 +421,85 @@ def api_admin_delete_registration(reg_id: int):
         return jsonify(build_response(True, "Registro eliminado.")), 200
 
     return jsonify(build_response(False, "Registro no encontrado.")), 404
+
+
+@admin_api.route("/equipo", methods=["GET"])
+def api_admin_listar_equipo():
+    if not is_admin_authenticated():
+        return jsonify(build_response(False, "No autorizado.")), 401
+
+    init_equipo_db()
+    return jsonify({"ok": True, "accesos": listar_equipo_accesos()}), 200
+
+
+@admin_api.route("/equipo", methods=["POST"])
+def api_admin_crear_equipo():
+    if not is_admin_authenticated():
+        return jsonify(build_response(False, "No autorizado.")), 401
+
+    init_equipo_db()
+    payload = request.get_json(silent=True) or {}
+    email = limpiar_texto(str(payload.get("email", ""))).lower()
+    password = str(payload.get("password", ""))
+    equipos = payload.get("equipos")
+
+    # No exigimos que sea correo UPM (puede ser gente externa colaborando en un
+    # equipo): solo que tenga forma de email.
+    if not email or "@" not in email:
+        return jsonify(build_response(False, "Introduce un email válido.")), 400
+
+    if len(email) > MAX_EMAIL_LEN:
+        return jsonify(build_response(False, "El email supera la longitud permitida.")), 400
+
+    if len(password) < 8:
+        return jsonify(build_response(False, "La contraseña debe tener al menos 8 caracteres.")), 400
+
+    if not isinstance(equipos, list) or not equipos or any(e not in EQUIPOS_VALIDOS for e in equipos):
+        return jsonify(build_response(False, "Selecciona al menos un equipo válido.")), 400
+
+    acceso = crear_equipo_acceso(email, password, equipos)
+    if acceso is None:
+        return jsonify(build_response(False, "Ese email ya tiene acceso de equipo.")), 409
+
+    logger.info("admin crea acceso equipo email=%s equipos=%s", email, equipos)
+    return jsonify(build_response(True, "Acceso creado.", acceso=acceso)), 201
+
+
+@admin_api.route("/equipo/<int:acceso_id>", methods=["PUT"])
+def api_admin_actualizar_equipo(acceso_id: int):
+    if not is_admin_authenticated():
+        return jsonify(build_response(False, "No autorizado.")), 401
+
+    payload = request.get_json(silent=True) or {}
+    equipos = payload.get("equipos")
+    activo = payload.get("activo")
+    password = str(payload.get("password", "")) or None
+
+    if equipos is not None and (
+        not isinstance(equipos, list) or not equipos or any(e not in EQUIPOS_VALIDOS for e in equipos)
+    ):
+        return jsonify(build_response(False, "Selecciona al menos un equipo válido.")), 400
+
+    if activo is not None and not isinstance(activo, bool):
+        return jsonify(build_response(False, "Valor de 'activo' no válido.")), 400
+
+    if password is not None and len(password) < 8:
+        return jsonify(build_response(False, "La contraseña debe tener al menos 8 caracteres.")), 400
+
+    if actualizar_equipo_acceso(acceso_id, equipos=equipos, activo=activo, password=password):
+        logger.info("admin actualiza acceso equipo id=%s", acceso_id)
+        return jsonify(build_response(True, "Acceso actualizado.")), 200
+
+    return jsonify(build_response(False, "Acceso no encontrado o sin cambios que aplicar.")), 404
+
+
+@admin_api.route("/equipo/<int:acceso_id>", methods=["DELETE"])
+def api_admin_eliminar_equipo(acceso_id: int):
+    if not is_admin_authenticated():
+        return jsonify(build_response(False, "No autorizado.")), 401
+
+    if eliminar_equipo_acceso(acceso_id):
+        logger.info("admin elimina acceso equipo id=%s", acceso_id)
+        return jsonify(build_response(True, "Acceso eliminado.")), 200
+
+    return jsonify(build_response(False, "Acceso no encontrado.")), 404
