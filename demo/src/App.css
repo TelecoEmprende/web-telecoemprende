@@ -749,6 +749,13 @@ main > section:nth-of-type(3) {
   display: grid;
   gap: 8px;
   width: 72%;
+  /* Sin esto, el 72% es solo una preferencia: por defecto un hijo de grid
+     tiene min-width:auto, que deja que su contenido (aquí, la captura)
+     empuje la tarjeta más ancha que ese 72% e imprima por el borde de la
+     pantalla en vez de encogerse. Es el mismo arreglo que ya lleva
+     `.carteles .cartel` más abajo, con `min-height: 0`, para el mismo
+     problema en el otro eje. */
+  min-width: 0;
   align-content: start;
 }
 

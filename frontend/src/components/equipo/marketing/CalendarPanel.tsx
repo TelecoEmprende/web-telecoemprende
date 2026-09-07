@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 
-import { createTask, getCalendario } from "../../../api/marketing";
+import { createTask, getCalendario, getEnlaceCalendario } from "../../../api/marketing";
 import { AlertBanner } from "../../feedback/AlertBanner";
+import { SuscribirCalendario } from "../SuscribirCalendario";
 import { AvataresDeResponsables } from "./Avatares";
 import type { ApiFailure } from "../../../types/api";
 import type { CalendarioItem } from "../../../types/marketing";
@@ -180,6 +181,7 @@ export function CalendarPanel({ onAbrirCampaign }: Props) {
           <button type="button" className="mkt-btn-mini-react" onClick={() => mover(1)}>
             Siguiente →
           </button>
+          <SuscribirCalendario obtenerEnlace={getEnlaceCalendario} onError={setError} />
         </div>
       </header>
 

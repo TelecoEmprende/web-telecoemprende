@@ -22,3 +22,7 @@ export function getEquipoSession() {
 export function getEquipoCalendario() {
   return apiRequest<ApiResult & { eventos: EventoCalendario[] }>("/api/equipo/calendario");
 }
+
+export function getEnlaceCalendarioGeneral() {
+  return apiRequest<ApiResult & { url: string }>("/api/equipo/calendario/enlace");
+}
