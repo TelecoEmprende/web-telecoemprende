@@ -93,3 +93,7 @@ export function getCalendario(desde: string, hasta: string) {
 export function getMiembros() {
   return apiRequest<{ ok: true; miembros: Miembro[] }>(`${BASE}/miembros`);
 }
+
+export function getEnlaceCalendario() {
+  return apiRequest<{ ok: true; url: string }>(`${BASE}/calendario/enlace`);
+}

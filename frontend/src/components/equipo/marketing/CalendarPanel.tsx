@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 
-import { createTask, getCalendario } from "../../../api/marketing";
+import { createTask, getCalendario, getEnlaceCalendario } from "../../../api/marketing";
 import { AlertBanner } from "../../feedback/AlertBanner";
 import { AvataresDeResponsables } from "./Avatares";
 import type { ApiFailure } from "../../../types/api";
@@ -52,6 +52,8 @@ export function CalendarPanel({ onAbrirCampaign }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [diaAbierto, setDiaAbierto] = useState<string | null>(null);
   const [tituloNuevo, setTituloNuevo] = useState("");
+  const [enlaceCalendario, setEnlaceCalendario] = useState<string | null>(null);
+  const [cargandoEnlace, setCargandoEnlace] = useState(false);
   // Se busca un mes con datos una sola vez, en el primer montaje. Después el
   // usuario manda: si navega a un mes vacío, se queda ahí.
   const [yaBuscado, setYaBuscado] = useState(false);
@@ -162,6 +164,32 @@ export function CalendarPanel({ onAbrirCampaign }: Props) {
     }
   }
 
+  async function suscribirCalendario() {
+    setCargandoEnlace(true);
+    try {
+      const { url } = await getEnlaceCalendario();
+      setEnlaceCalendario(url);
+      // Deep link que abre directamente el diálogo de "añadir por URL" de
+      // Google Calendar; si el navegador bloquea el popup o la persona usa
+      // otro calendario, el enlace de abajo sigue ahí para copiar a mano.
+      window.open(`https://calendar.google.com/calendar/r?cid=${encodeURIComponent(url)}`, "_blank");
+    } catch (err) {
+      setError((err as ApiFailure)?.message || "No se pudo generar el enlace del calendario.");
+    } finally {
+      setCargandoEnlace(false);
+    }
+  }
+
+  async function copiarEnlaceCalendario() {
+    if (!enlaceCalendario) return;
+    try {
+      await navigator.clipboard.writeText(enlaceCalendario);
+    } catch {
+      // Sin permiso de portapapeles no hay nada que hacer salvo dejar el
+      // enlace a la vista para que se copie a mano.
+    }
+  }
+
   return (
     <section className="mkt-panel-react">
       {error ? <AlertBanner variant="error" message={error} /> : null}
@@ -180,8 +208,28 @@ export function CalendarPanel({ onAbrirCampaign }: Props) {
           <button type="button" className="mkt-btn-mini-react" onClick={() => mover(1)}>
             Siguiente →
           </button>
+          <button
+            type="button"
+            className="mkt-btn-mini-react"
+            onClick={() => void suscribirCalendario()}
+            disabled={cargandoEnlace}
+          >
+            {cargandoEnlace ? "Generando enlace..." : "📅 Suscribirse"}
+          </button>
         </div>
       </header>
+
+      {enlaceCalendario ? (
+        <p className="mkt-leyenda-nota-react">
+          Se ha abierto Google Calendar en otra pestaña para confirmar la
+          suscripción. Si no, o usas otra app de calendario, copia este
+          enlace y añádelo como "calendario por URL":{" "}
+          <code>{enlaceCalendario}</code>{" "}
+          <button type="button" className="mkt-btn-mini-react" onClick={() => void copiarEnlaceCalendario()}>
+            Copiar
+          </button>
+        </p>
+      ) : null}
 
       {/* La leyenda va antes de la rejilla: leerla después de haber necesitado
           el código de color no sirve de nada. */}

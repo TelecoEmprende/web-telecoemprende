@@ -1,8 +1,17 @@
+import hashlib
+import hmac
+
 import psycopg2
 from flask import session
 from werkzeug.security import check_password_hash, generate_password_hash
 
-from backend.config import CARGOS_VALIDOS, DATABASE_URL, EQUIPO_CON_PERMISOS_ADMIN, EQUIPOS_VALIDOS
+from backend.config import (
+    CALENDARIO_TOKEN_SECRET,
+    CARGOS_VALIDOS,
+    DATABASE_URL,
+    EQUIPO_CON_PERMISOS_ADMIN,
+    EQUIPOS_VALIDOS,
+)
 
 # Hash "de relleno" para cuando el email no existe: sin esto, saltarse
 # check_password_hash en ese caso haría que la respuesta fuera más rápida
@@ -108,6 +117,36 @@ def equipo_session_info() -> dict:
 
 def logout_equipo() -> None:
     session.clear()
+
+
+def token_calendario(email: str) -> str:
+    """Firma de un email para el enlace de suscripción al calendario (.ics).
+
+    No se guarda en ningún sitio: se recalcula al verificar, así que no hace
+    falta tabla ni migración para invalidar u otorgar acceso, va ligado a
+    seguir dado de alta en `equipo_accesos`.
+    """
+    return hmac.new(
+        CALENDARIO_TOKEN_SECRET.encode(), email.strip().lower().encode(), hashlib.sha256
+    ).hexdigest()
+
+
+def equipos_por_token_calendario(email: str, token: str) -> list[str] | None:
+    """Verifica el token del enlace de calendario y devuelve los equipos
+    activos de ese email, o None si el token no cuadra o la cuenta no existe
+    o está de baja."""
+    if not hmac.compare_digest(token_calendario(email), token):
+        return None
+    with _get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT equipos FROM equipo_accesos WHERE email = %s AND activo = TRUE",
+                (email.strip().lower(),),
+            )
+            fila = cur.fetchone()
+    if fila is None:
+        return None
+    return [e for e in fila[0] if e in EQUIPOS_VALIDOS]
 
 
 def listar_equipo_accesos() -> list[dict]:
