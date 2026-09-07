@@ -13,6 +13,9 @@ const getCalendario = vi.fn();
 const getMiembros = vi.fn();
 const updateTask = vi.fn();
 const createTask = vi.fn();
+const getFichaMiembro = vi.fn();
+const listarRegistros = vi.fn();
+const updateFichaMiembro = vi.fn();
 
 // El módulo ya no exporta funciones sueltas sino una factoría por
 // departamento (Marketing y Eventos comparten paneles). `apiDepto` guarda el
@@ -39,6 +42,14 @@ vi.mock("../../api/marketing", () => ({
       updateCampaign: vi.fn(),
       updateContent: vi.fn(),
       getEnlaceCalendario: () => Promise.resolve({ ok: true, url: "" }),
+      getFichaMiembro: (...args: unknown[]) => getFichaMiembro(...args),
+      listarRegistros: (...args: unknown[]) => listarRegistros(...args),
+      crearRegistro: vi.fn(),
+      actualizarRegistro: vi.fn(),
+      eliminarRegistro: vi.fn(),
+      getResumenPresupuesto: () =>
+        Promise.resolve({ ok: true, resumen: { gastos: "0", ingresos: "0", pagado: "0", balance: "0" } }),
+      updateFichaMiembro: (...args: unknown[]) => updateFichaMiembro(...args),
     };
   },
 }));
@@ -121,6 +132,11 @@ describe("/equipo — panel de Marketing", () => {
       .mockReset()
       .mockResolvedValue({ ok: true, desde: "", hasta: "", items: [] });
     getMiembros.mockReset().mockResolvedValue({ ok: true, miembros: [] });
+    getFichaMiembro.mockReset();
+    listarRegistros.mockReset().mockImplementation((recurso: string) =>
+      Promise.resolve({ ok: true, [recurso]: [] }),
+    );
+    updateFichaMiembro.mockReset().mockResolvedValue({ ok: true });
     updateTask.mockReset().mockResolvedValue({ ok: true });
     createTask.mockReset().mockResolvedValue({ ok: true, task: TAREA });
   });
@@ -316,10 +332,19 @@ describe("/equipo — panel de Marketing", () => {
     );
   });
 
-  it("lista los miembros del departamento", async () => {
+  it("lista los miembros del departamento con su carga", async () => {
     getMiembros.mockResolvedValue({
       ok: true,
-      miembros: [{ email: YO, equipos: ["marketing"], activo: true }],
+      miembros: [
+        { email: YO, equipos: ["marketing"], activo: true, tags: ["Copy"], abiertas: 0 },
+        {
+          email: "hugo@telecoemprende.es",
+          equipos: ["marketing"],
+          activo: true,
+          tags: ["Reels"],
+          abiertas: 5,
+        },
+      ],
     });
 
     await renderMarketing();
@@ -327,9 +352,110 @@ describe("/equipo — panel de Marketing", () => {
 
     await userEvent.click(screen.getByRole("button", { name: "Miembros" }));
 
-    const panel = await screen.findByRole("heading", { name: "Miembros de Marketing" });
-    expect(panel).toBeInTheDocument();
-    expect(await screen.findByText(YO)).toBeInTheDocument();
+    expect(
+      await screen.findByRole("heading", { name: "Miembros de Marketing" }),
+    ).toBeInTheDocument();
+    // El directorio enseña el nombre, no el email en crudo.
+    expect(await screen.findByText("Abril")).toBeInTheDocument();
+    expect(screen.getByText("Libre")).toBeInTheDocument();
+    expect(screen.getByText("5 tareas abiertas")).toBeInTheDocument();
+  });
+
+  it("los más libres salen primero, para saber a quién asignar", async () => {
+    getMiembros.mockResolvedValue({
+      ok: true,
+      miembros: [
+        {
+          email: "hugo@telecoemprende.es",
+          equipos: ["marketing"],
+          activo: true,
+          tags: [],
+          abiertas: 5,
+        },
+        { email: YO, equipos: ["marketing"], activo: true, tags: [], abiertas: 0 },
+      ],
+    });
+
+    await renderMarketing();
+    await screen.findByText(/Nada pendiente/);
+    await userEvent.click(screen.getByRole("button", { name: "Miembros" }));
+
+    await screen.findByText("Abril");
+    const nombres = screen
+      .getAllByText(/^(Abril|Hugo)$/)
+      .map((n) => n.textContent);
+    expect(nombres).toEqual(["Abril", "Hugo"]);
+  });
+
+  it("filtra el directorio por habilidad", async () => {
+    getMiembros.mockResolvedValue({
+      ok: true,
+      miembros: [
+        { email: YO, equipos: ["marketing"], activo: true, tags: ["Copy"], abiertas: 0 },
+        {
+          email: "hugo@telecoemprende.es",
+          equipos: ["marketing"],
+          activo: true,
+          tags: ["Reels"],
+          abiertas: 1,
+        },
+      ],
+    });
+
+    await renderMarketing();
+    await screen.findByText(/Nada pendiente/);
+    await userEvent.click(screen.getByRole("button", { name: "Miembros" }));
+    await screen.findByText("Abril");
+
+    await userEvent.click(screen.getByRole("button", { name: "Reels" }));
+
+    expect(screen.getByText("Hugo")).toBeInTheDocument();
+    expect(screen.queryByText("Abril")).not.toBeInTheDocument();
+  });
+
+  it("al tocar a alguien se abre su ficha con sus números", async () => {
+    getMiembros.mockResolvedValue({
+      ok: true,
+      miembros: [
+        { email: YO, equipos: ["marketing"], activo: true, tags: ["Copy"], abiertas: 2 },
+      ],
+    });
+    getFichaMiembro.mockResolvedValue({
+      ok: true,
+      ficha: {
+        email: YO,
+        equipos: ["marketing"],
+        vp_de: [],
+        cargo: "",
+        tags: ["Copy"],
+        notas: "Mejor una cosa a la vez.",
+        desde: "2026-01-15T10:00:00",
+        abiertas: 2,
+        completadas: 12,
+        campanas: 3,
+        actividad: [
+          {
+            id: 1,
+            titulo: "Grabar reel de apertura",
+            estado: "acabado" as TaskEstado,
+            updated_at: new Date().toISOString(),
+            padre: "Vuelta al cole",
+          },
+        ],
+      },
+    });
+
+    await renderMarketing();
+    await screen.findByText(/Nada pendiente/);
+    await userEvent.click(screen.getByRole("button", { name: "Miembros" }));
+    await userEvent.click(await screen.findByText("Abril"));
+
+    const dialogo = await screen.findByRole("dialog");
+    expect(within(dialogo).getByText("12")).toBeInTheDocument();
+    expect(within(dialogo).getByText("Grabar reel de apertura", { exact: false }))
+      .toBeInTheDocument();
+    expect(within(dialogo).getByDisplayValue("Mejor una cosa a la vez."))
+      .toBeInTheDocument();
   });
 
   it("muestra el estado vacío cuando no hay campañas", async () => {
@@ -372,6 +498,11 @@ describe("/equipo — panel de Eventos", () => {
       .mockReset()
       .mockResolvedValue({ ok: true, desde: "", hasta: "", items: [] });
     getMiembros.mockReset().mockResolvedValue({ ok: true, miembros: [] });
+    getFichaMiembro.mockReset();
+    listarRegistros.mockReset().mockImplementation((recurso: string) =>
+      Promise.resolve({ ok: true, [recurso]: [] }),
+    );
+    updateFichaMiembro.mockReset().mockResolvedValue({ ok: true });
     updateTask.mockReset().mockResolvedValue({ ok: true });
     createTask.mockReset().mockResolvedValue({ ok: true, task: TAREA });
   });
@@ -385,12 +516,38 @@ describe("/equipo — panel de Eventos", () => {
     await userEvent.click(await screen.findByRole("button", { name: "Resumen" }));
   }
 
-  it("Eventos tiene los mismos paneles que Marketing", async () => {
+  it("Eventos tiene su navegación completa, con los nombres de Eventos", async () => {
     await renderEventos();
 
-    for (const panel of ["Resumen", "Eventos", "Tareas", "Calendario", "Miembros"]) {
+    for (const panel of [
+      "Resumen", "Eventos", "Gestiones", "Calendario",
+      "Recursos", "Presupuesto", "Reuniones", "Miembros",
+    ]) {
       expect(screen.getByRole("button", { name: panel })).toBeInTheDocument();
     }
+    // En Eventos las tareas se llaman gestiones y las campañas, eventos.
+    expect(screen.queryByRole("button", { name: "Tareas" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Campañas" })).not.toBeInTheDocument();
+  });
+
+  it("los anuncios cuelgan del club, no de un departamento", async () => {
+    await renderEventos();
+
+    const anuncios = screen.getByRole("button", { name: "Anuncios" });
+    expect(anuncios).toBeInTheDocument();
+
+    await userEvent.click(anuncios);
+
+    // Se abre el panel de anuncios (el h3 es el del panel; el h2 es el título
+    // que pinta la barra del shell).
+    expect(
+      await screen.findByRole("heading", { name: "Anuncios", level: 3 }),
+    ).toBeInTheDocument();
+    expect(listarRegistros).toHaveBeenCalledWith("anuncios");
+
+    // Y la barra lo rotula como Club, no como Eventos: el contenido es de todo
+    // el equipo aunque la ruta cuelgue de un departamento.
+    expect(document.querySelector(".equipo-barra-depto-react")?.textContent).toBe("Club");
   });
 
   it("pide los datos al departamento de Eventos, no al de Marketing", async () => {
@@ -416,7 +573,7 @@ describe("/equipo — panel de Eventos", () => {
     });
 
     await renderEventos();
-    await userEvent.click(screen.getByRole("button", { name: "Tareas" }));
+    await userEvent.click(screen.getByRole("button", { name: "Gestiones" }));
 
     expect(
       await screen.findByText("Reservar el espacio de la feria"),

@@ -2,6 +2,7 @@ import { apiRequest } from "./client";
 import type { ApiResult } from "../types/api";
 import type {
   CalendarioItem,
+  FichaMiembro,
   CampaignDetalle,
   CampaignResumen,
   Content,
@@ -9,6 +10,7 @@ import type {
   Task,
 } from "../types/marketing";
 import type { Team } from "../types/equipo";
+import type { Recurso, Registro, ResumenPresupuesto } from "../types/registros";
 
 /**
  * Cliente del workspace de un departamento.
@@ -80,6 +82,32 @@ export function apiDepto(depto: Team) {
 
     getEnlaceCalendario: () =>
       apiRequest<{ ok: true; url: string }>(`${BASE}/calendario/enlace`),
+
+    getFichaMiembro: (email: string) =>
+      apiRequest<{ ok: true; ficha: FichaMiembro }>(
+        `${BASE}/miembros/ficha?email=${encodeURIComponent(email)}`,
+      ),
+
+    updateFichaMiembro: (email: string, datos: { tags?: string[]; notas?: string }) =>
+      put<ApiResult>("/miembros/ficha", { email, ...datos }),
+
+    // --- Registros (recursos, presupuesto, anuncios, reuniones, alumni) ---
+    // Un solo juego de métodos para las cinco: el backend las sirve con el
+    // mismo CRUD y solo cambian los campos que se le mandan.
+
+    listarRegistros: (recurso: Recurso) =>
+      apiRequest<{ ok: true } & Record<string, Registro[]>>(`${BASE}/${recurso}`),
+
+    crearRegistro: (recurso: Recurso, datos: Record<string, unknown>) =>
+      post<{ ok: true; registro: Registro }>(`/${recurso}`, datos),
+
+    actualizarRegistro: (recurso: Recurso, id: number, datos: Record<string, unknown>) =>
+      put<ApiResult>(`/${recurso}/${id}`, datos),
+
+    eliminarRegistro: (recurso: Recurso, id: number) => del(`/${recurso}/${id}`),
+
+    getResumenPresupuesto: () =>
+      apiRequest<{ ok: true; resumen: ResumenPresupuesto }>(`${BASE}/presupuesto/resumen`),
   };
 }
 

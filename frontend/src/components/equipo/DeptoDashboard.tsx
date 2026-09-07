@@ -7,6 +7,13 @@ import { CampaignsPanel } from "./marketing/CampaignsPanel";
 import { MembersPanel } from "./marketing/MembersPanel";
 import { TasksPanel } from "./marketing/TasksPanel";
 import { WeekPanel } from "./marketing/WeekPanel";
+import {
+  AlumniPanel,
+  AnunciosPanel,
+  PresupuestoPanel,
+  RecursosPanel,
+  ReunionesPanel,
+} from "./registros/paneles";
 import type { Team } from "../../types/equipo";
 
 type Props = {
@@ -53,6 +60,11 @@ export function DeptoDashboard({ depto, seccion, onSeccion }: Props) {
         <CalendarPanel onAbrirCampaign={abrirCampaign} />
       ) : null}
       {seccion === `${p}-miembros` ? <MembersPanel /> : null}
+      {seccion === `${p}-recursos` ? <RecursosPanel /> : null}
+      {seccion === `${p}-presupuesto` ? <PresupuestoPanel /> : null}
+      {seccion === `${p}-anuncios` ? <AnunciosPanel /> : null}
+      {seccion === `${p}-reuniones` ? <ReunionesPanel /> : null}
+      {seccion === `${p}-alumni` ? <AlumniPanel /> : null}
     </DeptoProvider>
   );
 }

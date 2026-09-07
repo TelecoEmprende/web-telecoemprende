@@ -686,3 +686,100 @@ class SlackTestCase(MarketingTestCase):
         marketing_api_slack.enviar = lambda texto: True
         tareas = self.client.get("/api/marketing/tasks").get_json()["tasks"]
         self.assertEqual([t["titulo"] for t in tareas], ["Guion del reel"])
+
+
+class FichaMiembroTestCase(MarketingTestCase):
+    """Directorio y ficha: carga de trabajo calculada, perfil guardado."""
+
+    def test_el_directorio_cuenta_las_tareas_abiertas_de_cada_uno(self):
+        self.login()
+        self.seed_acceso("hugo@telecoemprende.es", "x", ["marketing"])
+
+        self.client.post(
+            "/api/marketing/tasks",
+            json={"titulo": "Guion", "responsables": ["hugo@telecoemprende.es"]},
+        )
+        acabada = self.client.post(
+            "/api/marketing/tasks",
+            json={"titulo": "Reel", "responsables": ["hugo@telecoemprende.es"]},
+        ).get_json()["task"]["id"]
+        self.client.put(f"/api/marketing/tasks/{acabada}", json={"estado": "acabado"})
+
+        miembros = self.client.get("/api/marketing/miembros").get_json()["miembros"]
+        hugo = next(m for m in miembros if m["email"] == "hugo@telecoemprende.es")
+        # Solo cuenta lo que sigue abierto: la acabada ya no pesa.
+        self.assertEqual(hugo["abiertas"], 1)
+
+    def test_la_carga_no_mezcla_departamentos(self):
+        self.login(equipos=["marketing", "eventos"])
+        self.seed_acceso("hugo@telecoemprende.es", "x", ["marketing", "eventos"])
+        self.client.post(
+            "/api/eventos/tasks",
+            json={"titulo": "Montaje", "responsables": ["hugo@telecoemprende.es"]},
+        )
+
+        en_marketing = self.client.get("/api/marketing/miembros").get_json()["miembros"]
+        hugo = next(m for m in en_marketing if m["email"] == "hugo@telecoemprende.es")
+        self.assertEqual(hugo["abiertas"], 0)
+
+        en_eventos = self.client.get("/api/eventos/miembros").get_json()["miembros"]
+        hugo = next(m for m in en_eventos if m["email"] == "hugo@telecoemprende.es")
+        self.assertEqual(hugo["abiertas"], 1)
+
+    def test_la_ficha_trae_totales_y_actividad(self):
+        self.login()
+        self.seed_acceso("hugo@telecoemprende.es", "x", ["marketing"])
+        campaign_id = self.crear_campaign()["id"]
+        self.client.post(
+            "/api/marketing/tasks",
+            json={
+                "titulo": "Guion del reel",
+                "campaign_id": campaign_id,
+                "responsables": ["hugo@telecoemprende.es"],
+            },
+        )
+
+        ficha = self.client.get(
+            "/api/marketing/miembros/ficha?email=hugo@telecoemprende.es"
+        ).get_json()["ficha"]
+
+        self.assertEqual(ficha["abiertas"], 1)
+        self.assertEqual(ficha["completadas"], 0)
+        self.assertEqual(ficha["campanas"], 1)
+        self.assertEqual([a["titulo"] for a in ficha["actividad"]], ["Guion del reel"])
+
+    def test_se_guardan_etiquetas_y_nota(self):
+        self.login()
+        self.seed_acceso("hugo@telecoemprende.es", "x", ["marketing"])
+
+        guardar = self.client.put(
+            "/api/marketing/miembros/ficha",
+            json={
+                "email": "hugo@telecoemprende.es",
+                "tags": ["Reels", "Fotografía", "  "],
+                "notas": "Mejor una cosa a la vez.",
+            },
+        )
+        self.assertEqual(guardar.status_code, 200)
+
+        ficha = self.client.get(
+            "/api/marketing/miembros/ficha?email=hugo@telecoemprende.es"
+        ).get_json()["ficha"]
+        # La etiqueta en blanco se descarta y el resto queda ordenado.
+        self.assertEqual(ficha["tags"], ["Fotografía", "Reels"])
+        self.assertEqual(ficha["notas"], "Mejor una cosa a la vez.")
+
+    def test_no_se_lee_la_ficha_de_alguien_de_otro_departamento(self):
+        self.login(equipos=["marketing"])
+        self.seed_acceso("solo-eventos@example.com", "x", ["eventos"])
+
+        leer = self.client.get(
+            "/api/marketing/miembros/ficha?email=solo-eventos@example.com"
+        )
+        self.assertEqual(leer.status_code, 404)
+
+        escribir = self.client.put(
+            "/api/marketing/miembros/ficha",
+            json={"email": "solo-eventos@example.com", "notas": "colada"},
+        )
+        self.assertEqual(escribir.status_code, 404)
