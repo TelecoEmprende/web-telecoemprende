@@ -129,6 +129,33 @@ export type Miembro = {
   email: string;
   equipos: string[];
   activo: boolean;
+  /** Etiquetas de habilidad, del perfil de la persona. */
+  tags: string[];
+  /** Tareas sin acabar en ESTE departamento. Se calcula, no se guarda. */
+  abiertas: number;
+};
+
+/** Una entrada del historial: el estado actual de una tarea suya. */
+export type ActividadMiembro = {
+  id: number;
+  titulo: string;
+  estado: TaskEstado;
+  updated_at: string;
+  padre: string | null;
+};
+
+export type FichaMiembro = {
+  email: string;
+  equipos: string[];
+  vp_de: string[];
+  cargo: string;
+  tags: string[];
+  notas: string;
+  desde: string;
+  abiertas: number;
+  completadas: number;
+  campanas: number;
+  actividad: ActividadMiembro[];
 };
 
 /** Fechas en el formato de aquí (15 oct), no en ISO crudo. */
@@ -150,4 +177,15 @@ export function diasHasta(iso: string | null) {
   const objetivo = new Date(ano, mes - 1, dia);
   const soloHoy = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate());
   return Math.round((objetivo.getTime() - soloHoy.getTime()) / 86400000);
+}
+
+
+/** "hace 2 días", "ayer", "hoy". Para el historial de la ficha de miembro. */
+export function haceCuanto(iso: string) {
+  const dias = diasHasta(iso.slice(0, 10));
+  if (dias === null) return "";
+  if (dias === 0) return "hoy";
+  if (dias === -1) return "ayer";
+  if (dias < 0) return `hace ${Math.abs(dias)} días`;
+  return formatearFecha(iso.slice(0, 10));
 }
