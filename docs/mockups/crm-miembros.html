@@ -1,0 +1,861 @@
+<title>Marketing como CRM</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700;800&display=swap');
+
+  :root {
+    --gold: #f4b044;
+    --orange: #e0680e;
+    --orange-dark: #b95208;
+    --steel: #88a5b7;
+    --navy: #112532;
+    --navy-soft: #18374b;
+    --cream: #faf5ec;
+    --surface: #ffffff;
+    --bg: #f6efe3;
+    --text: #112532;
+    --text-muted: #4e6373;
+    --border: #e8ddca;
+    --success-bg: #e3f6e8;
+    --success-text: #1d7a3d;
+    --error-bg: #fde8ea;
+    --error-text: #b42318;
+    --info-bg: #fdf1dd;
+    --info-text: #9a5b06;
+
+    --page-bg: var(--bg);
+    --ink: var(--text);
+    --ink-muted: var(--text-muted);
+    --card-bg: var(--surface);
+    --card-border: var(--border);
+    --shadow: 0 1px 2px rgba(17, 37, 50, 0.06);
+    --shadow-soft: 0 10px 30px -12px rgba(17, 37, 50, 0.18);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --page-bg: #0b1a24;
+      --ink: #f3ede0;
+      --ink-muted: #a9bccb;
+      --card-bg: #16303f;
+      --card-border: #24475a;
+      --shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+      --shadow-soft: 0 20px 44px -20px rgba(0, 0, 0, 0.6);
+      --success-bg: #123524;
+      --success-text: #6fd99a;
+      --error-bg: #3a1418;
+      --error-text: #f3a2a8;
+      --info-bg: #2f2410;
+      --info-text: #f0c274;
+    }
+  }
+  :root[data-theme="dark"] {
+    --page-bg: #0b1a24;
+    --ink: #f3ede0;
+    --ink-muted: #a9bccb;
+    --card-bg: #16303f;
+    --card-border: #24475a;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+    --shadow-soft: 0 20px 44px -20px rgba(0, 0, 0, 0.6);
+    --success-bg: #123524;
+    --success-text: #6fd99a;
+    --error-bg: #3a1418;
+    --error-text: #f3a2a8;
+    --info-bg: #2f2410;
+    --info-text: #f0c274;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    background: var(--page-bg);
+    color: var(--ink);
+    font-family: "Inter", sans-serif;
+    line-height: 1.55;
+  }
+
+  .doc {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 64px 24px 100px;
+  }
+
+  h1, h2, h3 {
+    font-family: "Space Grotesk", "Inter", sans-serif;
+    text-wrap: balance;
+    margin: 0;
+  }
+
+  /* ---------- Portada ---------- */
+
+  .eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--orange);
+    margin-bottom: 18px;
+  }
+
+  .eyebrow::before {
+    content: "";
+    width: 22px;
+    height: 2px;
+    background: var(--orange);
+  }
+
+  .portada h1 {
+    font-size: clamp(2rem, 4.4vw, 2.9rem);
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    max-width: 18ch;
+  }
+
+  .portada p.lead {
+    margin: 20px 0 0;
+    max-width: 62ch;
+    font-size: 1.08rem;
+    color: var(--ink-muted);
+  }
+
+  .aviso {
+    margin-top: 28px;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 16px;
+    border-radius: 999px;
+    background: var(--info-bg);
+    color: var(--info-text);
+    font-size: 0.85rem;
+    font-weight: 600;
+  }
+
+  /* ---------- Estructura de propuesta ---------- */
+
+  .propuesta {
+    margin-top: 88px;
+    padding-top: 40px;
+    border-top: 1px solid var(--card-border);
+  }
+
+  .propuesta__cabecera {
+    display: flex;
+    align-items: baseline;
+    gap: 16px;
+    margin-bottom: 10px;
+  }
+
+  .propuesta__numero {
+    font-family: "Space Grotesk", sans-serif;
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--orange);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .propuesta h2 {
+    font-size: 1.5rem;
+    font-weight: 700;
+  }
+
+  .propuesta__meta {
+    display: flex;
+    gap: 8px;
+    margin: 14px 0 18px;
+  }
+
+  .tag-meta {
+    font-size: 0.74rem;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 999px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .tag-meta.impacto { background: var(--success-bg); color: var(--success-text); }
+  .tag-meta.esfuerzo-bajo { background: var(--info-bg); color: var(--info-text); }
+  .tag-meta.esfuerzo-medio { background: var(--error-bg); color: var(--error-text); }
+
+  .propuesta p.porque {
+    max-width: 64ch;
+    color: var(--ink-muted);
+    font-size: 0.98rem;
+    margin: 0 0 28px;
+  }
+
+  .propuesta p.porque strong { color: var(--ink); }
+
+  /* ---------- Marco del mockup: como una ventana del navegador ---------- */
+
+  .mockup {
+    border-radius: 16px;
+    border: 1px solid var(--card-border);
+    background: var(--card-bg);
+    box-shadow: var(--shadow-soft);
+    overflow: hidden;
+  }
+
+  .mockup__barra {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--card-border);
+    background: color-mix(in srgb, var(--card-bg) 92%, var(--ink) 8%);
+  }
+
+  .mockup__barra span {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: var(--card-border);
+  }
+
+  .mockup__lienzo {
+    background: var(--cream);
+    padding: 22px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .mockup__lienzo { background: #0f2431; }
+  }
+  :root[data-theme="dark"] .mockup__lienzo { background: #0f2431; }
+
+  /* ---------- Piezas de UI reutilizadas en los mockups ---------- */
+
+  .app-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    box-shadow: 0 1px 2px rgba(17, 37, 50, 0.06);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .app-card { background: #16303f; border-color: #24475a; }
+  }
+  :root[data-theme="dark"] .app-card { background: #16303f; border-color: #24475a; }
+
+  .avatar {
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    font-family: "Space Grotesk", sans-serif;
+    font-weight: 700;
+    color: #fff;
+    flex-shrink: 0;
+  }
+
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 3px 9px;
+    border-radius: 999px;
+    white-space: nowrap;
+  }
+
+  .chip.skill { background: var(--info-bg); color: var(--info-text); }
+  .chip.libre { background: var(--success-bg); color: var(--success-text); }
+  .chip.cargado { background: var(--error-bg); color: var(--error-text); }
+  .chip.neutro { background: color-mix(in srgb, var(--steel) 22%, transparent); color: var(--navy); }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .chip.neutro { color: var(--ink); }
+  }
+  :root[data-theme="dark"] .chip.neutro { color: var(--ink); }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: "Inter", sans-serif;
+    font-size: 0.82rem;
+    font-weight: 700;
+    padding: 8px 14px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--navy);
+    cursor: default;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .btn { background: #16303f; border-color: #24475a; color: var(--ink); }
+  }
+  :root[data-theme="dark"] .btn { background: #16303f; border-color: #24475a; color: var(--ink); }
+
+  .btn.primario {
+    background: var(--orange);
+    border-color: var(--orange);
+    color: #fff;
+  }
+
+  /* --- Directorio (propuesta 1) --- */
+
+  .directorio-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 14px;
+  }
+
+  .directorio-toolbar h3 {
+    font-size: 1rem;
+    font-weight: 700;
+  }
+
+  .filtros {
+    display: flex;
+    gap: 6px;
+  }
+
+  .filtro {
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 5px 11px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    color: var(--ink-muted);
+  }
+  .filtro.activo { background: var(--navy); border-color: var(--navy); color: var(--cream); }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .filtro { border-color: #24475a; }
+  }
+  :root[data-theme="dark"] .filtro { border-color: #24475a; }
+
+  .lista-miembros {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .miembro-fila {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 13px 16px;
+  }
+
+  .miembro-fila .avatar { width: 38px; height: 38px; font-size: 0.85rem; }
+
+  .miembro-info { flex: 1; min-width: 0; }
+  .miembro-info .nombre { font-weight: 700; font-size: 0.92rem; }
+  .miembro-info .skills { display: flex; gap: 5px; margin-top: 6px; flex-wrap: wrap; }
+
+  .miembro-fila .acciones {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  /* --- Ficha de miembro (propuesta 2) --- */
+
+  .ficha {
+    display: grid;
+    grid-template-columns: 220px 1fr;
+    gap: 0;
+  }
+
+  .ficha__lateral {
+    padding: 26px 22px;
+    border-right: 1px solid var(--border);
+    text-align: center;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .ficha__lateral { border-color: #24475a; }
+  }
+  :root[data-theme="dark"] .ficha__lateral { border-color: #24475a; }
+
+  .ficha__lateral .avatar {
+    width: 72px; height: 72px; font-size: 1.5rem;
+    margin: 0 auto 14px;
+  }
+
+  .ficha__lateral h3 { font-size: 1.1rem; font-weight: 700; }
+  .ficha__lateral .rol { font-size: 0.82rem; color: var(--ink-muted); margin-top: 3px; }
+
+  .ficha__contacto {
+    margin-top: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    font-size: 0.8rem;
+  }
+  .ficha__contacto .btn { justify-content: center; width: 100%; }
+
+  .ficha__skills {
+    margin-top: 18px;
+    display: flex;
+    gap: 5px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .ficha__cuerpo { padding: 24px 26px; }
+
+  .ficha__stat-fila {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+
+  .stat-tile {
+    padding: 14px;
+    border-radius: 12px;
+    background: var(--cream);
+    text-align: center;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .stat-tile { background: #0f2431; }
+  }
+  :root[data-theme="dark"] .stat-tile { background: #0f2431; }
+
+  .stat-tile .num {
+    font-family: "Space Grotesk", sans-serif;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--navy);
+    font-variant-numeric: tabular-nums;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .stat-tile .num { color: var(--ink); }
+  }
+  :root[data-theme="dark"] .stat-tile .num { color: var(--ink); }
+
+  .stat-tile .etiq { font-size: 0.72rem; color: var(--ink-muted); font-weight: 600; margin-top: 2px; }
+
+  .ficha__seccion-titulo {
+    font-size: 0.76rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--ink-muted);
+    margin: 0 0 12px;
+  }
+
+  .timeline-item {
+    display: flex;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.85rem;
+  }
+  .timeline-item:last-child { border-bottom: none; }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .timeline-item { border-color: #24475a; }
+  }
+  :root[data-theme="dark"] .timeline-item { border-color: #24475a; }
+
+  .timeline-item .punto {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--success-text);
+    margin-top: 5px; flex-shrink: 0;
+  }
+  .timeline-item .fecha { color: var(--ink-muted); font-size: 0.76rem; white-space: nowrap; margin-left: auto; }
+
+  .nota-privada {
+    margin-top: 18px;
+    padding: 12px 14px;
+    border-radius: 10px;
+    border: 1px dashed var(--border);
+    font-size: 0.82rem;
+    color: var(--ink-muted);
+    font-style: italic;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .nota-privada { border-color: #24475a; }
+  }
+  :root[data-theme="dark"] .nota-privada { border-color: #24475a; }
+
+  /* --- Salud del equipo (propuesta 3) --- */
+
+  .salud-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-bottom: 18px;
+  }
+
+  .salud-tile {
+    padding: 16px;
+    text-align: left;
+  }
+
+  .salud-tile .num {
+    font-family: "Space Grotesk", sans-serif;
+    font-size: 1.7rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+  .salud-tile .num.alerta { color: var(--error-text); }
+  .salud-tile .num.ok { color: var(--success-text); }
+  .salud-tile .etiq { font-size: 0.76rem; color: var(--ink-muted); font-weight: 600; margin-top: 4px; }
+
+  .reengagement-fila {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 11px 16px;
+  }
+  .reengagement-fila .avatar { width: 30px; height: 30px; font-size: 0.7rem; }
+  .reengagement-fila .detalle { flex: 1; font-size: 0.85rem; }
+  .reengagement-fila .detalle .nombre { font-weight: 700; }
+  .reengagement-fila .detalle .sub { color: var(--ink-muted); font-size: 0.78rem; }
+
+  /* ---------- Quick wins ---------- */
+
+  .quick-wins {
+    margin-top: 88px;
+    padding-top: 40px;
+    border-top: 1px solid var(--card-border);
+  }
+
+  .quick-wins h2 { font-size: 1.5rem; font-weight: 700; margin-bottom: 8px; }
+  .quick-wins > p { color: var(--ink-muted); max-width: 60ch; margin: 0 0 28px; }
+
+  .qw-lista {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 14px;
+  }
+
+  .qw-item {
+    padding: 18px 20px;
+    display: flex;
+    gap: 14px;
+  }
+
+  .qw-item .icono {
+    width: 34px; height: 34px;
+    border-radius: 9px;
+    background: var(--info-bg);
+    color: var(--info-text);
+    display: grid;
+    place-items: center;
+    font-size: 1rem;
+    flex-shrink: 0;
+  }
+
+  .qw-item h4 { font-size: 0.92rem; font-weight: 700; margin: 0 0 4px; }
+  .qw-item p { font-size: 0.82rem; color: var(--ink-muted); margin: 0; }
+
+  /* ---------- Cierre ---------- */
+
+  .cierre {
+    margin-top: 88px;
+    padding: 32px;
+    border-radius: 18px;
+    background: var(--navy);
+    color: var(--cream);
+  }
+  .cierre h2 { font-size: 1.3rem; font-weight: 700; color: #fff; margin-bottom: 10px; }
+  .cierre p { margin: 0; max-width: 60ch; color: color-mix(in srgb, var(--cream) 78%, transparent); font-size: 0.95rem; }
+  .cierre .lista-prioridad { margin-top: 20px; display: flex; flex-direction: column; gap: 10px; }
+  .cierre .lista-prioridad div {
+    display: flex; align-items: center; gap: 10px;
+    font-size: 0.88rem; font-weight: 600;
+  }
+  .cierre .lista-prioridad span.n {
+    font-family: "Space Grotesk", sans-serif;
+    width: 22px; height: 22px; border-radius: 50%;
+    background: var(--orange); color: #fff;
+    display: grid; place-items: center;
+    font-size: 0.75rem; flex-shrink: 0;
+  }
+
+  @media (max-width: 640px) {
+    .ficha { grid-template-columns: 1fr; }
+    .ficha__lateral { border-right: none; border-bottom: 1px solid var(--card-border); }
+    .ficha__stat-fila { grid-template-columns: repeat(3, 1fr); }
+    .salud-grid { grid-template-columns: repeat(2, 1fr); }
+    .qw-lista { grid-template-columns: 1fr; }
+    .mockup__lienzo { padding: 14px; }
+  }
+</style>
+
+<div class="doc">
+
+  <div class="portada">
+    <div class="eyebrow">Propuesta · sin tocar nada todavía</div>
+    <h1>Marketing como CRM del equipo, no solo tablero de tareas</h1>
+    <p class="lead">
+      Hoy la pestaña "Miembros" es un listado con foto y email. Lo que ya
+      tenéis alrededor — tareas, campañas, responsables — es justo la materia
+      prima de un CRM: quién hace qué, cuánto lleva encima, y a quién avisar
+      la próxima vez. Estas son las piezas que lo convertirían en eso.
+    </p>
+    <div class="aviso">💬 Solo propuestas — nada de esto está construido ni subido</div>
+  </div>
+
+  <!-- ============ PROPUESTA 1 ============ -->
+  <section class="propuesta">
+    <div class="propuesta__cabecera">
+      <span class="propuesta__numero">01</span>
+      <h2>Directorio con carga de trabajo y habilidades</h2>
+    </div>
+    <div class="propuesta__meta">
+      <span class="tag-meta impacto">Impacto alto</span>
+      <span class="tag-meta esfuerzo-bajo">Esfuerzo bajo</span>
+    </div>
+    <p class="porque">
+      Ahora mismo, para saber a quién asignar algo hay que acordarse de
+      memoria. Con una etiqueta de <strong>habilidad</strong> (Diseño, Reels,
+      Copy...) y un chip de <strong>carga</strong> (cuántas tareas abiertas
+      tiene), planificar una campaña nueva es mirar la lista, no preguntar
+      por WhatsApp quién anda libre.
+    </p>
+
+    <div class="mockup">
+      <div class="mockup__barra"><span></span><span></span><span></span></div>
+      <div class="mockup__lienzo">
+        <div class="app-card" style="padding: 18px;">
+          <div class="directorio-toolbar">
+            <h3>Miembros de Marketing</h3>
+            <div class="filtros">
+              <span class="filtro activo">Todos</span>
+              <span class="filtro">Diseño</span>
+              <span class="filtro">Reels</span>
+              <span class="filtro">Copy</span>
+            </div>
+          </div>
+          <div class="lista-miembros">
+            <div class="app-card miembro-fila">
+              <div class="avatar" style="background:#e0680e;">AB</div>
+              <div class="miembro-info">
+                <div class="nombre">Abril</div>
+                <div class="skills">
+                  <span class="chip skill">Estrategia</span>
+                  <span class="chip skill">Copy</span>
+                </div>
+              </div>
+              <div class="acciones">
+                <span class="chip cargado">4 tareas abiertas</span>
+              </div>
+            </div>
+            <div class="app-card miembro-fila">
+              <div class="avatar" style="background:#18374b;">HA</div>
+              <div class="miembro-info">
+                <div class="nombre">Hammad</div>
+                <div class="skills">
+                  <span class="chip skill">Dirección</span>
+                </div>
+              </div>
+              <div class="acciones">
+                <span class="chip neutro">1 tarea abierta</span>
+              </div>
+            </div>
+            <div class="app-card miembro-fila">
+              <div class="avatar" style="background:#b95208;">HU</div>
+              <div class="miembro-info">
+                <div class="nombre">Hugo</div>
+                <div class="skills">
+                  <span class="chip skill">Reels</span>
+                  <span class="chip skill">Fotografía</span>
+                </div>
+              </div>
+              <div class="acciones">
+                <span class="chip libre">Libre</span>
+              </div>
+            </div>
+            <div class="app-card miembro-fila">
+              <div class="avatar" style="background:#4e6373;">GU</div>
+              <div class="miembro-info">
+                <div class="nombre">Guillermo</div>
+                <div class="skills">
+                  <span class="chip skill">IA</span>
+                  <span class="chip skill">Diseño</span>
+                </div>
+              </div>
+              <div class="acciones">
+                <span class="chip libre">Libre</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ PROPUESTA 2 ============ -->
+  <section class="propuesta">
+    <div class="propuesta__cabecera">
+      <span class="propuesta__numero">02</span>
+      <h2>Ficha de miembro: la pieza central</h2>
+    </div>
+    <div class="propuesta__meta">
+      <span class="tag-meta impacto">Impacto alto</span>
+      <span class="tag-meta esfuerzo-medio">Esfuerzo medio</span>
+    </div>
+    <p class="porque">
+      Tocar a alguien de la lista abre su ficha: de un vistazo, cuánto lleva
+      encima, qué ha entregado y una nota privada del departamento ("va bien
+      con deadlines cortos", "mejor no ponerle dos cosas a la vez"). Es el
+      historial que hoy solo existe en la cabeza de quien lleva el equipo.
+    </p>
+
+    <div class="mockup">
+      <div class="mockup__barra"><span></span><span></span><span></span></div>
+      <div class="mockup__lienzo">
+        <div class="app-card ficha">
+          <div class="ficha__lateral">
+            <div class="avatar" style="background:#e0680e;">HU</div>
+            <h3>Hugo</h3>
+            <div class="rol">Miembro · desde ene 2026</div>
+            <div class="ficha__skills">
+              <span class="chip skill">Reels</span>
+              <span class="chip skill">Fotografía</span>
+            </div>
+            <div class="ficha__contacto">
+              <span class="btn">✉️ hugo@alumnos.upm.es</span>
+              <span class="btn">💬 WhatsApp</span>
+              <span class="btn primario">+ Asignar tarea</span>
+            </div>
+          </div>
+          <div class="ficha__cuerpo">
+            <div class="ficha__stat-fila">
+              <div class="stat-tile"><div class="num">0</div><div class="etiq">Tareas abiertas</div></div>
+              <div class="stat-tile"><div class="num">12</div><div class="etiq">Completadas</div></div>
+              <div class="stat-tile"><div class="num">3</div><div class="etiq">Campañas</div></div>
+            </div>
+            <div class="ficha__seccion-titulo">Actividad reciente</div>
+            <div class="timeline-item">
+              <span class="punto"></span>
+              <span>Completó <strong>"Grabar reel apertura de curso"</strong></span>
+              <span class="fecha">hace 2 días</span>
+            </div>
+            <div class="timeline-item">
+              <span class="punto"></span>
+              <span>Se unió a la campaña <strong>"Vuelta al cole"</strong></span>
+              <span class="fecha">hace 6 días</span>
+            </div>
+            <div class="timeline-item">
+              <span class="punto"></span>
+              <span>Completó <strong>"Fotos charla Santi y Pablo"</strong></span>
+              <span class="fecha">2 sep</span>
+            </div>
+            <div class="nota-privada">
+              📝 Nota del equipo: mejor asignarle una cosa cada vez, entrega
+              rápido pero se agobia con varias tareas a la vez.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ PROPUESTA 3 ============ -->
+  <section class="propuesta">
+    <div class="propuesta__cabecera">
+      <span class="propuesta__numero">03</span>
+      <h2>Salud del equipo, no solo de las campañas</h2>
+    </div>
+    <div class="propuesta__meta">
+      <span class="tag-meta impacto">Impacto medio</span>
+      <span class="tag-meta esfuerzo-medio">Esfuerzo medio</span>
+    </div>
+    <p class="porque">
+      El resumen de Home ya cuenta cómo van las campañas. Esto añade cómo va
+      <strong>la gente</strong>: quién anda sin tocar una tarea hace semanas
+      (antes de que deje el club en silencio) y quién está cargando con todo
+      (antes de que se queme).
+    </p>
+
+    <div class="mockup">
+      <div class="mockup__barra"><span></span><span></span><span></span></div>
+      <div class="mockup__lienzo">
+        <div class="salud-grid">
+          <div class="app-card salud-tile">
+            <div class="num ok">9</div>
+            <div class="etiq">Miembros activos</div>
+          </div>
+          <div class="app-card salud-tile">
+            <div class="num alerta">2</div>
+            <div class="etiq">Sin tarea hace +15 días</div>
+          </div>
+          <div class="app-card salud-tile">
+            <div class="num alerta">1</div>
+            <div class="etiq">Con 5+ tareas abiertas</div>
+          </div>
+          <div class="app-card salud-tile">
+            <div class="num ok">78%</div>
+            <div class="etiq">Tareas a tiempo</div>
+          </div>
+        </div>
+        <div class="app-card" style="padding: 6px 0;">
+          <div style="padding: 12px 16px 4px;" class="ficha__seccion-titulo">Para reenganchar</div>
+          <div class="reengagement-fila">
+            <div class="avatar" style="background:#88a5b7;">DI</div>
+            <div class="detalle">
+              <div class="nombre">Diego</div>
+              <div class="sub">Última tarea completada: hace 18 días</div>
+            </div>
+            <span class="btn">👋 Proponer tarea</span>
+          </div>
+          <div class="reengagement-fila">
+            <div class="avatar" style="background:#88a5b7;">MA</div>
+            <div class="detalle">
+              <div class="nombre">Mamoun</div>
+              <div class="sub">Última tarea completada: hace 21 días</div>
+            </div>
+            <span class="btn">👋 Proponer tarea</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ QUICK WINS ============ -->
+  <section class="quick-wins">
+    <h2>Cambios rápidos, sin tanto rediseño</h2>
+    <p>No cambian la pantalla, solo la hacen un poco más útil. Se podrían meter en cualquier momento, sueltos.</p>
+    <div class="qw-lista">
+      <div class="app-card qw-item">
+        <div class="icono">📋</div>
+        <div>
+          <h4>Copiar todos los emails</h4>
+          <p>Un botón en el directorio que copia la lista para un correo o WhatsApp de grupo, sin ir uno a uno.</p>
+        </div>
+      </div>
+      <div class="app-card qw-item">
+        <div class="icono">💬</div>
+        <div>
+          <h4>Acciones rápidas por fila</h4>
+          <p>WhatsApp y "Asignar tarea" directamente desde la lista, sin entrar en la ficha.</p>
+        </div>
+      </div>
+      <div class="app-card qw-item">
+        <div class="icono">🏷️</div>
+        <div>
+          <h4>Etiquetas editables</h4>
+          <p>Cada quien (o quien administre) añade sus propias habilidades desde su ficha, sin tocar código.</p>
+        </div>
+      </div>
+      <div class="app-card qw-item">
+        <div class="icono">📊</div>
+        <div>
+          <h4>Ordenar por carga</h4>
+          <p>Un simple "más libres primero" en el directorio ya ayuda a repartir tareas de forma justa.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="cierre">
+    <h2>Si tuviera que elegir por dónde empezar</h2>
+    <p>
+      Directorio y ficha son la base — todo lo demás cuelga de ahí. Salud del
+      equipo es la guinda, pero necesita que la ficha (con su historial) ya
+      exista para tener datos que enseñar.
+    </p>
+    <div class="lista-prioridad">
+      <div><span class="n">1</span> Carga de trabajo en el directorio (ya tenéis casi todos los datos)</div>
+      <div><span class="n">2</span> Ficha de miembro con historial y nota privada</div>
+      <div><span class="n">3</span> Etiquetas de habilidad, editables por cada uno</div>
+      <div><span class="n">4</span> Salud del equipo / reenganche</div>
+    </div>
+  </div>
+
+</div>

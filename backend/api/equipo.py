@@ -1,16 +1,19 @@
 import logging
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, Response, jsonify, request, session, url_for
 
 from backend.config import LOGIN_BLOCK_WINDOW_SECONDS, MAX_LOGIN_ATTEMPTS_PER_WINDOW
 from backend.schemas import build_response
 from backend.services.equipo import (
+    calendario_general_ics,
     equipo_session_info,
+    equipos_por_token_calendario,
     init_equipo_db,
     is_equipo_authenticated,
     listar_eventos_calendario,
     login_equipo,
     logout_equipo,
+    token_calendario,
 )
 from backend.services.security import demasiadas_peticiones, limpiar_texto, obtener_ip_real
 
@@ -71,3 +74,35 @@ def api_equipo_calendario():
 
     init_equipo_db()
     return jsonify({"ok": True, "eventos": listar_eventos_calendario()}), 200
+
+
+@equipo_api.route("/calendario/enlace", methods=["GET"])
+def api_equipo_calendario_enlace():
+    """URL de suscripción (.ics) al calendario general, firmada para este
+    email. Igual que la de Marketing: se pega en "Añadir por URL" de Google
+    Calendar y no hace falta volver a iniciar sesión para que se actualice."""
+    if not is_equipo_authenticated():
+        return jsonify(build_response(False, "No autorizado.")), 401
+
+    email = session.get("equipo_email", "")
+    url = url_for(
+        "equipo_api.api_equipo_calendario_ics",
+        email=email,
+        token=token_calendario(email),
+        _external=True,
+    )
+    return jsonify({"ok": True, "url": url}), 200
+
+
+@equipo_api.route("/calendario.ics", methods=["GET"])
+def api_equipo_calendario_ics():
+    """Sin sesión: un calendario externo solo hace GET periódicos, sin
+    cookies. La autorización va en la firma del enlace (`?token=`), abierta a
+    cualquier equipo activo -- el calendario general no es de un solo
+    departamento."""
+    email = request.args.get("email", "")
+    if equipos_por_token_calendario(email, request.args.get("token", "")) is None:
+        return "No autorizado.", 401
+
+    init_equipo_db()
+    return Response(calendario_general_ics(), mimetype="text/calendar")

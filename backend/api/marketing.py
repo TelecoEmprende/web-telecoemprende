@@ -16,7 +16,7 @@ import re
 from datetime import date, datetime, timedelta
 from functools import wraps
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, Response, jsonify, request, url_for
 
 from backend.config import (
     CONTENT_ESTADOS,
@@ -29,13 +29,19 @@ from backend.config import (
 )
 from backend.schemas import build_response
 from backend.services.admin import is_admin_authenticated
-from backend.services.equipo import equipo_session_info, is_equipo_authenticated
+from backend.services.equipo import (
+    equipo_session_info,
+    equipos_por_token_calendario,
+    is_equipo_authenticated,
+    token_calendario,
+)
 from backend.services.slack import tarea_cambia_estado, tarea_creada
 from backend.services.marketing import (
     actualizar_campaign,
     actualizar_content,
     actualizar_task,
     calendario,
+    calendario_ics,
     crear_campaign,
     crear_content,
     crear_task,
@@ -483,6 +489,40 @@ def api_calendario():
         "hasta": hasta.isoformat(),
         "items": calendario(desde, hasta, departamento_actual()),
     }), 200
+
+
+@marketing_api.route("/calendario/enlace", methods=["GET"])
+@requiere_equipo
+def api_calendario_enlace():
+    """URL de suscripción (.ics) para el calendario del departamento, firmada
+    para este email: se pega en "Añadir por URL" de Google Calendar (o el que
+    sea) y se actualiza sola, sin volver a iniciar sesión ni pasar por OAuth."""
+    email = _autor()
+    url = url_for(
+        "marketing_api.api_calendario_ics",
+        email=email,
+        token=token_calendario(email),
+        _external=True,
+    )
+    return jsonify({"ok": True, "url": url}), 200
+
+
+@marketing_api.route("/calendario.ics", methods=["GET"])
+def api_calendario_ics():
+    """Sin sesión: un calendario externo solo hace GET periódicos a esta URL,
+    sin cookies. La autorización va en la firma del enlace (`?token=`), no en
+    `@requiere_equipo`."""
+    email = request.args.get("email", "")
+    equipos = equipos_por_token_calendario(email, request.args.get("token", ""))
+    if equipos is None or departamento_actual() not in equipos:
+        return "No autorizado.", 401
+
+    init_marketing_db()
+    hoy = date.today()
+    contenido = calendario_ics(
+        hoy - timedelta(days=30), hoy + timedelta(days=180), departamento_actual()
+    )
+    return Response(contenido, mimetype="text/calendar")
 
 
 # --------------------------------------------------------------------------

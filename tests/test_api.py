@@ -594,6 +594,33 @@ class ApiTestCase(unittest.TestCase):
         titulos = [e["titulo"] for e in response.get_json()["eventos"]]
         self.assertIn("Charla", titulos)
 
+    def test_equipo_calendario_enlace_funciona_sin_sesion(self):
+        self.login()
+        self.client.post(
+            "/api/admin/calendario",
+            json={"titulo": "Charla", "descripcion": "", "fecha": "2026-11-05", "hora": "17:00"},
+        )
+        self.client.post("/api/admin/logout")
+
+        self.seed_equipo()
+        self.equipo_login()
+
+        url = self.client.get("/api/equipo/calendario/enlace").get_json()["url"]
+        ruta = url.split("localhost", 1)[1]
+
+        self.client.post("/api/equipo/logout")
+        response = self.client.get(ruta)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.mimetype, "text/calendar")
+        self.assertIn("BEGIN:VEVENT", response.get_data(as_text=True))
+
+    def test_equipo_calendario_ics_token_equivocado_rechazado(self):
+        response = self.client.get(
+            "/api/equipo/calendario.ics?email=nadie@example.com&token=nopo"
+        )
+        self.assertEqual(response.status_code, 401)
+
     def test_admin_equipo_endpoints_require_auth(self):
         self.assertEqual(self.client.get("/api/admin/equipo").status_code, 401)
         self.assertEqual(self.client.post("/api/admin/equipo", json={}).status_code, 401)
