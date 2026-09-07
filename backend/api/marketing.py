@@ -38,6 +38,8 @@ from backend.services.equipo import (
 from backend.services.slack import tarea_cambia_estado, tarea_creada
 from backend.services.marketing import (
     actualizar_campaign,
+    carga_por_miembro,
+    ficha_miembro,
     actualizar_content,
     actualizar_task,
     calendario,
@@ -93,6 +95,7 @@ def _sanear(texto: str, *, multilinea: bool = False) -> str:
 _DEPARTAMENTO_POR_BLUEPRINT = {
     "marketing_api": "marketing",
     "eventos_api": "eventos",
+    "ingenieria_api": "ingenieria",
 }
 
 marketing_api = Blueprint("marketing_api", __name__, url_prefix="/api/marketing")
@@ -532,15 +535,89 @@ def api_calendario_ics():
 @marketing_api.route("/miembros", methods=["GET"])
 @requiere_equipo
 def api_miembros():
-    """Compañeros del departamento, leídos de `equipo_accesos` (tabla de Hammad,
-    solo lectura). Hoy solo hay email: nombre/apellidos/foto llegarán cuando se
-    acuerde ampliar esa tabla."""
+    """Directorio del departamento: quién está, qué sabe hacer y cuánto lleva
+    encima. Las etiquetas salen de `equipo_accesos` (perfil de la persona); la
+    carga se calcula sobre las tareas del departamento, no se guarda."""
     from backend.services.equipo import init_equipo_db, listar_equipo_accesos
 
     init_equipo_db()
+    depto = departamento_actual()
+    carga = carga_por_miembro(depto)
     miembros = [
-        {"email": a["email"], "equipos": a["equipos"], "activo": a["activo"]}
+        {
+            "email": a["email"],
+            "equipos": a["equipos"],
+            "activo": a["activo"],
+            "tags": a["tags"],
+            "abiertas": carga.get(a["email"], 0),
+        }
         for a in listar_equipo_accesos()
-        if departamento_actual() in a["equipos"] and a["activo"]
+        if depto in a["equipos"] and a["activo"]
     ]
     return jsonify({"ok": True, "miembros": miembros}), 200
+
+
+def _miembro_del_departamento(email: str) -> dict | None:
+    """La persona, solo si está en el departamento de la petición: sin esto,
+    la ficha sería una forma de leer las notas de cualquiera del club."""
+    from backend.services.equipo import init_equipo_db, listar_equipo_accesos
+
+    init_equipo_db()
+    return next(
+        (
+            a
+            for a in listar_equipo_accesos()
+            if a["email"] == email and departamento_actual() in a["equipos"]
+        ),
+        None,
+    )
+
+
+@marketing_api.route("/miembros/ficha", methods=["GET"])
+@requiere_equipo
+def api_ficha_miembro():
+    """El email va en query y no en la ruta: lleva `@` y puntos, y meterlo en el
+    path obliga a escaparlo en los dos lados para no ganar nada."""
+    email = request.args.get("email", "").strip().lower()
+    acceso = _miembro_del_departamento(email)
+    if acceso is None:
+        return jsonify(build_response(False, "Miembro no encontrado.")), 404
+
+    ficha = ficha_miembro(email, departamento_actual())
+    ficha.update(
+        email=acceso["email"],
+        equipos=acceso["equipos"],
+        vp_de=acceso["vp_de"],
+        cargo=acceso["cargo"],
+        tags=acceso["tags"],
+        notas=acceso["notas"],
+        desde=acceso["created_at"],
+    )
+    return jsonify({"ok": True, "ficha": ficha}), 200
+
+
+@marketing_api.route("/miembros/ficha", methods=["PUT"])
+@requiere_equipo
+def api_actualizar_ficha_miembro():
+    """Solo etiquetas y nota: los permisos (equipos, vp, cargo) siguen siendo
+    cosa de /admin."""
+    from backend.services.equipo import actualizar_perfil
+
+    datos = _payload()
+    email = _texto(datos, "email", obligatorio=True).lower()
+    if _miembro_del_departamento(email) is None:
+        return jsonify(build_response(False, "Miembro no encontrado.")), 404
+
+    tags = (
+        _lista_textos(datos, "tags", MAX_RESPONSABLES) if "tags" in datos else None
+    )
+    notas = (
+        _texto(datos, "notas", maximo=MAX_TEXTO_LARGO_LEN, multilinea=True)
+        if "notas" in datos
+        else None
+    )
+    if tags is None and notas is None:
+        raise DatosInvalidos("No hay nada que actualizar.")
+
+    actualizar_perfil(email, tags=tags, notas=notas)
+    return jsonify(build_response(True, "Ficha actualizada.")), 200

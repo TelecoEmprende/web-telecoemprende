@@ -467,7 +467,7 @@ def calendario(desde: date, hasta: date, departamento: str) -> list[dict]:
             return [_serializar(f) for f in cur.fetchall()]
 
 
-def calendario_ics(desde: date, hasta: date) -> str:
+def calendario_ics(desde: date, hasta: date, departamento: str) -> str:
     """El mismo contenido de `calendario()` en formato .ics, para que alguien
     lo suscriba en Google Calendar (o el que use) y lo vea sin entrar aquí.
 
@@ -477,18 +477,18 @@ def calendario_ics(desde: date, hasta: date) -> str:
     lineas = [
         "BEGIN:VCALENDAR",
         "VERSION:2.0",
-        "PRODID:-//TelecoEmprende//Marketing//ES",
+        f"PRODID:-//TelecoEmprende//{departamento}//ES",
         "CALSCALE:GREGORIAN",
         # Pide a los clientes que no lo den de baja tras un rato sin cambios
         # ni lo repinten cada minuto; una vez al día de sobra para deadlines.
         "X-PUBLISHED-TTL:PT24H",
     ]
-    for item in calendario(desde, hasta):
+    for item in calendario(desde, hasta, departamento):
         inicio = date.fromisoformat(item["fecha"])
         etiqueta = "Tarea" if item["origen"] == "task" else "Publicación"
         resumen = escapar_ics(f"{etiqueta}: {item['titulo']}")
         descripcion = " · ".join(p for p in (item.get("padre"), item.get("detalle")) if p)
-        lineas += ["BEGIN:VEVENT", f"UID:marketing-{item['origen']}-{item['id']}@telecoemprende.es"]
+        lineas += ["BEGIN:VEVENT", f"UID:{departamento}-{item['origen']}-{item['id']}@telecoemprende.es"]
         lineas.append(f"DTSTAMP:{datetime.now(UTC).strftime('%Y%m%dT%H%M%SZ')}")
         lineas.append(f"DTSTART;VALUE=DATE:{inicio.strftime('%Y%m%d')}")
         lineas.append(f"DTEND;VALUE=DATE:{(inicio + timedelta(days=1)).strftime('%Y%m%d')}")
@@ -576,3 +576,74 @@ def estado_content_valido(estado: str) -> bool:
 
 def prioridad_valida(prioridad: str) -> bool:
     return prioridad in TASK_PRIORIDADES
+
+
+# --------------------------------------------------------------------------
+# Miembros: carga de trabajo y ficha
+# --------------------------------------------------------------------------
+
+def carga_por_miembro(departamento: str) -> dict[str, int]:
+    """Tareas sin acabar por persona, en un solo GROUP BY.
+
+    `responsables` es un TEXT[], así que se desenrolla con unnest en vez de
+    traerse todas las tareas y contarlas en Python: el tablero de un
+    departamento con doscientas tareas seguiría siendo una consulta.
+    """
+    with _get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT responsable, COUNT(*)
+                FROM tasks, unnest(responsables) AS responsable
+                WHERE departamento = %s AND estado <> 'acabado'
+                GROUP BY responsable
+                """,
+                (departamento,),
+            )
+            return {fila[0]: fila[1] for fila in cur.fetchall()}
+
+
+def ficha_miembro(email: str, departamento: str) -> dict:
+    """Los tres números de la ficha y su actividad reciente.
+
+    La actividad no necesita tabla de eventos: el estado actual de sus tareas
+    ordenado por `updated_at` ya cuenta la historia, y así no hay un registro
+    que mantener sincronizado con la realidad.
+    """
+    with _get_connection() as conn:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(
+                """
+                SELECT
+                    COUNT(*) FILTER (WHERE estado <> 'acabado') AS abiertas,
+                    COUNT(*) FILTER (WHERE estado = 'acabado') AS completadas,
+                    COUNT(DISTINCT campaign_id) FILTER (WHERE campaign_id IS NOT NULL)
+                        AS campanas
+                FROM tasks
+                WHERE departamento = %s AND %s = ANY(responsables)
+                """,
+                (departamento, email),
+            )
+            totales = cur.fetchone()
+
+            cur.execute(
+                """
+                SELECT t.id, t.titulo, t.estado, t.updated_at,
+                       COALESCE(co.titulo, c.nombre) AS padre
+                FROM tasks t
+                LEFT JOIN contents co ON co.id = t.content_id
+                LEFT JOIN campaigns c ON c.id = t.campaign_id
+                WHERE t.departamento = %s AND %s = ANY(t.responsables)
+                ORDER BY t.updated_at DESC
+                LIMIT 8
+                """,
+                (departamento, email),
+            )
+            actividad = [_serializar(f) for f in cur.fetchall()]
+
+    return {
+        "abiertas": totales["abiertas"],
+        "completadas": totales["completadas"],
+        "campanas": totales["campanas"],
+        "actividad": actividad,
+    }

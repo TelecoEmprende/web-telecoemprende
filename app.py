@@ -15,6 +15,11 @@ from pathlib import Path
 from backend.api.admin import admin_api
 from backend.api.equipo import equipo_api
 from backend.api.marketing import marketing_api
+
+# Importar por el efecto: `registros` cuelga sus rutas de `marketing_api`, y
+# tiene que hacerlo ANTES de registrar el blueprint -- Flask no admite rutas
+# nuevas en un blueprint ya registrado.
+import backend.api.registros  # noqa: F401
 from backend.api.public import public_api
 from backend.config import ADMIN_SESSION_LIFETIME_SECONDS
 from backend.schemas import build_response
@@ -24,10 +29,15 @@ app = Flask(__name__)
 app.register_blueprint(public_api)
 app.register_blueprint(admin_api)
 app.register_blueprint(equipo_api)
+# El mismo blueprint, una vez por departamento con workspace: mismas rutas bajo
+# /api/marketing, /api/eventos y /api/ingenieria. `departamento_actual()`
+# distingue de cuál viene la petición por el `name` del registro, y todas las
+# consultas van acotadas por él.
 app.register_blueprint(marketing_api)
-# El mismo blueprint, otra vez, para Eventos: mismas rutas bajo /api/eventos.
-# `departamento_actual()` distingue una de otra por el `name` del registro.
 app.register_blueprint(marketing_api, url_prefix="/api/eventos", name="eventos_api")
+app.register_blueprint(
+    marketing_api, url_prefix="/api/ingenieria", name="ingenieria_api"
+)
 
 # Usa una clave segura desde variable de entorno.
 # Si no existe, genera una temporal para desarrollo.

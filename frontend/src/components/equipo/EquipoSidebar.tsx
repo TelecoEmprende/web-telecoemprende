@@ -2,14 +2,19 @@ import type { LucideIcon } from "lucide-react";
 import {
   CalendarDays,
   ExternalLink,
+  FolderOpen,
+  Handshake,
   Home,
   KanbanSquare,
   LayoutDashboard,
   LogOut,
   Megaphone,
+  Megaphone as Anuncio,
   PartyPopper,
   Settings,
   Users,
+  Users2,
+  Wallet,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 
@@ -46,26 +51,81 @@ export function prefijoDe(team: Team): string {
   return PREFIJO[team];
 }
 
-export type Seccion =
-  | "club"
-  | `${"mkt" | "ev"}-${"home" | "campanas" | "tareas" | "calendario" | "miembros"}`;
+type Panel =
+  | "home"
+  | "campanas"
+  | "tareas"
+  | "calendario"
+  | "miembros"
+  | "recursos"
+  | "presupuesto"
+  | "anuncios"
+  | "reuniones"
+  | "alumni";
 
-const CLUB: Item[] = [{ id: "club", label: "Inicio", icono: Home }];
+export type Seccion = "club" | `${"mkt" | "ev" | "ing"}-${Panel}`;
 
-/** Los cinco paneles que tiene un departamento con workspace. */
+const CLUB: Item[] = [
+  { id: "club", label: "Inicio", icono: Home },
+  // Los anuncios son del club entero (el backend no los acota por
+  // departamento), pero se piden por la ruta de uno: se cuelgan del primer
+  // departamento de la persona, ver `seccionesDe`.
+];
+
+/** Qué paneles tiene cada departamento. Los cinco de siempre los tienen todos;
+ *  Presupuesto es de quien mueve dinero (Eventos) y Alumni de Ingeniería. */
+const PANELES_POR_EQUIPO: Record<Team, Panel[]> = {
+  marketing: ["home", "campanas", "tareas", "calendario", "recursos", "miembros"],
+  eventos: [
+    "home", "campanas", "tareas", "calendario",
+    "recursos", "presupuesto", "reuniones", "miembros",
+  ],
+  ingenieria: [
+    "home", "tareas", "calendario", "alumni", "reuniones", "recursos", "miembros",
+  ],
+};
+
+const ICONO: Record<Panel, LucideIcon> = {
+  home: LayoutDashboard,
+  campanas: Megaphone,
+  tareas: KanbanSquare,
+  calendario: CalendarDays,
+  miembros: Users,
+  recursos: FolderOpen,
+  presupuesto: Wallet,
+  anuncios: Anuncio,
+  reuniones: Users2,
+  alumni: Handshake,
+};
+
+/** Algunos paneles se llaman distinto según el departamento: en Eventos las
+ *  campañas son eventos y las tareas son gestiones, que es como se habla ahí. */
+function etiquetaPanel(team: Team, panel: Panel): string {
+  if (team === "eventos") {
+    if (panel === "campanas") return "Eventos";
+    if (panel === "tareas") return "Gestiones";
+  }
+  return {
+    home: "Resumen",
+    campanas: "Campañas",
+    tareas: "Tareas",
+    calendario: "Calendario",
+    miembros: "Miembros",
+    recursos: "Recursos",
+    presupuesto: "Presupuesto",
+    anuncios: "Anuncios",
+    reuniones: "Reuniones",
+    alumni: "Red Alumni",
+  }[panel];
+}
+
 function panelesDe(team: Team): Item[] {
   const p = PREFIJO[team];
-  return [
-    { id: `${p}-home` as Seccion, label: "Resumen", icono: LayoutDashboard },
-    {
-      id: `${p}-campanas` as Seccion,
-      label: team === "eventos" ? "Eventos" : "Campañas",
-      icono: team === "eventos" ? PartyPopper : Megaphone,
-    },
-    { id: `${p}-tareas` as Seccion, label: "Tareas", icono: KanbanSquare },
-    { id: `${p}-calendario` as Seccion, label: "Calendario", icono: CalendarDays },
-    { id: `${p}-miembros` as Seccion, label: "Miembros", icono: Users },
-  ];
+  return PANELES_POR_EQUIPO[team].map((panel) => ({
+    id: `${p}-${panel}` as Seccion,
+    label: etiquetaPanel(team, panel),
+    icono: panel === "campanas" && team === "eventos" ? PartyPopper : ICONO[panel],
+  }));
 }
 
 /** Secciones que aporta cada departamento. Quien no esté en un departamento
@@ -73,17 +133,19 @@ function panelesDe(team: Team): Item[] {
 const POR_EQUIPO: Record<Team, Item[]> = {
   marketing: panelesDe("marketing"),
   eventos: panelesDe("eventos"),
-  // Ingeniería no tiene secciones propias aquí: su panel es `/admin`, y se
-  // ofrece como enlace en el grupo del club (ver `tieneAccesoAdmin`).
-  ingenieria: [],
+  // Ingeniería ya tiene workspace propio (Alumni, Reuniones). El enlace a
+  // `/admin` sigue apareciendo aparte, ver `tieneAccesoAdmin`.
+  ingenieria: panelesDe("ingenieria"),
 };
 
 /** Departamento (como `Team`) al que pertenece una sección, o null si es del
- *  club. Lo usa el shell para saber qué workspace montar. */
+ *  club. Sale del prefijo y no de buscar en `POR_EQUIPO`, porque Anuncios se
+ *  sirve por la ruta de un departamento sin ser uno de sus paneles. */
 export function teamDe(seccion: Seccion): Team | null {
-  return (Object.keys(POR_EQUIPO) as Team[]).find((t) =>
-    POR_EQUIPO[t].some((item) => item.id === seccion),
-  ) ?? null;
+  const prefijo = seccion.split("-")[0];
+  return (
+    (Object.keys(PREFIJO) as Team[]).find((t) => PREFIJO[t] === prefijo) ?? null
+  );
 }
 
 const TEAM_LABEL: Record<Team, string> = {
@@ -100,11 +162,27 @@ const CARGO_LABEL: Record<Exclude<Cargo, "">, string> = {
 /** Todas las secciones visibles para esa persona, en el orden del sidebar.
  *  El shell lo usa para saber en qué sección abrir y cómo titular la barra. */
 export function seccionesDe(teams: Team[]): Item[] {
-  return [...CLUB, ...teams.flatMap((team) => POR_EQUIPO[team] ?? [])];
+  return [...clubDe(teams), ...teams.flatMap((team) => POR_EQUIPO[team] ?? [])];
 }
 
-/** El departamento al que pertenece una sección, para el rótulo de la barra. */
+/** El grupo "Club": el inicio, y los anuncios si la persona está en algún
+ *  departamento (la ruta de anuncios cuelga de uno, aunque el contenido sea
+ *  del club entero). */
+export function clubDe(teams: Team[]): Item[] {
+  if (teams.length === 0) return CLUB;
+  return [
+    ...CLUB,
+    {
+      id: `${PREFIJO[teams[0]]}-anuncios` as Seccion,
+      label: "Anuncios",
+      icono: Anuncio,
+    },
+  ];
+}
+
+/** El rótulo de la barra: el departamento, o "Club" para lo que es de todos. */
 export function deptoDe(seccion: Seccion): string {
+  if (seccion === "club" || seccion.endsWith("-anuncios")) return "Club";
   const team = teamDe(seccion);
   return team ? TEAM_LABEL[team] : "Club";
 }
@@ -192,7 +270,7 @@ export function EquipoSidebar({
           navegación al que saltar con lector de pantalla. */}
       <SidebarContent>
         <nav aria-label="Secciones de /equipo">
-          {grupo("Club", CLUB)}
+          {grupo("Club", clubDe(teams))}
 
           {teams.map((team) =>
             grupo(TEAM_LABEL[team], POR_EQUIPO[team] ?? [], vpDe.includes(team)),

@@ -653,7 +653,10 @@
   gap: 12px;
 }
 
+/* La fila entera es el disparador de la ficha: un botón, no un div con
+   onClick, para que llegue con tabulador y responda a Enter. */
 .mkt-miembro-react {
+  width: 100%;
   display: flex;
   align-items: center;
   gap: 14px;
@@ -661,6 +664,30 @@
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   background: var(--color-surface);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color var(--dur-fast) var(--ease-out);
+}
+
+.mkt-miembro-react:hover,
+.mkt-miembro-react:focus-visible {
+  border-color: var(--color-orange);
+}
+
+.mkt-miembro-datos-react {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+  flex: 1;
+}
+
+.mkt-miembro-nombre-react {
+  font-size: 0.98rem;
+  font-weight: 700;
+  color: var(--color-navy);
 }
 
 .mkt-miembro-email-react {
@@ -669,6 +696,194 @@
   font-weight: 700;
   color: var(--color-navy);
   overflow-wrap: anywhere;
+}
+
+/* ---------- Habilidades y carga ---------- */
+
+.mkt-tags-react {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.mkt-tag-react {
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--color-info-bg);
+  color: var(--color-info-text);
+}
+
+.mkt-carga-react {
+  flex: 0 0 auto;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.mkt-carga-libre-react {
+  background: var(--color-success-bg);
+  color: var(--color-success-text);
+}
+
+.mkt-carga-media-react {
+  background: var(--color-info-bg);
+  color: var(--color-info-text);
+}
+
+/* Rojo solo a partir de cuatro: si todo el mundo sale en rojo, el chip deja
+   de significar nada. */
+.mkt-carga-alta-react {
+  background: var(--color-error-bg);
+  color: var(--color-error-text);
+}
+
+.mkt-filtros-react {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.mkt-filtros-react [aria-pressed="true"] {
+  background: var(--color-orange-dark);
+  border-color: var(--color-orange-dark);
+  color: #fff;
+}
+
+/* ---------- Ficha de miembro ---------- */
+
+.mkt-ficha-react {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.mkt-ficha-identidad-react {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.mkt-ficha-nombre-react {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--color-navy);
+}
+
+.mkt-ficha-cifras-react {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin: 0;
+}
+
+.mkt-ficha-cifras-react > div {
+  padding: 14px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  text-align: center;
+}
+
+.mkt-ficha-cifras-react dd {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.6rem;
+  font-weight: 700;
+  line-height: 1.1;
+  color: var(--color-navy);
+  font-variant-numeric: tabular-nums;
+}
+
+.mkt-ficha-cifras-react dt {
+  margin-top: 4px;
+  font-size: 0.74rem;
+  color: var(--color-text-muted);
+}
+
+.mkt-ficha-bloque-react h4 {
+  margin: 0 0 10px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.mkt-ficha-actividad-react {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.mkt-ficha-actividad-react li {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--color-border);
+  font-size: 0.9rem;
+}
+
+.mkt-ficha-actividad-react li:last-child {
+  border-bottom: none;
+}
+
+.mkt-ficha-actividad-texto-react {
+  flex: 1;
+  min-width: 0;
+  color: var(--color-text-muted);
+}
+
+.mkt-ficha-actividad-texto-react b {
+  color: var(--color-navy);
+}
+
+.mkt-ficha-actividad-texto-react em {
+  font-style: normal;
+  color: var(--color-text-muted);
+  opacity: 0.8;
+}
+
+.mkt-ficha-actividad-react time {
+  flex: 0 0 auto;
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+}
+
+/* El punto repite el estado en color, para leer la columna de un vistazo
+   sin ir palabra a palabra. */
+.mkt-punto-react {
+  flex: 0 0 auto;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-steel);
+  align-self: center;
+}
+
+.mkt-punto-en_progreso-react { background: var(--color-gold); }
+.mkt-punto-por_revisar-react { background: var(--color-orange); }
+.mkt-punto-acabado-react { background: var(--color-success-text); }
+
+.mkt-ficha-acciones-react {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 4px;
+}
+
+@media (max-width: 520px) {
+  .mkt-ficha-cifras-react {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* ---------- Modal del editor de contenido ---------- */
@@ -1589,4 +1804,231 @@ button.mkt-evento-react {
 :where([data-slot="dialog-content"]) svg,
 :where([data-slot="avatar"]) img {
   display: block;
+}
+
+/* ---------- Registros (recursos, presupuesto, anuncios, reuniones, alumni) --- */
+
+.reg-lista-react {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.reg-item-react {
+  padding: 16px 18px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+}
+
+.reg-item-cabecera-react {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.reg-item-texto-react {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.reg-item-titulo-react {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--color-navy);
+  overflow-wrap: anywhere;
+}
+
+.reg-item-derecha-react {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.reg-item-acciones-react {
+  flex: 0 0 auto;
+  display: flex;
+  gap: 6px;
+}
+
+.reg-item-acciones-react svg {
+  width: 15px;
+  height: 15px;
+}
+
+.reg-item-cuerpo-react {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+  font-size: 0.93rem;
+}
+
+.reg-item-cuerpo-react p {
+  margin: 0 0 8px;
+}
+
+.reg-item-cuerpo-react p:last-child {
+  margin-bottom: 0;
+}
+
+.reg-item-cuerpo-react b {
+  color: var(--color-navy);
+}
+
+/* Actas y mensajes largos: se escriben con saltos de línea y así se leen. */
+.reg-cuerpo-largo-react {
+  white-space: pre-wrap;
+}
+
+.reg-confirmar-react {
+  margin: 12px 0 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--color-border);
+  font-size: 0.9rem;
+  color: var(--color-text-muted);
+}
+
+.reg-enlace-react {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-orange-dark);
+  text-decoration: none;
+}
+
+.reg-enlace-react:hover {
+  text-decoration: underline;
+}
+
+.reg-enlace-react svg {
+  width: 14px;
+  height: 14px;
+}
+
+.reg-check-react {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.reg-check-react input {
+  width: auto;
+  margin: 0;
+}
+
+/* ---------- Estados ---------- */
+
+.reg-estado-react {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: var(--color-info-bg);
+  color: var(--color-info-text);
+}
+
+.reg-estado-pagado-react,
+.reg-estado-colabora-react {
+  background: var(--color-success-bg);
+  color: var(--color-success-text);
+}
+
+/* Cancelado y descartado en gris: siguen en la lista como registro, pero no
+   deben llamar la atención como si estuvieran vivos. */
+.reg-estado-cancelado-react,
+.reg-estado-descartado-react {
+  background: rgba(136, 165, 183, 0.2);
+  color: var(--color-text-muted);
+  text-decoration: line-through;
+}
+
+.reg-fijado-react {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: var(--color-orange-dark);
+  color: #fff;
+}
+
+.reg-fijado-react svg {
+  width: 12px;
+  height: 12px;
+}
+
+/* ---------- Presupuesto ---------- */
+
+.reg-totales-react {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 10px;
+  margin: 0 0 18px;
+}
+
+.reg-totales-react > div {
+  padding: 14px 16px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+.reg-totales-react dd {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--color-navy);
+  font-variant-numeric: tabular-nums;
+}
+
+.reg-totales-react dt {
+  margin-top: 3px;
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+}
+
+.reg-total-negativo-react dd {
+  color: var(--color-error-text);
+}
+
+.reg-importe-react {
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.reg-importe-gasto-react {
+  color: var(--color-error-text);
+}
+
+.reg-importe-ingreso-react {
+  color: var(--color-success-text);
+}
+
+@media (max-width: 620px) {
+  .reg-item-cabecera-react {
+    flex-wrap: wrap;
+  }
+
+  .reg-item-texto-react {
+    flex-basis: 100%;
+  }
 }

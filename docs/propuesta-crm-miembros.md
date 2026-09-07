@@ -1,8 +1,18 @@
 # Propuesta: Marketing como CRM del equipo
 
-Escrito por Abril (con Claude) el 7 de septiembre de 2026. **Nada de esto está
-construido** — es una propuesta con mockups para que se decida qué se hace y
-quién lo hace. Si la ejecutas tú (Hammad), este documento es el punto de
+Escrito por Abril (con Claude) el 7 de septiembre de 2026.
+
+> **Estado: construido el 8 de septiembre de 2026.** Se hicieron las piezas 01
+> (directorio con carga y habilidades) y 02 (ficha de miembro), con la
+> **opción B** de la decisión pendiente: `tags` y `notas` son columnas de
+> `equipo_accesos`, así que Eventos e Ingeniería las heredan sin reconstruir
+> nada. La diferencia con lo propuesto es que las edita cualquiera del
+> departamento desde la ficha, no solo quien administra: dejarlo en `/admin`
+> lo habría convertido en un campo que nadie rellena. La pieza 03 (salud del
+> equipo) sigue pendiente.
+>
+> Ver `frontend/src/components/equipo/marketing/MembersPanel.tsx` y
+> `MemberDialog.tsx`. Si la ejecutas tú (Hammad), este documento es el punto de
 partida: pásaselo a tu Claude tal cual, junto con
 [`docs/mockups/crm-miembros.html`](mockups/crm-miembros.html) (ábrelo en el
 navegador para ver los mockups con colores y tipografía reales del sitio).

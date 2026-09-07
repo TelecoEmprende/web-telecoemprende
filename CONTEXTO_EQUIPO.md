@@ -49,7 +49,8 @@ departamentos a los que pertenece, más un calendario compartido.
 | `frontend/src/routes/EquipoPage.tsx` | La página entera: comprueba sesión, muestra login o el dashboard, y reparte las pestañas por equipo |
 | `frontend/src/components/equipo/DeptoDashboard.tsx` | Los paneles de un departamento. **Marketing y Eventos usan el mismo componente**: solo cambia el `depto` |
 | `frontend/src/components/equipo/DeptoApi.tsx` | Ata las llamadas de API al departamento abierto (`useApi()`) |
-| `frontend/src/components/equipo/marketing/*` | Los cinco paneles (Resumen, Campañas, Tareas, Calendario, Miembros). Se llaman `marketing/` por herencia: los usan los dos departamentos |
+| `frontend/src/components/equipo/marketing/*` | Los paneles de siempre (Resumen, Campañas, Tareas, Calendario, Miembros). Se llaman `marketing/` por herencia: los usan los tres departamentos |
+| `frontend/src/components/equipo/registros/*` | Recursos, Presupuesto, Anuncios, Reuniones y Red Alumni. Los cinco son el mismo panel (`RegistrosPanel`) con campos distintos, declarados en `paneles.tsx` |
 | `frontend/src/components/equipo/CalendarioEquipo.tsx` | Calendario compartido, solo lectura |
 | `frontend/src/components/equipo/EquipoLoginForm.tsx` | Formulario de acceso |
 | `frontend/src/styles/equipo.css` | Lo poco de CSS propio que queda (el resto es Tailwind) |
@@ -98,11 +99,20 @@ Componentes de shadcn ya instalados en `frontend/src/components/ui/`: `button`, 
 Reglas de acceso ya implementadas en el backend (no hay que replicarlas en el front):
 
 - Departamentos válidos: `marketing`, `eventos`, `ingenieria`.
-- `marketing` y `eventos` tienen workspace propio con los mismos paneles: en el
-  backend es **el mismo blueprint registrado dos veces** (`/api/marketing` y
-  `/api/eventos`, ver `app.py`), y `departamento_actual()` acota cada consulta.
-  Para añadir un tercer departamento con tablero basta registrarlo otra vez y
-  añadirlo a `_DEPARTAMENTO_POR_BLUEPRINT`.
+- Los tres departamentos tienen workspace propio: en el backend es **el mismo
+  blueprint registrado tres veces** (`/api/marketing`, `/api/eventos` y
+  `/api/ingenieria`, ver `app.py`), y `departamento_actual()` acota cada
+  consulta. Para añadir otro basta registrarlo de nuevo y añadirlo a
+  `_DEPARTAMENTO_POR_BLUEPRINT`.
+- **Qué paneles ve cada uno** lo decide `PANELES_POR_EQUIPO` en
+  `EquipoSidebar.tsx`. En Eventos las campañas se llaman "Eventos" y las tareas
+  "Gestiones": es la misma tabla, solo cambia el rótulo.
+- **Anuncios es el único global**: no tiene columna `departamento` y se ve
+  igual desde cualquiera. Su ruta cuelga del primer departamento de la persona
+  porque el blueprint es por departamento, pero el contenido es del club.
+- **Ojo con `--color-primary` dentro de `/equipo`**: `.shadcn-scope` lo remapea
+  a un gris casi blanco. Para acentos usa `--color-orange` (fondos) o
+  `--color-orange-dark` (texto, que sobre fondo claro sí llega a 4.5:1).
 - Quien tenga `ingenieria`, o `cargo` de `presidente`/`boardmember`, recibe además
   sesión de administrador y puede entrar a `/admin`.
 - Un acceso vale con departamento(s) **o** con cargo: el board sin departamento
@@ -137,7 +147,7 @@ admin).
 ```bash
 cd frontend
 npx tsc --noEmit -p .   # tipos
-npm test                # 25 tests (Marketing y Eventos incluidos)
+npm test                # 29 tests (Marketing, Eventos y fichas de miembro)
 npm run build           # que compile de verdad
 ```
 
