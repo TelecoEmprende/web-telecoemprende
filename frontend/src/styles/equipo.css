@@ -127,6 +127,12 @@
   display: flex;
   flex-direction: column;
   background: var(--color-background);
+  /* El shell lleva la utilidad `text-foreground`, que en `.shadcn-scope.dark`
+     computa a crema y se hereda hacia abajo. Redefinir `--foreground` aquí no
+     lo deshace -- un color ya computado arriba se hereda tal cual --, así que
+     el área clara fija su propio color. Sin esto, cualquier texto que no se
+     pinte a sí mismo sale invisible sobre el crema. */
+  color: var(--color-text);
 }
 
 /* Barra superior con el disparador del sidebar y en qué sección estás. */
@@ -249,22 +255,33 @@
 
 /* ---------- Inicio del club ---------- */
 
-/* Calendario compartido a la izquierda, próximos eventos a la derecha; en
-   columna estrecha (sidebar abierto en portátil) se apilan. */
-.equipo-inicio-react {
-  display: grid;
-  /* El calendario ocupa lo que mide (rejilla de 7 celdas fijas, no se
-     estira); lo que sobra se lo lleva la lista de eventos, que es la que
-     tiene texto de largo variable. */
-  grid-template-columns: max-content minmax(0, 1fr);
-  gap: 28px;
-  align-items: start;
+/* La rejilla del mes la pone `marketing.css` (clases `mkt-*`, compartidas a
+   propósito: ver el comentario de CalendarioEquipo.tsx). Aquí solo van las
+   diferencias del calendario del club, que es de solo lectura.
+
+   El número del día allí es un <button> que abre el formulario de "nueva
+   tarea"; aquí es un <span> y heredaba su `cursor: pointer` y su hover, o
+   sea, una invitación a pulsar algo que no hace nada. El selector de tipo
+   añade especificidad suficiente para ganarle sin tocar su archivo. */
+span.mkt-dia-numero-react {
+  cursor: default;
 }
 
-@container (max-width: 860px) {
-  .equipo-inicio-react {
-    grid-template-columns: minmax(0, 1fr);
-  }
+span.mkt-dia-numero-react:hover {
+  background: none;
+  color: var(--color-text-muted);
+}
+
+/* Los eventos del club no son ni publicación ni tarea, así que no encajan en
+   los colores de la leyenda de Marketing: naranja de marca, el mismo tono que
+   usa su chip de "en revisión". */
+.equipo-evento-chip-react {
+  background: rgba(224, 104, 14, 0.16);
+  color: var(--color-orange-dark);
+}
+
+.equipo-proximos-react {
+  margin-top: 28px;
 }
 
 .equipo-eventos-lista-react {
@@ -311,32 +328,99 @@
   line-height: 1.55;
 }
 
-/* El <Calendar> de shadcn (react-day-picker) solo se pinta con cinco tokens
-   propios, y dentro de `.shadcn-scope.dark` los cinco son oscuros: sobre el
-   crema del área de trabajo salía una rejilla negra. Se re-encadenan aquí a
-   los de marca en vez de instalar un segundo calendario -- `--primary` ya es
-   el naranja del club, así que el resalte de los días con evento no cambia. */
-.equipo-calendario-react {
-  /* `--primary` también: en index.css `.dark` va sin capa y `.shadcn-scope`
-     dentro de `@layer base`, y como ambas caen en el MISMO elemento, la
-     regla sin capa gana -- dentro de /equipo `--primary` acaba siendo el gris
-     de shadcn, no el naranja del club. Se restaura solo aquí para no cambiar
-     el aspecto de los paneles de Marketing, que ya no lo usan. */
-  --primary: var(--color-orange);
-  --primary-foreground: var(--color-cream);
+/* ==========================================================================
+   Login
+   ==========================================================================
+
+   La tarjeta va en la paleta del área de trabajo (crema, navy, naranja) sobre
+   el navy de la página: la misma pareja de tonos que dentro, sidebar oscuro y
+   trabajo claro, para que entrar no cambie de sitio.
+
+   Los componentes de shadcn se quedan (Input/Label/Button traen el foco y el
+   `aria` ya resueltos); lo que se re-encadena son sus tokens, que dentro de
+   `.shadcn-scope.dark` son todos oscuros. `--primary` es el que dejaba el
+   botón "Entrar" en gris casi blanco en vez del naranja del club: en
+   index.css `.dark` va sin capa y `.shadcn-scope` dentro de `@layer base`, y
+   al caer las dos en el mismo elemento gana la regla sin capa. */
+.equipo-login-react {
   --background: var(--color-surface);
   --foreground: var(--color-navy);
-  --popover: var(--color-surface);
-  --muted: var(--color-background);
+  --card: var(--color-surface);
+  --card-foreground: var(--color-navy);
   --muted-foreground: var(--color-text-muted);
-  /* Por defecto la celda mide 1.75rem: una rejilla diminuta al lado de los
-     paneles de Marketing. */
-  --cell-size: 2.4rem;
+  --border: var(--color-border);
+  --input: rgba(17, 37, 50, 0.18);
+  --primary: var(--color-orange);
+  --primary-foreground: #ffffff;
+  --destructive: var(--color-error-text);
+  --ring: var(--color-orange);
 
-  padding: 12px;
+  width: 100%;
+  max-width: 400px;
+  margin: 0 auto;
+  padding: 30px 28px;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   background: var(--color-surface);
+  box-shadow: var(--shadow-soft);
+  /* Igual que en `.equipo-main-react`: las etiquetas de shadcn no se pintan a
+     sí mismas y heredaban el crema del shell, ilegible sobre la tarjeta. */
+  color: var(--color-text);
+}
+
+/* El <Input> de shadcn pide `border border-input`: ancho y color, pero el
+   estilo lo daba el Preflight de Tailwind (`border-style: solid` global), que
+   aquí está desactivado a propósito para no reescribir la landing. Sin él el
+   borde es `none` y el campo se ve sin caja -- en la versión oscura no se
+   notaba porque `dark:bg-input/30` le ponía un relleno. */
+.equipo-login-react [data-slot="input"] {
+  border-style: solid;
+  /* El color va aquí y no vía `--input`, que es lo que pide la utilidad
+     `border-input`: en este proyecto `@layer base` queda POR ENCIMA de
+     `@layer utilities` (index.css importa utilities antes que base, y el orden
+     entre capas ya usadas no se puede reescribir -- ver el comentario largo
+     del mini-reset del sidebar), así que el `@apply border-border` de
+     `.shadcn-scope *` le gana a `border-input` y dejaba el borde en el crema
+     de las tarjetas, invisible sobre el blanco del campo. Sin capa, esta regla
+     gana a las dos. */
+  border-color: rgba(17, 37, 50, 0.18);
+  background: var(--color-surface);
+  /* `h-8` son 32px: por debajo del objetivo táctil de 44px que respeta el
+     resto del proyecto (ver `.mkt-btn-mini-react`), y en un formulario que se
+     rellena desde el móvil eso se nota. */
+  min-height: 44px;
+  padding: 8px 12px;
+}
+
+.equipo-login-react h1 {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  color: var(--color-navy);
+}
+
+.equipo-login-react p {
+  margin: 6px 0 22px;
+  color: var(--color-text-muted);
+  font-size: 0.92rem;
+  line-height: 1.6;
+}
+
+/* El error va antes del formulario y con el rojo de estado del proyecto, no
+   con el `--destructive` de shadcn: es el mismo aviso que en /admin. */
+/* Escrito con el padre delante a propósito: `.equipo-login-react p` (que pinta
+   la línea de introducción en gris) tiene MÁS especificidad que una clase
+   suelta, así que se comía el rojo del error. */
+.equipo-login-react .equipo-login-error-react {
+  margin: 0 0 16px;
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  background: var(--color-error-bg);
+  color: var(--color-error-text);
+  font-size: 0.88rem;
+  font-weight: 700;
+  line-height: 1.5;
 }
 
 /* ==========================================================================
