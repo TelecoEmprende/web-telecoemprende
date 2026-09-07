@@ -33,32 +33,58 @@ import type { Cargo, Team } from "../../types/equipo";
  *  del shell es una sola cadena y no un par que hay que mantener coherente. */
 type Item = { id: Seccion; label: string; icono: LucideIcon };
 
+/** Prefijo de las secciones de cada departamento. Marketing y Eventos tienen
+ *  el mismo juego de paneles (ver `DeptoDashboard`), así que sus secciones se
+ *  generan en vez de escribirse dos veces. */
+const PREFIJO: Record<Team, string> = {
+  marketing: "mkt",
+  eventos: "ev",
+  ingenieria: "ing",
+};
+
+export function prefijoDe(team: Team): string {
+  return PREFIJO[team];
+}
+
 export type Seccion =
   | "club"
-  | "mkt-home"
-  | "mkt-campanas"
-  | "mkt-tareas"
-  | "mkt-calendario"
-  | "mkt-miembros"
-  | "eventos";
+  | `${"mkt" | "ev"}-${"home" | "campanas" | "tareas" | "calendario" | "miembros"}`;
 
 const CLUB: Item[] = [{ id: "club", label: "Inicio", icono: Home }];
+
+/** Los cinco paneles que tiene un departamento con workspace. */
+function panelesDe(team: Team): Item[] {
+  const p = PREFIJO[team];
+  return [
+    { id: `${p}-home` as Seccion, label: "Resumen", icono: LayoutDashboard },
+    {
+      id: `${p}-campanas` as Seccion,
+      label: team === "eventos" ? "Eventos" : "Campañas",
+      icono: team === "eventos" ? PartyPopper : Megaphone,
+    },
+    { id: `${p}-tareas` as Seccion, label: "Tareas", icono: KanbanSquare },
+    { id: `${p}-calendario` as Seccion, label: "Calendario", icono: CalendarDays },
+    { id: `${p}-miembros` as Seccion, label: "Miembros", icono: Users },
+  ];
+}
 
 /** Secciones que aporta cada departamento. Quien no esté en un departamento
  *  no ve su grupo: la navegación sale de la sesión, no de una lista fija. */
 const POR_EQUIPO: Record<Team, Item[]> = {
-  marketing: [
-    { id: "mkt-home", label: "Resumen", icono: LayoutDashboard },
-    { id: "mkt-campanas", label: "Campañas", icono: Megaphone },
-    { id: "mkt-tareas", label: "Tareas", icono: KanbanSquare },
-    { id: "mkt-calendario", label: "Calendario", icono: CalendarDays },
-    { id: "mkt-miembros", label: "Miembros", icono: Users },
-  ],
-  eventos: [{ id: "eventos", label: "Eventos", icono: PartyPopper }],
+  marketing: panelesDe("marketing"),
+  eventos: panelesDe("eventos"),
   // Ingeniería no tiene secciones propias aquí: su panel es `/admin`, y se
   // ofrece como enlace en el grupo del club (ver `tieneAccesoAdmin`).
   ingenieria: [],
 };
+
+/** Departamento (como `Team`) al que pertenece una sección, o null si es del
+ *  club. Lo usa el shell para saber qué workspace montar. */
+export function teamDe(seccion: Seccion): Team | null {
+  return (Object.keys(POR_EQUIPO) as Team[]).find((t) =>
+    POR_EQUIPO[t].some((item) => item.id === seccion),
+  ) ?? null;
+}
 
 const TEAM_LABEL: Record<Team, string> = {
   marketing: "Marketing",
@@ -79,9 +105,7 @@ export function seccionesDe(teams: Team[]): Item[] {
 
 /** El departamento al que pertenece una sección, para el rótulo de la barra. */
 export function deptoDe(seccion: Seccion): string {
-  const team = (Object.keys(POR_EQUIPO) as Team[]).find((t) =>
-    POR_EQUIPO[t].some((item) => item.id === seccion),
-  );
+  const team = teamDe(seccion);
   return team ? TEAM_LABEL[team] : "Club";
 }
 

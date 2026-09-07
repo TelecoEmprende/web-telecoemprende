@@ -8,11 +8,11 @@ import {
   EquipoSidebar,
   deptoDe,
   seccionesDe,
+  teamDe,
   type Seccion,
 } from "../components/equipo/EquipoSidebar";
 import { EquipoLoginForm } from "../components/equipo/EquipoLoginForm";
-import { MarketingDashboard } from "../components/equipo/MarketingDashboard";
-import { EventosDashboard } from "../components/equipo/EventosDashboard";
+import { DeptoDashboard } from "../components/equipo/DeptoDashboard";
 import type { ApiFailure } from "../types/api";
 import type { Cargo, Team } from "../types/equipo";
 
@@ -119,6 +119,7 @@ export function EquipoPage() {
   }
 
   const titulo = seccionesDe(teams).find((s) => s.id === seccion)?.label ?? "";
+  const deptoActual = teamDe(seccion);
 
   return (
     // El workspace se lleva la pantalla entera: no hay cabecera del sitio, la
@@ -145,9 +146,16 @@ export function EquipoPage() {
 
           <div className="equipo-contenido-react">
             {seccion === "club" ? <CalendarioEquipo /> : null}
-            {seccion === "eventos" ? <EventosDashboard /> : null}
-            {seccion.startsWith("mkt-") ? (
-              <MarketingDashboard seccion={seccion} onSeccion={setSeccion} />
+            {deptoActual ? (
+              // `key` para que cambiar de departamento remonte los paneles: si
+              // no, Marketing y Eventos comparten estado y el tablero enseña un
+              // momento las tareas del anterior.
+              <DeptoDashboard
+                key={deptoActual}
+                depto={deptoActual}
+                seccion={seccion}
+                onSeccion={setSeccion}
+              />
             ) : null}
           </div>
         </main>

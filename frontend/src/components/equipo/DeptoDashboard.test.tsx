@@ -4,7 +4,7 @@ import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { EquipoPage } from "../../routes/EquipoPage";
-import type { Prioridad, TaskEstado } from "../../types/marketing";
+import type { Prioridad, Task, TaskEstado } from "../../types/marketing";
 
 const getCampaigns = vi.fn();
 const getCampaign = vi.fn();
@@ -14,31 +14,45 @@ const getMiembros = vi.fn();
 const updateTask = vi.fn();
 const createTask = vi.fn();
 
+// El módulo ya no exporta funciones sueltas sino una factoría por
+// departamento (Marketing y Eventos comparten paneles). `apiDepto` guarda el
+// departamento con el que se le llama, y así el test puede comprobar que cada
+// workspace pide los datos de los suyos y no de los del otro.
+const deptosPedidos: string[] = [];
+
 vi.mock("../../api/marketing", () => ({
-  getCampaigns: (...args: unknown[]) => getCampaigns(...args),
-  getCampaign: (...args: unknown[]) => getCampaign(...args),
-  getTasks: (...args: unknown[]) => getTasks(...args),
-  getCalendario: (...args: unknown[]) => getCalendario(...args),
-  getMiembros: (...args: unknown[]) => getMiembros(...args),
-  updateTask: (...args: unknown[]) => updateTask(...args),
-  createTask: (...args: unknown[]) => createTask(...args),
-  createCampaign: vi.fn(),
-  createContent: vi.fn(),
-  deleteCampaign: vi.fn(),
-  deleteContent: vi.fn(),
-  deleteTask: vi.fn(),
-  updateCampaign: vi.fn(),
-  updateContent: vi.fn(),
+  apiDepto: (depto: string) => {
+    deptosPedidos.push(depto);
+    return {
+      getCampaigns: (...args: unknown[]) => getCampaigns(...args),
+      getCampaign: (...args: unknown[]) => getCampaign(...args),
+      getTasks: (...args: unknown[]) => getTasks(...args),
+      getCalendario: (...args: unknown[]) => getCalendario(...args),
+      getMiembros: (...args: unknown[]) => getMiembros(...args),
+      updateTask: (...args: unknown[]) => updateTask(...args),
+      createTask: (...args: unknown[]) => createTask(...args),
+      createCampaign: vi.fn(),
+      createContent: vi.fn(),
+      deleteCampaign: vi.fn(),
+      deleteContent: vi.fn(),
+      deleteTask: vi.fn(),
+      updateCampaign: vi.fn(),
+      updateContent: vi.fn(),
+    };
+  },
 }));
 
 // El shell de /equipo lee la sesión y el calendario del club: sin esto el
-// test hace peticiones de verdad contra jsdom.
+// test hace peticiones de verdad contra jsdom. Los equipos son mutables porque
+// el sidebar sale de la sesión: quien es de Eventos ve otras secciones.
+let teamsDeSesion = ["marketing"];
+
 vi.mock("../../api/equipo", () => ({
   getEquipoSession: () =>
     Promise.resolve({
       ok: true,
       authenticated: true,
-      teams: ["marketing"],
+      teams: teamsDeSesion,
       vp_de: [],
       cargo: "",
     }),
@@ -78,7 +92,7 @@ const TAREA = {
   campaign_nombre: "Cómo empezar a invertir",
 };
 
-function tareas(...lista: Partial<typeof TAREA>[]) {
+function tareas(...lista: Partial<Task>[]): Task[] {
   return lista.map((t, i) => ({ ...TAREA, id: i + 1, ...t }));
 }
 
@@ -96,6 +110,8 @@ async function renderMarketing() {
 
 describe("/equipo — panel de Marketing", () => {
   beforeEach(() => {
+    teamsDeSesion = ["marketing"];
+    deptosPedidos.length = 0;
     getCampaigns.mockReset().mockResolvedValue({ ok: true, campaigns: [] });
     getCampaign.mockReset();
     getTasks.mockReset().mockResolvedValue({ ok: true, tasks: [], usuario: YO });
@@ -340,5 +356,75 @@ describe("/equipo — panel de Marketing", () => {
       "aria-current",
       "page",
     );
+  });
+});
+
+describe("/equipo — panel de Eventos", () => {
+  beforeEach(() => {
+    teamsDeSesion = ["eventos"];
+    deptosPedidos.length = 0;
+    getCampaigns.mockReset().mockResolvedValue({ ok: true, campaigns: [] });
+    getCampaign.mockReset();
+    getTasks.mockReset().mockResolvedValue({ ok: true, tasks: [], usuario: YO });
+    getCalendario
+      .mockReset()
+      .mockResolvedValue({ ok: true, desde: "", hasta: "", items: [] });
+    getMiembros.mockReset().mockResolvedValue({ ok: true, miembros: [] });
+    updateTask.mockReset().mockResolvedValue({ ok: true });
+    createTask.mockReset().mockResolvedValue({ ok: true, task: TAREA });
+  });
+
+  async function renderEventos() {
+    render(
+      <MemoryRouter>
+        <EquipoPage />
+      </MemoryRouter>,
+    );
+    await userEvent.click(await screen.findByRole("button", { name: "Resumen" }));
+  }
+
+  it("Eventos tiene los mismos paneles que Marketing", async () => {
+    await renderEventos();
+
+    for (const panel of ["Resumen", "Eventos", "Tareas", "Calendario", "Miembros"]) {
+      expect(screen.getByRole("button", { name: panel })).toBeInTheDocument();
+    }
+  });
+
+  it("pide los datos al departamento de Eventos, no al de Marketing", async () => {
+    await renderEventos();
+
+    await waitFor(() => expect(getTasks).toHaveBeenCalled());
+    expect([...new Set(deptosPedidos)]).toEqual(["eventos"]);
+  });
+
+  it("el tablero de tareas de Eventos carga sus tareas", async () => {
+    getTasks.mockResolvedValue({
+      ok: true,
+      usuario: YO,
+      tasks: tareas({
+        departamento: "eventos",
+        titulo: "Reservar el espacio de la feria",
+        // Tarea suelta de Eventos: no cuelga de ninguna campaña.
+        campaign_id: null,
+        content_id: null,
+        content_titulo: null,
+        campaign_nombre: null,
+      }),
+    });
+
+    await renderEventos();
+    await userEvent.click(screen.getByRole("button", { name: "Tareas" }));
+
+    expect(
+      await screen.findByText("Reservar el espacio de la feria"),
+    ).toBeInTheDocument();
+  });
+
+  it("quien solo es de Eventos no ve las secciones de Marketing", async () => {
+    await renderEventos();
+
+    expect(screen.queryByRole("button", { name: "Campañas" })).not.toBeInTheDocument();
+    expect(deptosPedidos).not.toContain("marketing");
   });
 });
