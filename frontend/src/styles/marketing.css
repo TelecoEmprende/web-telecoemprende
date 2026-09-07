@@ -124,10 +124,6 @@
   transition: background var(--dur-press) var(--ease-out);
 }
 
-.mkt-btn-react:hover:not(:disabled) {
-  background: var(--color-orange-dark);
-}
-
 .mkt-btn-react:disabled {
   opacity: 0.5;
   cursor: not-allowed;
@@ -148,17 +144,8 @@
   transition: border-color var(--dur-fast) var(--ease-out);
 }
 
-.mkt-btn-mini-react:hover:not(:disabled) {
-  border-color: var(--color-orange);
-}
-
 .mkt-btn-mini-peligro-react {
   color: var(--color-error-text);
-}
-
-.mkt-btn-mini-peligro-react:hover {
-  border-color: var(--color-error-text);
-  background: var(--color-error-bg);
 }
 
 .mkt-btn-mini-react:disabled {
@@ -179,8 +166,26 @@
   cursor: pointer;
 }
 
-.mkt-volver-react:hover {
-  color: var(--color-orange);
+/* Con puntero real, no en pantalla táctil: sin esto, tocar cualquiera de
+   estos botones en móvil se queda con el estilo de :hover pegado hasta
+   tocar otra cosa. */
+@media (hover: hover) and (pointer: fine) {
+  .mkt-btn-react:hover:not(:disabled) {
+    background: var(--color-orange-dark);
+  }
+
+  .mkt-btn-mini-react:hover:not(:disabled) {
+    border-color: var(--color-orange);
+  }
+
+  .mkt-btn-mini-peligro-react:hover {
+    border-color: var(--color-error-text);
+    background: var(--color-error-bg);
+  }
+
+  .mkt-volver-react:hover {
+    color: var(--color-orange);
+  }
 }
 
 /* ---------- Formularios ---------- */
@@ -255,9 +260,11 @@
     box-shadow var(--dur-fast) var(--ease-out);
 }
 
-.mkt-campaign-card-react:hover {
-  border-color: var(--color-orange);
-  box-shadow: var(--shadow-soft);
+@media (hover: hover) and (pointer: fine) {
+  .mkt-campaign-card-react:hover {
+    border-color: var(--color-orange);
+    box-shadow: var(--shadow-soft);
+  }
 }
 
 .mkt-campaign-nombre-react {
@@ -797,10 +804,13 @@
   font-size: 0.88rem;
   font-weight: 700;
   cursor: pointer;
+  transition: border-color var(--dur-fast) var(--ease-out);
 }
 
-.mkt-toggle-react:hover {
-  border-color: var(--color-orange);
+@media (hover: hover) and (pointer: fine) {
+  .mkt-toggle-react:hover {
+    border-color: var(--color-orange);
+  }
 }
 
 .mkt-toggle-react input {
@@ -978,11 +988,18 @@
     border-color var(--dur-fast) var(--ease-out);
 }
 
-.mkt-btn-borrar-react:hover,
 .mkt-btn-borrar-react:focus-visible {
   opacity: 1;
   color: var(--color-error-text);
   border-color: var(--color-error-bg);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .mkt-btn-borrar-react:hover {
+    opacity: 1;
+    color: var(--color-error-text);
+    border-color: var(--color-error-bg);
+  }
 }
 
 .mkt-zona-peligro-react {
@@ -1042,11 +1059,8 @@
   font-size: 0.76rem;
   font-weight: 800;
   cursor: pointer;
-}
-
-.mkt-dia-numero-react:hover {
-  background: var(--color-background);
-  color: var(--color-navy);
+  transition: background var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out);
 }
 
 .mkt-dia-mas-react {
@@ -1054,11 +1068,22 @@
   font-size: 1rem;
   line-height: 1;
   color: var(--color-orange);
+  transition: opacity var(--dur-fast) var(--ease-out);
 }
 
-.mkt-dia-react:hover .mkt-dia-mas-react,
 .mkt-dia-numero-react:focus-visible .mkt-dia-mas-react {
   opacity: 1;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .mkt-dia-numero-react:hover {
+    background: var(--color-background);
+    color: var(--color-navy);
+  }
+
+  .mkt-dia-react:hover .mkt-dia-mas-react {
+    opacity: 1;
+  }
 }
 
 /* Los eventos son botones: llevan a su campaña. */
@@ -1068,10 +1093,13 @@ button.mkt-evento-react {
   font-family: inherit;
   text-align: left;
   cursor: pointer;
+  transition: filter var(--dur-fast) var(--ease-out);
 }
 
-button.mkt-evento-react:hover {
-  filter: brightness(0.94);
+@media (hover: hover) and (pointer: fine) {
+  button.mkt-evento-react:hover {
+    filter: brightness(0.94);
+  }
 }
 
 .mkt-evento-alta-react {
@@ -1243,13 +1271,19 @@ button.mkt-evento-react:hover {
   cursor: pointer;
   box-shadow: 0 1px 2px rgba(17, 37, 50, 0.06);
   transition: border-color var(--dur-fast) var(--ease-out),
-    box-shadow var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out);
+    box-shadow var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out),
+    opacity var(--dur-fast) var(--ease-out);
 }
 
-.mkt-task-card-react:hover {
-  border-color: var(--color-orange);
-  box-shadow: 0 6px 16px rgba(17, 37, 50, 0.1);
-  transform: translateY(-1px);
+/* Con puntero real: la tarjeta es lo que más se toca de todo el tablero, así
+   que en pantalla táctil este hover (borde + sombra + levantarse 1px) se
+   quedaría pegado al tocar en vez de desaparecer con el dedo. */
+@media (hover: hover) and (pointer: fine) {
+  .mkt-task-card-react:hover {
+    border-color: var(--color-orange);
+    box-shadow: 0 6px 16px rgba(17, 37, 50, 0.1);
+    transform: translateY(-1px);
+  }
 }
 
 /* La tarjeta que se está arrastrando: el navegador ya pinta un "fantasma"
