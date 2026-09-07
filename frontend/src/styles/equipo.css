@@ -1,5 +1,12 @@
-/* Panel /equipo: fondo navy sólido (el resto del layout de la pantalla de
-   equipo vive en shadcn/Tailwind, ver EquipoPage.tsx e index.css). */
+/* Área de equipo (/equipo).
+   Dos pantallas distintas:
+
+   - `.equipo-shell-react`: el login, sobre el navy del club.
+   - `.equipo-workspace-react`: el panel una vez dentro. Sidebar navy + área
+     de trabajo crema, el patrón que estrenó Marketing y que ahora comparten
+     todos los departamentos. Antes esto vivía en `marketing.css` y tapaba
+     este shell desde fuera con `:has()`; ahora el shell ES esa pantalla, así
+     que `marketing.css` solo tiene que estilar sus paneles. */
 
 .equipo-shell-react {
   min-height: 100vh;
@@ -11,4 +18,387 @@
   max-width: 880px;
   margin: 0 auto;
   padding: 48px 20px 64px;
+}
+
+/* ==========================================================================
+   Workspace
+   ========================================================================== */
+
+/* `.shadcn-scope` (index.css) re-encadena --color-background, --color-border
+   y --radius-lg/md/xl a las variables internas de shadcn, así que dentro de
+   /equipo esos nombres dejan de significar lo que dice tokens.css (el crema
+   se vuelve el navy casi negro de shadcn). El área de trabajo los quiere con
+   su valor original: son variables CSS normales, no del @theme de Tailwind,
+   así que se reescriben aquí sin tocar index.css.
+
+   Va fuera de `@layer`: el bloque de `.shadcn-scope` está en `@layer base` y
+   cualquier regla sin capa le gana, que es justo lo que hace falta cuando el
+   selector apunta al MISMO elemento. */
+.equipo-workspace-react {
+  --color-background: #f6efe3;
+  --color-border: #e8ddca;
+  --radius-lg: 20px;
+  --radius-md: 14px;
+  --radius-xl: 28px;
+
+  /* El sidebar de shadcn habla en `--sidebar*` (grises por defecto). Se
+     re-encadenan a los tokens de marca. `--sidebar-accent` es naranja y no
+     navy-soft porque navy-soft sobre navy no se distingue, y el item activo
+     es la única pista de dónde estás. */
+  --sidebar: var(--color-navy);
+  --sidebar-foreground: var(--color-cream);
+  --sidebar-primary: var(--color-orange);
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: var(--color-orange);
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: var(--color-navy-soft);
+  --sidebar-ring: var(--color-orange);
+
+  min-height: 100vh;
+  background: var(--color-background);
+}
+
+/* El disparador que pliega el sidebar hereda `color` de `.shadcn-scope.dark`,
+   que es crema: invisible sobre la barra blanca. Es el único control para
+   llegar a la navegación en móvil, no puede depender de una herencia. */
+.equipo-workspace-react [data-slot="sidebar-trigger"] {
+  color: var(--color-navy);
+}
+
+/* El texto del sidebar sale en `text-sm` (0.875rem), pequeño para una nav que
+   se usa constantemente. Fuera de `@layer` para ganarle a esa utilidad. */
+.equipo-workspace-react [data-slot="sidebar-menu-button"] {
+  font-size: 0.95rem;
+}
+
+.equipo-workspace-react [data-slot="sidebar-group-label"] {
+  font-size: 0.8rem;
+}
+
+/* ---------- Marca en la cabecera del sidebar ---------- */
+
+.equipo-marca-react {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 4px;
+  min-width: 0;
+}
+
+.equipo-marca-logo-react {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  border-radius: 8px;
+  background: #fff;
+  object-fit: contain;
+}
+
+.equipo-marca-texto-react {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.25;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.equipo-marca-texto-react strong {
+  font-size: 1rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.equipo-marca-texto-react span {
+  font-size: 0.82rem;
+  opacity: 0.7;
+  white-space: nowrap;
+}
+
+/* Plegado a iconos: el texto de la marca estorba, solo queda el logo. */
+[data-state="collapsed"] .equipo-marca-texto-react {
+  display: none;
+}
+
+/* ---------- Área de trabajo ---------- */
+
+.equipo-main-react {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-background);
+}
+
+/* Barra superior con el disparador del sidebar y en qué sección estás. */
+.equipo-barra-react {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 60px;
+  padding: 0 20px;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+
+.equipo-barra-react h2 {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  color: var(--color-navy);
+}
+
+/* El departamento al que pertenece la sección abierta: sin esto, "Calendario"
+   de Marketing y "Calendario" del club se leen igual en la barra. */
+.equipo-barra-depto-react {
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-text-muted);
+}
+
+.equipo-contenido-react {
+  flex: 1;
+  padding: 26px 24px 60px;
+  /* Las media queries miden la ventana, pero lo que se estrecha aquí es la
+     columna: el sidebar le quita 16rem. Las container queries miden eso. */
+  container-type: inline-size;
+}
+
+@media (max-width: 620px) {
+  .equipo-contenido-react {
+    padding: 18px 14px 44px;
+  }
+}
+
+/* ---------- Paneles propios del club (Inicio, Eventos) ---------- */
+
+/* Marketing tiene los suyos en `marketing.css` con prefijo `mkt-`; esto es lo
+   mínimo compartido para que las secciones que aún no son de nadie se lean
+   igual que las suyas. */
+
+.equipo-panel-header-react {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.equipo-panel-header-react h3 {
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  color: var(--color-navy);
+}
+
+.equipo-vacio-react {
+  margin: 20px 0;
+  color: var(--color-text-muted);
+  line-height: 1.7;
+}
+
+.equipo-tarjeta-react {
+  padding: 18px 20px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+}
+
+.equipo-tarjeta-react h4 {
+  margin: 0 0 6px;
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--color-navy);
+}
+
+.equipo-tarjeta-react p {
+  margin: 0 0 14px;
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+/* Enlaces que salen de /equipo (el panel de /admin). Botón, no <a> suelto:
+   es una acción con el mismo peso que las del resto del panel. */
+.equipo-enlace-react {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 8px 16px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-surface);
+  color: var(--color-navy);
+  font-size: 0.86rem;
+  font-weight: 700;
+  text-decoration: none;
+  transition: border-color var(--dur-fast) var(--ease-out);
+}
+
+.equipo-enlace-react:hover {
+  border-color: var(--color-orange);
+}
+
+/* ---------- Inicio del club ---------- */
+
+/* Calendario compartido a la izquierda, próximos eventos a la derecha; en
+   columna estrecha (sidebar abierto en portátil) se apilan. */
+.equipo-inicio-react {
+  display: grid;
+  /* El calendario ocupa lo que mide (rejilla de 7 celdas fijas, no se
+     estira); lo que sobra se lo lleva la lista de eventos, que es la que
+     tiene texto de largo variable. */
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 28px;
+  align-items: start;
+}
+
+@container (max-width: 860px) {
+  .equipo-inicio-react {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.equipo-eventos-lista-react {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.equipo-evento-react {
+  padding: 12px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+/* El día es lo que se busca al repasar la lista, así que va primero y con el
+   naranja de marca; el título debajo, en el peso normal de lectura. */
+.equipo-evento-fecha-react {
+  display: block;
+  margin-bottom: 2px;
+  color: var(--color-orange-dark);
+  font-size: 0.74rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.equipo-evento-titulo-react {
+  display: block;
+  color: var(--color-navy);
+  font-size: 0.95rem;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.equipo-evento-desc-react {
+  display: block;
+  margin-top: 4px;
+  color: var(--color-text-muted);
+  font-size: 0.86rem;
+  line-height: 1.55;
+}
+
+/* El <Calendar> de shadcn (react-day-picker) solo se pinta con cinco tokens
+   propios, y dentro de `.shadcn-scope.dark` los cinco son oscuros: sobre el
+   crema del área de trabajo salía una rejilla negra. Se re-encadenan aquí a
+   los de marca en vez de instalar un segundo calendario -- `--primary` ya es
+   el naranja del club, así que el resalte de los días con evento no cambia. */
+.equipo-calendario-react {
+  /* `--primary` también: en index.css `.dark` va sin capa y `.shadcn-scope`
+     dentro de `@layer base`, y como ambas caen en el MISMO elemento, la
+     regla sin capa gana -- dentro de /equipo `--primary` acaba siendo el gris
+     de shadcn, no el naranja del club. Se restaura solo aquí para no cambiar
+     el aspecto de los paneles de Marketing, que ya no lo usan. */
+  --primary: var(--color-orange);
+  --primary-foreground: var(--color-cream);
+  --background: var(--color-surface);
+  --foreground: var(--color-navy);
+  --popover: var(--color-surface);
+  --muted: var(--color-background);
+  --muted-foreground: var(--color-text-muted);
+  /* Por defecto la celda mide 1.75rem: una rejilla diminuta al lado de los
+     paneles de Marketing. */
+  --cell-size: 2.4rem;
+
+  padding: 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+}
+
+/* ==========================================================================
+   Mini-reset del sidebar
+   ========================================================================== */
+
+/* Mini-reset acotado al sidebar.
+   Los componentes de shadcn se escriben dando por hecho el Preflight de
+   Tailwind, que aquí está desactivado para no reescribir la landing ni el
+   panel de Hammad. Sin él, los <li> salen con viñeta y los <button> con el
+   fondo gris del navegador.
+
+   Iba dentro de `@layer base` para perder contra las utilidades de Tailwind
+   (`hover:bg-sidebar-accent` y similares) -- pero index.css de Hammad usa
+   "utilities" antes que "base" (su primer `@layer base {...}` es su propio
+   bloque de `.shadcn-scope`, que aparece después de importar utilities), así
+   que por orden de primera aparición "base" queda por ENCIMA de "utilities"
+   en la cascada. Ninguna declaración `@layer theme, base, components,
+   utilities;` posterior puede arreglar eso: el orden entre capas ya usadas
+   no se puede reescribir, solo fijar para las que aún no tenían posición.
+   Resultado real: con `@layer base`, este reset le ganaba a los estados
+   `:hover`/`:active`/activo del sidebar en vez de perder -- el naranja al
+   pasar el ratón dejaba de verse.
+
+   Arreglo sin tocar su archivo: fuera de cualquier `@layer` (así sin capa
+   vuelve a ganarle a todo, incluidas las utilidades) pero excluyendo con
+   `:not()` los estados que Tailwind necesita controlar. En reposo manda este
+   reset; en hover/activo, el selector deja de matchear y manda la utilidad.
+
+   Segunda vuelta de este mismo problema: los `:not()` SÍ suman especificidad
+   (la del pseudo-clase que llevan dentro), así que este reset y la regla que
+   pinta el icono del trigger en navy (arriba del archivo) quedaban EMPATADAS
+   en especificidad -- y por ir después en el archivo, este reset ganaba y su
+   `color: inherit` se comía el navy, dejando el icono del trigger en el
+   crema/casi blanco que hereda de la raíz oscura de Hammad. Todo el selector
+   va envuelto en un `:where()` exterior para que también los `:not()` cuenten
+   como especificidad cero -- sigue matcheando exactamente igual, pero ya no
+   compite con nada. */
+:where([data-slot="sidebar"]) ul,
+:where([data-slot="sidebar"]) ol {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+:where(
+  [data-slot="sidebar"]
+    button:not(:hover):not(:focus-visible):not(:active):not(
+      [data-active="true"]
+    )
+),
+:where([data-slot="sidebar-trigger"]:not(:hover):not(:focus-visible)) {
+  background-color: transparent;
+  background-image: none;
+  border: 0;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+}
+
+:where([data-slot="sidebar"]) svg,
+:where([data-slot="sidebar-trigger"]) svg {
+  display: block;
+  flex-shrink: 0;
 }
