@@ -2,13 +2,9 @@ import { useEffect, useState } from "react";
 
 import { getMiembros } from "../../../api/marketing";
 import { AlertBanner } from "../../feedback/AlertBanner";
+import { AvatarResponsable } from "./Avatares";
 import type { ApiFailure } from "../../../types/api";
 import type { Miembro } from "../../../types/marketing";
-
-/** Inicial del email como avatar mientras no haya fotos de perfil. */
-function inicial(email: string) {
-  return email.charAt(0).toUpperCase();
-}
 
 export function MembersPanel() {
   const [miembros, setMiembros] = useState<Miembro[]>([]);
@@ -56,9 +52,7 @@ export function MembersPanel() {
         <ul className="mkt-miembros-react">
           {miembros.map((miembro) => (
             <li key={miembro.email} className="mkt-miembro-react">
-              <span className="mkt-avatar-react" aria-hidden="true">
-                {inicial(miembro.email)}
-              </span>
+              <AvatarResponsable email={miembro.email} />
               <div>
                 <p className="mkt-miembro-email-react">{miembro.email}</p>
                 <p className="mkt-meta-react">
@@ -73,8 +67,8 @@ export function MembersPanel() {
       )}
 
       <p className="mkt-meta-react">
-        Por ahora solo se muestra el email: nombre, apellidos y foto llegarán
-        cuando se amplíe la tabla de accesos de equipo.
+        Por ahora solo se muestra el email: nombre y apellidos llegarán cuando
+        se amplíe la tabla de accesos de equipo.
       </p>
     </section>
   );
