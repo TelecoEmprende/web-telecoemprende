@@ -42,7 +42,6 @@ vi.mock("../../api/equipo", () => ({
       teams: ["marketing"],
       vp_de: [],
       cargo: "",
-      email: "abril@example.com",
     }),
   getEquipoCalendario: () => Promise.resolve({ ok: true, eventos: [] }),
   getEnlaceCalendarioGeneral: () => Promise.resolve({ ok: true, url: "" }),
@@ -120,12 +119,6 @@ describe("/equipo — panel de Marketing", () => {
     // El resumen de campañas en marcha sí es parte de Home; Miembros no.
     expect(getCampaigns).toHaveBeenCalled();
     expect(getMiembros).not.toHaveBeenCalled();
-  });
-
-  it("muestra quién ha iniciado sesión al pie del sidebar", async () => {
-    await renderMarketing();
-
-    expect(await screen.findByText("abril@example.com")).toBeInTheDocument();
   });
 
   it("separa lo vencido y ordena lo demás por día en el timeline", async () => {

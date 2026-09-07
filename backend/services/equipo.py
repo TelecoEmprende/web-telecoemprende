@@ -114,7 +114,6 @@ def equipo_session_info() -> dict:
         "teams": session.get("equipo_teams", []),
         "vp_de": session.get("equipo_vp_de", []),
         "cargo": session.get("equipo_cargo", ""),
-        "email": session.get("equipo_email", ""),
     }
 
 

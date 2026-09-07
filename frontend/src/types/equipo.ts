@@ -12,7 +12,6 @@ export type EquipoSessionResponse = {
   teams: Team[];
   vp_de: Team[];
   cargo: Cargo;
-  email: string;
 };
 
 export type EquipoAcceso = {
