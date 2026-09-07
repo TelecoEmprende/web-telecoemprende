@@ -1,8 +1,19 @@
+import hashlib
+import hmac
+from datetime import UTC, date, datetime, timedelta
+
 import psycopg2
 from flask import session
 from werkzeug.security import check_password_hash, generate_password_hash
 
-from backend.config import CARGOS_VALIDOS, DATABASE_URL, EQUIPO_CON_PERMISOS_ADMIN, EQUIPOS_VALIDOS
+from backend.config import (
+    CALENDARIO_TOKEN_SECRET,
+    CARGOS_VALIDOS,
+    DATABASE_URL,
+    EQUIPO_CON_PERMISOS_ADMIN,
+    EQUIPOS_VALIDOS,
+)
+from backend.services.ics import escapar as escapar_ics
 
 # Hash "de relleno" para cuando el email no existe: sin esto, saltarse
 # check_password_hash en ese caso haría que la respuesta fuera más rápida
@@ -108,6 +119,36 @@ def equipo_session_info() -> dict:
 
 def logout_equipo() -> None:
     session.clear()
+
+
+def token_calendario(email: str) -> str:
+    """Firma de un email para el enlace de suscripción al calendario (.ics).
+
+    No se guarda en ningún sitio: se recalcula al verificar, así que no hace
+    falta tabla ni migración para invalidar u otorgar acceso, va ligado a
+    seguir dado de alta en `equipo_accesos`.
+    """
+    return hmac.new(
+        CALENDARIO_TOKEN_SECRET.encode(), email.strip().lower().encode(), hashlib.sha256
+    ).hexdigest()
+
+
+def equipos_por_token_calendario(email: str, token: str) -> list[str] | None:
+    """Verifica el token del enlace de calendario y devuelve los equipos
+    activos de ese email, o None si el token no cuadra o la cuenta no existe
+    o está de baja."""
+    if not hmac.compare_digest(token_calendario(email), token):
+        return None
+    with _get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT equipos FROM equipo_accesos WHERE email = %s AND activo = TRUE",
+                (email.strip().lower(),),
+            )
+            fila = cur.fetchone()
+    if fila is None:
+        return None
+    return [e for e in fila[0] if e in EQUIPOS_VALIDOS]
 
 
 def listar_equipo_accesos() -> list[dict]:
@@ -303,6 +344,37 @@ def listar_eventos_calendario() -> list[dict]:
         }
         for f in filas
     ]
+
+
+def calendario_general_ics() -> str:
+    """El calendario compartido de /equipo, en .ics, para suscribirlo en
+    Google Calendar (u otro) igual que el de Marketing. Es una tabla pequeña
+    y gestionada a mano desde /admin: se manda entera, sin filtrar por rango.
+    """
+    lineas = [
+        "BEGIN:VCALENDAR",
+        "VERSION:2.0",
+        "PRODID:-//TelecoEmprende//Equipo//ES",
+        "CALSCALE:GREGORIAN",
+        "X-PUBLISHED-TTL:PT24H",
+    ]
+    for evento in listar_eventos_calendario():
+        inicio = date.fromisoformat(evento["fecha"])
+        lineas += ["BEGIN:VEVENT", f"UID:equipo-evento-{evento['id']}@telecoemprende.es"]
+        lineas.append(f"DTSTAMP:{datetime.now(UTC).strftime('%Y%m%dT%H%M%SZ')}")
+        if evento["hora"]:
+            hora, minuto = evento["hora"].split(":")
+            marca = f"{inicio.strftime('%Y%m%d')}T{hora.zfill(2)}{minuto.zfill(2)}00"
+            lineas.append(f"DTSTART:{marca}")
+        else:
+            lineas.append(f"DTSTART;VALUE=DATE:{inicio.strftime('%Y%m%d')}")
+            lineas.append(f"DTEND;VALUE=DATE:{(inicio + timedelta(days=1)).strftime('%Y%m%d')}")
+        lineas.append(f"SUMMARY:{escapar_ics(evento['titulo'])}")
+        if evento["descripcion"]:
+            lineas.append(f"DESCRIPTION:{escapar_ics(evento['descripcion'])}")
+        lineas.append("END:VEVENT")
+    lineas.append("END:VCALENDAR")
+    return "\r\n".join(lineas) + "\r\n"
 
 
 def crear_evento_calendario(titulo: str, descripcion: str, fecha: str, hora: str) -> dict:

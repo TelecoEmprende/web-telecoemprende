@@ -77,6 +77,9 @@ export function apiDepto(depto: Team) {
       ),
 
     getMiembros: () => apiRequest<{ ok: true; miembros: Miembro[] }>(`${BASE}/miembros`),
+
+    getEnlaceCalendario: () =>
+      apiRequest<{ ok: true; url: string }>(`${BASE}/calendario/enlace`),
   };
 }
 

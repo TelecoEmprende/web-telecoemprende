@@ -38,6 +38,7 @@ vi.mock("../../api/marketing", () => ({
       deleteTask: vi.fn(),
       updateCampaign: vi.fn(),
       updateContent: vi.fn(),
+      getEnlaceCalendario: () => Promise.resolve({ ok: true, url: "" }),
     };
   },
 }));
@@ -57,6 +58,7 @@ vi.mock("../../api/equipo", () => ({
       cargo: "",
     }),
   getEquipoCalendario: () => Promise.resolve({ ok: true, eventos: [] }),
+  getEnlaceCalendarioGeneral: () => Promise.resolve({ ok: true, url: "" }),
   logoutEquipo: () => Promise.resolve({ ok: true }),
   loginEquipo: vi.fn(),
 }));
