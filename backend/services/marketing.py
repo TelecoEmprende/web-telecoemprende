@@ -23,6 +23,7 @@ from backend.config import (
     TASK_ESTADOS,
     TASK_PRIORIDADES,
 )
+from backend.services.ics import escapar as escapar_ics
 
 
 def _get_connection():
@@ -447,7 +448,7 @@ def calendario_ics(desde: date, hasta: date) -> str:
     for item in calendario(desde, hasta):
         inicio = date.fromisoformat(item["fecha"])
         etiqueta = "Tarea" if item["origen"] == "task" else "Publicación"
-        resumen = _ics_escapar(f"{etiqueta}: {item['titulo']}")
+        resumen = escapar_ics(f"{etiqueta}: {item['titulo']}")
         descripcion = " · ".join(p for p in (item.get("padre"), item.get("detalle")) if p)
         lineas += ["BEGIN:VEVENT", f"UID:marketing-{item['origen']}-{item['id']}@telecoemprende.es"]
         lineas.append(f"DTSTAMP:{datetime.now(UTC).strftime('%Y%m%dT%H%M%SZ')}")
@@ -455,14 +456,10 @@ def calendario_ics(desde: date, hasta: date) -> str:
         lineas.append(f"DTEND;VALUE=DATE:{(inicio + timedelta(days=1)).strftime('%Y%m%d')}")
         lineas.append(f"SUMMARY:{resumen}")
         if descripcion:
-            lineas.append(f"DESCRIPTION:{_ics_escapar(descripcion)}")
+            lineas.append(f"DESCRIPTION:{escapar_ics(descripcion)}")
         lineas.append("END:VEVENT")
     lineas.append("END:VCALENDAR")
     return "\r\n".join(lineas) + "\r\n"
-
-
-def _ics_escapar(texto: str) -> str:
-    return texto.replace("\\", "\\\\").replace(",", "\\,").replace(";", "\\;").replace("\n", "\\n")
 
 
 # --------------------------------------------------------------------------
