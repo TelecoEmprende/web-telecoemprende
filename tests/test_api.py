@@ -641,6 +641,60 @@ class ApiTestCase(unittest.TestCase):
         )
         self.assertEqual(response.status_code, 409)
 
+    def test_admin_equipo_create_board_member_without_team(self):
+        """Board sin departamento: el cargo por sí solo ya da acceso a /admin."""
+        self.login()
+
+        create = self.client.post(
+            "/api/admin/equipo",
+            json={
+                "email": "board@example.com",
+                "password": "contrasena-larga",
+                "equipos": [],
+                "cargo": "boardmember",
+            },
+        )
+        self.assertEqual(create.status_code, 201)
+
+        self.client.post("/api/admin/logout")
+        login = self.client.post(
+            "/api/equipo/login",
+            json={"email": "board@example.com", "password": "contrasena-larga"},
+        )
+        self.assertEqual(login.status_code, 200)
+        self.assertEqual(login.get_json()["teams"], [])
+        self.assertEqual(login.get_json()["cargo"], "boardmember")
+        # El cargo, sin ningún equipo, tiene que seguir abriendo /admin.
+        self.assertEqual(self.client.get("/api/admin/registrations").status_code, 200)
+
+    def test_admin_equipo_create_rejects_no_team_and_no_cargo(self):
+        """Sin departamento y sin cargo la cuenta no daría acceso a nada."""
+        self.login()
+
+        response = self.client.post(
+            "/api/admin/equipo",
+            json={"email": "nadie@example.com", "password": "contrasena-larga", "equipos": []},
+        )
+        self.assertEqual(response.status_code, 400)
+
+    def test_admin_equipo_update_cannot_strip_last_access(self):
+        """Quitarle el cargo a un board sin equipos lo dejaría sin acceso."""
+        self.login()
+
+        create = self.client.post(
+            "/api/admin/equipo",
+            json={
+                "email": "board2@example.com",
+                "password": "contrasena-larga",
+                "equipos": [],
+                "cargo": "boardmember",
+            },
+        )
+        acceso_id = create.get_json()["acceso"]["id"]
+
+        response = self.client.put(f"/api/admin/equipo/{acceso_id}", json={"cargo": ""})
+        self.assertEqual(response.status_code, 404)
+
     def test_admin_equipo_create_rejects_invalid_team(self):
         self.login()
 

@@ -135,8 +135,19 @@ def listar_equipo_accesos() -> list[dict]:
     ]
 
 
-def _equipos_y_vp_validos(equipos: list[str], vp_de: list[str]) -> bool:
-    if not equipos or any(e not in EQUIPOS_VALIDOS for e in equipos):
+def _acceso_valido(equipos: list[str], vp_de: list[str], cargo: str) -> bool:
+    """Un acceso necesita al menos un departamento O un cargo de dirección.
+
+    El cargo a solas (board member sin departamento) es válido a propósito: ya
+    da sesión de /admin por sí mismo (ver `_tiene_permisos_admin`), que es
+    justo el caso de quien está en el board pero no en ningún equipo. Sin
+    ninguno de los dos, en cambio, la cuenta no daría acceso a nada.
+    """
+    if cargo and cargo not in CARGOS_VALIDOS:
+        return False
+    if any(e not in EQUIPOS_VALIDOS for e in equipos):
+        return False
+    if not equipos and not cargo:
         return False
     return all(v in equipos for v in vp_de)
 
@@ -150,9 +161,7 @@ def crear_equipo_acceso(
     vp_de = sorted(set(vp_de or []))
     cargo = cargo or ""
 
-    if not _equipos_y_vp_validos(equipos, vp_de):
-        return None
-    if cargo and cargo not in CARGOS_VALIDOS:
+    if not _acceso_valido(equipos, vp_de, cargo):
         return None
 
     with _get_connection() as conn:
@@ -201,23 +210,29 @@ def actualizar_equipo_acceso(
         equipos = sorted(set(equipos))
     if vp_de is not None:
         vp_de = sorted(set(vp_de))
-    if cargo is not None and cargo and cargo not in CARGOS_VALIDOS:
-        return False
-
     campos = []
     valores: list = []
 
-    if equipos is not None or vp_de is not None:
+    # equipos, vp_de y cargo se validan juntos: cambiar uno solo puede dejar el
+    # acceso inválido (quitarle el cargo a un board member sin departamento lo
+    # dejaría sin acceso a nada), así que se comprueba el trío ya resuelto
+    # contra lo que hay guardado.
+    if equipos is not None or vp_de is not None or cargo is not None:
         with _get_connection() as conn:
             with conn.cursor() as cur:
-                cur.execute("SELECT equipos, vp_de FROM equipo_accesos WHERE id = %s", (acceso_id,))
+                cur.execute(
+                    "SELECT equipos, vp_de, cargo FROM equipo_accesos WHERE id = %s",
+                    (acceso_id,),
+                )
                 fila = cur.fetchone()
         if fila is None:
             return False
 
-        equipos_finales = equipos if equipos is not None else fila[0]
-        vp_de_finales = vp_de if vp_de is not None else fila[1]
-        if not _equipos_y_vp_validos(equipos_finales, vp_de_finales):
+        if not _acceso_valido(
+            equipos if equipos is not None else fila[0],
+            vp_de if vp_de is not None else fila[1],
+            cargo if cargo is not None else fila[2],
+        ):
             return False
 
         if equipos is not None:
@@ -226,10 +241,9 @@ def actualizar_equipo_acceso(
         if vp_de is not None:
             campos.append("vp_de = %s")
             valores.append(vp_de)
-
-    if cargo is not None:
-        campos.append("cargo = %s")
-        valores.append(cargo)
+        if cargo is not None:
+            campos.append("cargo = %s")
+            valores.append(cargo)
     if activo is not None:
         campos.append("activo = %s")
         valores.append(activo)
