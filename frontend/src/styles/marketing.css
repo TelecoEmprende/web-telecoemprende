@@ -663,19 +663,6 @@
   background: var(--color-surface);
 }
 
-.mkt-avatar-react {
-  display: grid;
-  place-items: center;
-  width: 42px;
-  height: 42px;
-  flex-shrink: 0;
-  border-radius: 50%;
-  background: var(--color-navy);
-  color: var(--color-cream);
-  font-size: 1.05rem;
-  font-weight: 800;
-}
-
 .mkt-miembro-email-react {
   margin: 0;
   font-size: 0.92rem;

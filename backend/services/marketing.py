@@ -12,7 +12,7 @@ desaparece de una tarea histórica si se le da de baja el acceso.
 """
 
 import json
-from datetime import date
+from datetime import UTC, date, datetime, timedelta
 
 import psycopg2
 from psycopg2.extras import RealDictCursor
@@ -23,6 +23,7 @@ from backend.config import (
     TASK_ESTADOS,
     TASK_PRIORIDADES,
 )
+from backend.services.ics import escapar as escapar_ics
 
 
 def _get_connection():
@@ -426,6 +427,39 @@ def calendario(desde: date, hasta: date) -> list[dict]:
                 {"desde": desde, "hasta": hasta},
             )
             return [_serializar(f) for f in cur.fetchall()]
+
+
+def calendario_ics(desde: date, hasta: date) -> str:
+    """El mismo contenido de `calendario()` en formato .ics, para que alguien
+    lo suscriba en Google Calendar (o el que use) y lo vea sin entrar aquí.
+
+    Sin librería aparte: un evento de día completo en RFC 5545 son unas
+    pocas líneas de texto plano.
+    """
+    lineas = [
+        "BEGIN:VCALENDAR",
+        "VERSION:2.0",
+        "PRODID:-//TelecoEmprende//Marketing//ES",
+        "CALSCALE:GREGORIAN",
+        # Pide a los clientes que no lo den de baja tras un rato sin cambios
+        # ni lo repinten cada minuto; una vez al día de sobra para deadlines.
+        "X-PUBLISHED-TTL:PT24H",
+    ]
+    for item in calendario(desde, hasta):
+        inicio = date.fromisoformat(item["fecha"])
+        etiqueta = "Tarea" if item["origen"] == "task" else "Publicación"
+        resumen = escapar_ics(f"{etiqueta}: {item['titulo']}")
+        descripcion = " · ".join(p for p in (item.get("padre"), item.get("detalle")) if p)
+        lineas += ["BEGIN:VEVENT", f"UID:marketing-{item['origen']}-{item['id']}@telecoemprende.es"]
+        lineas.append(f"DTSTAMP:{datetime.now(UTC).strftime('%Y%m%dT%H%M%SZ')}")
+        lineas.append(f"DTSTART;VALUE=DATE:{inicio.strftime('%Y%m%d')}")
+        lineas.append(f"DTEND;VALUE=DATE:{(inicio + timedelta(days=1)).strftime('%Y%m%d')}")
+        lineas.append(f"SUMMARY:{resumen}")
+        if descripcion:
+            lineas.append(f"DESCRIPTION:{escapar_ics(descripcion)}")
+        lineas.append("END:VEVENT")
+    lineas.append("END:VCALENDAR")
+    return "\r\n".join(lineas) + "\r\n"
 
 
 # --------------------------------------------------------------------------
