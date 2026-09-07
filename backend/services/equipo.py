@@ -49,6 +49,18 @@ def init_equipo_db():
                 ALTER TABLE equipo_accesos
                 ADD COLUMN IF NOT EXISTS cargo VARCHAR(20) NOT NULL DEFAULT ''
             """)
+            # Perfil de la persona, no del departamento: por eso vive aquí y no
+            # en una tabla de Marketing. Eventos e Ingeniería leen lo mismo sin
+            # volver a construirlo (era la decisión abierta de
+            # docs/propuesta-crm-miembros.md, resuelta por la opción B).
+            cur.execute("""
+                ALTER TABLE equipo_accesos
+                ADD COLUMN IF NOT EXISTS tags TEXT[] NOT NULL DEFAULT '{}'
+            """)
+            cur.execute("""
+                ALTER TABLE equipo_accesos
+                ADD COLUMN IF NOT EXISTS notas TEXT NOT NULL DEFAULT ''
+            """)
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS calendario_eventos (
                     id SERIAL PRIMARY KEY,
@@ -156,7 +168,8 @@ def listar_equipo_accesos() -> list[dict]:
         with conn.cursor() as cur:
             cur.execute(
                 """
-                SELECT id, email, equipos, vp_de, cargo, activo, created_at
+                SELECT id, email, equipos, vp_de, cargo, activo, created_at,
+                       tags, notas
                 FROM equipo_accesos ORDER BY email
                 """
             )
@@ -171,13 +184,26 @@ def listar_equipo_accesos() -> list[dict]:
             "cargo": f[4],
             "activo": f[5],
             "created_at": f[6].isoformat(),
+            "tags": f[7],
+            "notas": f[8],
         }
         for f in filas
     ]
 
 
-def _equipos_y_vp_validos(equipos: list[str], vp_de: list[str]) -> bool:
-    if not equipos or any(e not in EQUIPOS_VALIDOS for e in equipos):
+def _acceso_valido(equipos: list[str], vp_de: list[str], cargo: str) -> bool:
+    """Un acceso necesita al menos un departamento O un cargo de dirección.
+
+    El cargo a solas (board member sin departamento) es válido a propósito: ya
+    da sesión de /admin por sí mismo (ver `_tiene_permisos_admin`), que es
+    justo el caso de quien está en el board pero no en ningún equipo. Sin
+    ninguno de los dos, en cambio, la cuenta no daría acceso a nada.
+    """
+    if cargo and cargo not in CARGOS_VALIDOS:
+        return False
+    if any(e not in EQUIPOS_VALIDOS for e in equipos):
+        return False
+    if not equipos and not cargo:
         return False
     return all(v in equipos for v in vp_de)
 
@@ -191,9 +217,7 @@ def crear_equipo_acceso(
     vp_de = sorted(set(vp_de or []))
     cargo = cargo or ""
 
-    if not _equipos_y_vp_validos(equipos, vp_de):
-        return None
-    if cargo and cargo not in CARGOS_VALIDOS:
+    if not _acceso_valido(equipos, vp_de, cargo):
         return None
 
     with _get_connection() as conn:
@@ -242,23 +266,29 @@ def actualizar_equipo_acceso(
         equipos = sorted(set(equipos))
     if vp_de is not None:
         vp_de = sorted(set(vp_de))
-    if cargo is not None and cargo and cargo not in CARGOS_VALIDOS:
-        return False
-
     campos = []
     valores: list = []
 
-    if equipos is not None or vp_de is not None:
+    # equipos, vp_de y cargo se validan juntos: cambiar uno solo puede dejar el
+    # acceso inválido (quitarle el cargo a un board member sin departamento lo
+    # dejaría sin acceso a nada), así que se comprueba el trío ya resuelto
+    # contra lo que hay guardado.
+    if equipos is not None or vp_de is not None or cargo is not None:
         with _get_connection() as conn:
             with conn.cursor() as cur:
-                cur.execute("SELECT equipos, vp_de FROM equipo_accesos WHERE id = %s", (acceso_id,))
+                cur.execute(
+                    "SELECT equipos, vp_de, cargo FROM equipo_accesos WHERE id = %s",
+                    (acceso_id,),
+                )
                 fila = cur.fetchone()
         if fila is None:
             return False
 
-        equipos_finales = equipos if equipos is not None else fila[0]
-        vp_de_finales = vp_de if vp_de is not None else fila[1]
-        if not _equipos_y_vp_validos(equipos_finales, vp_de_finales):
+        if not _acceso_valido(
+            equipos if equipos is not None else fila[0],
+            vp_de if vp_de is not None else fila[1],
+            cargo if cargo is not None else fila[2],
+        ):
             return False
 
         if equipos is not None:
@@ -267,10 +297,9 @@ def actualizar_equipo_acceso(
         if vp_de is not None:
             campos.append("vp_de = %s")
             valores.append(vp_de)
-
-    if cargo is not None:
-        campos.append("cargo = %s")
-        valores.append(cargo)
+        if cargo is not None:
+            campos.append("cargo = %s")
+            valores.append(cargo)
     if activo is not None:
         campos.append("activo = %s")
         valores.append(activo)
@@ -413,3 +442,36 @@ def eliminar_evento_calendario(evento_id: int) -> bool:
         conn.commit()
 
     return eliminado
+
+
+def actualizar_perfil(email: str, tags: list[str] | None = None, notas: str | None = None) -> bool:
+    """Etiquetas de habilidad y nota del equipo de una persona.
+
+    Separado de `actualizar_equipo_acceso` a propósito: eso son permisos y solo
+    lo toca quien administra; esto es contexto de trabajo y lo edita cualquiera
+    del departamento desde su ficha. Mezclarlos habría significado exponer los
+    permisos a quien solo quiere apuntar "entrega rápido pero mejor una cosa a
+    la vez".
+    """
+    campos, valores = [], []
+    if tags is not None:
+        campos.append("tags = %s")
+        valores.append(sorted({t.strip() for t in tags if t.strip()}))
+    if notas is not None:
+        campos.append("notas = %s")
+        valores.append(notas.strip())
+
+    if not campos:
+        return False
+
+    valores.append(email.strip().lower())
+    with _get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                f"UPDATE equipo_accesos SET {', '.join(campos)} WHERE email = %s",
+                valores,
+            )
+            actualizado = cur.rowcount > 0
+        conn.commit()
+
+    return actualizado
