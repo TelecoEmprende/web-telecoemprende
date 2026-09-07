@@ -24,7 +24,15 @@ const CON_FOTO = new Set([
 ]);
 
 function nombreDe(email: string) {
-  return email.split("@")[0].split(/[.+_-]/)[0].toLowerCase();
+  const local = email.split("@")[0].toLowerCase();
+  // "nombre.apellido@..." o "nombre_apellido@...": el separador ya lo parte.
+  const primerToken = local.split(/[.+_-]/)[0];
+  if (CON_FOTO.has(primerToken)) return primerToken;
+
+  // Sin separador (p. ej. "abrilespinosatortuero@gmail.com") el email entero
+  // es un solo token: buscar qué nombre conocido empieza el local-part.
+  const prefijo = [...CON_FOTO].find((nombre) => local.startsWith(nombre));
+  return prefijo ?? primerToken;
 }
 
 export function fotoDe(email: string) {
