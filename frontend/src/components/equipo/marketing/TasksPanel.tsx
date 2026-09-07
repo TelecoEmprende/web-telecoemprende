@@ -212,6 +212,12 @@ export function TasksPanel() {
               onDrop={(event) => {
                 event.preventDefault();
                 setSobreColumna(null);
+                // No basta con "onDragEnd" para limpiar `arrastrando`: al
+                // cambiar de columna la tarjeta se desmonta de esta lista y
+                // se monta en la de al lado, y el navegador no siempre llega
+                // a disparar "dragend" sobre un nodo que ya no está donde
+                // empezó el arrastre. Se limpia aquí, que sí se dispara.
+                setArrastrando(null);
                 const id = Number(event.dataTransfer.getData(TASK_MIME));
                 const task = tasks.find((t) => t.id === id);
                 if (task) void moverA(task, estado);
