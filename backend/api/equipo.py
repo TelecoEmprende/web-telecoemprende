@@ -63,7 +63,11 @@ def api_equipo_logout():
 @equipo_api.route("/session", methods=["GET"])
 def api_equipo_session():
     authenticated = is_equipo_authenticated()
-    info = equipo_session_info() if authenticated else {"teams": [], "vp_de": [], "cargo": ""}
+    info = (
+        equipo_session_info()
+        if authenticated
+        else {"teams": [], "vp_de": [], "cargo": "", "email": ""}
+    )
     return jsonify({"ok": True, "authenticated": authenticated, **info}), 200
 
 

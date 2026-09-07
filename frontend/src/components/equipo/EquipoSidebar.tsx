@@ -1,4 +1,5 @@
 import type { LucideIcon } from "lucide-react";
+import { useEffect, useState } from "react";
 import {
   CalendarDays,
   ExternalLink,
@@ -13,6 +14,7 @@ import {
 } from "lucide-react";
 import { Link } from "react-router-dom";
 
+import { getEquipoSession } from "../../api/equipo";
 import {
   Sidebar,
   SidebarContent,
@@ -26,6 +28,7 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar";
+import { AvatarResponsable, etiquetaDe } from "./marketing/Avatares";
 import type { Cargo, Team } from "../../types/equipo";
 
 /** Una entrada de la navegación. El id identifica la sección abierta en todo
@@ -83,6 +86,43 @@ export function deptoDe(seccion: Seccion): string {
     POR_EQUIPO[t].some((item) => item.id === seccion),
   );
   return team ? TEAM_LABEL[team] : "Club";
+}
+
+/**
+ * Quién ha iniciado sesión, al pie del sidebar -- para saber en qué perfil
+ * se está sin tener que abrir "Cerrar sesión" y mirar. Pide su propia sesión
+ * en vez de recibir el email por props: así no hace falta tocar
+ * `EquipoPage.tsx` (de Hammad) para pasar un dato que `/api/equipo/session`
+ * ya expone.
+ */
+function PerfilActivo() {
+  const [email, setEmail] = useState("");
+
+  useEffect(() => {
+    let activo = true;
+    getEquipoSession()
+      .then((sesion) => {
+        if (activo && sesion.email) setEmail(sesion.email);
+      })
+      .catch(() => {
+        // Sin sesión legible no hay nada que mostrar: se queda vacío.
+      });
+    return () => {
+      activo = false;
+    };
+  }, []);
+
+  if (!email) return null;
+
+  return (
+    <div className="mkt-perfil-react">
+      <AvatarResponsable email={email} />
+      <span className="mkt-perfil-texto-react">
+        <strong>{etiquetaDe(email)}</strong>
+        <span>{email}</span>
+      </span>
+    </div>
+  );
 }
 
 type Props = {
@@ -197,6 +237,7 @@ export function EquipoSidebar({
       {/* Con el workspace a pantalla completa no hay cabecera del sitio, así
           que la salida a la web pública y el cierre de sesión viven aquí. */}
       <SidebarFooter>
+        <PerfilActivo />
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton asChild tooltip={ayuda("Ver la web")}>
