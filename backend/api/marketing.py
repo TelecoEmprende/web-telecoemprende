@@ -1,9 +1,14 @@
-"""API del espacio de Marketing dentro de /equipo.
+"""API del espacio de trabajo de un departamento dentro de /equipo.
+
+Sirve a Marketing y a Eventos con las mismas rutas: el blueprint se registra
+una vez por departamento (ver `app.py`) y `departamento_actual()` dice cuál es
+el de la petición. Todas las consultas van acotadas por él, así que pasar el id
+de una tarea de otro departamento no encuentra nada.
 
 Autorización: reutiliza la sesión que ya monta `login_equipo` (no hay un
-sistema de auth paralelo). Cada ruta pasa por `@requiere_equipo("marketing")`,
-que exige pertenecer al equipo -- comprobado en servidor, nunca confiando en
-que el frontend haya escondido el botón.
+sistema de auth paralelo). Cada ruta pasa por `@requiere_equipo`, que exige
+pertenecer al departamento de la ruta -- comprobado en servidor, nunca
+confiando en que el frontend haya escondido el botón.
 """
 
 import logging
@@ -25,6 +30,7 @@ from backend.config import (
 from backend.schemas import build_response
 from backend.services.admin import is_admin_authenticated
 from backend.services.equipo import equipo_session_info, is_equipo_authenticated
+from backend.services.slack import tarea_cambia_estado, tarea_creada
 from backend.services.marketing import (
     actualizar_campaign,
     actualizar_content,
@@ -74,37 +80,47 @@ def _sanear(texto: str, *, multilinea: bool = False) -> str:
     return "\n".join(" ".join(linea.split()) for linea in lineas).strip()
 
 
+# El mismo blueprint se registra una vez por departamento (ver `app.py`), con
+# un `name` distinto cada vez. Así Marketing y Eventos comparten tablero,
+# tareas y calendario sin duplicar 400 líneas de rutas: lo único que cambia es
+# de qué departamento son las filas, y eso sale del nombre del registro.
+_DEPARTAMENTO_POR_BLUEPRINT = {
+    "marketing_api": "marketing",
+    "eventos_api": "eventos",
+}
+
 marketing_api = Blueprint("marketing_api", __name__, url_prefix="/api/marketing")
 
-DEPARTAMENTO = "marketing"
+
+def departamento_actual() -> str:
+    return _DEPARTAMENTO_POR_BLUEPRINT[request.blueprint]
 
 
 class DatosInvalidos(ValueError):
     """Error de validación con el mensaje que se le enseña al usuario."""
 
 
-def requiere_equipo(equipo: str):
-    """Exige pertenecer a `equipo`. El admin pasa siempre: el equipo de
-    ingeniería recibe `admin_auth` al entrar en /equipo y hace de superusuario."""
+def requiere_equipo(func):
+    """Exige pertenecer al departamento de la ruta. El admin pasa siempre: el
+    equipo de ingeniería recibe `admin_auth` al entrar en /equipo y hace de
+    superusuario."""
 
-    def decorador(func):
-        @wraps(func)
-        def envoltorio(*args, **kwargs):
-            autorizado = is_admin_authenticated() or (
-                is_equipo_authenticated() and equipo in equipo_session_info()["teams"]
-            )
-            if not autorizado:
-                return jsonify(build_response(False, "No autorizado.")), 401
+    @wraps(func)
+    def envoltorio(*args, **kwargs):
+        autorizado = is_admin_authenticated() or (
+            is_equipo_authenticated()
+            and departamento_actual() in equipo_session_info()["teams"]
+        )
+        if not autorizado:
+            return jsonify(build_response(False, "No autorizado.")), 401
 
-            init_marketing_db()
-            try:
-                return func(*args, **kwargs)
-            except DatosInvalidos as error:
-                return jsonify(build_response(False, str(error))), 400
+        init_marketing_db()
+        try:
+            return func(*args, **kwargs)
+        except DatosInvalidos as error:
+            return jsonify(build_response(False, str(error))), 400
 
-        return envoltorio
-
-    return decorador
+    return envoltorio
 
 
 # --------------------------------------------------------------------------
@@ -194,13 +210,13 @@ def _autor() -> str:
 # --------------------------------------------------------------------------
 
 @marketing_api.route("/campaigns", methods=["GET"])
-@requiere_equipo(DEPARTAMENTO)
+@requiere_equipo
 def api_listar_campaigns():
-    return jsonify({"ok": True, "campaigns": listar_campaigns()}), 200
+    return jsonify({"ok": True, "campaigns": listar_campaigns(departamento_actual())}), 200
 
 
 @marketing_api.route("/campaigns", methods=["POST"])
-@requiere_equipo(DEPARTAMENTO)
+@requiere_equipo
 def api_crear_campaign():
     datos = _payload()
     campaign = crear_campaign(
@@ -209,22 +225,23 @@ def api_crear_campaign():
         audiencia=_texto(datos, "audiencia", maximo=MAX_TEXTO_LARGO_LEN),
         fecha=_fecha(datos, "fecha"),
         creado_por=_autor(),
+        departamento=departamento_actual(),
     )
     logger.info("marketing crea campaign id=%s", campaign["id"])
     return jsonify(build_response(True, "Campaña creada.", campaign=campaign)), 201
 
 
 @marketing_api.route("/campaigns/<int:campaign_id>", methods=["GET"])
-@requiere_equipo(DEPARTAMENTO)
+@requiere_equipo
 def api_obtener_campaign(campaign_id: int):
-    campaign = obtener_campaign(campaign_id)
+    campaign = obtener_campaign(campaign_id, departamento_actual())
     if campaign is None:
         return jsonify(build_response(False, "Campaña no encontrada.")), 404
     return jsonify({"ok": True, "campaign": campaign}), 200
 
 
 @marketing_api.route("/campaigns/<int:campaign_id>", methods=["PUT"])
-@requiere_equipo(DEPARTAMENTO)
+@requiere_equipo
 def api_actualizar_campaign(campaign_id: int):
     datos = _payload()
     campos = {}
@@ -237,15 +254,15 @@ def api_actualizar_campaign(campaign_id: int):
     if "fecha" in datos:
         campos["fecha"] = _fecha(datos, "fecha")
 
-    if not actualizar_campaign(campaign_id, **campos):
+    if not actualizar_campaign(campaign_id, departamento_actual(), **campos):
         return jsonify(build_response(False, "Campaña no encontrada o sin cambios.")), 404
     return jsonify(build_response(True, "Campaña actualizada.")), 200
 
 
 @marketing_api.route("/campaigns/<int:campaign_id>", methods=["DELETE"])
-@requiere_equipo(DEPARTAMENTO)
+@requiere_equipo
 def api_eliminar_campaign(campaign_id: int):
-    if not eliminar_campaign(campaign_id):
+    if not eliminar_campaign(campaign_id, departamento_actual()):
         return jsonify(build_response(False, "Campaña no encontrada.")), 404
     logger.info("marketing elimina campaign id=%s", campaign_id)
     return jsonify(build_response(True, "Campaña eliminada.")), 200
@@ -288,10 +305,12 @@ def _campos_content(datos: dict, *, parcial: bool) -> dict:
 
 
 @marketing_api.route("/campaigns/<int:campaign_id>/contents", methods=["POST"])
-@requiere_equipo(DEPARTAMENTO)
+@requiere_equipo
 def api_crear_content(campaign_id: int):
     datos = _payload()
-    content = crear_content(campaign_id, **_campos_content(datos, parcial=False))
+    content = crear_content(
+        campaign_id, departamento_actual(), **_campos_content(datos, parcial=False)
+    )
     if content is None:
         return jsonify(build_response(False, "Campaña no encontrada.")), 404
     logger.info("marketing crea content id=%s campaign=%s", content["id"], campaign_id)
@@ -299,27 +318,27 @@ def api_crear_content(campaign_id: int):
 
 
 @marketing_api.route("/contents/<int:content_id>", methods=["GET"])
-@requiere_equipo(DEPARTAMENTO)
+@requiere_equipo
 def api_obtener_content(content_id: int):
-    content = obtener_content(content_id)
+    content = obtener_content(content_id, departamento_actual())
     if content is None:
         return jsonify(build_response(False, "Contenido no encontrado.")), 404
     return jsonify({"ok": True, "content": content}), 200
 
 
 @marketing_api.route("/contents/<int:content_id>", methods=["PUT"])
-@requiere_equipo(DEPARTAMENTO)
+@requiere_equipo
 def api_actualizar_content(content_id: int):
     campos = _campos_content(_payload(), parcial=True)
-    if not actualizar_content(content_id, **campos):
+    if not actualizar_content(content_id, departamento_actual(), **campos):
         return jsonify(build_response(False, "Contenido no encontrado o sin cambios.")), 404
     return jsonify(build_response(True, "Contenido actualizado.")), 200
 
 
 @marketing_api.route("/contents/<int:content_id>", methods=["DELETE"])
-@requiere_equipo(DEPARTAMENTO)
+@requiere_equipo
 def api_eliminar_content(content_id: int):
-    if not eliminar_content(content_id):
+    if not eliminar_content(content_id, departamento_actual()):
         return jsonify(build_response(False, "Contenido no encontrado.")), 404
     logger.info("marketing elimina content id=%s", content_id)
     return jsonify(build_response(True, "Contenido eliminado.")), 200
@@ -330,19 +349,19 @@ def api_eliminar_content(content_id: int):
 # --------------------------------------------------------------------------
 
 @marketing_api.route("/tasks", methods=["GET"])
-@requiere_equipo(DEPARTAMENTO)
+@requiere_equipo
 def api_listar_tasks():
     # `usuario` viaja aquí para que el panel pueda filtrar "solo lo mío" sin
     # tocar /api/equipo/session, que es de otro miembro del equipo.
     return jsonify({
         "ok": True,
-        "tasks": listar_tasks(DEPARTAMENTO),
+        "tasks": listar_tasks(departamento_actual()),
         "usuario": _autor(),
     }), 200
 
 
 @marketing_api.route("/tasks", methods=["POST"])
-@requiere_equipo(DEPARTAMENTO)
+@requiere_equipo
 def api_crear_task():
     datos = _payload()
 
@@ -355,7 +374,7 @@ def api_crear_task():
         return valor
 
     task = crear_task(
-        departamento=DEPARTAMENTO,
+        departamento=departamento_actual(),
         campaign_id=id_opcional("campaign_id"),
         content_id=id_opcional("content_id"),
         titulo=_texto(datos, "titulo", obligatorio=True),
@@ -375,20 +394,21 @@ def api_crear_task():
         return jsonify(build_response(False, "Campaña o contenido no encontrado.")), 404
 
     logger.info("marketing crea task id=%s", task["id"])
+    tarea_creada(task, departamento_actual(), _autor())
     return jsonify(build_response(True, "Tarea creada.", task=task)), 201
 
 
 @marketing_api.route("/tasks/<int:task_id>", methods=["GET"])
-@requiere_equipo(DEPARTAMENTO)
+@requiere_equipo
 def api_obtener_task(task_id: int):
-    task = obtener_task(task_id)
+    task = obtener_task(task_id, departamento_actual())
     if task is None:
         return jsonify(build_response(False, "Tarea no encontrada.")), 404
     return jsonify({"ok": True, "task": task}), 200
 
 
 @marketing_api.route("/tasks/<int:task_id>", methods=["PUT"])
-@requiere_equipo(DEPARTAMENTO)
+@requiere_equipo
 def api_actualizar_task(task_id: int):
     datos = _payload()
     campos = {}
@@ -413,15 +433,24 @@ def api_actualizar_task(task_id: int):
     if "enlaces" in datos:
         campos["enlaces"] = _lista_textos(datos, "enlaces", MAX_ENLACES)
 
-    if not actualizar_task(task_id, **campos):
+    if not actualizar_task(task_id, departamento_actual(), **campos):
         return jsonify(build_response(False, "Tarea no encontrada o sin cambios.")), 404
+
+    # Solo el cambio de estado se avisa: editar un título o una checklist es
+    # ruido en el canal, mover una tarea a "Acabado" no.
+    if "estado" in campos:
+        tarea = obtener_task(task_id, departamento_actual())
+        if tarea is not None:
+            tarea_cambia_estado(
+                tarea, campos["estado"], departamento_actual(), _autor()
+            )
     return jsonify(build_response(True, "Tarea actualizada.")), 200
 
 
 @marketing_api.route("/tasks/<int:task_id>", methods=["DELETE"])
-@requiere_equipo(DEPARTAMENTO)
+@requiere_equipo
 def api_eliminar_task(task_id: int):
-    if not eliminar_task(task_id):
+    if not eliminar_task(task_id, departamento_actual()):
         return jsonify(build_response(False, "Tarea no encontrada.")), 404
     logger.info("marketing elimina task id=%s", task_id)
     return jsonify(build_response(True, "Tarea eliminada.")), 200
@@ -432,7 +461,7 @@ def api_eliminar_task(task_id: int):
 # --------------------------------------------------------------------------
 
 @marketing_api.route("/calendario", methods=["GET"])
-@requiere_equipo(DEPARTAMENTO)
+@requiere_equipo
 def api_calendario():
     """`?desde=AAAA-MM-DD&hasta=AAAA-MM-DD`. Sin parámetros, el mes en curso."""
     args = request.args.to_dict()
@@ -452,7 +481,7 @@ def api_calendario():
         "ok": True,
         "desde": desde.isoformat(),
         "hasta": hasta.isoformat(),
-        "items": calendario(desde, hasta),
+        "items": calendario(desde, hasta, departamento_actual()),
     }), 200
 
 
@@ -461,7 +490,7 @@ def api_calendario():
 # --------------------------------------------------------------------------
 
 @marketing_api.route("/miembros", methods=["GET"])
-@requiere_equipo(DEPARTAMENTO)
+@requiere_equipo
 def api_miembros():
     """Compañeros del departamento, leídos de `equipo_accesos` (tabla de Hammad,
     solo lectura). Hoy solo hay email: nombre/apellidos/foto llegarán cuando se
@@ -472,6 +501,6 @@ def api_miembros():
     miembros = [
         {"email": a["email"], "equipos": a["equipos"], "activo": a["activo"]}
         for a in listar_equipo_accesos()
-        if DEPARTAMENTO in a["equipos"] and a["activo"]
+        if departamento_actual() in a["equipos"] and a["activo"]
     ]
     return jsonify({"ok": True, "miembros": miembros}), 200

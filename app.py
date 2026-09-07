@@ -25,6 +25,9 @@ app.register_blueprint(public_api)
 app.register_blueprint(admin_api)
 app.register_blueprint(equipo_api)
 app.register_blueprint(marketing_api)
+# El mismo blueprint, otra vez, para Eventos: mismas rutas bajo /api/eventos.
+# `departamento_actual()` distingue una de otra por el `name` del registro.
+app.register_blueprint(marketing_api, url_prefix="/api/eventos", name="eventos_api")
 
 # Usa una clave segura desde variable de entorno.
 # Si no existe, genera una temporal para desarrollo.

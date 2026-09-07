@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 
-import { createTask, getCalendario } from "../../../api/marketing";
+import { useApi } from "../DeptoApi";
 import { AlertBanner } from "../../feedback/AlertBanner";
 import { AvataresDeResponsables } from "./Avatares";
 import type { ApiFailure } from "../../../types/api";
@@ -43,6 +43,8 @@ type Props = {
 };
 
 export function CalendarPanel({ onAbrirCampaign }: Props) {
+  const { createTask, getCalendario } = useApi();
+
   const [cursor, setCursor] = useState(() => {
     const hoy = new Date();
     return new Date(hoy.getFullYear(), hoy.getMonth(), 1);

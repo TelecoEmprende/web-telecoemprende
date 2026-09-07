@@ -1,8 +1,8 @@
 import { FormEvent, useEffect, useState } from "react";
 
-import { createTask, getTasks, updateTask } from "../../../api/marketing";
 import { AvataresDeResponsables } from "./Avatares";
 import { TaskDialog } from "./TaskDialog";
+import { useApi } from "../DeptoApi";
 import { AlertBanner } from "../../feedback/AlertBanner";
 import { Badge } from "@/components/ui/badge";
 import type { ApiFailure } from "../../../types/api";
@@ -28,6 +28,8 @@ const TASK_MIME = "application/x-teleco-task-id";
  * teclado -- el drag es un atajo encima de eso, no lo sustituye.
  */
 export function TasksPanel() {
+  const { createTask, getTasks, updateTask } = useApi();
+
   const [tasks, setTasks] = useState<Task[]>([]);
   const [usuario, setUsuario] = useState("");
   const [soloMias, setSoloMias] = useState(false);

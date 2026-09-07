@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-import { getMiembros } from "../../../api/marketing";
+import { useApi } from "../DeptoApi";
 import { AlertBanner } from "../../feedback/AlertBanner";
 import type { ApiFailure } from "../../../types/api";
 import type { Miembro } from "../../../types/marketing";
@@ -11,6 +11,8 @@ function inicial(email: string) {
 }
 
 export function MembersPanel() {
+  const { getMiembros } = useApi();
+
   const [miembros, setMiembros] = useState<Miembro[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

@@ -20,13 +20,13 @@ Club de emprendimiento nacido en la ETSIT-UPM, abierto este curso a toda la UPM.
 | Jorge | Ex-vicepresidente · Board Member | MUIT · IIT · ETSIT | El del buen gusto del equipo |
 | Hammad | Presidente | GISD · ETSIT | Coordina el día a día |
 | Alex | Ex-secretario · Board Member | MUIT · ETSIT | Apoyo desde la sombra |
-| Iker | Miembro | GISD · ETSIT | Gusto por la inversión |
-| Abril | Miembro | GISD · ETSIT | Convierte ideas en proyectos que funcionan — **diseña el dashboard de Marketing en `/equipo`** |
-| Mamoun | Miembro | GII · ETSIINF | Ingeniería Informática, la mirada distinta |
-| Diego | Miembro | GIB · ETSIT | IA, Data Analytics, ML/DL, Ingeniería Biomédica |
-| David | Miembro | GISD · ETSIT | Ingeniero de día, piloto de noche |
-| Hugo | Miembro | GITST · ETSIT | Energía nueva al equipo |
-| Guillermo | Miembro | GITST · ETSIT | IA y robótica |
+| Iker | **VP de Eventos y Logística** | GISD · ETSIT | Dirección de Eventos, logística, cartelería y materiales visuales |
+| Abril | **VP de Tech e Ingeniería** | GISD · ETSIT | Tecnología, ingeniería, producto y soporte técnico |
+| Mamoun | Miembro · Gestión Logística de Eventos | GII · ETSIINF | Organización logística, materiales, espacios y necesidades operativas |
+| Diego | Miembro · Comunicación de Eventos | GIB · ETSIT | Comunicación, promoción, captación y RRSS vinculadas a Eventos |
+| David | Miembro · Preparación de Eventos | GISD · ETSIT | Preparación operativa, montaje, coordinación previa y ejecución |
+| Hugo | Miembro · Operaciones de Eventos | GITST · ETSIT | Apoyo en montaje, ejecución y necesidades operativas |
+| Guillermo | Miembro · Experiencia y Activaciones de Eventos | GITST · ETSIT | Apoyo en dinámicas, demos, activaciones y ejecución durante Eventos |
 
 _(Fuente: `frontend/src/components/home/AboutSection.tsx`.)_
 
@@ -34,8 +34,7 @@ _(Fuente: `frontend/src/components/home/AboutSection.tsx`.)_
 
 # Cómo tocar la UI de `/equipo`
 
-Esta parte está escrita para quien vaya a rediseñar el área interna del equipo
-(sobre todo el dashboard de Marketing, que es de Abril).
+Esta parte está escrita para quien vaya a rediseñar el área interna del equipo.
 
 ## Qué es `/equipo`
 
@@ -48,8 +47,9 @@ departamentos a los que pertenece, más un calendario compartido.
 | Archivo | Qué es |
 |---|---|
 | `frontend/src/routes/EquipoPage.tsx` | La página entera: comprueba sesión, muestra login o el dashboard, y reparte las pestañas por equipo |
-| `frontend/src/components/equipo/MarketingDashboard.tsx` | **El de Abril.** Ahora mismo es un placeholder "Próximamente" |
-| `frontend/src/components/equipo/EventosDashboard.tsx` | Igual, placeholder, lo lleva el equipo internamente |
+| `frontend/src/components/equipo/DeptoDashboard.tsx` | Los paneles de un departamento. **Marketing y Eventos usan el mismo componente**: solo cambia el `depto` |
+| `frontend/src/components/equipo/DeptoApi.tsx` | Ata las llamadas de API al departamento abierto (`useApi()`) |
+| `frontend/src/components/equipo/marketing/*` | Los cinco paneles (Resumen, Campañas, Tareas, Calendario, Miembros). Se llaman `marketing/` por herencia: los usan los dos departamentos |
 | `frontend/src/components/equipo/CalendarioEquipo.tsx` | Calendario compartido, solo lectura |
 | `frontend/src/components/equipo/EquipoLoginForm.tsx` | Formulario de acceso |
 | `frontend/src/styles/equipo.css` | Lo poco de CSS propio que queda (el resto es Tailwind) |
@@ -98,8 +98,15 @@ Componentes de shadcn ya instalados en `frontend/src/components/ui/`: `button`, 
 Reglas de acceso ya implementadas en el backend (no hay que replicarlas en el front):
 
 - Departamentos válidos: `marketing`, `eventos`, `ingenieria`.
+- `marketing` y `eventos` tienen workspace propio con los mismos paneles: en el
+  backend es **el mismo blueprint registrado dos veces** (`/api/marketing` y
+  `/api/eventos`, ver `app.py`), y `departamento_actual()` acota cada consulta.
+  Para añadir un tercer departamento con tablero basta registrarlo otra vez y
+  añadirlo a `_DEPARTAMENTO_POR_BLUEPRINT`.
 - Quien tenga `ingenieria`, o `cargo` de `presidente`/`boardmember`, recibe además
   sesión de administrador y puede entrar a `/admin`.
+- Un acceso vale con departamento(s) **o** con cargo: el board sin departamento
+  es válido, y entra directo a `/admin`.
 - Las altas de personas y el calendario se gestionan desde `/admin` (paneles
   `EquipoAccesosPanel` y `CalendarioPanel`), no desde `/equipo`.
 
@@ -130,7 +137,7 @@ admin).
 ```bash
 cd frontend
 npx tsc --noEmit -p .   # tipos
-npm test                # 8 tests, ninguno cubre /equipo todavía
+npm test                # 25 tests (Marketing y Eventos incluidos)
 npm run build           # que compile de verdad
 ```
 
