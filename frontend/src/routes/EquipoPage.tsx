@@ -1,33 +1,20 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
 
 import { getEquipoSession, loginEquipo, logoutEquipo } from "../api/equipo";
 import { Header } from "../components/layout/Header";
-import { Badge } from "../components/ui/badge";
-import { Button } from "../components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
+import { SidebarProvider, SidebarTrigger } from "../components/ui/sidebar";
 import { CalendarioEquipo } from "../components/equipo/CalendarioEquipo";
+import {
+  EquipoSidebar,
+  deptoDe,
+  seccionesDe,
+  type Seccion,
+} from "../components/equipo/EquipoSidebar";
 import { EquipoLoginForm } from "../components/equipo/EquipoLoginForm";
 import { MarketingDashboard } from "../components/equipo/MarketingDashboard";
 import { EventosDashboard } from "../components/equipo/EventosDashboard";
 import type { ApiFailure } from "../types/api";
 import type { Cargo, Team } from "../types/equipo";
-
-const TEAM_LABELS: Record<"marketing" | "eventos", string> = {
-  marketing: "Marketing",
-  eventos: "Eventos",
-};
-
-const CARGO_LABELS: Record<"presidente" | "boardmember", string> = {
-  presidente: "Presidente",
-  boardmember: "Board member",
-};
-
-// El equipo de ingeniería (y presidencia/board) no tiene un dashboard aquí:
-// su acceso ya incluye sesión de /admin (ver login_equipo en el backend), así
-// que su "tarjeta" es simplemente un enlace a ese panel.
-const DASHBOARD_TEAMS: Array<"marketing" | "eventos"> = ["marketing", "eventos"];
 
 export function EquipoPage() {
   const [isCheckingSession, setIsCheckingSession] = useState(true);
@@ -38,6 +25,9 @@ export function EquipoPage() {
   const [vpDe, setVpDe] = useState<Team[]>([]);
   const [cargo, setCargo] = useState<Cargo>("");
   const [loginError, setLoginError] = useState<string | null>(null);
+  // Se abre en el inicio del club, que es lo único común a todo el mundo; las
+  // secciones de cada departamento cuelgan debajo en el sidebar.
+  const [seccion, setSeccion] = useState<Seccion>("club");
 
   useEffect(() => {
     let active = true;
@@ -98,88 +88,70 @@ export function EquipoPage() {
       setTeams([]);
       setVpDe([]);
       setCargo("");
+      setSeccion("club");
       setIsLoggingOut(false);
     }
   }
 
-  const dashboardTeams = DASHBOARD_TEAMS.filter((team) => teams.includes(team));
+  // El equipo de ingeniería (y presidencia/board) no tiene secciones propias
+  // aquí: su acceso ya incluye sesión de /admin (ver login_equipo en el
+  // backend), así que el sidebar solo les ofrece el enlace a ese panel.
   const tieneAccesoAdmin =
     teams.includes("ingenieria") || cargo === "presidente" || cargo === "boardmember";
 
+  if (!isAuthenticated) {
+    return (
+      <div className="shadcn-scope dark equipo-shell-react bg-background font-sans text-foreground">
+        <Header teamMode />
+        <main className="equipo-content-react">
+          {isCheckingSession ? (
+            <p className="text-center text-muted-foreground">Comprobando sesión...</p>
+          ) : (
+            <EquipoLoginForm
+              isSubmitting={isSubmitting}
+              errorMessage={loginError}
+              onSubmit={handleLogin}
+            />
+          )}
+        </main>
+      </div>
+    );
+  }
+
+  const titulo = seccionesDe(teams).find((s) => s.id === seccion)?.label ?? "";
+
   return (
-    <div className="shadcn-scope dark equipo-shell-react bg-background font-sans text-foreground">
-      <Header teamMode />
-      <main className="equipo-content-react">
-        {isCheckingSession ? (
-          <p className="text-center text-muted-foreground">Comprobando sesión...</p>
-        ) : !isAuthenticated ? (
-          <EquipoLoginForm
-            isSubmitting={isSubmitting}
-            errorMessage={loginError}
-            onSubmit={handleLogin}
-          />
-        ) : (
-          <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div className="flex items-center gap-2">
-                <h1 className="text-2xl font-bold">TelecoEmprende Equipo</h1>
-                {cargo ? <Badge>{CARGO_LABELS[cargo]}</Badge> : null}
-              </div>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => void handleLogout()}
-                disabled={isLoggingOut}
-              >
-                {isLoggingOut ? "Saliendo..." : "Cerrar sesión"}
-              </Button>
-            </div>
+    // El workspace se lleva la pantalla entera: no hay cabecera del sitio, la
+    // navegación (y la salida) están en el sidebar.
+    <div className="shadcn-scope dark equipo-workspace-react font-sans">
+      <SidebarProvider>
+        <EquipoSidebar
+          seccion={seccion}
+          onSeccion={setSeccion}
+          teams={teams}
+          vpDe={vpDe}
+          cargo={cargo}
+          tieneAccesoAdmin={tieneAccesoAdmin}
+          onLogout={() => void handleLogout()}
+          isLoggingOut={isLoggingOut}
+        />
 
-            {dashboardTeams.length > 0 ? (
-              <Tabs defaultValue={dashboardTeams[0]}>
-                <TabsList>
-                  {dashboardTeams.map((team) => (
-                    <TabsTrigger key={team} value={team} className="gap-1.5">
-                      {TEAM_LABELS[team]}
-                      {vpDe.includes(team) ? <Badge variant="secondary">VP</Badge> : null}
-                    </TabsTrigger>
-                  ))}
-                </TabsList>
-                <TabsContent value="marketing">
-                  <Card>
-                    <CardContent>
-                      <MarketingDashboard />
-                    </CardContent>
-                  </Card>
-                </TabsContent>
-                <TabsContent value="eventos">
-                  <Card>
-                    <CardContent>
-                      <EventosDashboard />
-                    </CardContent>
-                  </Card>
-                </TabsContent>
-              </Tabs>
+        <main className="equipo-main-react">
+          <header className="equipo-barra-react">
+            <SidebarTrigger />
+            <span className="equipo-barra-depto-react">{deptoDe(seccion)}</span>
+            <h2>{titulo}</h2>
+          </header>
+
+          <div className="equipo-contenido-react">
+            {seccion === "club" ? <CalendarioEquipo /> : null}
+            {seccion === "eventos" ? <EventosDashboard /> : null}
+            {seccion.startsWith("mkt-") ? (
+              <MarketingDashboard seccion={seccion} onSeccion={setSeccion} />
             ) : null}
-
-            {tieneAccesoAdmin ? (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Ingeniería</CardTitle>
-                  <CardDescription>Panel de administración del club.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Button asChild variant="outline">
-                    <Link to="/admin">Ir al panel admin</Link>
-                  </Button>
-                </CardContent>
-              </Card>
-            ) : null}
-
-            <CalendarioEquipo />
           </div>
-        )}
-      </main>
+        </main>
+      </SidebarProvider>
     </div>
   );
 }

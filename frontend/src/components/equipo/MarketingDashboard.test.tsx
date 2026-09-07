@@ -1,8 +1,9 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { MarketingDashboard } from "./MarketingDashboard";
+import { EquipoPage } from "../../routes/EquipoPage";
 import type { Prioridad, TaskEstado } from "../../types/marketing";
 
 const getCampaigns = vi.fn();
@@ -30,11 +31,18 @@ vi.mock("../../api/marketing", () => ({
   updateContent: vi.fn(),
 }));
 
-// El selector de equipo del sidebar lee la sesión: sin esto el test hace una
-// petición de verdad contra jsdom.
+// El shell de /equipo lee la sesión y el calendario del club: sin esto el
+// test hace peticiones de verdad contra jsdom.
 vi.mock("../../api/equipo", () => ({
   getEquipoSession: () =>
-    Promise.resolve({ ok: true, authenticated: true, teams: ["marketing"] }),
+    Promise.resolve({
+      ok: true,
+      authenticated: true,
+      teams: ["marketing"],
+      vp_de: [],
+      cargo: "",
+    }),
+  getEquipoCalendario: () => Promise.resolve({ ok: true, eventos: [] }),
   logoutEquipo: () => Promise.resolve({ ok: true }),
   loginEquipo: vi.fn(),
 }));
@@ -74,14 +82,19 @@ function tareas(...lista: Partial<typeof TAREA>[]) {
   return lista.map((t, i) => ({ ...TAREA, id: i + 1, ...t }));
 }
 
-/** Monta el dashboard y pasa la pantalla intermedia ("Entrar a Marketing"),
- *  que existe justamente para no montar el sidebar hasta que se pide. */
+/** Monta /equipo entero (el sidebar y la navegación son suyos, no del panel
+ *  de Marketing) y entra en el resumen del departamento: la página abre en el
+ *  inicio del club, que es lo común a todo el mundo. */
 async function renderMarketing() {
-  render(<MarketingDashboard />);
-  await userEvent.click(await screen.findByRole("button", { name: "Entrar a Marketing" }));
+  render(
+    <MemoryRouter>
+      <EquipoPage />
+    </MemoryRouter>,
+  );
+  await userEvent.click(await screen.findByRole("button", { name: "Resumen" }));
 }
 
-describe("MarketingDashboard", () => {
+describe("/equipo — panel de Marketing", () => {
   beforeEach(() => {
     getCampaigns.mockReset().mockResolvedValue({ ok: true, campaigns: [] });
     getCampaign.mockReset();
@@ -94,7 +107,7 @@ describe("MarketingDashboard", () => {
     createTask.mockReset().mockResolvedValue({ ok: true, task: TAREA });
   });
 
-  it("abre en Home, no en el listado de miembros", async () => {
+  it("abre en el resumen, no en el listado de miembros", async () => {
     getTasks.mockResolvedValue({ ok: true, tasks: tareas({}), usuario: YO });
 
     await renderMarketing();
@@ -314,10 +327,10 @@ describe("MarketingDashboard", () => {
     await renderMarketing();
     await screen.findByText(/Nada pendiente/);
 
-    const nav = screen.getByRole("navigation", { name: "Secciones de Marketing" });
-    expect(within(nav).getByRole("button", { name: "Home" })).toHaveAttribute(
+    const nav = screen.getByRole("navigation", { name: "Secciones de /equipo" });
+    expect(within(nav).getByRole("button", { name: "Resumen" })).toHaveAttribute(
       "aria-current",
-      "true",
+      "page",
     );
 
     // fireEvent y no userEvent: el TooltipTrigger de Radix se traga el primer
@@ -325,7 +338,7 @@ describe("MarketingDashboard", () => {
     fireEvent.click(within(nav).getByRole("button", { name: "Calendario" }));
     expect(within(nav).getByRole("button", { name: "Calendario" })).toHaveAttribute(
       "aria-current",
-      "true",
+      "page",
     );
   });
 });
