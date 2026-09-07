@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { getCalendario, getCampaigns, getTasks, updateTask } from "../../../api/marketing";
+import { useApi } from "../DeptoApi";
 import { AlertBanner } from "../../feedback/AlertBanner";
 import { AvataresDeResponsables } from "./Avatares";
 import { Badge } from "@/components/ui/badge";
@@ -103,6 +103,8 @@ function Hito({ pub, pendientes }: { pub: CalendarioItem; pendientes: number }) 
 const HORIZONTE_DIAS = 30;
 
 export function WeekPanel() {
+  const { getCalendario, getCampaigns, getTasks, updateTask } = useApi();
+
   const [tasks, setTasks] = useState<Task[]>([]);
   const [publicaciones, setPublicaciones] = useState<CalendarioItem[]>([]);
   const [campaigns, setCampaigns] = useState<CampaignResumen[]>([]);

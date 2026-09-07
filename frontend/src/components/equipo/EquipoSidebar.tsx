@@ -2,14 +2,19 @@ import type { LucideIcon } from "lucide-react";
 import {
   CalendarDays,
   ExternalLink,
+  FolderOpen,
+  Handshake,
   Home,
   KanbanSquare,
   LayoutDashboard,
   LogOut,
   Megaphone,
+  Megaphone as Anuncio,
   PartyPopper,
   Settings,
   Users,
+  Users2,
+  Wallet,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 
@@ -33,32 +38,115 @@ import type { Cargo, Team } from "../../types/equipo";
  *  del shell es una sola cadena y no un par que hay que mantener coherente. */
 type Item = { id: Seccion; label: string; icono: LucideIcon };
 
-export type Seccion =
-  | "club"
-  | "mkt-home"
-  | "mkt-campanas"
-  | "mkt-tareas"
-  | "mkt-calendario"
-  | "mkt-miembros"
-  | "eventos";
+/** Prefijo de las secciones de cada departamento. Marketing y Eventos tienen
+ *  el mismo juego de paneles (ver `DeptoDashboard`), así que sus secciones se
+ *  generan en vez de escribirse dos veces. */
+const PREFIJO: Record<Team, string> = {
+  marketing: "mkt",
+  eventos: "ev",
+  ingenieria: "ing",
+};
 
-const CLUB: Item[] = [{ id: "club", label: "Inicio", icono: Home }];
+export function prefijoDe(team: Team): string {
+  return PREFIJO[team];
+}
+
+type Panel =
+  | "home"
+  | "campanas"
+  | "tareas"
+  | "calendario"
+  | "miembros"
+  | "recursos"
+  | "presupuesto"
+  | "anuncios"
+  | "reuniones"
+  | "alumni";
+
+export type Seccion = "club" | `${"mkt" | "ev" | "ing"}-${Panel}`;
+
+const CLUB: Item[] = [
+  { id: "club", label: "Inicio", icono: Home },
+  // Los anuncios son del club entero (el backend no los acota por
+  // departamento), pero se piden por la ruta de uno: se cuelgan del primer
+  // departamento de la persona, ver `seccionesDe`.
+];
+
+/** Qué paneles tiene cada departamento. Los cinco de siempre los tienen todos;
+ *  Presupuesto es de quien mueve dinero (Eventos) y Alumni de Ingeniería. */
+const PANELES_POR_EQUIPO: Record<Team, Panel[]> = {
+  marketing: ["home", "campanas", "tareas", "calendario", "recursos", "miembros"],
+  eventos: [
+    "home", "campanas", "tareas", "calendario",
+    "recursos", "presupuesto", "reuniones", "miembros",
+  ],
+  ingenieria: [
+    "home", "tareas", "calendario", "alumni", "reuniones", "recursos", "miembros",
+  ],
+};
+
+const ICONO: Record<Panel, LucideIcon> = {
+  home: LayoutDashboard,
+  campanas: Megaphone,
+  tareas: KanbanSquare,
+  calendario: CalendarDays,
+  miembros: Users,
+  recursos: FolderOpen,
+  presupuesto: Wallet,
+  anuncios: Anuncio,
+  reuniones: Users2,
+  alumni: Handshake,
+};
+
+/** Algunos paneles se llaman distinto según el departamento: en Eventos las
+ *  campañas son eventos y las tareas son gestiones, que es como se habla ahí. */
+function etiquetaPanel(team: Team, panel: Panel): string {
+  if (team === "eventos") {
+    if (panel === "campanas") return "Eventos";
+    if (panel === "tareas") return "Gestiones";
+  }
+  return {
+    home: "Resumen",
+    campanas: "Campañas",
+    tareas: "Tareas",
+    calendario: "Calendario",
+    miembros: "Miembros",
+    recursos: "Recursos",
+    presupuesto: "Presupuesto",
+    anuncios: "Anuncios",
+    reuniones: "Reuniones",
+    alumni: "Red Alumni",
+  }[panel];
+}
+
+function panelesDe(team: Team): Item[] {
+  const p = PREFIJO[team];
+  return PANELES_POR_EQUIPO[team].map((panel) => ({
+    id: `${p}-${panel}` as Seccion,
+    label: etiquetaPanel(team, panel),
+    icono: panel === "campanas" && team === "eventos" ? PartyPopper : ICONO[panel],
+  }));
+}
 
 /** Secciones que aporta cada departamento. Quien no esté en un departamento
  *  no ve su grupo: la navegación sale de la sesión, no de una lista fija. */
 const POR_EQUIPO: Record<Team, Item[]> = {
-  marketing: [
-    { id: "mkt-home", label: "Resumen", icono: LayoutDashboard },
-    { id: "mkt-campanas", label: "Campañas", icono: Megaphone },
-    { id: "mkt-tareas", label: "Tareas", icono: KanbanSquare },
-    { id: "mkt-calendario", label: "Calendario", icono: CalendarDays },
-    { id: "mkt-miembros", label: "Miembros", icono: Users },
-  ],
-  eventos: [{ id: "eventos", label: "Eventos", icono: PartyPopper }],
-  // Ingeniería no tiene secciones propias aquí: su panel es `/admin`, y se
-  // ofrece como enlace en el grupo del club (ver `tieneAccesoAdmin`).
-  ingenieria: [],
+  marketing: panelesDe("marketing"),
+  eventos: panelesDe("eventos"),
+  // Ingeniería ya tiene workspace propio (Alumni, Reuniones). El enlace a
+  // `/admin` sigue apareciendo aparte, ver `tieneAccesoAdmin`.
+  ingenieria: panelesDe("ingenieria"),
 };
+
+/** Departamento (como `Team`) al que pertenece una sección, o null si es del
+ *  club. Sale del prefijo y no de buscar en `POR_EQUIPO`, porque Anuncios se
+ *  sirve por la ruta de un departamento sin ser uno de sus paneles. */
+export function teamDe(seccion: Seccion): Team | null {
+  const prefijo = seccion.split("-")[0];
+  return (
+    (Object.keys(PREFIJO) as Team[]).find((t) => PREFIJO[t] === prefijo) ?? null
+  );
+}
 
 const TEAM_LABEL: Record<Team, string> = {
   marketing: "Marketing",
@@ -74,14 +162,28 @@ const CARGO_LABEL: Record<Exclude<Cargo, "">, string> = {
 /** Todas las secciones visibles para esa persona, en el orden del sidebar.
  *  El shell lo usa para saber en qué sección abrir y cómo titular la barra. */
 export function seccionesDe(teams: Team[]): Item[] {
-  return [...CLUB, ...teams.flatMap((team) => POR_EQUIPO[team] ?? [])];
+  return [...clubDe(teams), ...teams.flatMap((team) => POR_EQUIPO[team] ?? [])];
 }
 
-/** El departamento al que pertenece una sección, para el rótulo de la barra. */
+/** El grupo "Club": el inicio, y los anuncios si la persona está en algún
+ *  departamento (la ruta de anuncios cuelga de uno, aunque el contenido sea
+ *  del club entero). */
+export function clubDe(teams: Team[]): Item[] {
+  if (teams.length === 0) return CLUB;
+  return [
+    ...CLUB,
+    {
+      id: `${PREFIJO[teams[0]]}-anuncios` as Seccion,
+      label: "Anuncios",
+      icono: Anuncio,
+    },
+  ];
+}
+
+/** El rótulo de la barra: el departamento, o "Club" para lo que es de todos. */
 export function deptoDe(seccion: Seccion): string {
-  const team = (Object.keys(POR_EQUIPO) as Team[]).find((t) =>
-    POR_EQUIPO[t].some((item) => item.id === seccion),
-  );
+  if (seccion === "club" || seccion.endsWith("-anuncios")) return "Club";
+  const team = teamDe(seccion);
   return team ? TEAM_LABEL[team] : "Club";
 }
 
@@ -168,7 +270,7 @@ export function EquipoSidebar({
           navegación al que saltar con lector de pantalla. */}
       <SidebarContent>
         <nav aria-label="Secciones de /equipo">
-          {grupo("Club", CLUB)}
+          {grupo("Club", clubDe(teams))}
 
           {teams.map((team) =>
             grupo(TEAM_LABEL[team], POR_EQUIPO[team] ?? [], vpDe.includes(team)),
