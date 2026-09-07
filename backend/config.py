@@ -49,6 +49,10 @@ RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "")
 RESEND_FROM_EMAIL = os.environ.get("RESEND_FROM_EMAIL", "inscripciones@telecoemprende.es")
 RESEND_FROM_NAME = os.environ.get("RESEND_FROM_NAME", "TelecoEmprende")
 
+# Avisos a Slack (Incoming Webhook). Sin la variable no se envía nada y el
+# resto sigue funcionando igual (ver services/slack.py).
+SLACK_WEBHOOK_URL = os.environ.get("SLACK_WEBHOOK_URL", "")
+
 # --- Workspace de equipo: Marketing (campañas, contenidos, tareas) ---
 # Ciclo de vida de una tarea: trabajo que alguien tiene que hacer.
 TASK_ESTADOS = ("pendiente", "en_progreso", "por_revisar", "acabado")
