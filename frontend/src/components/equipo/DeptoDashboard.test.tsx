@@ -16,6 +16,7 @@ const createTask = vi.fn();
 const getFichaMiembro = vi.fn();
 const listarRegistros = vi.fn();
 const updateFichaMiembro = vi.fn();
+const duplicateCampaign = vi.fn();
 
 // El módulo ya no exporta funciones sueltas sino una factoría por
 // departamento (Marketing y Eventos comparten paneles). `apiDepto` guarda el
@@ -37,6 +38,7 @@ vi.mock("../../api/marketing", () => ({
       createCampaign: vi.fn(),
       createContent: vi.fn(),
       deleteCampaign: vi.fn(),
+      duplicateCampaign: (...args: unknown[]) => duplicateCampaign(...args),
       deleteContent: vi.fn(),
       deleteTask: vi.fn(),
       updateCampaign: vi.fn(),
@@ -137,6 +139,7 @@ describe("/equipo — panel de Marketing", () => {
       Promise.resolve({ ok: true, [recurso]: [] }),
     );
     updateFichaMiembro.mockReset().mockResolvedValue({ ok: true });
+    duplicateCampaign.mockReset();
     updateTask.mockReset().mockResolvedValue({ ok: true });
     createTask.mockReset().mockResolvedValue({ ok: true, task: TAREA });
   });
@@ -525,6 +528,37 @@ describe("/equipo — panel de Marketing", () => {
     expect(await screen.findByText(/Aún no hay campañas/)).toBeInTheDocument();
   });
 
+  it("duplicar una campaña la recarga y abre la copia", async () => {
+    getCampaigns.mockResolvedValue({
+      ok: true,
+      campaigns: [
+        { id: 1, nombre: "Vuelta al cole", objetivo: "", total_contents: 2, total_tasks: 3, fecha: null },
+      ],
+    });
+    duplicateCampaign.mockResolvedValue({
+      ok: true,
+      campaign: {
+        id: 2,
+        nombre: "Vuelta al cole (copia)",
+        objetivo: "",
+        audiencia: "",
+        fecha: null,
+        contents: [],
+        tasks_sueltas: [],
+      },
+    });
+
+    await renderMarketing();
+    await screen.findByText(/Nada pendiente/);
+    await userEvent.click(screen.getByRole("button", { name: "Campañas" }));
+    await screen.findByText("Vuelta al cole");
+
+    await userEvent.click(screen.getByRole("button", { name: "Duplicar" }));
+
+    expect(duplicateCampaign).toHaveBeenCalledWith(1);
+    expect(await screen.findByRole("heading", { name: "Vuelta al cole (copia)" })).toBeInTheDocument();
+  });
+
   it("la navegación marca la pestaña activa", async () => {
     await renderMarketing();
     await screen.findByText(/Nada pendiente/);
@@ -561,6 +595,7 @@ describe("/equipo — panel de Eventos", () => {
       Promise.resolve({ ok: true, [recurso]: [] }),
     );
     updateFichaMiembro.mockReset().mockResolvedValue({ ok: true });
+    duplicateCampaign.mockReset();
     updateTask.mockReset().mockResolvedValue({ ok: true });
     createTask.mockReset().mockResolvedValue({ ok: true, task: TAREA });
   });

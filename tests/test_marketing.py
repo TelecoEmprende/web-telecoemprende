@@ -213,6 +213,64 @@ class CampaignTests(MarketingTestCase):
             self.client.get("/api/marketing/campaigns/9999").status_code, 404
         )
 
+    def test_duplicar_copia_contents_y_tasks_en_blanco(self):
+        campaign = self.crear_campaign(
+            nombre="Reunión semanal", objetivo="Poner al día al equipo", fecha="2026-10-01",
+        )
+        content = self.crear_content(
+            campaign["id"], titulo="Post de la reunión", fecha_publicacion="2026-10-02",
+            estado="publicado", script="Guion original",
+        )
+        self.client.post(
+            "/api/marketing/tasks",
+            json={
+                "titulo": "Escribir guion", "content_id": content["id"], "estado": "acabado",
+                "deadline": "2026-10-01",
+                "checklist": [{"texto": "Revisar ortografía", "hecho": True}],
+            },
+        )
+        self.client.post(
+            "/api/marketing/tasks",
+            json={"titulo": "Reservar sala", "campaign_id": campaign["id"], "estado": "acabado"},
+        )
+
+        respuesta = self.client.post(f"/api/marketing/campaigns/{campaign['id']}/duplicar")
+        self.assertEqual(respuesta.status_code, 201, respuesta.get_json())
+        copia = respuesta.get_json()["campaign"]
+
+        self.assertEqual(copia["nombre"], "Reunión semanal (copia)")
+        self.assertEqual(copia["objetivo"], "Poner al día al equipo")
+        self.assertIsNone(copia["fecha"])
+        self.assertNotEqual(copia["id"], campaign["id"])
+
+        self.assertEqual(len(copia["contents"]), 1)
+        content_copia = copia["contents"][0]
+        self.assertEqual(content_copia["titulo"], "Post de la reunión")
+        self.assertEqual(content_copia["script"], "Guion original")
+        self.assertEqual(content_copia["estado"], "idea")
+        self.assertIsNone(content_copia["fecha_publicacion"])
+
+        self.assertEqual(len(content_copia["tasks"]), 1)
+        tarea_copia = content_copia["tasks"][0]
+        self.assertEqual(tarea_copia["titulo"], "Escribir guion")
+        self.assertEqual(tarea_copia["estado"], "pendiente")
+        self.assertIsNone(tarea_copia["deadline"])
+        self.assertEqual(tarea_copia["checklist"], [{"texto": "Revisar ortografía", "hecho": False}])
+
+        self.assertEqual(len(copia["tasks_sueltas"]), 1)
+        self.assertEqual(copia["tasks_sueltas"][0]["titulo"], "Reservar sala")
+        self.assertEqual(copia["tasks_sueltas"][0]["estado"], "pendiente")
+
+        # La original no se toca.
+        original = self.client.get(f"/api/marketing/campaigns/{campaign['id']}").get_json()
+        self.assertEqual(original["campaign"]["nombre"], "Reunión semanal")
+        self.assertEqual(original["campaign"]["contents"][0]["estado"], "publicado")
+
+    def test_duplicar_campaign_inexistente_da_404(self):
+        self.assertEqual(
+            self.client.post("/api/marketing/campaigns/9999/duplicar").status_code, 404
+        )
+
 
 class ContentTests(MarketingTestCase):
     def setUp(self):

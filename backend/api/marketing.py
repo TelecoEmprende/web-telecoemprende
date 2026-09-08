@@ -47,6 +47,7 @@ from backend.services.marketing import (
     crear_campaign,
     crear_content,
     crear_task,
+    duplicar_campaign,
     eliminar_campaign,
     eliminar_content,
     eliminar_task,
@@ -275,6 +276,16 @@ def api_eliminar_campaign(campaign_id: int):
         return jsonify(build_response(False, "Campaña no encontrada.")), 404
     logger.info("marketing elimina campaign id=%s", campaign_id)
     return jsonify(build_response(True, "Campaña eliminada.")), 200
+
+
+@marketing_api.route("/campaigns/<int:campaign_id>/duplicar", methods=["POST"])
+@requiere_equipo
+def api_duplicar_campaign(campaign_id: int):
+    campaign = duplicar_campaign(campaign_id, departamento_actual(), _autor())
+    if campaign is None:
+        return jsonify(build_response(False, "Campaña no encontrada.")), 404
+    logger.info("marketing duplica campaign id=%s -> id=%s", campaign_id, campaign["id"])
+    return jsonify(build_response(True, "Campaña duplicada.", campaign=campaign)), 201
 
 
 # --------------------------------------------------------------------------

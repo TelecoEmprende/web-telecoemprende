@@ -159,6 +159,7 @@ export function CampaignsPanel({ campaignInicial, onCampaignAbierta }: Props) {
     createTask,
     deleteCampaign,
     deleteContent,
+    duplicateCampaign,
     getCampaign,
     getCampaigns,
     updateCampaign,
@@ -173,6 +174,7 @@ export function CampaignsPanel({ campaignInicial, onCampaignAbierta }: Props) {
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
   const [editandoCampaign, setEditandoCampaign] = useState(false);
   const [confirmando, setConfirmando] = useState<number | null>(null);
+  const [duplicando, setDuplicando] = useState<number | null>(null);
   const [confirmandoContent, setConfirmandoContent] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -272,6 +274,19 @@ export function CampaignsPanel({ campaignInicial, onCampaignAbierta }: Props) {
       await cargarCampaigns();
     } catch (err) {
       setError(mensajeDeError(err, "No se pudo eliminar la campaña."));
+    }
+  }
+
+  async function duplicarCampaign(campaign: CampaignResumen | CampaignDetalle) {
+    setDuplicando(campaign.id);
+    try {
+      const respuesta = await duplicateCampaign(campaign.id);
+      await cargarCampaigns();
+      setDetalle(respuesta.campaign);
+    } catch (err) {
+      setError(mensajeDeError(err, "No se pudo duplicar la campaña."));
+    } finally {
+      setDuplicando(null);
     }
   }
 
@@ -447,6 +462,14 @@ export function CampaignsPanel({ campaignInicial, onCampaignAbierta }: Props) {
                 onClick={empezarAEditarCampaign}
               >
                 Editar campaña
+              </button>
+              <button
+                type="button"
+                className="mkt-btn-mini-react"
+                disabled={duplicando === detalle.id}
+                onClick={() => void duplicarCampaign(detalle)}
+              >
+                {duplicando === detalle.id ? "Duplicando..." : "Duplicar"}
               </button>
               <button
                 type="button"
@@ -712,6 +735,14 @@ export function CampaignsPanel({ campaignInicial, onCampaignAbierta }: Props) {
                   {campaign.total_contents} contenidos · {campaign.total_tasks} tareas
                   {campaign.fecha ? ` · ${formatearFecha(campaign.fecha, true)}` : ""}
                 </span>
+              </button>
+              <button
+                type="button"
+                className="mkt-btn-mini-react"
+                disabled={duplicando === campaign.id}
+                onClick={() => void duplicarCampaign(campaign)}
+              >
+                {duplicando === campaign.id ? "Duplicando..." : "Duplicar"}
               </button>
             </li>
           ))}
