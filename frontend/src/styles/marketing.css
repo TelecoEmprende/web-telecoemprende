@@ -109,27 +109,43 @@
 
 /* ---------- Botones ---------- */
 
+/* El degradado dorado de los CTA de la landing (`.lp-btn-gold` en
+   landing.css): mismos colores y sombra, escalados a un botón de app en vez
+   del hero de una página de aterrizaje. Es la acción principal de cada
+   panel (crear, guardar, asignar) -- `.mkt-btn-mini-react` se queda como
+   estaba para todo lo demás. */
 .mkt-btn-react {
   min-height: 44px;
   padding: 11px 20px;
   border: none;
   border-radius: var(--radius-md);
-  background: var(--color-orange);
-  color: #fff;
+  background: linear-gradient(120deg, var(--color-gold), #f7c065 55%, #f0902e);
+  color: var(--color-navy);
+  box-shadow: 0 10px 24px rgba(224, 104, 14, 0.28);
   font-family: inherit;
   font-size: 0.95rem;
   font-weight: 800;
   cursor: pointer;
-  transition: background var(--dur-press) var(--ease-out);
+  transition: transform var(--dur-press) var(--ease-out),
+    filter var(--dur-press) var(--ease-out),
+    box-shadow var(--dur-press) var(--ease-out);
 }
 
-.mkt-btn-react:hover:not(:disabled) {
-  background: var(--color-orange-dark);
+@media (hover: hover) and (pointer: fine) {
+  .mkt-btn-react:hover:not(:disabled) {
+    transform: translateY(-1px);
+    filter: brightness(1.04);
+  }
+}
+
+.mkt-btn-react:active:not(:disabled) {
+  transform: scale(0.97);
 }
 
 .mkt-btn-react:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+  box-shadow: none;
 }
 
 .mkt-btn-mini-react,
