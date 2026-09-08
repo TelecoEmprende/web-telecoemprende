@@ -363,7 +363,24 @@ def actualizar_content(content_id: int, departamento: str, **campos) -> bool:
         "titulo", "tipo", "plataforma", "fecha_publicacion", "estado", "script",
         "copy_texto", "cta", "hashtags", "idea_visual", "responsables", "enlaces",
     )
-    return _actualizar("contents", content_id, permitidos, campos, departamento)
+    actualizado = _actualizar("contents", content_id, permitidos, campos, departamento)
+
+    # Publicar un contenido cierra solo sus tareas todavía abiertas: antes
+    # "publicado" y "tareas acabadas" eran dos cosas que había que marcar por
+    # separado, y era fácil dejarte la segunda.
+    if actualizado and campos.get("estado") == "publicado":
+        with _get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    UPDATE tasks SET estado = 'acabado', updated_at = NOW()
+                    WHERE content_id = %s AND departamento = %s AND estado != 'acabado'
+                    """,
+                    (content_id, departamento),
+                )
+            conn.commit()
+
+    return actualizado
 
 
 def eliminar_content(content_id: int, departamento: str) -> bool:
