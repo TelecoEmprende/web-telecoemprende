@@ -6,6 +6,10 @@ os.environ["DATABASE_URL"] = os.environ.get(
     "TEST_DATABASE_URL",
     "postgresql://telecoemprende:telecoemprende@localhost:5432/telecoemprende_test",
 )
+# `backend.config.CRON_SECRET` se lee una vez, al primer `import app` de toda
+# la suite -- fijarlo aquí también (test_cron.py lo repite por si se ejecuta
+# solo) para que no dependa de qué archivo de test importa primero.
+os.environ["CRON_SECRET"] = "test-cron-secret"
 
 import app  # noqa: E402
 import backend.services.admin as admin_service  # noqa: E402

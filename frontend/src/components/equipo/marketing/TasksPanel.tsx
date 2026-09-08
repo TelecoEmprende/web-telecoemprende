@@ -1,12 +1,15 @@
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 
 import { AvataresDeResponsables } from "./Avatares";
 import { TaskDialog } from "./TaskDialog";
 import { useApi } from "../DeptoApi";
 import { AlertBanner } from "../../feedback/AlertBanner";
+import { ContadorCaracteres } from "../../feedback/ContadorCaracteres";
+import { Esqueleto } from "../../feedback/Esqueleto";
 import { Badge } from "@/components/ui/badge";
 import type { ApiFailure } from "../../../types/api";
 import {
+  MAX_TITULO_LEN,
   PRIORIDADES,
   PRIORIDAD_LABEL,
   TASK_ESTADOS,
@@ -22,6 +25,19 @@ import {
  *  archivo o de texto suelto que caiga sobre el tablero por error. */
 const TASK_MIME = "application/x-teleco-task-id";
 
+const ORDEN_PRIORIDAD: Record<Prioridad, number> = { alta: 0, media: 1, baja: 2 };
+
+/** Antes por fecha límite (sin fecha, al final), luego por prioridad: lo
+ *  urgente arriba de cada columna en vez del orden en que se crearon. */
+function compararTareas(a: Task, b: Task) {
+  if (a.deadline !== b.deadline) {
+    if (a.deadline === null) return 1;
+    if (b.deadline === null) return -1;
+    if (a.deadline !== b.deadline) return a.deadline < b.deadline ? -1 : 1;
+  }
+  return ORDEN_PRIORIDAD[a.prioridad] - ORDEN_PRIORIDAD[b.prioridad];
+}
+
 /**
  * Tablero por estado. Arrastrar una tarjeta cambia su estado; abrirla y
  * elegir "Estado" en el diálogo hace lo mismo y es la vía accesible por
@@ -33,12 +49,20 @@ export function TasksPanel() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [usuario, setUsuario] = useState("");
   const [soloMias, setSoloMias] = useState(false);
+  const [busqueda, setBusqueda] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
   const [abierta, setAbierta] = useState<Task | null>(null);
   const [arrastrando, setArrastrando] = useState<Task | null>(null);
   const [sobreColumna, setSobreColumna] = useState<TaskEstado | null>(null);
+  const [ultimoMovimiento, setUltimoMovimiento] = useState<{
+    taskId: number;
+    titulo: string;
+    anterior: TaskEstado;
+    actual: TaskEstado;
+  } | null>(null);
+  const deshacerTimeoutRef = useRef<number | null>(null);
 
   const [titulo, setTitulo] = useState("");
   const [prioridad, setPrioridad] = useState<Prioridad>("media");
@@ -47,6 +71,9 @@ export function TasksPanel() {
 
   useEffect(() => {
     void cargar();
+    return () => {
+      if (deshacerTimeoutRef.current) window.clearTimeout(deshacerTimeoutRef.current);
+    };
   }, []);
 
   async function cargar() {
@@ -88,32 +115,69 @@ export function TasksPanel() {
     }
   }
 
-  async function moverA(task: Task, estado: TaskEstado) {
+  function avisarMovimiento(aviso: typeof ultimoMovimiento) {
+    setUltimoMovimiento(aviso);
+    if (deshacerTimeoutRef.current) window.clearTimeout(deshacerTimeoutRef.current);
+    if (aviso) {
+      deshacerTimeoutRef.current = window.setTimeout(() => setUltimoMovimiento(null), 6000);
+    }
+  }
+
+  async function moverA(task: Task, estado: TaskEstado, avisar = true) {
     setSobreColumna(null);
     if (task.estado === estado) return;
+    const anterior = task.estado;
 
     setTasks((actuales) =>
       actuales.map((t) => (t.id === task.id ? { ...t, estado } : t)),
     );
     try {
       await updateTask(task.id, { estado });
+      if (avisar) {
+        avisarMovimiento({ taskId: task.id, titulo: task.titulo, anterior, actual: estado });
+      }
     } catch (err) {
       setError((err as ApiFailure)?.message || "No se pudo mover la tarea.");
       await cargar();
     }
   }
 
-  if (isLoading) return <p className="mkt-cargando-react">Cargando tareas...</p>;
+  function deshacerMovimiento() {
+    if (!ultimoMovimiento) return;
+    const task = tasks.find((t) => t.id === ultimoMovimiento.taskId);
+    avisarMovimiento(null);
+    // Sin aviso de nuevo: deshacer no es un movimiento que también se pueda
+    // deshacer, o el banner se quedaría reapareciendo indefinidamente.
+    if (task) void moverA(task, ultimoMovimiento.anterior, false);
+  }
 
-  const visibles = soloMias
-    ? tasks.filter((t) => t.responsables.includes(usuario))
-    : tasks;
+  if (isLoading) return <Esqueleto filas={5} alto={78} />;
+
+  const filtroTexto = busqueda.trim().toLowerCase();
+  const visibles = tasks
+    .filter((t) => !soloMias || t.responsables.includes(usuario))
+    .filter((t) => !filtroTexto || t.titulo.toLowerCase().includes(filtroTexto));
 
   return (
     <section className="mkt-panel-react">
       {error ? <AlertBanner variant="error" message={error} /> : null}
+      {ultimoMovimiento ? (
+        <AlertBanner
+          variant="info"
+          message={`"${ultimoMovimiento.titulo}" movida a ${TASK_ESTADO_LABEL[ultimoMovimiento.actual]}.`}
+          action={{ label: "Deshacer", onClick: deshacerMovimiento }}
+        />
+      ) : null}
 
       <header className="mkt-panel-header-react">
+        <input
+          type="search"
+          className="mkt-buscador-react"
+          value={busqueda}
+          placeholder="Buscar por título..."
+          aria-label="Buscar tareas por título"
+          onChange={(event) => setBusqueda(event.target.value)}
+        />
         <label className="mkt-toggle-react">
           <input
             type="checkbox"
@@ -142,6 +206,7 @@ export function TasksPanel() {
               placeholder="Diseñar cartel de la charla"
               onChange={(event) => setTitulo(event.target.value)}
             />
+            <ContadorCaracteres valor={titulo} maximo={MAX_TITULO_LEN} />
           </div>
           <div className="mkt-form-fila-react">
             <div className="field-group-react">
@@ -184,7 +249,11 @@ export function TasksPanel() {
         </form>
       ) : null}
 
-      {visibles.length === 0 && soloMias ? (
+      {visibles.length === 0 && filtroTexto ? (
+        <p className="mkt-vacio-react">
+          Ninguna tarea con "{busqueda.trim()}" en el título.
+        </p>
+      ) : visibles.length === 0 && soloMias ? (
         <p className="mkt-vacio-react">
           No tienes ninguna tarea asignada. Quita el filtro para ver las del resto
           del equipo.
@@ -193,7 +262,9 @@ export function TasksPanel() {
 
       <div className="mkt-tablero-react">
         {TASK_ESTADOS.map((estado) => {
-          const columna = visibles.filter((task) => task.estado === estado);
+          const columna = visibles
+            .filter((task) => task.estado === estado)
+            .sort(compararTareas);
 
           return (
             <div

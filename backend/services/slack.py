@@ -73,3 +73,21 @@ def tarea_cambia_estado(tarea: dict, estado: str, departamento: str, autor: str)
         f"{emoji} *{tarea.get('titulo', '')}* ({departamento}) pasa a *{etiqueta}*"
         f" — {_quien(autor)}"
     )
+
+
+def aviso_deadlines_manana(tareas: list[dict]) -> bool:
+    """Un aviso, todos los departamentos juntos -- son pocas tareas por día,
+    no hace falta un mensaje por departamento (ni el canal del webhook tiene
+    por qué ser distinto para cada uno)."""
+    if not tareas:
+        return False
+
+    lineas = [":alarm_clock: *Vence mañana:*"]
+    for tarea in tareas:
+        responsables = ", ".join(_quien(r) for r in tarea.get("responsables") or [])
+        linea = f"• *{tarea.get('titulo', '')}* ({tarea.get('departamento', '')})"
+        if responsables:
+            linea += f" — {responsables}"
+        lineas.append(linea)
+
+    return enviar("\n".join(lineas))

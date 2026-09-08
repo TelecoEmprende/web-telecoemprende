@@ -53,6 +53,9 @@ export function apiDepto(depto: Team) {
 
     deleteCampaign: (id: number) => del(`/campaigns/${id}`),
 
+    duplicateCampaign: (id: number) =>
+      post<{ ok: true; campaign: CampaignDetalle }>(`/campaigns/${id}/duplicar`, {}),
+
     // --- Contents ---
     createContent: (campaignId: number, datos: Partial<Content>) =>
       post<{ ok: true; content: Content }>(`/campaigns/${campaignId}/contents`, datos),

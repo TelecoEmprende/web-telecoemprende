@@ -72,9 +72,26 @@ p {
   padding: 14px 16px;
   border-radius: var(--radius-md);
   font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
   transition:
     opacity var(--dur-fast) var(--ease-out),
     transform var(--dur-fast) var(--ease-out);
+}
+
+.alert-banner__accion {
+  flex-shrink: 0;
+  border: none;
+  background: none;
+  padding: 0;
+  font: inherit;
+  font-weight: 800;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  color: inherit;
+  cursor: pointer;
 }
 
 @starting-style {
@@ -97,4 +114,45 @@ p {
 .alert-error {
   background: var(--color-error-bg);
   color: var(--color-error-text);
+}
+
+/* ---------- Esqueleto de carga ---------- */
+
+.esqueleto-react {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.esqueleto-fila-react {
+  border-radius: 14px;
+  background: linear-gradient(
+    90deg,
+    var(--color-border) 25%,
+    var(--color-background) 37%,
+    var(--color-border) 63%
+  );
+  background-size: 400% 100%;
+  animation: esqueleto-brillo 1.4s ease-in-out infinite;
+}
+
+@keyframes esqueleto-brillo {
+  0% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* ---------- Contador de caracteres ---------- */
+
+.contador-caracteres-react {
+  display: block;
+  margin-top: 4px;
+  font-size: 0.76rem;
+  color: var(--color-text-muted);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.contador-caracteres-excedido-react {
+  color: var(--color-error-text);
+  font-weight: 700;
 }
