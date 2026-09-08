@@ -559,6 +559,26 @@ describe("/equipo — panel de Marketing", () => {
     expect(await screen.findByRole("heading", { name: "Vuelta al cole (copia)" })).toBeInTheDocument();
   });
 
+  it("un enlace con ?campaign= abre esa campaña directamente", async () => {
+    getCampaign.mockResolvedValue({
+      ok: true,
+      campaign: {
+        id: 1, nombre: "Vuelta al cole", objetivo: "", audiencia: "", fecha: null,
+        contents: [], tasks_sueltas: [],
+      },
+    });
+
+    render(
+      <MemoryRouter initialEntries={["/equipo?campaign=1"]}>
+        <EquipoPage />
+      </MemoryRouter>,
+    );
+    await userEvent.click(await screen.findByRole("button", { name: "Resumen" }));
+
+    expect(await screen.findByRole("heading", { name: "Vuelta al cole" })).toBeInTheDocument();
+    expect(getCampaign).toHaveBeenCalledWith(1);
+  });
+
   it("la navegación marca la pestaña activa", async () => {
     await renderMarketing();
     await screen.findByText(/Nada pendiente/);

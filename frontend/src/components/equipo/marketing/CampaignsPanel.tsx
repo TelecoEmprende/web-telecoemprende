@@ -175,6 +175,7 @@ export function CampaignsPanel({ campaignInicial, onCampaignAbierta }: Props) {
   const [editandoCampaign, setEditandoCampaign] = useState(false);
   const [confirmando, setConfirmando] = useState<number | null>(null);
   const [duplicando, setDuplicando] = useState<number | null>(null);
+  const [enlaceCopiado, setEnlaceCopiado] = useState<number | null>(null);
   const [confirmandoContent, setConfirmandoContent] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -274,6 +275,17 @@ export function CampaignsPanel({ campaignInicial, onCampaignAbierta }: Props) {
       await cargarCampaigns();
     } catch (err) {
       setError(mensajeDeError(err, "No se pudo eliminar la campaña."));
+    }
+  }
+
+  async function copiarEnlace(campaign: CampaignDetalle) {
+    const url = `${window.location.origin}/equipo?campaign=${campaign.id}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      setEnlaceCopiado(campaign.id);
+      window.setTimeout(() => setEnlaceCopiado(null), 2000);
+    } catch {
+      setError("No se pudo copiar el enlace. Cópialo a mano: " + url);
     }
   }
 
@@ -470,6 +482,13 @@ export function CampaignsPanel({ campaignInicial, onCampaignAbierta }: Props) {
                 onClick={() => void duplicarCampaign(detalle)}
               >
                 {duplicando === detalle.id ? "Duplicando..." : "Duplicar"}
+              </button>
+              <button
+                type="button"
+                className="mkt-btn-mini-react"
+                onClick={() => void copiarEnlace(detalle)}
+              >
+                {enlaceCopiado === detalle.id ? "Enlace copiado" : "Copiar enlace"}
               </button>
               <button
                 type="button"
