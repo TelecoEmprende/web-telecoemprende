@@ -35,10 +35,6 @@ DEPARTAMENTOS_VALIDOS = {
 
 ESTADOS_VALIDOS = {"pendiente", "aceptado", "rechazado", "waitlist"}
 
-# Firma los enlaces de suscripción al calendario (.ics): con esto no hace
-# falta guardar un token por persona en la base de datos, se recalcula.
-CALENDARIO_TOKEN_SECRET = os.environ.get("FLASK_SECRET_KEY", "dev-calendario-token-secret")
-
 EQUIPOS_VALIDOS = {"marketing", "eventos", "ingenieria"}
 # Quien tenga este equipo recibe también sesión de admin al hacer login en /equipo.
 EQUIPO_CON_PERMISOS_ADMIN = "ingenieria"

@@ -24,10 +24,6 @@ export function getEquipoCalendario() {
   return apiRequest<ApiResult & { eventos: EventoCalendario[] }>("/api/equipo/calendario");
 }
 
-export function getEnlaceCalendarioGeneral() {
-  return apiRequest<ApiResult & { url: string }>("/api/equipo/calendario/enlace");
-}
-
 export function getMisTareas() {
   return apiRequest<ApiResult & { tareas: Task[] }>("/api/equipo/mis-tareas");
 }

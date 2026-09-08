@@ -1,14 +1,7 @@
 import { useMemo, useState, useEffect } from "react";
 
-import {
-  getEnlaceCalendarioGeneral,
-  getEquipoCalendario,
-  getEquipoSession,
-  getMisTareas,
-} from "../../api/equipo";
-import { AlertBanner } from "../feedback/AlertBanner";
+import { getEquipoCalendario, getEquipoSession, getMisTareas } from "../../api/equipo";
 import { etiquetaDe } from "./marketing/Avatares";
-import { SuscribirCalendario } from "./SuscribirCalendario";
 import type { EventoCalendario } from "../../types/equipo";
 import { diasHasta, formatearFecha as formatearFechaCorta, type Task } from "../../types/marketing";
 
@@ -118,7 +111,6 @@ function formatearFecha(fecha: string) {
  */
 export function CalendarioEquipo() {
   const [eventos, setEventos] = useState<EventoCalendario[]>([]);
-  const [error, setError] = useState<string | null>(null);
   const [cursor, setCursor] = useState(() => {
     const hoy = new Date();
     return new Date(hoy.getFullYear(), hoy.getMonth(), 1);
@@ -216,8 +208,6 @@ export function CalendarioEquipo() {
 
   const calendario = (
     <section className="mkt-panel-react">
-      {error ? <AlertBanner variant="error" message={error} /> : null}
-
       <header className="mkt-panel-header-react">
         <h3>
           {MESES[cursor.getMonth()]} {cursor.getFullYear()}
@@ -232,7 +222,6 @@ export function CalendarioEquipo() {
           <button type="button" className="mkt-btn-mini-react" onClick={() => mover(1)}>
             Siguiente →
           </button>
-          <SuscribirCalendario obtenerEnlace={getEnlaceCalendarioGeneral} onError={setError} />
         </div>
       </header>
 
