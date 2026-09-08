@@ -2126,10 +2126,6 @@ button.mkt-evento-react {
 }
 
 .mkt-saludo-react {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
   margin-bottom: 20px;
 }
 
@@ -2139,31 +2135,6 @@ button.mkt-evento-react {
 
 .mkt-saludo-react .mkt-meta-react {
   margin: 2px 0 0;
-}
-
-.mkt-anillo-react {
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
-  flex-shrink: 0;
-  display: grid;
-  place-items: center;
-  position: relative;
-}
-
-.mkt-anillo-react::before {
-  content: "";
-  position: absolute;
-  inset: 5px;
-  border-radius: 50%;
-  background: var(--color-surface);
-}
-
-.mkt-anillo-react span {
-  position: relative;
-  font-weight: 800;
-  font-size: 0.82rem;
-  color: var(--color-navy);
 }
 
 /* ---------- Tira de la semana ---------- */
@@ -2270,6 +2241,37 @@ button.mkt-evento-react {
   flex-direction: column;
   gap: 20px;
   min-width: 0;
+}
+
+/* El mes entero en la columna de Inicio, más compacto que en la pestaña de
+   Calendario propia (esa sí tiene la pantalla entera para él): casillas más
+   bajas para que quepa sin desplazarse. Acotado a esta columna, no toca la
+   rejilla de Marketing/Eventos. */
+.mkt-inicio-lateral-react .mkt-calendario-react {
+  margin-top: 10px;
+  gap: 3px;
+}
+
+.mkt-inicio-lateral-react .mkt-calendario-cabecera-react {
+  padding: 4px;
+  font-size: 0.66rem;
+}
+
+.mkt-inicio-lateral-react .mkt-dia-react,
+.mkt-inicio-lateral-react .mkt-dia-vacio-react {
+  min-height: 38px;
+  padding: 4px;
+}
+
+.mkt-inicio-lateral-react .mkt-dia-numero-react {
+  font-size: 0.68rem;
+  margin-bottom: 2px;
+}
+
+.mkt-inicio-lateral-react .mkt-evento-react {
+  padding: 1px 4px;
+  margin-bottom: 2px;
+  font-size: 0.6rem;
 }
 
 @media (max-width: 900px) {
