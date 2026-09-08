@@ -109,27 +109,43 @@
 
 /* ---------- Botones ---------- */
 
+/* El degradado dorado de los CTA de la landing (`.lp-btn-gold` en
+   landing.css): mismos colores y sombra, escalados a un botón de app en vez
+   del hero de una página de aterrizaje. Es la acción principal de cada
+   panel (crear, guardar, asignar) -- `.mkt-btn-mini-react` se queda como
+   estaba para todo lo demás. */
 .mkt-btn-react {
   min-height: 44px;
   padding: 11px 20px;
   border: none;
   border-radius: var(--radius-md);
-  background: var(--color-orange);
-  color: #fff;
+  background: linear-gradient(120deg, var(--color-gold), #f7c065 55%, #f0902e);
+  color: var(--color-navy);
+  box-shadow: 0 10px 24px rgba(224, 104, 14, 0.28);
   font-family: inherit;
   font-size: 0.95rem;
   font-weight: 800;
   cursor: pointer;
-  transition: background var(--dur-press) var(--ease-out);
+  transition: transform var(--dur-press) var(--ease-out),
+    filter var(--dur-press) var(--ease-out),
+    box-shadow var(--dur-press) var(--ease-out);
 }
 
-.mkt-btn-react:hover:not(:disabled) {
-  background: var(--color-orange-dark);
+@media (hover: hover) and (pointer: fine) {
+  .mkt-btn-react:hover:not(:disabled) {
+    transform: translateY(-1px);
+    filter: brightness(1.04);
+  }
+}
+
+.mkt-btn-react:active:not(:disabled) {
+  transform: scale(0.97);
 }
 
 .mkt-btn-react:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+  box-shadow: none;
 }
 
 .mkt-btn-mini-react,
@@ -276,6 +292,14 @@
 .mkt-selector-contenido-react {
   max-height: 280px;
   overflow-y: auto;
+  /* Sin esto, arrastrar el dedo sobre una fila (casilla + label, que es casi
+     toda la lista) no desliza -- el navegador espera a ver si algún
+     `pointerdown` de ahí va a interceptar el gesto antes de decidir si
+     hace scroll, y se lo salta. `pan-y` le dice de antemano que el scroll
+     vertical siempre gana aquí, toque lo que toque el dedo. Solo la barra
+     de scroll (que no es parte de ningún elemento interactivo) funcionaba
+     antes de esto. */
+  touch-action: pan-y;
 }
 
 .mkt-selector-vacio-react {
@@ -860,24 +884,92 @@
 
 /* ---------- Ficha de miembro ---------- */
 
-.mkt-ficha-react {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
+/* Sin el padding/gap por defecto de <DialogContent> (Tailwind `p-4 gap-4`):
+   el lateral y el cuerpo llevan su propio padding y necesitan poder llegar
+   hasta el borde del diálogo para que el borde entre ambos sea uno solo. */
+.mkt-dialogo-ficha-react {
+  padding: 0;
+  gap: 0;
 }
 
-.mkt-ficha-identidad-react {
+.mkt-ficha-react {
+  display: grid;
+  grid-template-columns: 200px 1fr;
+}
+
+.mkt-ficha-lateral-react {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 14px;
+  gap: 4px;
+  padding: 26px 20px;
+  border-right: 1px solid var(--color-border);
+  text-align: center;
+}
+
+.mkt-ficha-avatar-react {
+  width: 72px;
+  height: 72px;
+  font-size: 1.4rem;
+  margin-bottom: 10px;
 }
 
 .mkt-ficha-nombre-react {
   margin: 0;
   font-family: var(--font-display);
-  font-size: 1.15rem;
+  font-size: 1.1rem;
   font-weight: 700;
   color: var(--color-navy);
+}
+
+.mkt-ficha-skills-react {
+  justify-content: center;
+  margin-top: 14px;
+}
+
+.mkt-ficha-contacto-react {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  margin-top: 18px;
+}
+
+.mkt-ficha-contacto-react .mkt-btn-mini-react,
+.mkt-ficha-contacto-react .mkt-btn-react {
+  justify-content: center;
+  width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-decoration: none;
+}
+
+.mkt-ficha-asignar-react {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  margin-top: 8px;
+}
+
+.mkt-ficha-asignar-react input {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--color-orange);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-family: inherit;
+  font-size: 0.82rem;
+}
+
+.mkt-ficha-cuerpo-react {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  padding: 24px 26px;
+  min-width: 0;
 }
 
 .mkt-ficha-cifras-react {
@@ -889,9 +981,8 @@
 
 .mkt-ficha-cifras-react > div {
   padding: 14px 12px;
-  border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
-  background: var(--color-surface);
+  background: var(--color-background);
   text-align: center;
 }
 
@@ -983,6 +1074,27 @@
   align-items: center;
   gap: 12px;
   margin-top: 4px;
+}
+
+.mkt-nota-privada-react {
+  margin: 0;
+  padding: 12px 14px;
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-text-muted);
+  font-size: 0.86rem;
+  font-style: italic;
+}
+
+@media (max-width: 560px) {
+  .mkt-ficha-react {
+    grid-template-columns: 1fr;
+  }
+
+  .mkt-ficha-lateral-react {
+    border-right: none;
+    border-bottom: 1px solid var(--color-border);
+  }
 }
 
 @media (max-width: 520px) {
