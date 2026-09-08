@@ -16,6 +16,12 @@ export const CONTENT_ESTADOS = [
 
 export const PRIORIDADES = ["baja", "media", "alta"] as const;
 
+// Deben coincidir con backend/config.py (MAX_TITULO_LEN, MAX_TEXTO_LARGO_LEN):
+// no hay un sitio compartido entre Python y TypeScript, así que si cambian
+// ahí, hay que cambiarlos aquí también.
+export const MAX_TITULO_LEN = 160;
+export const MAX_TEXTO_LARGO_LEN = 5000;
+
 export type TaskEstado = (typeof TASK_ESTADOS)[number];
 export type ContentEstado = (typeof CONTENT_ESTADOS)[number];
 export type Prioridad = (typeof PRIORIDADES)[number];

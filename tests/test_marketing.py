@@ -6,6 +6,7 @@ os.environ["DATABASE_URL"] = os.environ.get(
     "TEST_DATABASE_URL",
     "postgresql://telecoemprende:telecoemprende@localhost:5432/telecoemprende_test",
 )
+os.environ["CRON_SECRET"] = "test-cron-secret"
 
 import app  # noqa: E402
 import backend.services.equipo as equipo_service  # noqa: E402
@@ -213,6 +214,64 @@ class CampaignTests(MarketingTestCase):
             self.client.get("/api/marketing/campaigns/9999").status_code, 404
         )
 
+    def test_duplicar_copia_contents_y_tasks_en_blanco(self):
+        campaign = self.crear_campaign(
+            nombre="Reunión semanal", objetivo="Poner al día al equipo", fecha="2026-10-01",
+        )
+        content = self.crear_content(
+            campaign["id"], titulo="Post de la reunión", fecha_publicacion="2026-10-02",
+            estado="publicado", script="Guion original",
+        )
+        self.client.post(
+            "/api/marketing/tasks",
+            json={
+                "titulo": "Escribir guion", "content_id": content["id"], "estado": "acabado",
+                "deadline": "2026-10-01",
+                "checklist": [{"texto": "Revisar ortografía", "hecho": True}],
+            },
+        )
+        self.client.post(
+            "/api/marketing/tasks",
+            json={"titulo": "Reservar sala", "campaign_id": campaign["id"], "estado": "acabado"},
+        )
+
+        respuesta = self.client.post(f"/api/marketing/campaigns/{campaign['id']}/duplicar")
+        self.assertEqual(respuesta.status_code, 201, respuesta.get_json())
+        copia = respuesta.get_json()["campaign"]
+
+        self.assertEqual(copia["nombre"], "Reunión semanal (copia)")
+        self.assertEqual(copia["objetivo"], "Poner al día al equipo")
+        self.assertIsNone(copia["fecha"])
+        self.assertNotEqual(copia["id"], campaign["id"])
+
+        self.assertEqual(len(copia["contents"]), 1)
+        content_copia = copia["contents"][0]
+        self.assertEqual(content_copia["titulo"], "Post de la reunión")
+        self.assertEqual(content_copia["script"], "Guion original")
+        self.assertEqual(content_copia["estado"], "idea")
+        self.assertIsNone(content_copia["fecha_publicacion"])
+
+        self.assertEqual(len(content_copia["tasks"]), 1)
+        tarea_copia = content_copia["tasks"][0]
+        self.assertEqual(tarea_copia["titulo"], "Escribir guion")
+        self.assertEqual(tarea_copia["estado"], "pendiente")
+        self.assertIsNone(tarea_copia["deadline"])
+        self.assertEqual(tarea_copia["checklist"], [{"texto": "Revisar ortografía", "hecho": False}])
+
+        self.assertEqual(len(copia["tasks_sueltas"]), 1)
+        self.assertEqual(copia["tasks_sueltas"][0]["titulo"], "Reservar sala")
+        self.assertEqual(copia["tasks_sueltas"][0]["estado"], "pendiente")
+
+        # La original no se toca.
+        original = self.client.get(f"/api/marketing/campaigns/{campaign['id']}").get_json()
+        self.assertEqual(original["campaign"]["nombre"], "Reunión semanal")
+        self.assertEqual(original["campaign"]["contents"][0]["estado"], "publicado")
+
+    def test_duplicar_campaign_inexistente_da_404(self):
+        self.assertEqual(
+            self.client.post("/api/marketing/campaigns/9999/duplicar").status_code, 404
+        )
+
 
 class ContentTests(MarketingTestCase):
     def setUp(self):
@@ -258,6 +317,41 @@ class ContentTests(MarketingTestCase):
 
         detalle = self.client.get(f"/api/marketing/contents/{content['id']}").get_json()
         self.assertEqual(detalle["content"]["estado"], "publicado")
+
+    def test_publicar_cierra_sus_tareas_pendientes(self):
+        content = self.crear_content(self.campaign["id"])
+        pendiente = self.client.post(
+            "/api/marketing/tasks",
+            json={"titulo": "Grabar", "content_id": content["id"]},
+        ).get_json()["task"]
+        ya_acabada = self.client.post(
+            "/api/marketing/tasks",
+            json={"titulo": "Guion", "content_id": content["id"], "estado": "acabado"},
+        ).get_json()["task"]
+
+        respuesta = self.client.put(
+            f"/api/marketing/contents/{content['id']}", json={"estado": "publicado"}
+        )
+        self.assertEqual(respuesta.status_code, 200)
+
+        tareas = {t["id"]: t for t in self.client.get("/api/marketing/tasks").get_json()["tasks"]}
+        self.assertEqual(tareas[pendiente["id"]]["estado"], "acabado")
+        # No pisa el updated_at de una que ya estaba acabada de antes.
+        self.assertEqual(tareas[ya_acabada["id"]]["estado"], "acabado")
+
+    def test_cambiar_a_otro_estado_no_toca_las_tareas(self):
+        content = self.crear_content(self.campaign["id"])
+        tarea = self.client.post(
+            "/api/marketing/tasks",
+            json={"titulo": "Grabar", "content_id": content["id"]},
+        ).get_json()["task"]
+
+        self.client.put(
+            f"/api/marketing/contents/{content['id']}", json={"estado": "en_revision"}
+        )
+
+        detalle = self.client.get(f"/api/marketing/tasks/{tarea['id']}").get_json()
+        self.assertEqual(detalle["task"]["estado"], "pendiente")
 
     def test_actualizacion_parcial_no_borra_lo_demas(self):
         content = self.crear_content(self.campaign["id"], script="Guion original")

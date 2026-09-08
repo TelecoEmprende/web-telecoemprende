@@ -2,10 +2,13 @@ import { FormEvent, useEffect, useRef, useState } from "react";
 
 import { useApi } from "../DeptoApi";
 import { AlertBanner } from "../../feedback/AlertBanner";
+import { ContadorCaracteres } from "../../feedback/ContadorCaracteres";
 import type { ApiFailure } from "../../../types/api";
 import {
   CONTENT_ESTADOS,
   CONTENT_ESTADO_LABEL,
+  MAX_TEXTO_LARGO_LEN,
+  MAX_TITULO_LEN,
   type Content,
   type ContentEstado,
 } from "../../../types/marketing";
@@ -174,6 +177,7 @@ export function ContentEditor({ content, onCerrar, onGuardado }: Props) {
               value={titulo}
               onChange={(event) => setTitulo(event.target.value)}
             />
+            <ContadorCaracteres valor={titulo} maximo={MAX_TITULO_LEN} />
           </div>
 
           <div className="mkt-form-fila-react">
@@ -222,6 +226,11 @@ export function ContentEditor({ content, onCerrar, onGuardado }: Props) {
                   </option>
                 ))}
               </select>
+              {estado === "publicado" ? (
+                <p className="mkt-meta-react">
+                  Al guardar, sus tareas pendientes se marcarán como hechas.
+                </p>
+              ) : null}
             </div>
           </div>
 
@@ -235,6 +244,7 @@ export function ContentEditor({ content, onCerrar, onGuardado }: Props) {
               value={script}
               onChange={(event) => setScript(event.target.value)}
             />
+            <ContadorCaracteres valor={script} maximo={MAX_TEXTO_LARGO_LEN} />
           </div>
 
           <div className="field-group-react">
@@ -245,6 +255,7 @@ export function ContentEditor({ content, onCerrar, onGuardado }: Props) {
               value={copyTexto}
               onChange={(event) => setCopyTexto(event.target.value)}
             />
+            <ContadorCaracteres valor={copyTexto} maximo={MAX_TEXTO_LARGO_LEN} />
           </div>
 
           <div className="field-group-react">

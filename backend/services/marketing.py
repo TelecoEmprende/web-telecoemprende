@@ -216,6 +216,77 @@ def eliminar_campaign(campaign_id: int, departamento: str) -> bool:
     return _eliminar("campaigns", campaign_id, departamento)
 
 
+def duplicar_campaign(campaign_id: int, departamento: str, creado_por: str) -> dict | None:
+    """Copia una campaña entera -- contenidos y tareas incluidos -- para lo
+    que se repite (reunión semanal, story de bienvenida) sin rehacerla a
+    mano cada vez.
+
+    La copia sale "en blanco": sin fecha, sin publicar, con las tareas en
+    `pendiente` y la checklist sin marcar. El texto (guion, copy, hashtags,
+    el propio enunciado de cada tarea) sí se conserva -- es la plantilla que
+    se quiere reutilizar, no el estado de la última vez.
+    """
+    original = obtener_campaign(campaign_id, departamento)
+    if original is None:
+        return None
+
+    nueva = crear_campaign(
+        nombre=f"{original['nombre']} (copia)",
+        objetivo=original["objetivo"],
+        audiencia=original["audiencia"],
+        fecha=None,
+        creado_por=creado_por,
+        departamento=departamento,
+    )
+
+    def _tarea_en_blanco(tarea: dict) -> dict:
+        return {
+            "titulo": tarea["titulo"],
+            "descripcion": tarea["descripcion"],
+            "estado": "pendiente",
+            "prioridad": tarea["prioridad"],
+            "deadline": None,
+            "responsables": tarea["responsables"],
+            "tags": tarea["tags"],
+            "checklist": [{**item, "hecho": False} for item in tarea["checklist"]],
+            "enlaces": tarea["enlaces"],
+            "creado_por": creado_por,
+        }
+
+    for content in original["contents"]:
+        nuevo_content = crear_content(
+            nueva["id"],
+            departamento,
+            titulo=content["titulo"],
+            tipo=content["tipo"],
+            plataforma=content["plataforma"],
+            fecha_publicacion=None,
+            estado="idea",
+            script=content["script"],
+            copy_texto=content["copy_texto"],
+            cta=content["cta"],
+            hashtags=content["hashtags"],
+            idea_visual=content["idea_visual"],
+            responsables=content["responsables"],
+            enlaces=content["enlaces"],
+        )
+        for tarea in content["tasks"]:
+            crear_task(
+                departamento=departamento,
+                content_id=nuevo_content["id"],
+                **_tarea_en_blanco(tarea),
+            )
+
+    for tarea in original["tasks_sueltas"]:
+        crear_task(
+            departamento=departamento,
+            campaign_id=nueva["id"],
+            **_tarea_en_blanco(tarea),
+        )
+
+    return obtener_campaign(nueva["id"], departamento)
+
+
 # --------------------------------------------------------------------------
 # Contents
 # --------------------------------------------------------------------------
@@ -292,7 +363,24 @@ def actualizar_content(content_id: int, departamento: str, **campos) -> bool:
         "titulo", "tipo", "plataforma", "fecha_publicacion", "estado", "script",
         "copy_texto", "cta", "hashtags", "idea_visual", "responsables", "enlaces",
     )
-    return _actualizar("contents", content_id, permitidos, campos, departamento)
+    actualizado = _actualizar("contents", content_id, permitidos, campos, departamento)
+
+    # Publicar un contenido cierra solo sus tareas todavía abiertas: antes
+    # "publicado" y "tareas acabadas" eran dos cosas que había que marcar por
+    # separado, y era fácil dejarte la segunda.
+    if actualizado and campos.get("estado") == "publicado":
+        with _get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    UPDATE tasks SET estado = 'acabado', updated_at = NOW()
+                    WHERE content_id = %s AND departamento = %s AND estado != 'acabado'
+                    """,
+                    (content_id, departamento),
+                )
+            conn.commit()
+
+    return actualizado
 
 
 def eliminar_content(content_id: int, departamento: str) -> bool:
@@ -324,6 +412,25 @@ def listar_tasks(departamento: str) -> list[dict]:
                 ORDER BY COALESCE(t.deadline, '9999-12-31'::date), t.id
                 """,
                 (departamento,),
+            )
+            return [_serializar(f) for f in cur.fetchall()]
+
+
+def tareas_que_vencen(fecha: date) -> list[dict]:
+    """Tareas de cualquier departamento con deadline exactamente `fecha` y
+    todavía sin acabar. Sin filtro de departamento a propósito: el aviso lo
+    dispara un cron, no una sesión de equipo -- lo agrupa por departamento
+    quien lo llama (ver `services/slack.py`), no aquí.
+    """
+    with _get_connection() as conn:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(
+                """
+                SELECT * FROM tasks
+                WHERE deadline = %s AND estado != 'acabado'
+                ORDER BY departamento, id
+                """,
+                (fecha,),
             )
             return [_serializar(f) for f in cur.fetchall()]
 

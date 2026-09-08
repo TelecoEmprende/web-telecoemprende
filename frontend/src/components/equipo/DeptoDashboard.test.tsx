@@ -16,6 +16,7 @@ const createTask = vi.fn();
 const getFichaMiembro = vi.fn();
 const listarRegistros = vi.fn();
 const updateFichaMiembro = vi.fn();
+const duplicateCampaign = vi.fn();
 
 // El módulo ya no exporta funciones sueltas sino una factoría por
 // departamento (Marketing y Eventos comparten paneles). `apiDepto` guarda el
@@ -37,6 +38,7 @@ vi.mock("../../api/marketing", () => ({
       createCampaign: vi.fn(),
       createContent: vi.fn(),
       deleteCampaign: vi.fn(),
+      duplicateCampaign: (...args: unknown[]) => duplicateCampaign(...args),
       deleteContent: vi.fn(),
       deleteTask: vi.fn(),
       updateCampaign: vi.fn(),
@@ -137,6 +139,7 @@ describe("/equipo — panel de Marketing", () => {
       Promise.resolve({ ok: true, [recurso]: [] }),
     );
     updateFichaMiembro.mockReset().mockResolvedValue({ ok: true });
+    duplicateCampaign.mockReset();
     updateTask.mockReset().mockResolvedValue({ ok: true });
     createTask.mockReset().mockResolvedValue({ ok: true, task: TAREA });
   });
@@ -261,6 +264,64 @@ describe("/equipo — panel de Marketing", () => {
     expect(screen.getByRole("button", { name: /Grabar/ })).toBeInTheDocument();
   });
 
+  it("el buscador filtra el tablero por título", async () => {
+    getTasks.mockResolvedValue({
+      ok: true,
+      usuario: YO,
+      tasks: tareas({ titulo: "Escribir guion" }, { titulo: "Grabar reel" }),
+    });
+
+    await renderMarketing();
+    await userEvent.click(screen.getByRole("button", { name: "Tareas" }));
+    await screen.findByRole("button", { name: /Escribir guion/ });
+
+    await userEvent.type(screen.getByLabelText("Buscar tareas por título"), "reel");
+
+    expect(screen.getByRole("button", { name: /Grabar reel/ })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Escribir guion/ })).not.toBeInTheDocument();
+  });
+
+  it("arrastrar una tarea a otra columna deja deshacer el movimiento", async () => {
+    getTasks.mockResolvedValue({
+      ok: true,
+      usuario: YO,
+      tasks: tareas({ id: 1, titulo: "Escribir guion", estado: "pendiente" }),
+    });
+    updateTask.mockResolvedValue({ ok: true });
+
+    await renderMarketing();
+    await userEvent.click(screen.getByRole("button", { name: "Tareas" }));
+    const tarjeta = await screen.findByRole("button", { name: /Escribir guion/ });
+    const destino = document.querySelector('[data-estado="en_progreso"]') as HTMLElement;
+
+    // jsdom no implementa DataTransfer: un objeto mínimo con las mismas
+    // formas de leer/escribir que usa el tablero real basta para el test.
+    const datos: Record<string, string> = {};
+    const dataTransfer = {
+      setData: (tipo: string, valor: string) => {
+        datos[tipo] = valor;
+      },
+      getData: (tipo: string) => datos[tipo] ?? "",
+      get types() {
+        return Object.keys(datos);
+      },
+      effectAllowed: "",
+    };
+
+    fireEvent.dragStart(tarjeta, { dataTransfer });
+    fireEvent.dragOver(destino, { dataTransfer });
+    fireEvent.drop(destino, { dataTransfer });
+
+    await waitFor(() => expect(updateTask).toHaveBeenCalledWith(1, { estado: "en_progreso" }));
+    expect(
+      await screen.findByText(/"Escribir guion" movida a En progreso/),
+    ).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "Deshacer" }));
+
+    await waitFor(() => expect(updateTask).toHaveBeenCalledWith(1, { estado: "pendiente" }));
+  });
+
   it("al pulsar una tarea se abre en grande con su contenido", async () => {
     getTasks.mockResolvedValue({ ok: true, tasks: tareas({}), usuario: YO });
 
@@ -330,6 +391,23 @@ describe("/equipo — panel de Marketing", () => {
         expect.objectContaining({ titulo: "Diseñar cartel" }),
       ),
     );
+  });
+
+  it("la vista semana pide un rango de 7 días y pinta 7 celdas", async () => {
+    await renderMarketing();
+    await screen.findByText(/Nada pendiente/);
+    await userEvent.click(screen.getByRole("button", { name: "Calendario" }));
+    await screen.findByRole("button", { name: /^Añadir tarea el 15 de/ });
+
+    getCalendario.mockClear();
+    await userEvent.click(screen.getByRole("button", { name: "Semana" }));
+
+    await waitFor(() => expect(getCalendario).toHaveBeenCalled());
+    const [desde, hasta] = getCalendario.mock.calls.at(-1) as [string, string];
+    const dias = (new Date(hasta).getTime() - new Date(desde).getTime()) / 86_400_000;
+    expect(dias).toBe(6);
+
+    expect(document.querySelectorAll(".mkt-dia-react").length).toBe(7);
   });
 
   it("lista los miembros del departamento con su carga", async () => {
@@ -467,6 +545,57 @@ describe("/equipo — panel de Marketing", () => {
     expect(await screen.findByText(/Aún no hay campañas/)).toBeInTheDocument();
   });
 
+  it("duplicar una campaña la recarga y abre la copia", async () => {
+    getCampaigns.mockResolvedValue({
+      ok: true,
+      campaigns: [
+        { id: 1, nombre: "Vuelta al cole", objetivo: "", total_contents: 2, total_tasks: 3, fecha: null },
+      ],
+    });
+    duplicateCampaign.mockResolvedValue({
+      ok: true,
+      campaign: {
+        id: 2,
+        nombre: "Vuelta al cole (copia)",
+        objetivo: "",
+        audiencia: "",
+        fecha: null,
+        contents: [],
+        tasks_sueltas: [],
+      },
+    });
+
+    await renderMarketing();
+    await screen.findByText(/Nada pendiente/);
+    await userEvent.click(screen.getByRole("button", { name: "Campañas" }));
+    await screen.findByText("Vuelta al cole");
+
+    await userEvent.click(screen.getByRole("button", { name: "Duplicar" }));
+
+    expect(duplicateCampaign).toHaveBeenCalledWith(1);
+    expect(await screen.findByRole("heading", { name: "Vuelta al cole (copia)" })).toBeInTheDocument();
+  });
+
+  it("un enlace con ?campaign= abre esa campaña directamente", async () => {
+    getCampaign.mockResolvedValue({
+      ok: true,
+      campaign: {
+        id: 1, nombre: "Vuelta al cole", objetivo: "", audiencia: "", fecha: null,
+        contents: [], tasks_sueltas: [],
+      },
+    });
+
+    render(
+      <MemoryRouter initialEntries={["/equipo?campaign=1"]}>
+        <EquipoPage />
+      </MemoryRouter>,
+    );
+    await userEvent.click(await screen.findByRole("button", { name: "Resumen" }));
+
+    expect(await screen.findByRole("heading", { name: "Vuelta al cole" })).toBeInTheDocument();
+    expect(getCampaign).toHaveBeenCalledWith(1);
+  });
+
   it("la navegación marca la pestaña activa", async () => {
     await renderMarketing();
     await screen.findByText(/Nada pendiente/);
@@ -503,6 +632,7 @@ describe("/equipo — panel de Eventos", () => {
       Promise.resolve({ ok: true, [recurso]: [] }),
     );
     updateFichaMiembro.mockReset().mockResolvedValue({ ok: true });
+    duplicateCampaign.mockReset();
     updateTask.mockReset().mockResolvedValue({ ok: true });
     createTask.mockReset().mockResolvedValue({ ok: true, task: TAREA });
   });
