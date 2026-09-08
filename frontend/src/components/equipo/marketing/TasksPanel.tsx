@@ -4,10 +4,12 @@ import { AvataresDeResponsables } from "./Avatares";
 import { TaskDialog } from "./TaskDialog";
 import { useApi } from "../DeptoApi";
 import { AlertBanner } from "../../feedback/AlertBanner";
+import { ContadorCaracteres } from "../../feedback/ContadorCaracteres";
 import { Esqueleto } from "../../feedback/Esqueleto";
 import { Badge } from "@/components/ui/badge";
 import type { ApiFailure } from "../../../types/api";
 import {
+  MAX_TITULO_LEN,
   PRIORIDADES,
   PRIORIDAD_LABEL,
   TASK_ESTADOS,
@@ -204,6 +206,7 @@ export function TasksPanel() {
               placeholder="Diseñar cartel de la charla"
               onChange={(event) => setTitulo(event.target.value)}
             />
+            <ContadorCaracteres valor={titulo} maximo={MAX_TITULO_LEN} />
           </div>
           <div className="mkt-form-fila-react">
             <div className="field-group-react">

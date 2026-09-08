@@ -3,6 +3,7 @@ import { Plus, Trash2 } from "lucide-react";
 
 import { useApi } from "../DeptoApi";
 import { AlertBanner } from "../../feedback/AlertBanner";
+import { ContadorCaracteres } from "../../feedback/ContadorCaracteres";
 import { AdjuntosDeContent } from "./AdjuntosDeContent";
 import { AvataresDeResponsables } from "./Avatares";
 import {
@@ -14,6 +15,8 @@ import {
 } from "@/components/ui/dialog";
 import type { ApiFailure } from "../../../types/api";
 import {
+  MAX_TEXTO_LARGO_LEN,
+  MAX_TITULO_LEN,
   PRIORIDADES,
   PRIORIDAD_LABEL,
   TASK_ESTADOS,
@@ -135,6 +138,7 @@ export function TaskDialog({ task, onCerrar, onGuardado }: Props) {
               value={titulo}
               onChange={(event) => setTitulo(event.target.value)}
             />
+            <ContadorCaracteres valor={titulo} maximo={MAX_TITULO_LEN} />
           </div>
 
           <div className="field-group-react">
@@ -146,6 +150,7 @@ export function TaskDialog({ task, onCerrar, onGuardado }: Props) {
               placeholder="Qué hay que hacer exactamente..."
               onChange={(event) => setDescripcion(event.target.value)}
             />
+            <ContadorCaracteres valor={descripcion} maximo={MAX_TEXTO_LARGO_LEN} />
           </div>
 
           <div className="mkt-form-fila-react">

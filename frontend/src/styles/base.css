@@ -140,3 +140,19 @@ p {
   0% { background-position: 100% 50%; }
   100% { background-position: 0% 50%; }
 }
+
+/* ---------- Contador de caracteres ---------- */
+
+.contador-caracteres-react {
+  display: block;
+  margin-top: 4px;
+  font-size: 0.76rem;
+  color: var(--color-text-muted);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.contador-caracteres-excedido-react {
+  color: var(--color-error-text);
+  font-weight: 700;
+}
