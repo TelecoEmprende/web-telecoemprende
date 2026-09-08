@@ -226,6 +226,11 @@ export function ContentEditor({ content, onCerrar, onGuardado }: Props) {
                   </option>
                 ))}
               </select>
+              {estado === "publicado" ? (
+                <p className="mkt-meta-react">
+                  Al guardar, sus tareas pendientes se marcarán como hechas.
+                </p>
+              ) : null}
             </div>
           </div>
 

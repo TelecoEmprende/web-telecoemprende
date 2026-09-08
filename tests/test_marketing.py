@@ -317,6 +317,41 @@ class ContentTests(MarketingTestCase):
         detalle = self.client.get(f"/api/marketing/contents/{content['id']}").get_json()
         self.assertEqual(detalle["content"]["estado"], "publicado")
 
+    def test_publicar_cierra_sus_tareas_pendientes(self):
+        content = self.crear_content(self.campaign["id"])
+        pendiente = self.client.post(
+            "/api/marketing/tasks",
+            json={"titulo": "Grabar", "content_id": content["id"]},
+        ).get_json()["task"]
+        ya_acabada = self.client.post(
+            "/api/marketing/tasks",
+            json={"titulo": "Guion", "content_id": content["id"], "estado": "acabado"},
+        ).get_json()["task"]
+
+        respuesta = self.client.put(
+            f"/api/marketing/contents/{content['id']}", json={"estado": "publicado"}
+        )
+        self.assertEqual(respuesta.status_code, 200)
+
+        tareas = {t["id"]: t for t in self.client.get("/api/marketing/tasks").get_json()["tasks"]}
+        self.assertEqual(tareas[pendiente["id"]]["estado"], "acabado")
+        # No pisa el updated_at de una que ya estaba acabada de antes.
+        self.assertEqual(tareas[ya_acabada["id"]]["estado"], "acabado")
+
+    def test_cambiar_a_otro_estado_no_toca_las_tareas(self):
+        content = self.crear_content(self.campaign["id"])
+        tarea = self.client.post(
+            "/api/marketing/tasks",
+            json={"titulo": "Grabar", "content_id": content["id"]},
+        ).get_json()["task"]
+
+        self.client.put(
+            f"/api/marketing/contents/{content['id']}", json={"estado": "en_revision"}
+        )
+
+        detalle = self.client.get(f"/api/marketing/tasks/{tarea['id']}").get_json()
+        self.assertEqual(detalle["task"]["estado"], "pendiente")
+
     def test_actualizacion_parcial_no_borra_lo_demas(self):
         content = self.crear_content(self.campaign["id"], script="Guion original")
 
