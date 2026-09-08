@@ -620,57 +620,6 @@ class CalendarioTests(MarketingTestCase):
         self.assertTrue(datos["desde"].endswith("-01"))
 
 
-class CalendarioEnlaceTests(MarketingTestCase):
-    """El enlace .ics no pasa por `@requiere_equipo` (no hay sesión posible
-    desde Google Calendar): la autorización va en la firma del token."""
-
-    def setUp(self):
-        super().setUp()
-        self.login()
-        campaign = self.crear_campaign()
-        self.crear_content(campaign["id"], fecha_publicacion="2026-10-15")
-
-    def test_el_enlace_respeta_el_esquema_del_proxy(self):
-        # Vercel (y Nginx en Docker) mandan X-Forwarded-Proto: sin ProxyFix,
-        # Flask no se fía y el enlace sale "http://", que Google Calendar
-        # rechaza en silencio al intentar suscribirse.
-        respuesta = self.client.get(
-            "/api/marketing/calendario/enlace",
-            headers={
-                "X-Forwarded-Proto": "https",
-                "X-Forwarded-Host": "telecoemprende.es",
-            },
-        )
-        url = respuesta.get_json()["url"]
-        self.assertTrue(url.startswith("https://telecoemprende.es/"), url)
-
-    def test_el_enlace_generado_funciona_sin_sesion(self):
-        url = self.client.get("/api/marketing/calendario/enlace").get_json()["url"]
-        ruta = url.split("localhost", 1)[1]
-
-        self.client.post("/api/equipo/logout")
-        respuesta = self.client.get(ruta)
-
-        self.assertEqual(respuesta.status_code, 200)
-        self.assertEqual(respuesta.mimetype, "text/calendar")
-        self.assertIn("BEGIN:VEVENT", respuesta.get_data(as_text=True))
-
-    def test_token_equivocado_rechazado(self):
-        respuesta = self.client.get(
-            "/api/marketing/calendario.ics?email=marketing@example.com&token=nopo"
-        )
-        self.assertEqual(respuesta.status_code, 401)
-
-    def test_email_sin_marketing_rechazado(self):
-        from backend.services.equipo import token_calendario
-
-        self.seed_acceso("solo.eventos@example.com", equipos=["eventos"])
-        token = token_calendario("solo.eventos@example.com")
-
-        respuesta = self.client.get(
-            f"/api/marketing/calendario.ics?email=solo.eventos@example.com&token={token}"
-        )
-        self.assertEqual(respuesta.status_code, 401)
 
 
 class MiembrosTests(MarketingTestCase):

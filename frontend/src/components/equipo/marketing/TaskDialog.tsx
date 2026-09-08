@@ -5,7 +5,7 @@ import { useApi } from "../DeptoApi";
 import { AlertBanner } from "../../feedback/AlertBanner";
 import { ContadorCaracteres } from "../../feedback/ContadorCaracteres";
 import { AdjuntosDeContent } from "./AdjuntosDeContent";
-import { AvataresDeResponsables } from "./Avatares";
+import { SelectorMiembros } from "./SelectorMiembros";
 import {
   Dialog,
   DialogContent,
@@ -60,7 +60,7 @@ export function TaskDialog({ task, onCerrar, onGuardado }: Props) {
   const [prioridad, setPrioridad] = useState<Prioridad>(task.prioridad);
   const [deadline, setDeadline] = useState(task.deadline ?? "");
   const [hora, setHora] = useState(task.hora);
-  const [responsables, setResponsables] = useState(comoLineas(task.responsables));
+  const [responsables, setResponsables] = useState<string[]>(task.responsables);
   const [tags, setTags] = useState(task.tags.join(", "));
   const [enlaces, setEnlaces] = useState(comoLineas(task.enlaces));
   const [checklist, setChecklist] = useState<ChecklistItem[]>(task.checklist);
@@ -98,7 +98,7 @@ export function TaskDialog({ task, onCerrar, onGuardado }: Props) {
         prioridad,
         deadline: deadline || null,
         hora,
-        responsables: desdeLineas(responsables),
+        responsables,
         tags: tags.split(",").map((t) => t.trim()).filter(Boolean),
         enlaces: desdeLineas(enlaces),
         checklist,
@@ -274,19 +274,11 @@ export function TaskDialog({ task, onCerrar, onGuardado }: Props) {
           </div>
 
           <div className="field-group-react">
-            <label htmlFor="td-responsables">Responsables (uno por línea)</label>
-            {desdeLineas(responsables).length > 0 ? (
-              <AvataresDeResponsables
-                responsables={desdeLineas(responsables)}
-                className="mkt-avatares-dialogo-react"
-              />
-            ) : null}
-            <textarea
+            <label htmlFor="td-responsables">Responsables</label>
+            <SelectorMiembros
               id="td-responsables"
-              rows={2}
-              value={responsables}
-              placeholder="abril@telecoemprende.es"
-              onChange={(event) => setResponsables(event.target.value)}
+              seleccionados={responsables}
+              onCambiar={setResponsables}
             />
           </div>
 

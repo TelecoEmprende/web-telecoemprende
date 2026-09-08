@@ -3,7 +3,6 @@ import { useCallback, useEffect, useRef, useState, type CSSProperties } from "re
 import { useApi } from "../DeptoApi";
 import { AlertBanner } from "../../feedback/AlertBanner";
 import { Esqueleto } from "../../feedback/Esqueleto";
-import { SuscribirCalendario } from "../SuscribirCalendario";
 import { AvataresDeResponsables } from "./Avatares";
 import type { ApiFailure } from "../../../types/api";
 import type { CalendarioItem } from "../../../types/marketing";
@@ -158,7 +157,7 @@ type Props = {
 };
 
 export function CalendarPanel({ onAbrirCampaign }: Props) {
-  const { createTask, getCalendario, getEnlaceCalendario } = useApi();
+  const { createTask, getCalendario } = useApi();
 
   const [cursor, setCursor] = useState(() => {
     const hoy = new Date();
@@ -394,7 +393,6 @@ export function CalendarPanel({ onAbrirCampaign }: Props) {
           <button type="button" className="mkt-btn-mini-react" onClick={() => mover(1)}>
             Siguiente →
           </button>
-          <SuscribirCalendario obtenerEnlace={getEnlaceCalendario} onError={setError} />
         </div>
       </header>
 

@@ -3,6 +3,7 @@ import { FormEvent, useEffect, useRef, useState } from "react";
 import { useApi } from "../DeptoApi";
 import { AlertBanner } from "../../feedback/AlertBanner";
 import { ContadorCaracteres } from "../../feedback/ContadorCaracteres";
+import { SelectorMiembros } from "./SelectorMiembros";
 import type { ApiFailure } from "../../../types/api";
 import {
   CONTENT_ESTADOS,
@@ -32,6 +33,15 @@ function desdeLineas(texto: string) {
     .filter(Boolean);
 }
 
+/** Mismo conjunto de personas, sin que importe el orden -- elegirlas del
+ *  picker puede reordenarlas (quitar y volver a poner mueve al final) sin
+ *  que eso cuente como un cambio real. */
+function mismosResponsables(a: string[], b: string[]) {
+  if (a.length !== b.length) return false;
+  const ordenados = [...b].sort();
+  return [...a].sort().every((email, i) => email === ordenados[i]);
+}
+
 /**
  * Editor sencillo, no un editor tipo Notion (§33 del encargo). Campos planos,
  * un guardar, y fuera.
@@ -49,7 +59,7 @@ export function ContentEditor({ content, onCerrar, onGuardado }: Props) {
   const [cta, setCta] = useState(content.cta);
   const [hashtags, setHashtags] = useState(content.hashtags);
   const [ideaVisual, setIdeaVisual] = useState(content.idea_visual);
-  const [responsables, setResponsables] = useState(comoLineas(content.responsables));
+  const [responsables, setResponsables] = useState<string[]>(content.responsables);
   const [enlaces, setEnlaces] = useState(comoLineas(content.enlaces));
 
   const [isSaving, setIsSaving] = useState(false);
@@ -71,7 +81,7 @@ export function ContentEditor({ content, onCerrar, onGuardado }: Props) {
     cta !== content.cta ||
     hashtags !== content.hashtags ||
     ideaVisual !== content.idea_visual ||
-    responsables !== comoLineas(content.responsables) ||
+    !mismosResponsables(responsables, content.responsables) ||
     enlaces !== comoLineas(content.enlaces);
 
   function intentarCerrar() {
@@ -134,7 +144,7 @@ export function ContentEditor({ content, onCerrar, onGuardado }: Props) {
         cta,
         hashtags,
         idea_visual: ideaVisual,
-        responsables: desdeLineas(responsables),
+        responsables,
         enlaces: desdeLineas(enlaces),
       });
       onGuardado();
@@ -294,13 +304,11 @@ export function ContentEditor({ content, onCerrar, onGuardado }: Props) {
 
           <div className="mkt-form-fila-react">
             <div className="field-group-react">
-              <label htmlFor="ce-responsables">Responsables (uno por línea)</label>
-              <textarea
+              <label htmlFor="ce-responsables">Responsables</label>
+              <SelectorMiembros
                 id="ce-responsables"
-                rows={3}
-                value={responsables}
-                placeholder="abril@alumnos.upm.es"
-                onChange={(event) => setResponsables(event.target.value)}
+                seleccionados={responsables}
+                onCambiar={setResponsables}
               />
             </div>
             <div className="field-group-react">
