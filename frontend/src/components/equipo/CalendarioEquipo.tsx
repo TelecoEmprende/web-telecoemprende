@@ -37,6 +37,17 @@ function cuandoTarea(deadline: string | null) {
   return formatearFechaCorta(deadline);
 }
 
+/** "Martes 8 de septiembre", con mayúscula inicial -- toLocaleDateString la
+ *  da en minúscula. */
+function tituloDeHoy() {
+  const texto = new Date().toLocaleDateString("es-ES", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+  });
+  return texto.charAt(0).toUpperCase() + texto.slice(1);
+}
+
 /** Lunes de la semana de `fecha`, para la tira de "esta semana" encima de
  *  la agenda -- los 7 días siempre, sin huecos de mes que rellenar. */
 function celdasDeLaSemana(fecha: Date) {
@@ -114,7 +125,8 @@ export function CalendarioEquipo() {
   });
   const [tareas, setTareas] = useState<Task[]>([]);
   const [email, setEmail] = useState("");
-  const [multiEquipo, setMultiEquipo] = useState(false);
+  const [teams, setTeams] = useState<string[]>([]);
+  const multiEquipo = teams.length > 1;
 
   useEffect(() => {
     let active = true;
@@ -136,7 +148,7 @@ export function CalendarioEquipo() {
       .then((sesion) => {
         if (!active) return;
         setEmail(sesion.email);
-        setMultiEquipo(sesion.teams.length > 1);
+        setTeams(sesion.teams);
         if (sesion.teams.length > 1) {
           getMisTareas()
             .then((respuesta) => {
@@ -187,6 +199,17 @@ export function CalendarioEquipo() {
   }, [eventos]);
 
   const hoy = iso(new Date());
+
+  // Porcentaje del día ya pasado, para el anillo del saludo: es lo único que
+  // el mockup no sacaba de ningún dato real, así que se sustituye por algo
+  // que sí lo es -- la hora del día -- en vez de inventar una métrica.
+  const ahora = new Date();
+  const progresoDia = Math.round(((ahora.getHours() * 60 + ahora.getMinutes()) / 1440) * 100);
+
+  const cosasPorDelante = tareas.filter((t) => {
+    const dias = diasHasta(t.deadline);
+    return dias === 0 || dias === 1;
+  }).length;
 
   function mover(meses: number) {
     setCursor((actual) => new Date(actual.getFullYear(), actual.getMonth() + meses, 1));
@@ -304,8 +327,22 @@ export function CalendarioEquipo() {
 
   return (
     <>
-      <header className="mkt-panel-header-react mkt-saludo-react">
-        <h3>Hola{email ? `, ${etiquetaDe(email)}` : ""} 👋</h3>
+      <header className="mkt-saludo-react">
+        <div>
+          <h3>Hola{email ? `, ${etiquetaDe(email)}` : ""} 👋</h3>
+          <p className="mkt-meta-react">
+            {tituloDeHoy()} — {cosasPorDelante === 0 ? "nada" : cosasPorDelante}{" "}
+            {cosasPorDelante === 1 ? "cosa" : "cosas"} por delante hoy y mañana
+          </p>
+        </div>
+        <div
+          className="mkt-anillo-react"
+          style={{
+            background: `conic-gradient(var(--color-orange) ${progresoDia}%, var(--color-border) 0)`,
+          }}
+        >
+          <span>{progresoDia}%</span>
+        </div>
       </header>
 
       <div className="mkt-semana-tira-react">
@@ -335,6 +372,9 @@ export function CalendarioEquipo() {
         <section className="mkt-panel-react mkt-agenda-panel-react">
           <header className="mkt-panel-header-react">
             <h3>Tu agenda</h3>
+            <span className="mkt-meta-react">
+              {teams.map((t) => DEPTO_LABEL[t] ?? t).join(" + ")}
+            </span>
           </header>
 
           {tareas.length === 0 ? (
@@ -365,6 +405,19 @@ export function CalendarioEquipo() {
               })}
             </ul>
           )}
+
+          {tareas.length > 0 ? (
+            <div className="mkt-agenda-leyenda-react">
+              {[...new Set(tareas.map((t) => t.departamento))].map((depto) => (
+                <span key={depto} className={`mkt-agenda-leyenda-punto-react ${DEPTO_CLASE[depto] ?? ""}`}>
+                  {DEPTO_LABEL[depto] ?? depto}
+                </span>
+              ))}
+              <span className="mkt-agenda-leyenda-punto-react mkt-agenda-leyenda-vencida-react">
+                Vencida
+              </span>
+            </div>
+          ) : null}
         </section>
 
         <div className="mkt-inicio-lateral-react">
