@@ -57,6 +57,11 @@ RESEND_FROM_NAME = os.environ.get("RESEND_FROM_NAME", "TelecoEmprende")
 # resto sigue funcionando igual (ver services/slack.py).
 SLACK_WEBHOOK_URL = os.environ.get("SLACK_WEBHOOK_URL", "")
 
+# Secreto que Vercel Cron manda como "Authorization: Bearer <esto>" al avisar
+# de deadlines de mañana (ver vercel.json > crons y api/cron.py). Vacío en
+# local a propósito: sin él, esa ruta rechaza cualquier petición.
+CRON_SECRET = os.environ.get("CRON_SECRET", "")
+
 # --- Workspace de equipo: Marketing (campañas, contenidos, tareas) ---
 # Ciclo de vida de una tarea: trabajo que alguien tiene que hacer.
 TASK_ESTADOS = ("pendiente", "en_progreso", "por_revisar", "acabado")

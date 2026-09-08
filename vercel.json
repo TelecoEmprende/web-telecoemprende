@@ -34,6 +34,9 @@
       ]
     }
   },
+  "crons": [
+    { "path": "/api/cron/avisar-deadlines", "schedule": "0 8 * * *" }
+  ],
   "rewrites": [
     { "source": "/api/(.*)", "destination": { "service": "backend" } },
     { "source": "/demo", "destination": { "service": "demo" } },
