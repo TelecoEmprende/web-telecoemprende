@@ -13,6 +13,7 @@ os.environ["DATABASE_URL"] = os.environ.get(
     "TEST_DATABASE_URL",
     "postgresql://telecoemprende:telecoemprende@localhost:5432/telecoemprende_test",
 )
+os.environ["CRON_SECRET"] = "test-cron-secret"
 
 import app  # noqa: E402
 import backend.services.equipo as equipo_service  # noqa: E402

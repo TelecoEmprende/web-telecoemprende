@@ -2,6 +2,8 @@ import { FormEvent, useCallback, useEffect, useState } from "react";
 
 import { useApi } from "../DeptoApi";
 import { AlertBanner } from "../../feedback/AlertBanner";
+import { ContadorCaracteres } from "../../feedback/ContadorCaracteres";
+import { Esqueleto } from "../../feedback/Esqueleto";
 import { AdjuntosDeContent } from "./AdjuntosDeContent";
 import { ContentEditor } from "./ContentEditor";
 import { Badge } from "@/components/ui/badge";
@@ -9,6 +11,8 @@ import type { ApiFailure } from "../../../types/api";
 import {
   CONTENT_ESTADOS,
   CONTENT_ESTADO_LABEL,
+  MAX_TEXTO_LARGO_LEN,
+  MAX_TITULO_LEN,
   TASK_ESTADO_LABEL,
   formatearFecha,
   type CampaignDetalle,
@@ -155,6 +159,7 @@ export function CampaignsPanel({ campaignInicial, onCampaignAbierta }: Props) {
     createTask,
     deleteCampaign,
     deleteContent,
+    duplicateCampaign,
     getCampaign,
     getCampaigns,
     updateCampaign,
@@ -169,6 +174,8 @@ export function CampaignsPanel({ campaignInicial, onCampaignAbierta }: Props) {
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
   const [editandoCampaign, setEditandoCampaign] = useState(false);
   const [confirmando, setConfirmando] = useState<number | null>(null);
+  const [duplicando, setDuplicando] = useState<number | null>(null);
+  const [enlaceCopiado, setEnlaceCopiado] = useState<number | null>(null);
   const [confirmandoContent, setConfirmandoContent] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -271,6 +278,30 @@ export function CampaignsPanel({ campaignInicial, onCampaignAbierta }: Props) {
     }
   }
 
+  async function copiarEnlace(campaign: CampaignDetalle) {
+    const url = `${window.location.origin}/equipo?campaign=${campaign.id}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      setEnlaceCopiado(campaign.id);
+      window.setTimeout(() => setEnlaceCopiado(null), 2000);
+    } catch {
+      setError("No se pudo copiar el enlace. Cópialo a mano: " + url);
+    }
+  }
+
+  async function duplicarCampaign(campaign: CampaignResumen | CampaignDetalle) {
+    setDuplicando(campaign.id);
+    try {
+      const respuesta = await duplicateCampaign(campaign.id);
+      await cargarCampaigns();
+      setDetalle(respuesta.campaign);
+    } catch (err) {
+      setError(mensajeDeError(err, "No se pudo duplicar la campaña."));
+    } finally {
+      setDuplicando(null);
+    }
+  }
+
   async function añadirContent() {
     if (!detalle) return;
     try {
@@ -347,7 +378,7 @@ export function CampaignsPanel({ campaignInicial, onCampaignAbierta }: Props) {
   }
 
   if (isLoading) {
-    return <p className="mkt-cargando-react">Cargando campañas...</p>;
+    return <Esqueleto filas={3} alto={92} />;
   }
 
   // --- Detalle de una campaña ---
@@ -379,6 +410,7 @@ export function CampaignsPanel({ campaignInicial, onCampaignAbierta }: Props) {
                 value={nombre}
                 onChange={(event) => setNombre(event.target.value)}
               />
+              <ContadorCaracteres valor={nombre} maximo={MAX_TITULO_LEN} />
             </div>
             <div className="field-group-react">
               <label htmlFor="mkt-edit-objetivo">Objetivo</label>
@@ -388,6 +420,7 @@ export function CampaignsPanel({ campaignInicial, onCampaignAbierta }: Props) {
                 value={objetivo}
                 onChange={(event) => setObjetivo(event.target.value)}
               />
+              <ContadorCaracteres valor={objetivo} maximo={MAX_TEXTO_LARGO_LEN} />
             </div>
             <div className="mkt-form-fila-react">
               <div className="field-group-react">
@@ -398,6 +431,7 @@ export function CampaignsPanel({ campaignInicial, onCampaignAbierta }: Props) {
                   value={audiencia}
                   onChange={(event) => setAudiencia(event.target.value)}
                 />
+                <ContadorCaracteres valor={audiencia} maximo={MAX_TEXTO_LARGO_LEN} />
               </div>
               <div className="field-group-react">
                 <label htmlFor="mkt-edit-fecha">Fecha</label>
@@ -440,6 +474,21 @@ export function CampaignsPanel({ campaignInicial, onCampaignAbierta }: Props) {
                 onClick={empezarAEditarCampaign}
               >
                 Editar campaña
+              </button>
+              <button
+                type="button"
+                className="mkt-btn-mini-react"
+                disabled={duplicando === detalle.id}
+                onClick={() => void duplicarCampaign(detalle)}
+              >
+                {duplicando === detalle.id ? "Duplicando..." : "Duplicar"}
+              </button>
+              <button
+                type="button"
+                className="mkt-btn-mini-react"
+                onClick={() => void copiarEnlace(detalle)}
+              >
+                {enlaceCopiado === detalle.id ? "Enlace copiado" : "Copiar enlace"}
               </button>
               <button
                 type="button"
@@ -642,6 +691,7 @@ export function CampaignsPanel({ campaignInicial, onCampaignAbierta }: Props) {
               placeholder="Cómo empezar a invertir"
               onChange={(event) => setNombre(event.target.value)}
             />
+            <ContadorCaracteres valor={nombre} maximo={MAX_TITULO_LEN} />
           </div>
           <div className="field-group-react">
             <label htmlFor="mkt-objetivo">Objetivo</label>
@@ -652,6 +702,7 @@ export function CampaignsPanel({ campaignInicial, onCampaignAbierta }: Props) {
               placeholder="Llenar la charla del 15 de octubre"
               onChange={(event) => setObjetivo(event.target.value)}
             />
+            <ContadorCaracteres valor={objetivo} maximo={MAX_TEXTO_LARGO_LEN} />
           </div>
           <div className="mkt-form-fila-react">
             <div className="field-group-react">
@@ -663,6 +714,7 @@ export function CampaignsPanel({ campaignInicial, onCampaignAbierta }: Props) {
                 placeholder="Estudiantes de la UPM"
                 onChange={(event) => setAudiencia(event.target.value)}
               />
+              <ContadorCaracteres valor={audiencia} maximo={MAX_TEXTO_LARGO_LEN} />
             </div>
             <div className="field-group-react">
               <label htmlFor="mkt-fecha">Fecha</label>
@@ -702,6 +754,14 @@ export function CampaignsPanel({ campaignInicial, onCampaignAbierta }: Props) {
                   {campaign.total_contents} contenidos · {campaign.total_tasks} tareas
                   {campaign.fecha ? ` · ${formatearFecha(campaign.fecha, true)}` : ""}
                 </span>
+              </button>
+              <button
+                type="button"
+                className="mkt-btn-mini-react"
+                disabled={duplicando === campaign.id}
+                onClick={() => void duplicarCampaign(campaign)}
+              >
+                {duplicando === campaign.id ? "Duplicando..." : "Duplicar"}
               </button>
             </li>
           ))}

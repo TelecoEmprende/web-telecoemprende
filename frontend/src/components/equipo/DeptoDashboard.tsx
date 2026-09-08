@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 
 import { DeptoProvider } from "./DeptoApi";
 import { prefijoDe, type Seccion } from "./EquipoSidebar";
@@ -37,6 +38,7 @@ type Props = {
  */
 export function DeptoDashboard({ depto, seccion, onSeccion }: Props) {
   const [campaignInicial, setCampaignInicial] = useState<number | null>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
   const p = prefijoDe(depto);
 
   /** Desde el calendario se salta a la campaña del elemento tocado, para que
@@ -45,6 +47,29 @@ export function DeptoDashboard({ depto, seccion, onSeccion }: Props) {
     setCampaignInicial(campaignId);
     onSeccion(`${p}-campanas` as Seccion);
   }
+
+  // Enlace compartible (ver "Copiar enlace" en CampaignsPanel): al entrar en
+  // este departamento con ?campaign=<id> en la URL, se abre directo. No
+  // resuelve el departamento por sí solo -- si el enlace es de una campaña
+  // de otro departamento, aquí no aparece -- pero evita tener que explicar
+  // "entra a Marketing y búscala" para quien ya está en el suyo.
+  useEffect(() => {
+    const campaignId = Number(searchParams.get("campaign"));
+    if (!campaignId) return;
+
+    abrirCampaign(campaignId);
+    setSearchParams(
+      (actuales) => {
+        const siguientes = new URLSearchParams(actuales);
+        siguientes.delete("campaign");
+        return siguientes;
+      },
+      { replace: true },
+    );
+    // Solo al montar: es la URL con la que se llegó, no algo a repetir en
+    // cada cambio de sección.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <DeptoProvider value={depto}>

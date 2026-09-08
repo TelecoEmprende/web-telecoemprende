@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { useApi, useDepto } from "../DeptoApi";
 import { AlertBanner } from "../../feedback/AlertBanner";
+import { Esqueleto } from "../../feedback/Esqueleto";
 import { AvatarResponsable, etiquetaDe } from "./Avatares";
 import { MemberDialog } from "./MemberDialog";
 import type { ApiFailure } from "../../../types/api";
@@ -70,7 +71,7 @@ export function MembersPanel() {
     [miembros, filtro],
   );
 
-  if (isLoading) return <p className="mkt-cargando-react">Cargando miembros...</p>;
+  if (isLoading) return <Esqueleto filas={4} alto={68} />;
 
   return (
     <section className="mkt-panel-react">
