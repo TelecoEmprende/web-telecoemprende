@@ -1,3 +1,5 @@
+import { Button } from "../ui/button";
+
 const EVENTO_LABELS: Record<string, string> = {
   "telecoemprende-2026-27": "Telecomprende inscripciones 26-27",
   "charla-santi-y-pablo": "Charla Santi y Pablo",
@@ -29,53 +31,75 @@ export function AdminToolbar({
     : "/api/admin/download";
 
   return (
-    <div className="admin-toolbar-react">
-      <div className="admin-toolbar-top-react">
+    <div className="mt-2 mb-5">
+      <div className="mb-5 flex items-start justify-between gap-[18px] max-[720px]:mb-[18px] max-[720px]:flex-col">
         <div>
-          <h1>Inscripciones registradas</h1>
-          <p>
+          <h1 className="mb-2.5 text-[2rem] font-black tracking-[-0.04em] max-[720px]:text-[1.7rem]">
+            Inscripciones registradas
+          </h1>
+          <p className="leading-[1.7] text-muted-foreground max-[720px]:text-[0.96rem]">
             Total actual: <strong>{total}</strong>
           </p>
         </div>
 
-        <div className="admin-actions-react">
-          <a href={downloadUrl} className="secondary-btn-react">
-            Descargar Excel
-          </a>
-          <button
+        <div className="flex flex-wrap items-center gap-3.5 max-[720px]:w-full">
+          <Button asChild variant="outline" size="lg" className="h-12 px-[18px] font-extrabold max-[720px]:w-full">
+            <a href={downloadUrl}>Descargar Excel</a>
+          </Button>
+          <Button
             type="button"
-            className="secondary-btn-react secondary-btn-light-react"
+            variant="outline"
+            size="lg"
+            className="h-12 bg-[#f7f9fc] px-[18px] font-extrabold max-[720px]:w-full"
             onClick={() => void onLogout()}
             disabled={isLoggingOut}
           >
             {isLoggingOut ? "Cerrando..." : "Cerrar sesión"}
-          </button>
+          </Button>
         </div>
       </div>
 
-      <div className="admin-evento-tabs-react" role="tablist" aria-label="Evento">
-        <button
-          type="button"
-          role="tab"
-          aria-selected={eventoActivo === ""}
-          className={eventoActivo === "" ? "admin-tab-react admin-tab-active-react" : "admin-tab-react"}
+      <div className="flex flex-wrap gap-2" role="tablist" aria-label="Evento">
+        <EventoTab
+          activo={eventoActivo === ""}
           onClick={() => onEventoChange("")}
-        >
-          Todos los eventos
-        </button>
+          label="Todos los eventos"
+        />
         {eventos.map((ev) => (
-          <button
+          <EventoTab
             key={ev}
-            type="button"
-            role="tab"
-            aria-selected={eventoActivo === ev}
-            className={eventoActivo === ev ? "admin-tab-react admin-tab-active-react" : "admin-tab-react"}
+            activo={eventoActivo === ev}
             onClick={() => onEventoChange(ev)}
-          >
-            {eventoLabel(ev)}
-          </button>
+            label={eventoLabel(ev)}
+          />
         ))}
       </div>
     </div>
+  );
+}
+
+function EventoTab({
+  activo,
+  label,
+  onClick,
+}: {
+  activo: boolean;
+  label: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      role="tab"
+      aria-selected={activo}
+      className={`cursor-pointer rounded-full border px-4 py-2.5 text-sm font-extrabold ${
+        activo
+          ? "border-[var(--color-navy)] bg-[var(--color-navy)] text-white"
+          : "border-[#d7dfeb] bg-white text-muted-foreground"
+      }`}
+      onClick={onClick}
+    >
+      {label}
+    </button>
   );
 }
