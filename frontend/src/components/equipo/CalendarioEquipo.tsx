@@ -1,9 +1,41 @@
 import { useMemo, useState, useEffect } from "react";
 
-import { getEnlaceCalendarioGeneral, getEquipoCalendario } from "../../api/equipo";
+import {
+  getEnlaceCalendarioGeneral,
+  getEquipoCalendario,
+  getEquipoSession,
+  getMisTareas,
+} from "../../api/equipo";
 import { AlertBanner } from "../feedback/AlertBanner";
+import { etiquetaDe } from "./marketing/Avatares";
 import { SuscribirCalendario } from "./SuscribirCalendario";
 import type { EventoCalendario } from "../../types/equipo";
+import { diasHasta, formatearFecha as formatearFechaCorta, type Task } from "../../types/marketing";
+
+const DEPTO_LABEL: Record<string, string> = {
+  marketing: "Marketing",
+  eventos: "Eventos",
+  ingenieria: "Ingeniería",
+};
+
+/** Color por departamento: el hilo visual de la agenda en vez de repetir la
+ *  etiqueta en cada fila. */
+const DEPTO_CLASE: Record<string, string> = {
+  marketing: "mkt-agenda-marketing-react",
+  eventos: "mkt-agenda-eventos-react",
+  ingenieria: "mkt-agenda-ingenieria-react",
+};
+
+/** "Ayer" / "Hoy" / "Mañana", y a partir de ahí la fecha -- para no decir
+ *  siempre "9 sept" cuando "mañana" se lee más rápido. */
+function cuandoTarea(deadline: string | null) {
+  const dias = diasHasta(deadline);
+  if (dias === null) return "Sin fecha";
+  if (dias < 0) return dias === -1 ? "Ayer" : `Hace ${Math.abs(dias)} días`;
+  if (dias === 0) return "Hoy";
+  if (dias === 1) return "Mañana";
+  return formatearFechaCorta(deadline);
+}
 
 const DIAS = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
 const MESES = [
@@ -68,6 +100,9 @@ export function CalendarioEquipo() {
     const hoy = new Date();
     return new Date(hoy.getFullYear(), hoy.getMonth(), 1);
   });
+  const [tareas, setTareas] = useState<Task[]>([]);
+  const [email, setEmail] = useState("");
+  const [multiEquipo, setMultiEquipo] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -80,6 +115,28 @@ export function CalendarioEquipo() {
       })
       .catch(() => {
         // Sin calendario disponible: la sección se queda con su estado vacío.
+      });
+
+    // "Tu agenda" solo aporta si hay más de un departamento que juntar: con
+    // uno solo, el resumen de ese departamento ya lo cuenta todo, y
+    // duplicarlo aquí sería la misma lista dos veces.
+    getEquipoSession()
+      .then((sesion) => {
+        if (!active) return;
+        setEmail(sesion.email);
+        setMultiEquipo(sesion.teams.length > 1);
+        if (sesion.teams.length > 1) {
+          getMisTareas()
+            .then((respuesta) => {
+              if (active) setTareas(respuesta.tareas);
+            })
+            .catch(() => {
+              // Sin agenda disponible: la sección no aparece, sin más.
+            });
+        }
+      })
+      .catch(() => {
+        // Sin sesión legible no hay nombre que saludar ni agenda que pedir.
       });
 
     return () => {
@@ -117,6 +174,43 @@ export function CalendarioEquipo() {
 
   return (
     <>
+      {multiEquipo ? (
+        <section className="mkt-panel-react mkt-agenda-panel-react">
+          <header className="mkt-panel-header-react">
+            <h3>Hola{email ? `, ${etiquetaDe(email)}` : ""} 👋</h3>
+          </header>
+
+          {tareas.length === 0 ? (
+            <p className="mkt-vacio-react">
+              Nada pendiente en ningún departamento ahora mismo.
+            </p>
+          ) : (
+            <ul className="mkt-agenda-react">
+              {tareas.map((tarea) => {
+                const dias = diasHasta(tarea.deadline);
+                const vencida = dias !== null && dias < 0;
+                return (
+                  <li
+                    key={`${tarea.departamento}-${tarea.id}`}
+                    className={`mkt-agenda-item-react ${DEPTO_CLASE[tarea.departamento] ?? ""}`}
+                  >
+                    <span
+                      className={`mkt-agenda-cuando-react${vencida ? " mkt-agenda-vencida-react" : ""}`}
+                    >
+                      {cuandoTarea(tarea.deadline)}
+                    </span>
+                    <span className="mkt-agenda-titulo-react">{tarea.titulo}</span>
+                    <span className="mkt-meta-react">
+                      {DEPTO_LABEL[tarea.departamento] ?? tarea.departamento}
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </section>
+      ) : null}
+
       <section className="mkt-panel-react">
         {error ? <AlertBanner variant="error" message={error} /> : null}
 

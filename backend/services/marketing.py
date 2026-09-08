@@ -435,6 +435,31 @@ def tareas_que_vencen(fecha: date) -> list[dict]:
             return [_serializar(f) for f in cur.fetchall()]
 
 
+def mis_tareas(email: str) -> list[dict]:
+    """Las tareas abiertas de una persona, de cualquier departamento al que
+    pertenezca -- para el "Inicio" de /equipo, que es de toda la sesión y no
+    de un departamento. Quien está en uno solo ve lo mismo que en el
+    resumen de su departamento; quien está en varios los ve juntos, sin
+    entrar uno por uno.
+    """
+    with _get_connection() as conn:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(
+                """
+                SELECT t.*,
+                       co.titulo AS content_titulo,
+                       c.nombre AS campaign_nombre
+                FROM tasks t
+                LEFT JOIN contents co ON co.id = t.content_id
+                LEFT JOIN campaigns c ON c.id = t.campaign_id
+                WHERE %s = ANY(t.responsables) AND t.estado != 'acabado'
+                ORDER BY COALESCE(t.deadline, '9999-12-31'::date), t.id
+                """,
+                (email,),
+            )
+            return [_serializar(f) for f in cur.fetchall()]
+
+
 def obtener_task(task_id: int, departamento: str) -> dict | None:
     with _get_connection() as conn:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:

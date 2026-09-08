@@ -11,6 +11,7 @@ import re
 import secrets
 from datetime import timedelta
 from pathlib import Path
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 from backend.api.admin import admin_api
 from backend.api.cron import cron_api
@@ -27,6 +28,11 @@ from backend.schemas import build_response
 from backend.services.registrations import crear_excel_si_no_existe
 
 app = Flask(__name__)
+# Vercel (y Nginx en Docker) hacen de proxy delante: sin esto, Flask no se fía
+# de X-Forwarded-Proto y `url_for(..., _external=True)` genera enlaces
+# `http://` en vez de `https://` -- justo el enlace de suscripción del
+# calendario, que Google Calendar rechaza en silencio si no es https.
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
 app.register_blueprint(public_api)
 app.register_blueprint(admin_api)
 app.register_blueprint(equipo_api)

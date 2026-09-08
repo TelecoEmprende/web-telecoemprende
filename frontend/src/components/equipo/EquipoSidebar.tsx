@@ -1,6 +1,7 @@
 import type { LucideIcon } from "lucide-react";
 import {
   CalendarDays,
+  ChevronRight,
   ExternalLink,
   FolderOpen,
   Handshake,
@@ -16,8 +17,10 @@ import {
   Users2,
   Wallet,
 } from "lucide-react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
   Sidebar,
   SidebarContent,
@@ -216,6 +219,33 @@ export function EquipoSidebar({
   // Radix de en medio, que se tragaba clics.
   const ayuda = (label: string) => (state === "collapsed" ? label : undefined);
 
+  // Con dos o tres departamentos, la lista completa no cabe sin scroll y ni
+  // siquiera se ve cuáles hay. Cada grupo de departamento se puede plegar a
+  // solo su título; el del departamento donde se está arranca abierto, y se
+  // reabre solo si `seccion` se mueve a otro (por ejemplo, un enlace directo).
+  const [expandido, setExpandido] = useState<Set<Team>>(() => {
+    // Al entrar por "Inicio" (`seccion` es "club") todavía no hay ningún
+    // departamento activo: sin este `?? teams[0]`, los grupos arrancarían
+    // todos plegados y ni el primer "Resumen" se vería sin tocar nada antes.
+    const actual = teamDe(seccion) ?? teams[0] ?? null;
+    return actual ? new Set([actual]) : new Set();
+  });
+
+  useEffect(() => {
+    const actual = teamDe(seccion);
+    if (!actual) return;
+    setExpandido((previo) => (previo.has(actual) ? previo : new Set(previo).add(actual)));
+  }, [seccion]);
+
+  function alternar(team: Team) {
+    setExpandido((previo) => {
+      const siguiente = new Set(previo);
+      if (siguiente.has(team)) siguiente.delete(team);
+      else siguiente.add(team);
+      return siguiente;
+    });
+  }
+
   // En móvil el sidebar es un cajón (Sheet) que se queda abierto tras elegir
   // sección si no se cierra a mano: habría que tocar dos veces para ver el
   // panel elegido. En escritorio no hay cajón que cerrar.
@@ -224,33 +254,74 @@ export function EquipoSidebar({
     if (isMobile) setOpenMobile(false);
   }
 
-  function grupo(titulo: string, items: Item[], vp = false) {
+  function contenidoDe(items: Item[]) {
+    return (
+      <SidebarGroupContent>
+        <SidebarMenu>
+          {items.map(({ id, label, icono: Icono }) => (
+            <SidebarMenuItem key={id}>
+              <SidebarMenuButton
+                isActive={seccion === id}
+                aria-current={seccion === id ? "page" : undefined}
+                onClick={() => elegir(id)}
+                tooltip={ayuda(label)}
+              >
+                <Icono />
+                <span>{label}</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          ))}
+        </SidebarMenu>
+      </SidebarGroupContent>
+    );
+  }
+
+  /** Sin `team` (el grupo Club), el grupo siempre está abierto: son dos
+   *  enlaces, no hace falta plegarlos y es el punto de partida de todos. */
+  function grupo(titulo: string, items: Item[], team: Team | null = null, vp = false) {
     if (items.length === 0) return null;
 
+    if (team === null) {
+      return (
+        <SidebarGroup key={titulo}>
+          <SidebarGroupLabel>{titulo}</SidebarGroupLabel>
+          {contenidoDe(items)}
+        </SidebarGroup>
+      );
+    }
+
+    // Plegado a iconos no hay nada que plegar -- ya es solo una columna de
+    // iconos -- así que se fuerza abierto y no se pierde nada al colapsar
+    // el sidebar entero.
+    const abierto = state === "collapsed" || expandido.has(team);
+
     return (
-      <SidebarGroup key={titulo}>
-        <SidebarGroupLabel>
-          {titulo}
-          {vp ? " · VP" : ""}
-        </SidebarGroupLabel>
-        <SidebarGroupContent>
-          <SidebarMenu>
-            {items.map(({ id, label, icono: Icono }) => (
-              <SidebarMenuItem key={id}>
-                <SidebarMenuButton
-                  isActive={seccion === id}
-                  aria-current={seccion === id ? "page" : undefined}
-                  onClick={() => elegir(id)}
-                  tooltip={ayuda(label)}
-                >
-                  <Icono />
-                  <span>{label}</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            ))}
-          </SidebarMenu>
-        </SidebarGroupContent>
-      </SidebarGroup>
+      <Collapsible key={titulo} open={abierto} onOpenChange={() => alternar(team)}>
+        <SidebarGroup>
+          <CollapsibleTrigger asChild>
+            <button
+              type="button"
+              // Nombre accesible distinto del texto visible a propósito: en
+              // Eventos, la sección "Campañas" se llama "Eventos" igual que
+              // el propio departamento, y sin esto los dos botones eran
+              // indistinguibles por nombre para un lector de pantalla (y para
+              // un test).
+              aria-label={`Sección ${titulo}${vp ? " · VP" : ""}, plegar o desplegar`}
+              className="group/trigger flex h-8 w-full shrink-0 items-center justify-between rounded-md px-2 text-xs font-medium text-sidebar-foreground/70 outline-hidden hover:text-sidebar-foreground group-data-[collapsible=icon]:hidden"
+            >
+              <span aria-hidden="true">
+                {titulo}
+                {vp ? " · VP" : ""}
+              </span>
+              <ChevronRight
+                aria-hidden="true"
+                className="size-3.5 shrink-0 transition-transform group-data-[state=open]/trigger:rotate-90"
+              />
+            </button>
+          </CollapsibleTrigger>
+          <CollapsibleContent>{contenidoDe(items)}</CollapsibleContent>
+        </SidebarGroup>
+      </Collapsible>
     );
   }
 
@@ -273,7 +344,7 @@ export function EquipoSidebar({
           {grupo("Club", clubDe(teams))}
 
           {teams.map((team) =>
-            grupo(TEAM_LABEL[team], POR_EQUIPO[team] ?? [], vpDe.includes(team)),
+            grupo(TEAM_LABEL[team], POR_EQUIPO[team] ?? [], team, vpDe.includes(team)),
           )}
 
           {tieneAccesoAdmin ? (

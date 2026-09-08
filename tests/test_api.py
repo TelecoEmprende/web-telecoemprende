@@ -598,6 +598,38 @@ class ApiTestCase(unittest.TestCase):
         titulos = [e["titulo"] for e in response.get_json()["eventos"]]
         self.assertIn("Charla", titulos)
 
+    def test_mis_tareas_requiere_sesion(self):
+        self.assertEqual(self.client.get("/api/equipo/mis-tareas").status_code, 401)
+
+    def test_mis_tareas_junta_departamentos_y_omite_las_acabadas(self):
+        self.seed_equipo(equipos=["marketing", "eventos"])
+        self.equipo_login()
+
+        self.client.post(
+            "/api/marketing/tasks",
+            json={"titulo": "Guion", "responsables": ["marketing@example.com"]},
+        )
+        self.client.post(
+            "/api/eventos/tasks",
+            json={"titulo": "Reservar sala", "responsables": ["marketing@example.com"]},
+        )
+        self.client.post(
+            "/api/marketing/tasks",
+            json={
+                "titulo": "Ya acabada", "estado": "acabado",
+                "responsables": ["marketing@example.com"],
+            },
+        )
+        self.client.post(
+            "/api/marketing/tasks",
+            json={"titulo": "De otra persona", "responsables": ["hugo@example.com"]},
+        )
+
+        respuesta = self.client.get("/api/equipo/mis-tareas")
+        self.assertEqual(respuesta.status_code, 200)
+        titulos = {t["titulo"] for t in respuesta.get_json()["tareas"]}
+        self.assertEqual(titulos, {"Guion", "Reservar sala"})
+
     def test_equipo_calendario_enlace_funciona_sin_sesion(self):
         self.login()
         self.client.post(
