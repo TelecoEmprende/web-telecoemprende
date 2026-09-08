@@ -10,7 +10,7 @@ import { AlertBanner } from "../feedback/AlertBanner";
 import { etiquetaDe } from "./marketing/Avatares";
 import { SuscribirCalendario } from "./SuscribirCalendario";
 import type { EventoCalendario } from "../../types/equipo";
-import { diasHasta, formatearFecha, type Task } from "../../types/marketing";
+import { diasHasta, formatearFecha as formatearFechaCorta, type Task } from "../../types/marketing";
 
 const DEPTO_LABEL: Record<string, string> = {
   marketing: "Marketing",
@@ -34,7 +34,7 @@ function cuandoTarea(deadline: string | null) {
   if (dias < 0) return dias === -1 ? "Ayer" : `Hace ${Math.abs(dias)} días`;
   if (dias === 0) return "Hoy";
   if (dias === 1) return "Mañana";
-  return formatearFecha(deadline);
+  return formatearFechaCorta(deadline);
 }
 
 const DIAS = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
