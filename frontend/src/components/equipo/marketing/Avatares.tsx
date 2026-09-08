@@ -52,9 +52,15 @@ export function etiquetaDe(email: string) {
   return nombre.charAt(0).toUpperCase() + nombre.slice(1);
 }
 
-export function AvatarResponsable({ email }: { email: string }) {
+export function AvatarResponsable({
+  email,
+  className,
+}: {
+  email: string;
+  className?: string;
+}) {
   return (
-    <Avatar title={email}>
+    <Avatar title={email} className={className}>
       <AvatarImage src={fotoDe(email)} alt={etiquetaDe(email)} />
       <AvatarFallback>{inicialesDe(email)}</AvatarFallback>
     </Avatar>
