@@ -1,7 +1,7 @@
 import { FormEvent, useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
 
-import { deleteTask, updateTask } from "../../../api/marketing";
+import { useApi } from "../DeptoApi";
 import { AlertBanner } from "../../feedback/AlertBanner";
 import { AdjuntosDeContent } from "./AdjuntosDeContent";
 import { AvataresDeResponsables } from "./Avatares";
@@ -49,6 +49,8 @@ function desdeLineas(texto: string) {
  * de tocarlos desde la interfaz. Aquí es donde se editan.
  */
 export function TaskDialog({ task, onCerrar, onGuardado }: Props) {
+  const { deleteTask, updateTask } = useApi();
+
   const [titulo, setTitulo] = useState(task.titulo);
   const [descripcion, setDescripcion] = useState(task.descripcion);
   const [estado, setEstado] = useState<TaskEstado>(task.estado);

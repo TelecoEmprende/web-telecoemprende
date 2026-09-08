@@ -1,17 +1,6 @@
 import { FormEvent, useCallback, useEffect, useState } from "react";
 
-import {
-  createCampaign,
-  createContent,
-  createTask,
-  deleteCampaign,
-  deleteContent,
-  getCampaign,
-  getCampaigns,
-  updateCampaign,
-  updateContent,
-  updateTask,
-} from "../../../api/marketing";
+import { useApi } from "../DeptoApi";
 import { AlertBanner } from "../../feedback/AlertBanner";
 import { AdjuntosDeContent } from "./AdjuntosDeContent";
 import { ContentEditor } from "./ContentEditor";
@@ -160,6 +149,19 @@ type Props = {
 };
 
 export function CampaignsPanel({ campaignInicial, onCampaignAbierta }: Props) {
+  const {
+    createCampaign,
+    createContent,
+    createTask,
+    deleteCampaign,
+    deleteContent,
+    getCampaign,
+    getCampaigns,
+    updateCampaign,
+    updateContent,
+    updateTask,
+  } = useApi();
+
   const [campaigns, setCampaigns] = useState<CampaignResumen[]>([]);
   const [detalle, setDetalle] = useState<CampaignDetalle | null>(null);
   const [isLoading, setIsLoading] = useState(true);

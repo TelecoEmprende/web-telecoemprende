@@ -462,8 +462,16 @@ def api_admin_crear_equipo():
     if len(password) < 8:
         return jsonify(build_response(False, "La contraseña debe tener al menos 8 caracteres.")), 400
 
-    if not isinstance(equipos, list) or not equipos or any(e not in EQUIPOS_VALIDOS for e in equipos):
+    if not isinstance(equipos, list) or any(e not in EQUIPOS_VALIDOS for e in equipos):
         return jsonify(build_response(False, "Selecciona al menos un equipo válido.")), 400
+
+    # Sin departamento se permite solo si hay cargo de dirección: ese acceso ya
+    # vale por sí mismo (board member sin equipo). Sin ninguno de los dos, la
+    # cuenta no daría acceso a nada.
+    if not equipos and not cargo:
+        return jsonify(build_response(
+            False, "Selecciona al menos un equipo, o asigna un cargo de dirección."
+        )), 400
 
     if not isinstance(vp_de, list) or any(v not in equipos for v in vp_de):
         return jsonify(build_response(False, "VP solo puede marcarse en un equipo ya seleccionado.")), 400
@@ -491,8 +499,10 @@ def api_admin_actualizar_equipo(acceso_id: int):
     activo = payload.get("activo")
     password = str(payload.get("password", "")) or None
 
+    # La combinación equipos/vp_de/cargo la valida el servicio contra la fila ya
+    # guardada (aquí solo se ven los campos que llegan en la petición).
     if equipos is not None and (
-        not isinstance(equipos, list) or not equipos or any(e not in EQUIPOS_VALIDOS for e in equipos)
+        not isinstance(equipos, list) or any(e not in EQUIPOS_VALIDOS for e in equipos)
     ):
         return jsonify(build_response(False, "Selecciona al menos un equipo válido.")), 400
 

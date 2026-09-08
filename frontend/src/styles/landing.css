@@ -559,11 +559,11 @@
 }
 
 .lp-team-role-slot {
-  /* Reserva sitio para dos líneas de rol (el más largo, "Ex-vicepresidente ·
-     Board Member", envuelve en las tarjetas estrechas) para que el programa
-     y la bio empiecen a la misma altura en todas las tarjetas del carrusel,
-     tengan el rol una o dos líneas. */
-  min-height: 46px;
+  /* Reserva sitio para tres líneas de rol (el más largo, "Miembro ·
+     Experiencia y Activaciones de Eventos", envuelve a tres en las tarjetas
+     estrechas) para que el programa y la bio empiecen a la misma altura en
+     todas las tarjetas del carrusel, tenga el rol una, dos o tres líneas. */
+  min-height: 66px;
   margin: 2px 0 4px;
 }
 

@@ -1,6 +1,6 @@
 import { FormEvent, useEffect, useRef, useState } from "react";
 
-import { updateContent } from "../../../api/marketing";
+import { useApi } from "../DeptoApi";
 import { AlertBanner } from "../../feedback/AlertBanner";
 import type { ApiFailure } from "../../../types/api";
 import {
@@ -34,6 +34,8 @@ function desdeLineas(texto: string) {
  * un guardar, y fuera.
  */
 export function ContentEditor({ content, onCerrar, onGuardado }: Props) {
+  const { updateContent } = useApi();
+
   const [titulo, setTitulo] = useState(content.titulo);
   const [tipo, setTipo] = useState(content.tipo);
   const [plataforma, setPlataforma] = useState(content.plataforma);
