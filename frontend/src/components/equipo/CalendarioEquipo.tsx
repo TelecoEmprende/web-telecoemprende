@@ -200,12 +200,6 @@ export function CalendarioEquipo() {
 
   const hoy = iso(new Date());
 
-  // Porcentaje del día ya pasado, para el anillo del saludo: es lo único que
-  // el mockup no sacaba de ningún dato real, así que se sustituye por algo
-  // que sí lo es -- la hora del día -- en vez de inventar una métrica.
-  const ahora = new Date();
-  const progresoDia = Math.round(((ahora.getHours() * 60 + ahora.getMinutes()) / 1440) * 100);
-
   const cosasPorDelante = tareas.filter((t) => {
     const dias = diasHasta(t.deadline);
     return dias === 0 || dias === 1;
@@ -328,21 +322,11 @@ export function CalendarioEquipo() {
   return (
     <>
       <header className="mkt-saludo-react">
-        <div>
-          <h3>Hola{email ? `, ${etiquetaDe(email)}` : ""} 👋</h3>
-          <p className="mkt-meta-react">
-            {tituloDeHoy()} — {cosasPorDelante === 0 ? "nada" : cosasPorDelante}{" "}
-            {cosasPorDelante === 1 ? "cosa" : "cosas"} por delante hoy y mañana
-          </p>
-        </div>
-        <div
-          className="mkt-anillo-react"
-          style={{
-            background: `conic-gradient(var(--color-orange) ${progresoDia}%, var(--color-border) 0)`,
-          }}
-        >
-          <span>{progresoDia}%</span>
-        </div>
+        <h3>Hola{email ? `, ${etiquetaDe(email)}` : ""} 👋</h3>
+        <p className="mkt-meta-react">
+          {tituloDeHoy()} — {cosasPorDelante === 0 ? "nada" : cosasPorDelante}{" "}
+          {cosasPorDelante === 1 ? "cosa" : "cosas"} por delante hoy y mañana
+        </p>
       </header>
 
       <div className="mkt-semana-tira-react">
