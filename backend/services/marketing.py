@@ -416,6 +416,25 @@ def listar_tasks(departamento: str) -> list[dict]:
             return [_serializar(f) for f in cur.fetchall()]
 
 
+def tareas_que_vencen(fecha: date) -> list[dict]:
+    """Tareas de cualquier departamento con deadline exactamente `fecha` y
+    todavía sin acabar. Sin filtro de departamento a propósito: el aviso lo
+    dispara un cron, no una sesión de equipo -- lo agrupa por departamento
+    quien lo llama (ver `services/slack.py`), no aquí.
+    """
+    with _get_connection() as conn:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(
+                """
+                SELECT * FROM tasks
+                WHERE deadline = %s AND estado != 'acabado'
+                ORDER BY departamento, id
+                """,
+                (fecha,),
+            )
+            return [_serializar(f) for f in cur.fetchall()]
+
+
 def obtener_task(task_id: int, departamento: str) -> dict | None:
     with _get_connection() as conn:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:

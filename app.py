@@ -13,6 +13,7 @@ from datetime import timedelta
 from pathlib import Path
 
 from backend.api.admin import admin_api
+from backend.api.cron import cron_api
 from backend.api.equipo import equipo_api
 from backend.api.marketing import marketing_api
 
@@ -29,6 +30,7 @@ app = Flask(__name__)
 app.register_blueprint(public_api)
 app.register_blueprint(admin_api)
 app.register_blueprint(equipo_api)
+app.register_blueprint(cron_api)
 # El mismo blueprint, una vez por departamento con workspace: mismas rutas bajo
 # /api/marketing, /api/eventos y /api/ingenieria. `departamento_actual()`
 # distingue de cuál viene la petición por el `name` del registro, y todas las
