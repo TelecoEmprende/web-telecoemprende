@@ -2068,3 +2068,59 @@ button.mkt-evento-react {
     flex-basis: 100%;
   }
 }
+
+/* ---------- Tu agenda (Inicio, cuando hay más de un departamento) ---------- */
+
+.mkt-agenda-panel-react {
+  margin-bottom: 20px;
+}
+
+.mkt-agenda-react {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+}
+
+.mkt-agenda-item-react {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  padding: 12px 16px;
+  background: var(--color-surface);
+  border-left: 3px solid var(--color-border);
+}
+
+.mkt-agenda-item-react + .mkt-agenda-item-react {
+  border-top: 1px solid var(--color-border);
+}
+
+.mkt-agenda-marketing-react { border-left-color: var(--color-orange); }
+.mkt-agenda-eventos-react { border-left-color: var(--color-success-text); }
+.mkt-agenda-ingenieria-react { border-left-color: var(--color-steel); }
+
+.mkt-agenda-cuando-react {
+  flex-shrink: 0;
+  font-size: 0.74rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--color-text-muted);
+  min-width: 5.5ch;
+}
+
+.mkt-agenda-vencida-react {
+  color: var(--color-error-text);
+}
+
+.mkt-agenda-titulo-react {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--color-navy);
+}

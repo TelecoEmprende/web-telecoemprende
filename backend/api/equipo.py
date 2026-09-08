@@ -15,6 +15,7 @@ from backend.services.equipo import (
     logout_equipo,
     token_calendario,
 )
+from backend.services.marketing import init_marketing_db, mis_tareas
 from backend.services.security import demasiadas_peticiones, limpiar_texto, obtener_ip_real
 
 logger = logging.getLogger("telecoemprende.equipo")
@@ -63,7 +64,11 @@ def api_equipo_logout():
 @equipo_api.route("/session", methods=["GET"])
 def api_equipo_session():
     authenticated = is_equipo_authenticated()
-    info = equipo_session_info() if authenticated else {"teams": [], "vp_de": [], "cargo": ""}
+    info = (
+        equipo_session_info()
+        if authenticated
+        else {"teams": [], "vp_de": [], "cargo": "", "email": ""}
+    )
     return jsonify({"ok": True, "authenticated": authenticated, **info}), 200
 
 
@@ -74,6 +79,19 @@ def api_equipo_calendario():
 
     init_equipo_db()
     return jsonify({"ok": True, "eventos": listar_eventos_calendario()}), 200
+
+
+@equipo_api.route("/mis-tareas", methods=["GET"])
+def api_equipo_mis_tareas():
+    """Tareas abiertas de la persona logueada, de cualquier departamento --
+    para el resumen personal de "Inicio". Vive aquí y no en marketing.py
+    porque no está atada a un solo departamento (ver `mis_tareas`)."""
+    if not is_equipo_authenticated():
+        return jsonify(build_response(False, "No autorizado.")), 401
+
+    init_marketing_db()
+    email = session.get("equipo_email", "")
+    return jsonify({"ok": True, "tareas": mis_tareas(email)}), 200
 
 
 @equipo_api.route("/calendario/enlace", methods=["GET"])

@@ -716,4 +716,23 @@ describe("/equipo — panel de Eventos", () => {
     expect(screen.queryByRole("button", { name: "Campañas" })).not.toBeInTheDocument();
     expect(deptosPedidos).not.toContain("marketing");
   });
+
+  it("con más de un departamento, solo el primero empieza desplegado", async () => {
+    teamsDeSesion = ["marketing", "eventos"];
+
+    render(
+      <MemoryRouter>
+        <EquipoPage />
+      </MemoryRouter>,
+    );
+
+    // Marketing es el primero: su "Resumen" ya se ve sin tocar nada.
+    await screen.findByRole("button", { name: "Resumen" });
+    // Eventos empieza plegado: "Gestiones" (su Tareas) no está a la vista.
+    expect(screen.queryByRole("button", { name: "Gestiones" })).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: /Sección Eventos/ }));
+
+    expect(await screen.findByRole("button", { name: "Gestiones" })).toBeInTheDocument();
+  });
 });
