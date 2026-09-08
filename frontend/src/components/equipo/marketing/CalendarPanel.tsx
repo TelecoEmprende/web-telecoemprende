@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
 
 import { useApi } from "../DeptoApi";
 import { AlertBanner } from "../../feedback/AlertBanner";
@@ -17,16 +17,19 @@ const MESES = [
 /** Cuántos elementos caben en una celda antes de plegar el resto (vista mes). */
 const MAX_POR_DIA = 3;
 
-/** Ventana de horas que pinta la rejilla de la vista semana. Fija y no
- *  calculada de los datos: un club no tiene reuniones a las 3 de la
- *  madrugada, y una ventana fija es una rejilla que se lee de un vistazo en
- *  vez de saltar de tamaño según lo que haya esa semana. */
-const HORA_INICIO = 8;
-const HORA_FIN = 22;
+/** El día entero, de 00:00 a 24:00 -- nada que tenga una hora puesta debería
+ *  poder "no caber" en la rejilla. La franja se ve entera haciendo scroll
+ *  dentro de `.mkt-semana-scroll-react`, que abre centrada sobre el horario
+ *  habitual (ver `HORA_SCROLL_INICIAL`) en vez de arrancar en medianoche. */
+const HORA_INICIO = 0;
+const HORA_FIN = 24;
 const HORAS_VISIBLES = Array.from(
   { length: HORA_FIN - HORA_INICIO },
   (_, i) => HORA_INICIO + i,
 );
+/** A qué hora se abre el scroll de la semana: nadie entra a mirar la
+ *  medianoche primero. */
+const HORA_SCROLL_INICIAL = 7;
 
 function iso(fecha: Date) {
   // toISOString() pasa por UTC y en España adelanta/atrasa un día según la
@@ -170,6 +173,16 @@ export function CalendarPanel({ onAbrirCampaign }: Props) {
   // Se busca un mes con datos una sola vez, en el primer montaje. Después el
   // usuario manda: si navega a un mes vacío, se queda ahí.
   const [yaBuscado, setYaBuscado] = useState(false);
+  const scrollSemanaRef = useRef<HTMLDivElement>(null);
+
+  // Al entrar en la vista semana, la rejilla abre con las 24h de scroll ya
+  // colocado sobre el horario habitual en vez de en medianoche.
+  useEffect(() => {
+    if (vista !== "semana" || isLoading) return;
+    const contenedor = scrollSemanaRef.current;
+    if (!contenedor) return;
+    contenedor.scrollTop = (HORA_SCROLL_INICIAL / (HORA_FIN - HORA_INICIO)) * contenedor.scrollHeight;
+  }, [vista, isLoading]);
 
   const cargar = useCallback(async (referencia: Date) => {
     setIsLoading(true);
@@ -508,7 +521,7 @@ export function CalendarPanel({ onAbrirCampaign }: Props) {
             })}
           </div>
 
-          <div className="mkt-semana-scroll-react">
+          <div className="mkt-semana-scroll-react" ref={scrollSemanaRef}>
             <div
               className="mkt-semana-rejilla-react"
               style={{ "--mkt-horas-visibles": HORAS_VISIBLES.length } as CSSProperties}
