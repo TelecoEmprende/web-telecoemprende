@@ -2,6 +2,7 @@ import { FormEvent, useCallback, useEffect, useState } from "react";
 
 import { useApi } from "../DeptoApi";
 import { AlertBanner } from "../../feedback/AlertBanner";
+import { ContadorCaracteres } from "../../feedback/ContadorCaracteres";
 import { Esqueleto } from "../../feedback/Esqueleto";
 import { AdjuntosDeContent } from "./AdjuntosDeContent";
 import { ContentEditor } from "./ContentEditor";
@@ -10,6 +11,8 @@ import type { ApiFailure } from "../../../types/api";
 import {
   CONTENT_ESTADOS,
   CONTENT_ESTADO_LABEL,
+  MAX_TEXTO_LARGO_LEN,
+  MAX_TITULO_LEN,
   TASK_ESTADO_LABEL,
   formatearFecha,
   type CampaignDetalle,
@@ -380,6 +383,7 @@ export function CampaignsPanel({ campaignInicial, onCampaignAbierta }: Props) {
                 value={nombre}
                 onChange={(event) => setNombre(event.target.value)}
               />
+              <ContadorCaracteres valor={nombre} maximo={MAX_TITULO_LEN} />
             </div>
             <div className="field-group-react">
               <label htmlFor="mkt-edit-objetivo">Objetivo</label>
@@ -389,6 +393,7 @@ export function CampaignsPanel({ campaignInicial, onCampaignAbierta }: Props) {
                 value={objetivo}
                 onChange={(event) => setObjetivo(event.target.value)}
               />
+              <ContadorCaracteres valor={objetivo} maximo={MAX_TEXTO_LARGO_LEN} />
             </div>
             <div className="mkt-form-fila-react">
               <div className="field-group-react">
@@ -399,6 +404,7 @@ export function CampaignsPanel({ campaignInicial, onCampaignAbierta }: Props) {
                   value={audiencia}
                   onChange={(event) => setAudiencia(event.target.value)}
                 />
+                <ContadorCaracteres valor={audiencia} maximo={MAX_TEXTO_LARGO_LEN} />
               </div>
               <div className="field-group-react">
                 <label htmlFor="mkt-edit-fecha">Fecha</label>
@@ -643,6 +649,7 @@ export function CampaignsPanel({ campaignInicial, onCampaignAbierta }: Props) {
               placeholder="Cómo empezar a invertir"
               onChange={(event) => setNombre(event.target.value)}
             />
+            <ContadorCaracteres valor={nombre} maximo={MAX_TITULO_LEN} />
           </div>
           <div className="field-group-react">
             <label htmlFor="mkt-objetivo">Objetivo</label>
@@ -653,6 +660,7 @@ export function CampaignsPanel({ campaignInicial, onCampaignAbierta }: Props) {
               placeholder="Llenar la charla del 15 de octubre"
               onChange={(event) => setObjetivo(event.target.value)}
             />
+            <ContadorCaracteres valor={objetivo} maximo={MAX_TEXTO_LARGO_LEN} />
           </div>
           <div className="mkt-form-fila-react">
             <div className="field-group-react">
@@ -664,6 +672,7 @@ export function CampaignsPanel({ campaignInicial, onCampaignAbierta }: Props) {
                 placeholder="Estudiantes de la UPM"
                 onChange={(event) => setAudiencia(event.target.value)}
               />
+              <ContadorCaracteres valor={audiencia} maximo={MAX_TEXTO_LARGO_LEN} />
             </div>
             <div className="field-group-react">
               <label htmlFor="mkt-fecha">Fecha</label>
