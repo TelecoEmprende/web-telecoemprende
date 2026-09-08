@@ -404,6 +404,7 @@ def api_crear_task():
         estado=_opcion(datos, "estado", TASK_ESTADOS, "pendiente"),
         prioridad=_opcion(datos, "prioridad", TASK_PRIORIDADES, "media"),
         deadline=_fecha(datos, "deadline"),
+        hora=_texto(datos, "hora", maximo=5),
         responsables=_lista_textos(datos, "responsables", MAX_RESPONSABLES),
         tags=_lista_textos(datos, "tags", MAX_RESPONSABLES),
         checklist=_checklist(datos),
@@ -444,6 +445,8 @@ def api_actualizar_task(task_id: int):
         campos["prioridad"] = _opcion(datos, "prioridad", TASK_PRIORIDADES, "media")
     if "deadline" in datos:
         campos["deadline"] = _fecha(datos, "deadline")
+    if "hora" in datos:
+        campos["hora"] = _texto(datos, "hora", maximo=5)
     if "responsables" in datos:
         campos["responsables"] = _lista_textos(datos, "responsables", MAX_RESPONSABLES)
     if "tags" in datos:

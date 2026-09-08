@@ -11,6 +11,7 @@ os.environ["CRON_SECRET"] = "test-cron-secret"
 import app  # noqa: E402
 import backend.services.equipo as equipo_service  # noqa: E402
 import backend.services.marketing as marketing_service  # noqa: E402
+import backend.services.registros as registros_service  # noqa: E402
 import backend.services.security as security_service  # noqa: E402
 import backend.services.slack as marketing_api_slack  # noqa: E402
 import urllib.error  # noqa: E402
@@ -22,6 +23,7 @@ class MarketingTestCase(unittest.TestCase):
         security_service.request_log.clear()
         equipo_service.init_equipo_db()
         marketing_service.init_marketing_db()
+        registros_service.init_registros_db()
 
         conn = marketing_service._get_connection()
         with conn.cursor() as cur:
@@ -31,6 +33,10 @@ class MarketingTestCase(unittest.TestCase):
             cur.execute("DELETE FROM contents")
             cur.execute("DELETE FROM campaigns")
             cur.execute("DELETE FROM equipo_accesos")
+            # El calendario ahora también lee reuniones (services/registros.py);
+            # sin limpiarlas aquí, una reunión creada en un test se cuela en el
+            # rango de fechas amplio que usan otros.
+            cur.execute("DELETE FROM reuniones")
         conn.commit()
         conn.close()
 
@@ -425,6 +431,21 @@ class TaskTests(MarketingTestCase):
         task = self.crear_task(responsables=["abril@x.com", "hugo@x.com", "diego@x.com"])
         self.assertEqual(len(task["responsables"]), 3)
 
+    def test_hora_opcional_se_guarda_y_se_actualiza(self):
+        task = self.crear_task(deadline="2026-10-10", hora="09:30")
+        self.assertEqual(task["hora"], "09:30")
+
+        respuesta = self.client.put(
+            f"/api/marketing/tasks/{task['id']}", json={"hora": "16:00"}
+        )
+        self.assertEqual(respuesta.status_code, 200)
+        detalle = self.client.get(f"/api/marketing/tasks/{task['id']}").get_json()
+        self.assertEqual(detalle["task"]["hora"], "16:00")
+
+    def test_sin_hora_se_queda_en_blanco(self):
+        task = self.crear_task(deadline="2026-10-10")
+        self.assertEqual(task["hora"], "")
+
     def test_hereda_la_campaign_de_su_content(self):
         task = self.crear_task(content_id=self.content["id"])
         self.assertEqual(task["campaign_id"], self.campaign["id"])
@@ -540,6 +561,34 @@ class CalendarioTests(MarketingTestCase):
         self.assertEqual(len(items), 2)
         self.assertEqual([i["origen"] for i in items], ["task", "content"])
         self.assertEqual(items[0]["fecha"], "2026-10-10")
+
+    def test_incluye_reuniones_con_su_hora(self):
+        conn = registros_service._get_connection()
+        with conn.cursor() as cur:
+            cur.execute(
+                "INSERT INTO reuniones (departamento, titulo, fecha, hora)"
+                " VALUES ('marketing', 'Semanal', '2026-10-12', '18:00')"
+            )
+        conn.commit()
+        conn.close()
+
+        self.client.post(
+            "/api/marketing/tasks",
+            json={"titulo": "Grabar", "deadline": "2026-10-10", "hora": "10:00",
+                  "campaign_id": self.campaign["id"]},
+        )
+
+        respuesta = self.client.get(
+            "/api/marketing/calendario?desde=2026-10-01&hasta=2026-10-31"
+        )
+        items = respuesta.get_json()["items"]
+
+        reunion = next(i for i in items if i["origen"] == "reunion")
+        self.assertEqual(reunion["titulo"], "Semanal")
+        self.assertEqual(reunion["hora"], "18:00")
+
+        tarea = next(i for i in items if i["origen"] == "task")
+        self.assertEqual(tarea["hora"], "10:00")
 
     def test_fuera_de_rango_no_aparece(self):
         self.crear_content(self.campaign["id"], fecha_publicacion="2026-12-01")

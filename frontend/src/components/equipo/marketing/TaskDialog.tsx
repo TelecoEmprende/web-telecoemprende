@@ -59,6 +59,7 @@ export function TaskDialog({ task, onCerrar, onGuardado }: Props) {
   const [estado, setEstado] = useState<TaskEstado>(task.estado);
   const [prioridad, setPrioridad] = useState<Prioridad>(task.prioridad);
   const [deadline, setDeadline] = useState(task.deadline ?? "");
+  const [hora, setHora] = useState(task.hora);
   const [responsables, setResponsables] = useState(comoLineas(task.responsables));
   const [tags, setTags] = useState(task.tags.join(", "));
   const [enlaces, setEnlaces] = useState(comoLineas(task.enlaces));
@@ -96,6 +97,7 @@ export function TaskDialog({ task, onCerrar, onGuardado }: Props) {
         estado,
         prioridad,
         deadline: deadline || null,
+        hora,
         responsables: desdeLineas(responsables),
         tags: tags.split(",").map((t) => t.trim()).filter(Boolean),
         enlaces: desdeLineas(enlaces),
@@ -184,14 +186,25 @@ export function TaskDialog({ task, onCerrar, onGuardado }: Props) {
             </div>
           </div>
 
-          <div className="field-group-react">
-            <label htmlFor="td-deadline">Fecha límite</label>
-            <input
-              id="td-deadline"
-              type="date"
-              value={deadline}
-              onChange={(event) => setDeadline(event.target.value)}
-            />
+          <div className="mkt-form-fila-react">
+            <div className="field-group-react">
+              <label htmlFor="td-deadline">Fecha límite</label>
+              <input
+                id="td-deadline"
+                type="date"
+                value={deadline}
+                onChange={(event) => setDeadline(event.target.value)}
+              />
+            </div>
+            <div className="field-group-react">
+              <label htmlFor="td-hora">Hora (opcional)</label>
+              <input
+                id="td-hora"
+                type="time"
+                value={hora}
+                onChange={(event) => setHora(event.target.value)}
+              />
+            </div>
           </div>
 
           {/* ---- Checklist ---- */}
