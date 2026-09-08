@@ -4,6 +4,7 @@ import { Pencil, Plus, Trash2 } from "lucide-react";
 import { useApi } from "../DeptoApi";
 import { AlertBanner } from "../../feedback/AlertBanner";
 import { Esqueleto } from "../../feedback/Esqueleto";
+import { SelectorMiembros } from "../marketing/SelectorMiembros";
 import {
   Dialog,
   DialogContent,
@@ -45,7 +46,9 @@ function valorInicial(campo: CampoSpec, registro: Registro | null): string {
     if (campo.tipo === "opcion") return campo.opciones?.[0]?.valor ?? "";
     return "";
   }
-  if (campo.tipo === "lista") return listaDe(registro, campo.clave).join("\n");
+  if (campo.tipo === "lista" || campo.tipo === "miembros") {
+    return listaDe(registro, campo.clave).join("\n");
+  }
   if (campo.tipo === "check") return registro[campo.clave] ? "si" : "";
   return textoDe(registro, campo.clave);
 }
@@ -249,7 +252,7 @@ function RegistroDialog({ campos, registro, titulo, onCerrar, onGuardar }: Dialo
     const datos: Record<string, unknown> = {};
     for (const campo of campos) {
       const bruto = valores[campo.clave] ?? "";
-      if (campo.tipo === "lista") {
+      if (campo.tipo === "lista" || campo.tipo === "miembros") {
         datos[campo.clave] = bruto
           .split("\n")
           .map((l) => l.trim())
@@ -299,7 +302,15 @@ function RegistroDialog({ campos, registro, titulo, onCerrar, onGuardar }: Dialo
                 ) : (
                   <>
                     <label htmlFor={id}>{campo.etiqueta}</label>
-                    {campo.tipo === "parrafo" || campo.tipo === "lista" ? (
+                    {campo.tipo === "miembros" ? (
+                      <SelectorMiembros
+                        id={id}
+                        seleccionados={
+                          valores[campo.clave] ? valores[campo.clave].split("\n").filter(Boolean) : []
+                        }
+                        onCambiar={(emails) => set(campo.clave, emails.join("\n"))}
+                      />
+                    ) : campo.tipo === "parrafo" || campo.tipo === "lista" ? (
                       <textarea
                         id={id}
                         rows={campo.tipo === "lista" ? 3 : 4}

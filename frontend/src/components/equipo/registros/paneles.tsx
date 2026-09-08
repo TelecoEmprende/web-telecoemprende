@@ -250,8 +250,7 @@ const CAMPOS_REUNIONES: readonly CampoSpec[] = [
   {
     clave: "asistentes",
     etiqueta: "Asistentes",
-    tipo: "lista",
-    ayuda: "Un email por línea.",
+    tipo: "miembros",
   },
   { clave: "acta", etiqueta: "Acta y acuerdos", tipo: "parrafo" },
 ];

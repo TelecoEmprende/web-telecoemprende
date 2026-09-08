@@ -1,6 +1,7 @@
 import { FormEvent, useEffect, useRef, useState } from "react";
 
 import { AvataresDeResponsables } from "./Avatares";
+import { SelectorMiembros } from "./SelectorMiembros";
 import { TaskDialog } from "./TaskDialog";
 import { useApi } from "../DeptoApi";
 import { AlertBanner } from "../../feedback/AlertBanner";
@@ -68,7 +69,7 @@ export function TasksPanel() {
   const [prioridad, setPrioridad] = useState<Prioridad>("media");
   const [deadline, setDeadline] = useState("");
   const [hora, setHora] = useState("");
-  const [responsables, setResponsables] = useState("");
+  const [responsables, setResponsables] = useState<string[]>([]);
 
   useEffect(() => {
     void cargar();
@@ -101,16 +102,13 @@ export function TasksPanel() {
         prioridad,
         deadline: deadline || null,
         hora,
-        responsables: responsables
-          .split(",")
-          .map((r) => r.trim())
-          .filter(Boolean),
+        responsables,
       });
       setTitulo("");
       setPrioridad("media");
       setDeadline("");
       setHora("");
-      setResponsables("");
+      setResponsables([]);
       setMostrarFormulario(false);
       await cargar();
     } catch (err) {
@@ -246,13 +244,11 @@ export function TasksPanel() {
             </div>
           </div>
           <div className="field-group-react">
-            <label htmlFor="tp-responsables">Responsables (separados por comas)</label>
-            <input
+            <label htmlFor="tp-responsables">Responsables</label>
+            <SelectorMiembros
               id="tp-responsables"
-              type="text"
-              value={responsables}
-              placeholder="abril@alumnos.upm.es, hugo@alumnos.upm.es"
-              onChange={(event) => setResponsables(event.target.value)}
+              seleccionados={responsables}
+              onCambiar={setResponsables}
             />
           </div>
           <button type="submit" className="mkt-btn-react" disabled={!titulo.trim()}>

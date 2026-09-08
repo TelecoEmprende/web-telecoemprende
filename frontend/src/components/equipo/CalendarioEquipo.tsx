@@ -192,10 +192,11 @@ export function CalendarioEquipo() {
 
   const hoy = iso(new Date());
 
-  const cosasPorDelante = tareas.filter((t) => {
-    const dias = diasHasta(t.deadline);
-    return dias === 0 || dias === 1;
-  }).length;
+  // Todo lo abierto con fecha, no solo hoy/mañana: contar nada más lo próximo
+  // dejaba "ninguna cosa pendiente" a quien tenía tareas ya vencidas la
+  // semana pasada -- se lee como "vas al día" y es lo contrario. Mismo
+  // criterio que el resumen de cada departamento (`WeekPanel.totalPendientes`).
+  const cosasPorDelante = tareas.filter((t) => diasHasta(t.deadline) !== null).length;
 
   function mover(meses: number) {
     setCursor((actual) => new Date(actual.getFullYear(), actual.getMonth() + meses, 1));
@@ -315,9 +316,8 @@ export function CalendarioEquipo() {
         <p className="mkt-meta-react">
           {tituloDeHoy()} —{" "}
           {cosasPorDelante === 0
-            ? "ninguna cosa"
-            : `${cosasPorDelante} ${cosasPorDelante === 1 ? "cosa" : "cosas"}`}{" "}
-          por delante hoy y mañana
+            ? "ninguna cosa pendiente"
+            : `${cosasPorDelante} ${cosasPorDelante === 1 ? "cosa pendiente" : "cosas pendientes"}`}
         </p>
       </header>
 
