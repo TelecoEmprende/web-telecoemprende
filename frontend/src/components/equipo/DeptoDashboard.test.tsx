@@ -532,6 +532,12 @@ describe("/equipo — panel de Marketing", () => {
     expect(within(dialogo).getByText("12")).toBeInTheDocument();
     expect(within(dialogo).getByText("Grabar reel de apertura", { exact: false }))
       .toBeInTheDocument();
+    // La nota sale de solo lectura por defecto; el textarea para editarla
+    // está detrás de "Editar perfil", no siempre a la vista.
+    expect(within(dialogo).getByText("Mejor una cosa a la vez.", { exact: false }))
+      .toBeInTheDocument();
+
+    await userEvent.click(within(dialogo).getByRole("button", { name: "Editar perfil" }));
     expect(within(dialogo).getByDisplayValue("Mejor una cosa a la vez."))
       .toBeInTheDocument();
   });
