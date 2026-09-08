@@ -2126,7 +2126,44 @@ button.mkt-evento-react {
 }
 
 .mkt-saludo-react {
-  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.mkt-saludo-react h3 {
+  margin: 0;
+}
+
+.mkt-saludo-react .mkt-meta-react {
+  margin: 2px 0 0;
+}
+
+.mkt-anillo-react {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  position: relative;
+}
+
+.mkt-anillo-react::before {
+  content: "";
+  position: absolute;
+  inset: 5px;
+  border-radius: 50%;
+  background: var(--color-surface);
+}
+
+.mkt-anillo-react span {
+  position: relative;
+  font-weight: 800;
+  font-size: 0.82rem;
+  color: var(--color-navy);
 }
 
 /* ---------- Tira de la semana ---------- */
@@ -2195,10 +2232,38 @@ button.mkt-evento-react {
 
 .mkt-inicio-columnas-react {
   display: grid;
-  grid-template-columns: 1.3fr 1fr;
+  grid-template-columns: 1fr 1fr;
   gap: 20px;
   align-items: start;
 }
+
+.mkt-agenda-leyenda-react {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-top: 14px;
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+}
+
+.mkt-agenda-leyenda-punto-react {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.mkt-agenda-leyenda-punto-react::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-steel);
+}
+
+.mkt-agenda-leyenda-punto-react.mkt-agenda-marketing-react::before { background: var(--color-orange); }
+.mkt-agenda-leyenda-punto-react.mkt-agenda-eventos-react::before { background: var(--color-success-text); }
+.mkt-agenda-leyenda-punto-react.mkt-agenda-ingenieria-react::before { background: var(--color-steel); }
+.mkt-agenda-leyenda-vencida-react::before { background: var(--color-error-text); }
 
 .mkt-inicio-lateral-react {
   display: flex;
