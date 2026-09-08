@@ -11,7 +11,6 @@ vi.mock("../../api/equipo", () => ({
   getEquipoCalendario: () => getEquipoCalendario(),
   getEquipoSession: () => getEquipoSession(),
   getMisTareas: () => getMisTareas(),
-  getEnlaceCalendarioGeneral: () => Promise.resolve({ ok: true, url: "" }),
 }));
 
 describe("CalendarioEquipo — tu agenda", () => {
