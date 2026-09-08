@@ -37,6 +37,18 @@ function cuandoTarea(deadline: string | null) {
   return formatearFechaCorta(deadline);
 }
 
+/** Lunes de la semana de `fecha`, para la tira de "esta semana" encima de
+ *  la agenda -- los 7 días siempre, sin huecos de mes que rellenar. */
+function celdasDeLaSemana(fecha: Date) {
+  const lunes = new Date(fecha);
+  lunes.setDate(fecha.getDate() - ((fecha.getDay() + 6) % 7));
+  return Array.from({ length: 7 }, (_, i) => {
+    const dia = new Date(lunes);
+    dia.setDate(lunes.getDate() + i);
+    return dia;
+  });
+}
+
 const DIAS = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
 const MESES = [
   "enero", "febrero", "marzo", "abril", "mayo", "junio",
@@ -153,6 +165,19 @@ export function CalendarioEquipo() {
     [eventos],
   );
 
+  /** Qué departamentos tienen una tarea que vence cada día, para los
+   *  puntitos de color de la tira de la semana. */
+  const deptosPorDia = useMemo(() => {
+    const mapa: Record<string, Set<string>> = {};
+    for (const tarea of tareas) {
+      if (!tarea.deadline) continue;
+      (mapa[tarea.deadline] ??= new Set()).add(tarea.departamento);
+    }
+    return mapa;
+  }, [tareas]);
+
+  const semana = useMemo(() => celdasDeLaSemana(new Date()), []);
+
   const proximos = useMemo(() => {
     const hoy = new Date();
     hoy.setHours(0, 0, 0, 0);
@@ -172,12 +197,144 @@ export function CalendarioEquipo() {
     setCursor(new Date(ahora.getFullYear(), ahora.getMonth(), 1));
   }
 
+  const calendario = (
+    <section className="mkt-panel-react">
+      {error ? <AlertBanner variant="error" message={error} /> : null}
+
+      <header className="mkt-panel-header-react">
+        <h3>
+          {MESES[cursor.getMonth()]} {cursor.getFullYear()}
+        </h3>
+        <div className="mkt-calendario-nav-react">
+          <button type="button" className="mkt-btn-mini-react" onClick={() => mover(-1)}>
+            ← Anterior
+          </button>
+          <button type="button" className="mkt-btn-mini-react" onClick={irAHoy}>
+            Hoy
+          </button>
+          <button type="button" className="mkt-btn-mini-react" onClick={() => mover(1)}>
+            Siguiente →
+          </button>
+          <SuscribirCalendario obtenerEnlace={getEnlaceCalendarioGeneral} onError={setError} />
+        </div>
+      </header>
+
+      <div className="mkt-calendario-react">
+        {DIAS.map((dia) => (
+          <div key={dia} className="mkt-calendario-cabecera-react">
+            {dia}
+          </div>
+        ))}
+
+        {celdasDelMes(cursor.getFullYear(), cursor.getMonth()).map((fecha, indice) => {
+          if (fecha === null) {
+            return <div key={`hueco-${indice}`} className="mkt-dia-vacio-react" />;
+          }
+
+          const clave = iso(fecha);
+          const delDia = porDia[clave] ?? [];
+          const visibles = delDia.slice(0, MAX_POR_DIA);
+          const ocultos = delDia.length - visibles.length;
+
+          return (
+            <div
+              key={clave}
+              className={`mkt-dia-react${clave === hoy ? " mkt-dia-hoy-react" : ""}`}
+            >
+              <span className="mkt-dia-numero-react">{fecha.getDate()}</span>
+
+              {visibles.map((evento) => (
+                <span
+                  key={evento.id}
+                  className="mkt-evento-react equipo-evento-chip-react"
+                  title={`${evento.titulo}${evento.hora ? ` · ${evento.hora}` : ""}`}
+                >
+                  {evento.hora ? `${evento.hora} ` : ""}
+                  {evento.titulo}
+                </span>
+              ))}
+
+              {ocultos > 0 ? (
+                <span className="mkt-dia-mas-eventos-react">+{ocultos} más</span>
+              ) : null}
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
+
+  const proximosEventos = (
+    <section className="equipo-proximos-react">
+      <header className="equipo-panel-header-react">
+        <h3>Próximos eventos</h3>
+      </header>
+      {proximos.length === 0 ? (
+        <p className="equipo-vacio-react">
+          No hay nada apuntado. Los eventos del club se añaden desde el panel
+          de administración.
+        </p>
+      ) : (
+        <ul className="equipo-eventos-lista-react">
+          {proximos.map((evento) => (
+            <li key={evento.id} className="equipo-evento-react">
+              <span className="equipo-evento-fecha-react">
+                {formatearFecha(evento.fecha)}
+                {evento.hora ? ` · ${evento.hora}` : ""}
+              </span>
+              <span className="equipo-evento-titulo-react">{evento.titulo}</span>
+              {evento.descripcion ? (
+                <span className="equipo-evento-desc-react">{evento.descripcion}</span>
+              ) : null}
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+
+  if (!multiEquipo) {
+    return (
+      <>
+        {calendario}
+        {proximosEventos}
+      </>
+    );
+  }
+
   return (
     <>
-      {multiEquipo ? (
+      <header className="mkt-panel-header-react mkt-saludo-react">
+        <h3>Hola{email ? `, ${etiquetaDe(email)}` : ""} 👋</h3>
+      </header>
+
+      <div className="mkt-semana-tira-react">
+        {semana.map((dia) => {
+          const clave = iso(dia);
+          const deptos = [...(deptosPorDia[clave] ?? [])];
+          const hayEvento = (porDia[clave] ?? []).length > 0;
+          return (
+            <div
+              key={clave}
+              className={`mkt-semana-dia-react${clave === hoy ? " mkt-semana-dia-hoy-react" : ""}`}
+            >
+              <span className="mkt-semana-letra-react">{DIAS[(dia.getDay() + 6) % 7]}</span>
+              <span className="mkt-semana-numero-react">{dia.getDate()}</span>
+              <span className="mkt-semana-puntos-react">
+                {deptos.map((depto) => (
+                  <i key={depto} className={`mkt-semana-punto-react ${DEPTO_CLASE[depto] ?? ""}`} />
+                ))}
+                {hayEvento ? <i className="mkt-semana-punto-react mkt-semana-punto-club-react" /> : null}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="mkt-inicio-columnas-react">
         <section className="mkt-panel-react mkt-agenda-panel-react">
           <header className="mkt-panel-header-react">
-            <h3>Hola{email ? `, ${etiquetaDe(email)}` : ""} 👋</h3>
+            <h3>Tu agenda</h3>
           </header>
 
           {tareas.length === 0 ? (
@@ -209,99 +366,12 @@ export function CalendarioEquipo() {
             </ul>
           )}
         </section>
-      ) : null}
 
-      <section className="mkt-panel-react">
-        {error ? <AlertBanner variant="error" message={error} /> : null}
-
-        <header className="mkt-panel-header-react">
-          <h3>
-            {MESES[cursor.getMonth()]} {cursor.getFullYear()}
-          </h3>
-          <div className="mkt-calendario-nav-react">
-            <button type="button" className="mkt-btn-mini-react" onClick={() => mover(-1)}>
-              ← Anterior
-            </button>
-            <button type="button" className="mkt-btn-mini-react" onClick={irAHoy}>
-              Hoy
-            </button>
-            <button type="button" className="mkt-btn-mini-react" onClick={() => mover(1)}>
-              Siguiente →
-            </button>
-            <SuscribirCalendario obtenerEnlace={getEnlaceCalendarioGeneral} onError={setError} />
-          </div>
-        </header>
-
-        <div className="mkt-calendario-react">
-          {DIAS.map((dia) => (
-            <div key={dia} className="mkt-calendario-cabecera-react">
-              {dia}
-            </div>
-          ))}
-
-          {celdasDelMes(cursor.getFullYear(), cursor.getMonth()).map((fecha, indice) => {
-            if (fecha === null) {
-              return <div key={`hueco-${indice}`} className="mkt-dia-vacio-react" />;
-            }
-
-            const clave = iso(fecha);
-            const delDia = porDia[clave] ?? [];
-            const visibles = delDia.slice(0, MAX_POR_DIA);
-            const ocultos = delDia.length - visibles.length;
-
-            return (
-              <div
-                key={clave}
-                className={`mkt-dia-react${clave === hoy ? " mkt-dia-hoy-react" : ""}`}
-              >
-                <span className="mkt-dia-numero-react">{fecha.getDate()}</span>
-
-                {visibles.map((evento) => (
-                  <span
-                    key={evento.id}
-                    className="mkt-evento-react equipo-evento-chip-react"
-                    title={`${evento.titulo}${evento.hora ? ` · ${evento.hora}` : ""}`}
-                  >
-                    {evento.hora ? `${evento.hora} ` : ""}
-                    {evento.titulo}
-                  </span>
-                ))}
-
-                {ocultos > 0 ? (
-                  <span className="mkt-dia-mas-eventos-react">+{ocultos} más</span>
-                ) : null}
-              </div>
-            );
-          })}
+        <div className="mkt-inicio-lateral-react">
+          {calendario}
+          {proximosEventos}
         </div>
-      </section>
-
-      <section className="equipo-proximos-react">
-        <header className="equipo-panel-header-react">
-          <h3>Próximos eventos</h3>
-        </header>
-        {proximos.length === 0 ? (
-          <p className="equipo-vacio-react">
-            No hay nada apuntado. Los eventos del club se añaden desde el panel
-            de administración.
-          </p>
-        ) : (
-          <ul className="equipo-eventos-lista-react">
-            {proximos.map((evento) => (
-              <li key={evento.id} className="equipo-evento-react">
-                <span className="equipo-evento-fecha-react">
-                  {formatearFecha(evento.fecha)}
-                  {evento.hora ? ` · ${evento.hora}` : ""}
-                </span>
-                <span className="equipo-evento-titulo-react">{evento.titulo}</span>
-                {evento.descripcion ? (
-                  <span className="equipo-evento-desc-react">{evento.descripcion}</span>
-                ) : null}
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+      </div>
     </>
   );
 }
