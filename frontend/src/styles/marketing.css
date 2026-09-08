@@ -562,7 +562,26 @@
 
 .mkt-calendario-nav-react {
   display: flex;
+  align-items: center;
+  flex-wrap: wrap;
   gap: 8px;
+}
+
+.mkt-vista-toggle-react {
+  display: flex;
+  gap: 4px;
+  padding: 3px;
+  border-radius: 12px;
+  background: var(--color-background);
+}
+
+.mkt-vista-toggle-react .mkt-btn-mini-react {
+  border: none;
+}
+
+.mkt-btn-mini-activo-react {
+  background: var(--color-navy);
+  color: var(--color-cream);
 }
 
 .mkt-calendario-react {
