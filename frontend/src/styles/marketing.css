@@ -2124,3 +2124,91 @@ button.mkt-evento-react {
   font-weight: 700;
   color: var(--color-navy);
 }
+
+.mkt-saludo-react {
+  margin-bottom: 4px;
+}
+
+/* ---------- Tira de la semana ---------- */
+
+.mkt-semana-tira-react {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 6px;
+  margin-bottom: 20px;
+}
+
+.mkt-semana-dia-react {
+  padding: 8px 4px;
+  border-radius: 10px;
+  text-align: center;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+}
+
+.mkt-semana-dia-hoy-react {
+  border-color: var(--color-orange);
+  background: color-mix(in srgb, var(--color-orange) 10%, var(--color-surface));
+}
+
+.mkt-semana-letra-react {
+  display: block;
+  font-size: 0.62rem;
+  font-weight: 800;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+}
+
+.mkt-semana-numero-react {
+  display: block;
+  font-weight: 800;
+  font-size: 1.05rem;
+  margin-top: 2px;
+  color: var(--color-navy);
+}
+
+.mkt-semana-dia-hoy-react .mkt-semana-numero-react {
+  color: var(--color-orange);
+}
+
+.mkt-semana-puntos-react {
+  display: flex;
+  justify-content: center;
+  gap: 3px;
+  margin-top: 5px;
+  height: 6px;
+}
+
+.mkt-semana-punto-react {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--color-steel);
+}
+
+.mkt-semana-punto-react.mkt-agenda-marketing-react { background: var(--color-orange); }
+.mkt-semana-punto-react.mkt-agenda-eventos-react { background: var(--color-success-text); }
+.mkt-semana-punto-react.mkt-agenda-ingenieria-react { background: var(--color-steel); }
+.mkt-semana-punto-club-react { background: var(--color-gold); }
+
+/* ---------- Inicio: agenda + calendario en columnas ---------- */
+
+.mkt-inicio-columnas-react {
+  display: grid;
+  grid-template-columns: 1.3fr 1fr;
+  gap: 20px;
+  align-items: start;
+}
+
+.mkt-inicio-lateral-react {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 0;
+}
+
+@media (max-width: 900px) {
+  .mkt-inicio-columnas-react {
+    grid-template-columns: 1fr;
+  }
+}
