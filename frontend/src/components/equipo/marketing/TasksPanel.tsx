@@ -67,6 +67,7 @@ export function TasksPanel() {
   const [titulo, setTitulo] = useState("");
   const [prioridad, setPrioridad] = useState<Prioridad>("media");
   const [deadline, setDeadline] = useState("");
+  const [hora, setHora] = useState("");
   const [responsables, setResponsables] = useState("");
 
   useEffect(() => {
@@ -99,6 +100,7 @@ export function TasksPanel() {
         titulo,
         prioridad,
         deadline: deadline || null,
+        hora,
         responsables: responsables
           .split(",")
           .map((r) => r.trim())
@@ -107,6 +109,7 @@ export function TasksPanel() {
       setTitulo("");
       setPrioridad("media");
       setDeadline("");
+      setHora("");
       setResponsables("");
       setMostrarFormulario(false);
       await cargar();
@@ -230,6 +233,15 @@ export function TasksPanel() {
                 type="date"
                 value={deadline}
                 onChange={(event) => setDeadline(event.target.value)}
+              />
+            </div>
+            <div className="field-group-react">
+              <label htmlFor="tp-hora">Hora (opcional)</label>
+              <input
+                id="tp-hora"
+                type="time"
+                value={hora}
+                onChange={(event) => setHora(event.target.value)}
               />
             </div>
           </div>
