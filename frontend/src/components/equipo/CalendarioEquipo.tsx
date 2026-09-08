@@ -1,14 +1,7 @@
 import { useMemo, useState, useEffect } from "react";
 
-import {
-  getEnlaceCalendarioGeneral,
-  getEquipoCalendario,
-  getEquipoSession,
-  getMisTareas,
-} from "../../api/equipo";
-import { AlertBanner } from "../feedback/AlertBanner";
+import { getEquipoCalendario, getEquipoSession, getMisTareas } from "../../api/equipo";
 import { etiquetaDe } from "./marketing/Avatares";
-import { SuscribirCalendario } from "./SuscribirCalendario";
 import type { EventoCalendario } from "../../types/equipo";
 import { diasHasta, formatearFecha as formatearFechaCorta, type Task } from "../../types/marketing";
 
@@ -118,7 +111,6 @@ function formatearFecha(fecha: string) {
  */
 export function CalendarioEquipo() {
   const [eventos, setEventos] = useState<EventoCalendario[]>([]);
-  const [error, setError] = useState<string | null>(null);
   const [cursor, setCursor] = useState(() => {
     const hoy = new Date();
     return new Date(hoy.getFullYear(), hoy.getMonth(), 1);
@@ -200,10 +192,11 @@ export function CalendarioEquipo() {
 
   const hoy = iso(new Date());
 
-  const cosasPorDelante = tareas.filter((t) => {
-    const dias = diasHasta(t.deadline);
-    return dias === 0 || dias === 1;
-  }).length;
+  // Todo lo abierto con fecha, no solo hoy/mañana: contar nada más lo próximo
+  // dejaba "ninguna cosa pendiente" a quien tenía tareas ya vencidas la
+  // semana pasada -- se lee como "vas al día" y es lo contrario. Mismo
+  // criterio que el resumen de cada departamento (`WeekPanel.totalPendientes`).
+  const cosasPorDelante = tareas.filter((t) => diasHasta(t.deadline) !== null).length;
 
   function mover(meses: number) {
     setCursor((actual) => new Date(actual.getFullYear(), actual.getMonth() + meses, 1));
@@ -216,8 +209,6 @@ export function CalendarioEquipo() {
 
   const calendario = (
     <section className="mkt-panel-react">
-      {error ? <AlertBanner variant="error" message={error} /> : null}
-
       <header className="mkt-panel-header-react">
         <h3>
           {MESES[cursor.getMonth()]} {cursor.getFullYear()}
@@ -232,7 +223,6 @@ export function CalendarioEquipo() {
           <button type="button" className="mkt-btn-mini-react" onClick={() => mover(1)}>
             Siguiente →
           </button>
-          <SuscribirCalendario obtenerEnlace={getEnlaceCalendarioGeneral} onError={setError} />
         </div>
       </header>
 
@@ -324,8 +314,10 @@ export function CalendarioEquipo() {
       <header className="mkt-saludo-react">
         <h3>Hola{email ? `, ${etiquetaDe(email)}` : ""} 👋</h3>
         <p className="mkt-meta-react">
-          {tituloDeHoy()} — {cosasPorDelante === 0 ? "nada" : cosasPorDelante}{" "}
-          {cosasPorDelante === 1 ? "cosa" : "cosas"} por delante hoy y mañana
+          {tituloDeHoy()} —{" "}
+          {cosasPorDelante === 0
+            ? "ninguna cosa pendiente"
+            : `${cosasPorDelante} ${cosasPorDelante === 1 ? "cosa pendiente" : "cosas pendientes"}`}
         </p>
       </header>
 

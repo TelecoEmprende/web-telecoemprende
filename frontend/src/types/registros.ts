@@ -24,7 +24,10 @@ export type TipoCampo =
   | "importe"
   | "url"
   | "lista"
-  | "check";
+  | "check"
+  /** Como "lista" (emails, uno por línea) pero elegidos del roster del
+   *  departamento por nombre y foto, no tecleados de memoria. */
+  | "miembros";
 
 export type CampoSpec = {
   clave: string;
