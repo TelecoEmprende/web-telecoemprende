@@ -1,9 +1,14 @@
 # Propuesta: pulido de lo que ya existe en Marketing
 
-Escrito por Abril (con Claude) el 7 de septiembre de 2026. Como
-[`propuesta-crm-miembros.md`](propuesta-crm-miembros.md): **nada de esto está
-construido**, es una lista para decidir qué se hace y quién. Sin mockups
-esta vez — son retoques sobre pantallas que ya existen, no pantallas nuevas.
+Escrito por Abril (con Claude) el 7 de septiembre de 2026. Sin mockups —
+son retoques sobre pantallas que ya existen, no pantallas nuevas.
+
+> **Estado: construido el 8 de septiembre de 2026**, las diez ideas. Un
+> cambio respecto a lo escrito abajo: el aviso de deadlines usa Slack
+> (`backend/api/cron.py`, disparado por Vercel Cron) en vez de un email por
+> Resend — Slack ya estaba conectado (`services/slack.py`) y Resend todavía
+> tiene el dominio sin verificar, así que reusar lo que ya funcionaba era
+> menos trabajo y funciona desde ya.
 
 ## Tareas / tablero
 
