@@ -1370,6 +1370,21 @@ button.mkt-evento-react:hover {
   min-height: 108px;
 }
 
+/* Vista semana: columnas altas y estrechas, como Google Calendar, en vez de
+   las casillas cuadradas del mes -- aquí solo hay 7, así que hay sitio de
+   sobra a lo alto. No es una rejilla de horas: las tareas y publicaciones de
+   aquí no tienen hora, solo fecha, así que se apilan de arriba abajo en vez
+   de colocarse a la altura que les tocaría en un reloj. */
+.mkt-calendario-semana-react .mkt-dia-react {
+  min-height: 480px;
+}
+
+@media (max-width: 720px) {
+  .mkt-calendario-semana-react .mkt-dia-react {
+    min-height: 320px;
+  }
+}
+
 @media (max-width: 620px) {
   .mkt-fila-react,
   .mkt-publicacion-react {
