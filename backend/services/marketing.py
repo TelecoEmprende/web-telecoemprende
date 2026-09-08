@@ -216,6 +216,77 @@ def eliminar_campaign(campaign_id: int, departamento: str) -> bool:
     return _eliminar("campaigns", campaign_id, departamento)
 
 
+def duplicar_campaign(campaign_id: int, departamento: str, creado_por: str) -> dict | None:
+    """Copia una campaña entera -- contenidos y tareas incluidos -- para lo
+    que se repite (reunión semanal, story de bienvenida) sin rehacerla a
+    mano cada vez.
+
+    La copia sale "en blanco": sin fecha, sin publicar, con las tareas en
+    `pendiente` y la checklist sin marcar. El texto (guion, copy, hashtags,
+    el propio enunciado de cada tarea) sí se conserva -- es la plantilla que
+    se quiere reutilizar, no el estado de la última vez.
+    """
+    original = obtener_campaign(campaign_id, departamento)
+    if original is None:
+        return None
+
+    nueva = crear_campaign(
+        nombre=f"{original['nombre']} (copia)",
+        objetivo=original["objetivo"],
+        audiencia=original["audiencia"],
+        fecha=None,
+        creado_por=creado_por,
+        departamento=departamento,
+    )
+
+    def _tarea_en_blanco(tarea: dict) -> dict:
+        return {
+            "titulo": tarea["titulo"],
+            "descripcion": tarea["descripcion"],
+            "estado": "pendiente",
+            "prioridad": tarea["prioridad"],
+            "deadline": None,
+            "responsables": tarea["responsables"],
+            "tags": tarea["tags"],
+            "checklist": [{**item, "hecho": False} for item in tarea["checklist"]],
+            "enlaces": tarea["enlaces"],
+            "creado_por": creado_por,
+        }
+
+    for content in original["contents"]:
+        nuevo_content = crear_content(
+            nueva["id"],
+            departamento,
+            titulo=content["titulo"],
+            tipo=content["tipo"],
+            plataforma=content["plataforma"],
+            fecha_publicacion=None,
+            estado="idea",
+            script=content["script"],
+            copy_texto=content["copy_texto"],
+            cta=content["cta"],
+            hashtags=content["hashtags"],
+            idea_visual=content["idea_visual"],
+            responsables=content["responsables"],
+            enlaces=content["enlaces"],
+        )
+        for tarea in content["tasks"]:
+            crear_task(
+                departamento=departamento,
+                content_id=nuevo_content["id"],
+                **_tarea_en_blanco(tarea),
+            )
+
+    for tarea in original["tasks_sueltas"]:
+        crear_task(
+            departamento=departamento,
+            campaign_id=nueva["id"],
+            **_tarea_en_blanco(tarea),
+        )
+
+    return obtener_campaign(nueva["id"], departamento)
+
+
 # --------------------------------------------------------------------------
 # Contents
 # --------------------------------------------------------------------------
