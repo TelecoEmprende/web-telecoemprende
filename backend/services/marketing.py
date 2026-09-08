@@ -99,6 +99,13 @@ def init_marketing_db():
                 ADD COLUMN IF NOT EXISTS departamento VARCHAR(20)
                     NOT NULL DEFAULT 'marketing'
             """)
+            # Hora opcional: mismo formato "HH:MM" y misma columna que
+            # `reuniones`, sin la cual una tarea con hora real no se puede
+            # distinguir de una que solo tiene fecha límite.
+            cur.execute("""
+                ALTER TABLE tasks
+                ADD COLUMN IF NOT EXISTS hora VARCHAR(5) NOT NULL DEFAULT ''
+            """)
             cur.execute(
                 "CREATE INDEX IF NOT EXISTS contents_campaign_idx ON contents (campaign_id)"
             )
@@ -506,10 +513,10 @@ def crear_task(**campos) -> dict | None:
                 """
                 INSERT INTO tasks (
                     departamento, campaign_id, content_id, titulo, descripcion,
-                    estado, prioridad, deadline, responsables, tags, checklist,
-                    enlaces, creado_por
+                    estado, prioridad, deadline, hora, responsables, tags,
+                    checklist, enlaces, creado_por
                 )
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 RETURNING *
                 """,
                 (
@@ -521,6 +528,7 @@ def crear_task(**campos) -> dict | None:
                     campos.get("estado", "pendiente"),
                     campos.get("prioridad", "media"),
                     campos.get("deadline"),
+                    campos.get("hora", ""),
                     campos.get("responsables", []),
                     campos.get("tags", []),
                     json.dumps(campos.get("checklist", [])),
@@ -535,7 +543,7 @@ def crear_task(**campos) -> dict | None:
 
 def actualizar_task(task_id: int, departamento: str, **campos) -> bool:
     permitidos = (
-        "titulo", "descripcion", "estado", "prioridad", "deadline",
+        "titulo", "descripcion", "estado", "prioridad", "deadline", "hora",
         "responsables", "tags", "checklist", "enlaces",
     )
     if "checklist" in campos:
@@ -554,9 +562,15 @@ def eliminar_task(task_id: int, departamento: str) -> bool:
 def calendario(desde: date, hasta: date, departamento: str) -> list[dict]:
     """Vista de solo lectura sobre lo que ya existe: no hay tabla de calendario.
 
-    Devuelve deadlines de tareas y fechas de publicación de contenidos en el
-    rango pedido, ya normalizados a la misma forma para que el frontend pinte
-    una única lista sin distinguir de dónde sale cada cosa.
+    Devuelve deadlines de tareas, fechas de publicación de contenidos y
+    reuniones en el rango pedido, ya normalizados a la misma forma para que
+    el frontend pinte una única lista sin distinguir de dónde sale cada cosa.
+
+    `hora` viaja en todas las filas aunque solo tareas y reuniones puedan
+    tenerla (las publicaciones son de día completo, `fecha_publicacion` no
+    guarda hora): así la vista semana coloca en su rejilla lo que tiene hora
+    real y el resto lo deja en la franja de "todo el día", sin tener que
+    mirar `origen` para saberlo.
     """
     with _get_connection() as conn:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
@@ -567,7 +581,7 @@ def calendario(desde: date, hasta: date, departamento: str) -> list[dict]:
                            co.fecha_publicacion AS fecha, co.estado,
                            co.campaign_id, co.plataforma AS detalle,
                            NULL AS prioridad, c.nombre AS padre,
-                           co.responsables
+                           co.responsables, NULL::varchar AS hora
                     FROM contents co
                     JOIN campaigns c ON c.id = co.campaign_id
                     WHERE co.fecha_publicacion BETWEEN %(desde)s AND %(hasta)s
@@ -577,12 +591,21 @@ def calendario(desde: date, hasta: date, departamento: str) -> list[dict]:
                            t.deadline AS fecha, t.estado,
                            t.campaign_id, t.prioridad AS detalle,
                            t.prioridad, COALESCE(co.titulo, c.nombre) AS padre,
-                           t.responsables
+                           t.responsables, NULLIF(t.hora, '') AS hora
                     FROM tasks t
                     LEFT JOIN contents co ON co.id = t.content_id
                     LEFT JOIN campaigns c ON c.id = t.campaign_id
                     WHERE t.deadline BETWEEN %(desde)s AND %(hasta)s
                       AND t.departamento = %(departamento)s
+                    UNION ALL
+                    SELECT 'reunion' AS origen, r.id, r.titulo,
+                           r.fecha AS fecha, '' AS estado,
+                           NULL::integer AS campaign_id, r.objetivo AS detalle,
+                           NULL AS prioridad, NULL AS padre,
+                           r.asistentes AS responsables, NULLIF(r.hora, '') AS hora
+                    FROM reuniones r
+                    WHERE r.fecha BETWEEN %(desde)s AND %(hasta)s
+                      AND r.departamento = %(departamento)s
                 ) x
                 ORDER BY fecha,
                          -- La publicación ancla el día; después las tareas por
@@ -592,6 +615,7 @@ def calendario(desde: date, hasta: date, departamento: str) -> list[dict]:
                              WHEN 'alta' THEN 1 WHEN 'media' THEN 2
                              WHEN 'baja' THEN 3 ELSE 0
                          END,
+                         hora NULLS LAST,
                          titulo
                 """,
                 {"desde": desde, "hasta": hasta, "departamento": departamento},
@@ -617,7 +641,7 @@ def calendario_ics(desde: date, hasta: date, departamento: str) -> str:
     ]
     for item in calendario(desde, hasta, departamento):
         inicio = date.fromisoformat(item["fecha"])
-        etiqueta = "Tarea" if item["origen"] == "task" else "Publicación"
+        etiqueta = {"task": "Tarea", "reunion": "Reunión"}.get(item["origen"], "Publicación")
         resumen = escapar_ics(f"{etiqueta}: {item['titulo']}")
         descripcion = " · ".join(p for p in (item.get("padre"), item.get("detalle")) if p)
         lineas += ["BEGIN:VEVENT", f"UID:{departamento}-{item['origen']}-{item['id']}@telecoemprende.es"]
