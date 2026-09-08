@@ -307,7 +307,12 @@ export function EquipoSidebar({
               // indistinguibles por nombre para un lector de pantalla (y para
               // un test).
               aria-label={`Sección ${titulo}${vp ? " · VP" : ""}, plegar o desplegar`}
-              className="group/trigger flex h-8 w-full shrink-0 items-center justify-between rounded-md px-2 text-xs font-medium text-sidebar-foreground/70 outline-hidden hover:text-sidebar-foreground group-data-[collapsible=icon]:hidden"
+              // `bg-transparent`/`border-0` sin variante `hover:`, para que
+              // apliquen siempre: el mini-reset de equipo.css (que no se
+              // toca) deja de proteger este botón en :hover, y sin un fondo
+              // propio ahí caía en el gris por defecto del navegador --
+              // mismo bug que ya salió antes con las tarjetas de tarea.
+              className="group/trigger flex h-8 w-full shrink-0 items-center justify-between rounded-md border-0 bg-transparent px-2 text-xs font-medium text-sidebar-foreground/70 outline-hidden hover:bg-sidebar-accent hover:text-sidebar-foreground group-data-[collapsible=icon]:hidden"
             >
               <span aria-hidden="true">
                 {titulo}
