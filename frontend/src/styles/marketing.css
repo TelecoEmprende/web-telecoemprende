@@ -94,7 +94,6 @@
   font-size: 0.88rem;
 }
 
-.mkt-cargando-react,
 .mkt-vacio-react {
   margin: 20px 0;
   color: var(--color-text-muted);
@@ -996,6 +995,24 @@
 .mkt-resumen-alerta-react {
   color: var(--color-error-text);
   font-weight: 800;
+}
+
+.mkt-buscador-react {
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-surface);
+  color: var(--color-navy);
+  font-family: inherit;
+  font-size: 0.88rem;
+  min-width: 0;
+  flex: 1 1 200px;
+}
+
+.mkt-buscador-react:focus {
+  outline: 2px solid var(--color-orange);
+  outline-offset: 1px;
 }
 
 /* Filtro "solo lo mío": una casilla, no un menú. */

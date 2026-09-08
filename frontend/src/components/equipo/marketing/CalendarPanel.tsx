@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import { useApi } from "../DeptoApi";
 import { AlertBanner } from "../../feedback/AlertBanner";
+import { Esqueleto } from "../../feedback/Esqueleto";
 import { SuscribirCalendario } from "../SuscribirCalendario";
 import { AvataresDeResponsables } from "./Avatares";
 import type { ApiFailure } from "../../../types/api";
@@ -199,7 +200,7 @@ export function CalendarPanel({ onAbrirCampaign }: Props) {
       </div>
 
       {isLoading ? (
-        <p className="mkt-cargando-react">Cargando calendario...</p>
+        <Esqueleto filas={5} alto={54} />
       ) : (
         <>
           {items.length === 0 ? (

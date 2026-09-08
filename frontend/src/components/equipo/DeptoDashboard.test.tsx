@@ -261,6 +261,64 @@ describe("/equipo — panel de Marketing", () => {
     expect(screen.getByRole("button", { name: /Grabar/ })).toBeInTheDocument();
   });
 
+  it("el buscador filtra el tablero por título", async () => {
+    getTasks.mockResolvedValue({
+      ok: true,
+      usuario: YO,
+      tasks: tareas({ titulo: "Escribir guion" }, { titulo: "Grabar reel" }),
+    });
+
+    await renderMarketing();
+    await userEvent.click(screen.getByRole("button", { name: "Tareas" }));
+    await screen.findByRole("button", { name: /Escribir guion/ });
+
+    await userEvent.type(screen.getByLabelText("Buscar tareas por título"), "reel");
+
+    expect(screen.getByRole("button", { name: /Grabar reel/ })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Escribir guion/ })).not.toBeInTheDocument();
+  });
+
+  it("arrastrar una tarea a otra columna deja deshacer el movimiento", async () => {
+    getTasks.mockResolvedValue({
+      ok: true,
+      usuario: YO,
+      tasks: tareas({ id: 1, titulo: "Escribir guion", estado: "pendiente" }),
+    });
+    updateTask.mockResolvedValue({ ok: true });
+
+    await renderMarketing();
+    await userEvent.click(screen.getByRole("button", { name: "Tareas" }));
+    const tarjeta = await screen.findByRole("button", { name: /Escribir guion/ });
+    const destino = document.querySelector('[data-estado="en_progreso"]') as HTMLElement;
+
+    // jsdom no implementa DataTransfer: un objeto mínimo con las mismas
+    // formas de leer/escribir que usa el tablero real basta para el test.
+    const datos: Record<string, string> = {};
+    const dataTransfer = {
+      setData: (tipo: string, valor: string) => {
+        datos[tipo] = valor;
+      },
+      getData: (tipo: string) => datos[tipo] ?? "",
+      get types() {
+        return Object.keys(datos);
+      },
+      effectAllowed: "",
+    };
+
+    fireEvent.dragStart(tarjeta, { dataTransfer });
+    fireEvent.dragOver(destino, { dataTransfer });
+    fireEvent.drop(destino, { dataTransfer });
+
+    await waitFor(() => expect(updateTask).toHaveBeenCalledWith(1, { estado: "en_progreso" }));
+    expect(
+      await screen.findByText(/"Escribir guion" movida a En progreso/),
+    ).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "Deshacer" }));
+
+    await waitFor(() => expect(updateTask).toHaveBeenCalledWith(1, { estado: "pendiente" }));
+  });
+
   it("al pulsar una tarea se abre en grande con su contenido", async () => {
     getTasks.mockResolvedValue({ ok: true, tasks: tareas({}), usuario: YO });
 

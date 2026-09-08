@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 
 import { useApi } from "../DeptoApi";
 import { AlertBanner } from "../../feedback/AlertBanner";
+import { Esqueleto } from "../../feedback/Esqueleto";
 import { AvatarResponsable, etiquetaDe } from "./Avatares";
 import {
   Dialog,
@@ -97,7 +98,7 @@ export function MemberDialog({ email, onCerrar, onGuardado }: Props) {
         {error ? <AlertBanner variant="error" message={error} /> : null}
 
         {ficha === null ? (
-          <p className="mkt-cargando-react">Cargando ficha...</p>
+          <Esqueleto filas={3} alto={48} />
         ) : (
           <div className="mkt-ficha-react">
             <div className="mkt-ficha-identidad-react">

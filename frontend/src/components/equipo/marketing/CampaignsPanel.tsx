@@ -2,6 +2,7 @@ import { FormEvent, useCallback, useEffect, useState } from "react";
 
 import { useApi } from "../DeptoApi";
 import { AlertBanner } from "../../feedback/AlertBanner";
+import { Esqueleto } from "../../feedback/Esqueleto";
 import { AdjuntosDeContent } from "./AdjuntosDeContent";
 import { ContentEditor } from "./ContentEditor";
 import { Badge } from "@/components/ui/badge";
@@ -347,7 +348,7 @@ export function CampaignsPanel({ campaignInicial, onCampaignAbierta }: Props) {
   }
 
   if (isLoading) {
-    return <p className="mkt-cargando-react">Cargando campañas...</p>;
+    return <Esqueleto filas={3} alto={92} />;
   }
 
   // --- Detalle de una campaña ---
