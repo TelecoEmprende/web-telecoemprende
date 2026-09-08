@@ -38,6 +38,39 @@ function celdasDelMes(año: number, mes: number) {
   ];
 }
 
+/** Lunes de la semana de `fecha`. */
+function lunesDe(fecha: Date) {
+  const copia = new Date(fecha);
+  copia.setDate(copia.getDate() - ((copia.getDay() + 6) % 7));
+  return copia;
+}
+
+/** Los 7 días de la semana de `fecha`, de lunes a domingo -- nunca hace falta
+ *  rellenar huecos, a diferencia del mes. */
+function celdasDeLaSemana(fecha: Date) {
+  const lunes = lunesDe(fecha);
+  return Array.from({ length: 7 }, (_, i) => {
+    const dia = new Date(lunes);
+    dia.setDate(lunes.getDate() + i);
+    return dia;
+  });
+}
+
+type Vista = "mes" | "semana";
+
+/** Qué rango de fechas hay que pedirle al backend para la vista actual. */
+function rangoDeVista(referencia: Date, vista: Vista) {
+  if (vista === "semana") {
+    const desde = lunesDe(referencia);
+    const hasta = new Date(desde);
+    hasta.setDate(desde.getDate() + 6);
+    return { desde, hasta };
+  }
+  const año = referencia.getFullYear();
+  const mes = referencia.getMonth();
+  return { desde: new Date(año, mes, 1), hasta: new Date(año, mes + 1, 0) };
+}
+
 type Props = {
   /** Abrir la campaña de un elemento del calendario, para que no sea un
    *  callejón sin salida: se ve algo, se toca, se llega a ello. */
@@ -51,6 +84,7 @@ export function CalendarPanel({ onAbrirCampaign }: Props) {
     const hoy = new Date();
     return new Date(hoy.getFullYear(), hoy.getMonth(), 1);
   });
+  const [vista, setVista] = useState<Vista>("mes");
   const [items, setItems] = useState<CalendarioItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -60,16 +94,12 @@ export function CalendarPanel({ onAbrirCampaign }: Props) {
   // usuario manda: si navega a un mes vacío, se queda ahí.
   const [yaBuscado, setYaBuscado] = useState(false);
 
-  const cargar = useCallback(async (mesInicio: Date) => {
+  const cargar = useCallback(async (referencia: Date) => {
     setIsLoading(true);
-    const año = mesInicio.getFullYear();
-    const mes = mesInicio.getMonth();
+    const { desde, hasta } = rangoDeVista(referencia, vista);
 
     try {
-      const respuesta = await getCalendario(
-        iso(new Date(año, mes, 1)),
-        iso(new Date(año, mes + 1, 0)),
-      );
+      const respuesta = await getCalendario(iso(desde), iso(hasta));
       setItems(respuesta.items);
       setError(null);
       return respuesta.items;
@@ -79,7 +109,7 @@ export function CalendarPanel({ onAbrirCampaign }: Props) {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [vista]);
 
   useEffect(() => {
     let activo = true;
@@ -139,11 +169,30 @@ export function CalendarPanel({ onAbrirCampaign }: Props) {
 
   const hoy = iso(new Date());
 
-  function mover(meses: number) {
+  function mover(pasos: number) {
     setDiaAbierto(null);
-    setCursor(
-      (actual) => new Date(actual.getFullYear(), actual.getMonth() + meses, 1),
-    );
+    setCursor((actual) => {
+      if (vista === "semana") {
+        const siguiente = new Date(actual);
+        siguiente.setDate(actual.getDate() + pasos * 7);
+        return siguiente;
+      }
+      return new Date(actual.getFullYear(), actual.getMonth() + pasos, 1);
+    });
+  }
+
+  /** "septiembre 2026" en vista de mes; "1–7 de septiembre 2026" (o cruzando
+   *  mes, "29 ago – 4 sep") en vista de semana. */
+  function tituloDeVista() {
+    if (vista === "mes") return `${MESES[cursor.getMonth()]} ${cursor.getFullYear()}`;
+
+    const { desde, hasta } = rangoDeVista(cursor, "semana");
+    const rango =
+      desde.getMonth() === hasta.getMonth()
+        ? `${desde.getDate()}–${hasta.getDate()} de ${MESES[desde.getMonth()]}`
+        : `${desde.getDate()} ${MESES[desde.getMonth()].slice(0, 3)} – ` +
+          `${hasta.getDate()} ${MESES[hasta.getMonth()].slice(0, 3)}`;
+    return `${rango} ${hasta.getFullYear()}`;
   }
 
   function irAHoy() {
@@ -171,10 +220,26 @@ export function CalendarPanel({ onAbrirCampaign }: Props) {
       {error ? <AlertBanner variant="error" message={error} /> : null}
 
       <header className="mkt-panel-header-react">
-        <h3>
-          {MESES[cursor.getMonth()]} {cursor.getFullYear()}
-        </h3>
+        <h3>{tituloDeVista()}</h3>
         <div className="mkt-calendario-nav-react">
+          <div className="mkt-vista-toggle-react" role="group" aria-label="Vista del calendario">
+            <button
+              type="button"
+              className={`mkt-btn-mini-react${vista === "mes" ? " mkt-btn-mini-activo-react" : ""}`}
+              aria-pressed={vista === "mes"}
+              onClick={() => setVista("mes")}
+            >
+              Mes
+            </button>
+            <button
+              type="button"
+              className={`mkt-btn-mini-react${vista === "semana" ? " mkt-btn-mini-activo-react" : ""}`}
+              aria-pressed={vista === "semana"}
+              onClick={() => setVista("semana")}
+            >
+              Semana
+            </button>
+          </div>
           <button type="button" className="mkt-btn-mini-react" onClick={() => mover(-1)}>
             ← Anterior
           </button>
@@ -205,8 +270,8 @@ export function CalendarPanel({ onAbrirCampaign }: Props) {
         <>
           {items.length === 0 ? (
             <p className="mkt-vacio-react">
-              Nada en {MESES[cursor.getMonth()]}. Puedes tocar cualquier día para
-              añadir una tarea, o cambiar de mes arriba.
+              Nada en {vista === "mes" ? MESES[cursor.getMonth()] : "esta semana"}. Puedes
+              tocar cualquier día para añadir una tarea, o cambiar de {vista} arriba.
             </p>
           ) : null}
 
@@ -217,7 +282,10 @@ export function CalendarPanel({ onAbrirCampaign }: Props) {
               </div>
             ))}
 
-            {celdasDelMes(cursor.getFullYear(), cursor.getMonth()).map((fecha, indice) => {
+            {(vista === "mes"
+              ? celdasDelMes(cursor.getFullYear(), cursor.getMonth())
+              : celdasDeLaSemana(cursor)
+            ).map((fecha, indice) => {
               if (fecha === null) {
                 return <div key={`hueco-${indice}`} className="mkt-dia-vacio-react" />;
               }
@@ -235,7 +303,7 @@ export function CalendarPanel({ onAbrirCampaign }: Props) {
                   <button
                     type="button"
                     className="mkt-dia-numero-react"
-                    aria-label={`Añadir tarea el ${fecha.getDate()} de ${MESES[cursor.getMonth()]}`}
+                    aria-label={`Añadir tarea el ${fecha.getDate()} de ${MESES[fecha.getMonth()]}`}
                     onClick={() => {
                       setTituloNuevo("");
                       setDiaAbierto(diaAbierto === clave ? null : clave);

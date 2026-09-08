@@ -393,6 +393,23 @@ describe("/equipo — panel de Marketing", () => {
     );
   });
 
+  it("la vista semana pide un rango de 7 días y pinta 7 celdas", async () => {
+    await renderMarketing();
+    await screen.findByText(/Nada pendiente/);
+    await userEvent.click(screen.getByRole("button", { name: "Calendario" }));
+    await screen.findByRole("button", { name: /^Añadir tarea el 15 de/ });
+
+    getCalendario.mockClear();
+    await userEvent.click(screen.getByRole("button", { name: "Semana" }));
+
+    await waitFor(() => expect(getCalendario).toHaveBeenCalled());
+    const [desde, hasta] = getCalendario.mock.calls.at(-1) as [string, string];
+    const dias = (new Date(hasta).getTime() - new Date(desde).getTime()) / 86_400_000;
+    expect(dias).toBe(6);
+
+    expect(document.querySelectorAll(".mkt-dia-react").length).toBe(7);
+  });
+
   it("lista los miembros del departamento con su carga", async () => {
     getMiembros.mockResolvedValue({
       ok: true,
