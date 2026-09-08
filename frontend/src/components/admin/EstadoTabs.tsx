@@ -10,6 +10,18 @@ const ESTADO_LABELS: Record<EstadoFiltro, string> = {
   waitlist: "Waitlisteados",
 };
 
+// Color de la pastilla activa por estado. El resto de la pastilla (borde,
+// tipografía, radio) es igual para todas, así que solo varía esto.
+const ESTADO_ACTIVO_CLASS: Record<EstadoFiltro, string> = {
+  todos: "border-[var(--color-navy)] bg-[var(--color-navy)] text-white",
+  pendiente: "border-slate-500 bg-slate-500 text-white",
+  aceptado:
+    "border-[var(--color-success-text)] bg-[var(--color-success-text)] text-white",
+  rechazado:
+    "border-[var(--color-error-text)] bg-[var(--color-error-text)] text-white",
+  waitlist: "border-[#e6a417] bg-[#e6a417] text-white",
+};
+
 const ORDEN: EstadoFiltro[] = ["todos", "pendiente", "aceptado", "rechazado", "waitlist"];
 
 type EstadoTabsProps = {
@@ -20,23 +32,24 @@ type EstadoTabsProps = {
 
 export function EstadoTabs({ registros, estadoActivo, onEstadoChange }: EstadoTabsProps) {
   return (
-    <div className="admin-estado-tabs-react" role="tablist" aria-label="Estado de la inscripción">
+    <div className="mb-5 flex flex-wrap gap-2" role="tablist" aria-label="Estado de la inscripción">
       {ORDEN.map((estado) => {
         const count = estado === "todos" ? registros.length : registros.filter((r) => r.estado === estado).length;
+        const activo = estadoActivo === estado;
         return (
           <button
             key={estado}
             type="button"
             role="tab"
-            aria-selected={estadoActivo === estado}
-            className={
-              estadoActivo === estado
-                ? `admin-estado-tab-react admin-estado-tab-active-react admin-estado-tab-${estado}-react`
-                : `admin-estado-tab-react admin-estado-tab-${estado}-react`
-            }
+            aria-selected={activo}
+            className={`cursor-pointer rounded-full border px-4 py-2.5 text-sm font-extrabold ${
+              activo
+                ? ESTADO_ACTIVO_CLASS[estado]
+                : "border-[#d7dfeb] bg-white text-muted-foreground"
+            }`}
             onClick={() => onEstadoChange(estado)}
           >
-            {ESTADO_LABELS[estado]} <span className="admin-estado-tab-count-react">{count}</span>
+            {ESTADO_LABELS[estado]} <span className="font-bold opacity-70">{count}</span>
           </button>
         );
       })}
