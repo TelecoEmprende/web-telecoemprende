@@ -1,6 +1,7 @@
 import { apiRequest } from "./client";
 import type { ApiResult } from "../types/api";
 import type { EquipoLoginResponse, EquipoSessionResponse, EventoCalendario } from "../types/equipo";
+import type { Task } from "../types/marketing";
 
 export function loginEquipo(email: string, password: string) {
   return apiRequest<EquipoLoginResponse>("/api/equipo/login", {
@@ -25,4 +26,8 @@ export function getEquipoCalendario() {
 
 export function getEnlaceCalendarioGeneral() {
   return apiRequest<ApiResult & { url: string }>("/api/equipo/calendario/enlace");
+}
+
+export function getMisTareas() {
+  return apiRequest<ApiResult & { tareas: Task[] }>("/api/equipo/mis-tareas");
 }
