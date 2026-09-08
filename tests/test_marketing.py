@@ -581,6 +581,20 @@ class CalendarioEnlaceTests(MarketingTestCase):
         campaign = self.crear_campaign()
         self.crear_content(campaign["id"], fecha_publicacion="2026-10-15")
 
+    def test_el_enlace_respeta_el_esquema_del_proxy(self):
+        # Vercel (y Nginx en Docker) mandan X-Forwarded-Proto: sin ProxyFix,
+        # Flask no se fía y el enlace sale "http://", que Google Calendar
+        # rechaza en silencio al intentar suscribirse.
+        respuesta = self.client.get(
+            "/api/marketing/calendario/enlace",
+            headers={
+                "X-Forwarded-Proto": "https",
+                "X-Forwarded-Host": "telecoemprende.es",
+            },
+        )
+        url = respuesta.get_json()["url"]
+        self.assertTrue(url.startswith("https://telecoemprende.es/"), url)
+
     def test_el_enlace_generado_funciona_sin_sesion(self):
         url = self.client.get("/api/marketing/calendario/enlace").get_json()["url"]
         ruta = url.split("localhost", 1)[1]
