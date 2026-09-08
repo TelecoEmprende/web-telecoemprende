@@ -96,6 +96,7 @@ const TAREA = {
   estado: "pendiente" as TaskEstado,
   prioridad: "media" as Prioridad,
   deadline: enDias(2),
+  hora: "",
   responsables: [] as string[],
   tags: [],
   checklist: [],
@@ -407,7 +408,8 @@ describe("/equipo — panel de Marketing", () => {
     const dias = (new Date(hasta).getTime() - new Date(desde).getTime()) / 86_400_000;
     expect(dias).toBe(6);
 
-    expect(document.querySelectorAll(".mkt-dia-react").length).toBe(7);
+    expect(document.querySelectorAll(".mkt-semana-dia-react").length).toBe(7);
+    expect(document.querySelectorAll(".mkt-semana-columna-react").length).toBe(7);
   });
 
   it("lista los miembros del departamento con su carga", async () => {

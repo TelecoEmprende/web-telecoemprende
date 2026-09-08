@@ -64,6 +64,8 @@ export type Task = {
   estado: TaskEstado;
   prioridad: Prioridad;
   deadline: string | null;
+  /** "HH:MM", o "" si la tarea solo tiene fecha límite y no hora. */
+  hora: string;
   responsables: string[];
   tags: string[];
   checklist: ChecklistItem[];
@@ -118,7 +120,7 @@ export type CampaignDetalle = Campaign & {
 };
 
 export type CalendarioItem = {
-  origen: "task" | "content";
+  origen: "task" | "content" | "reunion";
   id: number;
   titulo: string;
   fecha: string;
@@ -129,6 +131,8 @@ export type CalendarioItem = {
   /** Contenido o campaña de la que cuelga, para no leer títulos huérfanos. */
   padre: string | null;
   responsables: string[];
+  /** "HH:MM", o null si es de día completo (publicaciones siempre lo son). */
+  hora: string | null;
 };
 
 export type Miembro = {

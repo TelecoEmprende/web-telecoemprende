@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type CSSProperties } from "react";
 
 import { useApi } from "../DeptoApi";
 import { AlertBanner } from "../../feedback/AlertBanner";
@@ -14,8 +14,19 @@ const MESES = [
   "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre",
 ];
 
-/** Cuántos elementos caben en una celda antes de plegar el resto. */
+/** Cuántos elementos caben en una celda antes de plegar el resto (vista mes). */
 const MAX_POR_DIA = 3;
+
+/** Ventana de horas que pinta la rejilla de la vista semana. Fija y no
+ *  calculada de los datos: un club no tiene reuniones a las 3 de la
+ *  madrugada, y una ventana fija es una rejilla que se lee de un vistazo en
+ *  vez de saltar de tamaño según lo que haya esa semana. */
+const HORA_INICIO = 8;
+const HORA_FIN = 22;
+const HORAS_VISIBLES = Array.from(
+  { length: HORA_FIN - HORA_INICIO },
+  (_, i) => HORA_INICIO + i,
+);
 
 function iso(fecha: Date) {
   // toISOString() pasa por UTC y en España adelanta/atrasa un día según la
@@ -69,6 +80,72 @@ function rangoDeVista(referencia: Date, vista: Vista) {
   const año = referencia.getFullYear();
   const mes = referencia.getMonth();
   return { desde: new Date(año, mes, 1), hasta: new Date(año, mes + 1, 0) };
+}
+
+/** Minutos desde medianoche de un "HH:MM", o null si no es una hora válida. */
+function minutosDeHora(hora: string): number | null {
+  const m = /^(\d{1,2}):(\d{2})$/.exec(hora);
+  if (!m) return null;
+  const minutos = Number(m[1]) * 60 + Number(m[2]);
+  return Number.isNaN(minutos) ? null : minutos;
+}
+
+const VENTANA_INICIO = HORA_INICIO * 60;
+const VENTANA_FIN = HORA_FIN * 60;
+const VENTANA_TOTAL = VENTANA_FIN - VENTANA_INICIO;
+/** Duración por defecto de un item con hora: ni tareas ni reuniones guardan
+ *  cuánto duran, solo cuándo empiezan, así que se pinta un bloque de una
+ *  hora -- suficiente para verlo a su sitio sin fingir un dato que no hay. */
+const DURACION_DEFECTO_MIN = 60;
+
+type Posicion = { top: number; alto: number; inicioMin: number; finMin: number };
+
+/** Dónde cae un item con hora dentro de la rejilla, en porcentaje de la
+ *  ventana visible. Fuera de la ventana se recorta al borde más cercano en
+ *  vez de desaparecer: mejor verlo pegado a las 22:00 que no verlo. */
+function posicionEnRejilla(hora: string): Posicion | null {
+  const minutos = minutosDeHora(hora);
+  if (minutos === null) return null;
+  const inicio = Math.min(Math.max(minutos, VENTANA_INICIO), VENTANA_FIN - 15);
+  const fin = Math.min(inicio + DURACION_DEFECTO_MIN, VENTANA_FIN);
+  return {
+    top: ((inicio - VENTANA_INICIO) / VENTANA_TOTAL) * 100,
+    alto: ((fin - inicio) / VENTANA_TOTAL) * 100,
+    inicioMin: inicio,
+    finMin: fin,
+  };
+}
+
+type Bloque = { item: CalendarioItem; pos: Posicion; columna: number; columnas: number };
+
+/** Reparte los items que se solapan en columnas lado a lado, como hace
+ *  Google Calendar. Barrido simple por orden de inicio: cada bloque entra en
+ *  la primera columna cuyo último bloque ya haya terminado, o abre una
+ *  columna nueva. No es óptimo (no reagrupa para minimizar columnas), pero
+ *  con el volumen de un club esto no se nota y es mucho menos código.
+ */
+function distribuirColumnas(items: { item: CalendarioItem; pos: Posicion }[]): Bloque[] {
+  const ordenados = [...items].sort((a, b) => a.pos.inicioMin - b.pos.inicioMin);
+  const columnas: Posicion[][] = [];
+  const columnaDe: number[] = [];
+
+  ordenados.forEach(({ pos }, indice) => {
+    let col = columnas.findIndex((c) => c[c.length - 1].finMin <= pos.inicioMin);
+    if (col === -1) {
+      col = columnas.length;
+      columnas.push([]);
+    }
+    columnas[col].push(pos);
+    columnaDe[indice] = col;
+  });
+
+  const total = columnas.length || 1;
+  return ordenados.map(({ item, pos }, indice) => ({
+    item,
+    pos,
+    columna: columnaDe[indice],
+    columnas: total,
+  }));
 }
 
 type Props = {
@@ -215,6 +292,61 @@ export function CalendarPanel({ onAbrirCampaign }: Props) {
     }
   }
 
+  function botonEvento(
+    item: CalendarioItem,
+    extra?: { style?: CSSProperties; className?: string },
+  ) {
+    return (
+      <button
+        key={`${item.origen}-${item.id}`}
+        type="button"
+        className={`mkt-evento-react mkt-evento-${item.origen}-react${
+          item.prioridad === "alta" ? " mkt-evento-alta-react" : ""
+        }${extra?.className ? ` ${extra.className}` : ""}`}
+        style={extra?.style}
+        title={`${item.hora ? `${item.hora} — ` : ""}${item.padre ? `${item.padre} — ` : ""}${item.titulo}`}
+        onClick={() => item.campaign_id !== null && onAbrirCampaign(item.campaign_id)}
+      >
+        {item.hora ? <span className="mkt-evento-hora-react">{item.hora}</span> : null}
+        <span className="mkt-evento-texto-react">{item.titulo}</span>
+        {item.responsables.length > 0 ? (
+          <AvataresDeResponsables
+            responsables={item.responsables}
+            maximo={2}
+            className="mkt-evento-avatares-react"
+          />
+        ) : null}
+      </button>
+    );
+  }
+
+  function formularioNuevaTarea(clave: string, etiqueta: string) {
+    return (
+      <form
+        className="mkt-dia-form-react"
+        onSubmit={(event) => {
+          event.preventDefault();
+          void crearEnDia(clave);
+        }}
+      >
+        <input
+          type="text"
+          autoFocus
+          value={tituloNuevo}
+          placeholder="Nueva tarea"
+          aria-label={`Título de la tarea para el ${etiqueta}`}
+          onChange={(event) => setTituloNuevo(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === "Escape") setDiaAbierto(null);
+          }}
+        />
+        <button type="submit" className="mkt-btn-mini-react" disabled={!tituloNuevo.trim()}>
+          Añadir
+        </button>
+      </form>
+    );
+  }
+
   return (
     <section className="mkt-panel-react">
       {error ? <AlertBanner variant="error" message={error} /> : null}
@@ -258,6 +390,7 @@ export function CalendarPanel({ onAbrirCampaign }: Props) {
       <div className="mkt-leyenda-react">
         <span className="mkt-evento-react mkt-evento-content-react">Publicación</span>
         <span className="mkt-evento-react mkt-evento-task-react">Tarea</span>
+        <span className="mkt-evento-react mkt-evento-reunion-react">Reunión</span>
         <span className="mkt-evento-react mkt-evento-alta-react">Tarea urgente</span>
         <span className="mkt-leyenda-nota-react">
           Toca un día para añadir una tarea.
@@ -266,116 +399,162 @@ export function CalendarPanel({ onAbrirCampaign }: Props) {
 
       {isLoading ? (
         <Esqueleto filas={5} alto={54} />
-      ) : (
-        <>
-          {items.length === 0 ? (
-            <p className="mkt-vacio-react">
-              Nada en {vista === "mes" ? MESES[cursor.getMonth()] : "esta semana"}. Puedes
-              tocar cualquier día para añadir una tarea, o cambiar de {vista} arriba.
-            </p>
-          ) : null}
+      ) : items.length === 0 ? (
+        <p className="mkt-vacio-react">
+          Nada en {vista === "mes" ? MESES[cursor.getMonth()] : "esta semana"}. Puedes
+          tocar cualquier día para añadir una tarea, o cambiar de {vista} arriba.
+        </p>
+      ) : null}
 
-          <div className="mkt-calendario-react">
-            {DIAS.map((dia) => (
-              <div key={dia} className="mkt-calendario-cabecera-react">
-                {dia}
+      {!isLoading && vista === "mes" ? (
+        <div className="mkt-calendario-react">
+          {DIAS.map((dia) => (
+            <div key={dia} className="mkt-calendario-cabecera-react">
+              {dia}
+            </div>
+          ))}
+
+          {celdasDelMes(cursor.getFullYear(), cursor.getMonth()).map((fecha, indice) => {
+            if (fecha === null) {
+              return <div key={`hueco-${indice}`} className="mkt-dia-vacio-react" />;
+            }
+
+            const clave = iso(fecha);
+            const delDia = porDia[clave] ?? [];
+            const visibles = delDia.slice(0, MAX_POR_DIA);
+            const ocultos = delDia.length - visibles.length;
+
+            return (
+              <div
+                key={clave}
+                className={`mkt-dia-react${clave === hoy ? " mkt-dia-hoy-react" : ""}`}
+              >
+                <button
+                  type="button"
+                  className="mkt-dia-numero-react"
+                  aria-label={`Añadir tarea el ${fecha.getDate()} de ${MESES[fecha.getMonth()]}`}
+                  onClick={() => {
+                    setTituloNuevo("");
+                    setDiaAbierto(diaAbierto === clave ? null : clave);
+                  }}
+                >
+                  {fecha.getDate()}
+                  <span aria-hidden="true" className="mkt-dia-mas-react">
+                    +
+                  </span>
+                </button>
+
+                {visibles.map((item) => botonEvento(item))}
+
+                {ocultos > 0 ? (
+                  <span className="mkt-dia-mas-eventos-react">+{ocultos} más</span>
+                ) : null}
+
+                {diaAbierto === clave
+                  ? formularioNuevaTarea(clave, `${fecha.getDate()}`)
+                  : null}
               </div>
-            ))}
+            );
+          })}
+        </div>
+      ) : null}
 
-            {(vista === "mes"
-              ? celdasDelMes(cursor.getFullYear(), cursor.getMonth())
-              : celdasDeLaSemana(cursor)
-            ).map((fecha, indice) => {
-              if (fecha === null) {
-                return <div key={`hueco-${indice}`} className="mkt-dia-vacio-react" />;
-              }
-
+      {/* Vista semana: una rejilla de horas de verdad, como Google Calendar.
+          Lo que tiene hora (tareas con hora puesta, reuniones) se coloca a su
+          altura; lo que solo tiene fecha (publicaciones, tareas sin hora) va
+          en la franja de "todo el día" de arriba, que es donde vivía todo
+          antes de esto. */}
+      {!isLoading && vista === "semana" ? (
+        <div className="mkt-semana-react">
+          <div className="mkt-semana-todo-el-dia-react">
+            <div className="mkt-semana-gutter-react" aria-hidden="true">
+              Todo el día
+            </div>
+            {celdasDeLaSemana(cursor).map((fecha) => {
               const clave = iso(fecha);
               const delDia = porDia[clave] ?? [];
-              const visibles = delDia.slice(0, MAX_POR_DIA);
-              const ocultos = delDia.length - visibles.length;
+              const sinHora = delDia.filter(
+                (item) => posicionEnRejilla(item.hora ?? "") === null,
+              );
 
               return (
                 <div
                   key={clave}
-                  className={`mkt-dia-react${clave === hoy ? " mkt-dia-hoy-react" : ""}`}
+                  className={`mkt-semana-dia-react${clave === hoy ? " mkt-semana-dia-hoy-react" : ""}`}
                 >
                   <button
                     type="button"
-                    className="mkt-dia-numero-react"
-                    aria-label={`Añadir tarea el ${fecha.getDate()} de ${MESES[fecha.getMonth()]}`}
+                    className="mkt-semana-dia-cabecera-react"
+                    aria-label={`Añadir tarea el ${DIAS[(fecha.getDay() + 6) % 7]} ${fecha.getDate()}`}
                     onClick={() => {
                       setTituloNuevo("");
                       setDiaAbierto(diaAbierto === clave ? null : clave);
                     }}
                   >
-                    {fecha.getDate()}
-                    <span aria-hidden="true" className="mkt-dia-mas-react">
-                      +
+                    <span>{DIAS[(fecha.getDay() + 6) % 7]}</span>
+                    <span className="mkt-semana-dia-numero-react">
+                      {fecha.getDate()}
+                      <span aria-hidden="true" className="mkt-dia-mas-react">+</span>
                     </span>
                   </button>
 
-                  {visibles.map((item) => (
-                    <button
-                      key={`${item.origen}-${item.id}`}
-                      type="button"
-                      className={`mkt-evento-react mkt-evento-${item.origen}-react${
-                        item.prioridad === "alta" ? " mkt-evento-alta-react" : ""
-                      }`}
-                      title={`${item.padre ? `${item.padre} — ` : ""}${item.titulo}`}
-                      onClick={() =>
-                        item.campaign_id !== null && onAbrirCampaign(item.campaign_id)
-                      }
-                    >
-                      <span className="mkt-evento-texto-react">{item.titulo}</span>
-                      {item.responsables.length > 0 ? (
-                        <AvataresDeResponsables
-                          responsables={item.responsables}
-                          maximo={2}
-                          className="mkt-evento-avatares-react"
-                        />
-                      ) : null}
-                    </button>
-                  ))}
+                  {sinHora.map((item) => botonEvento(item))}
 
-                  {ocultos > 0 ? (
-                    <span className="mkt-dia-mas-eventos-react">+{ocultos} más</span>
-                  ) : null}
-
-                  {diaAbierto === clave ? (
-                    <form
-                      className="mkt-dia-form-react"
-                      onSubmit={(event) => {
-                        event.preventDefault();
-                        void crearEnDia(clave);
-                      }}
-                    >
-                      <input
-                        type="text"
-                        autoFocus
-                        value={tituloNuevo}
-                        placeholder="Nueva tarea"
-                        aria-label={`Título de la tarea para el ${fecha.getDate()}`}
-                        onChange={(event) => setTituloNuevo(event.target.value)}
-                        onKeyDown={(event) => {
-                          if (event.key === "Escape") setDiaAbierto(null);
-                        }}
-                      />
-                      <button
-                        type="submit"
-                        className="mkt-btn-mini-react"
-                        disabled={!tituloNuevo.trim()}
-                      >
-                        Añadir
-                      </button>
-                    </form>
-                  ) : null}
+                  {diaAbierto === clave
+                    ? formularioNuevaTarea(clave, `${fecha.getDate()}`)
+                    : null}
                 </div>
               );
             })}
           </div>
-        </>
-      )}
+
+          <div className="mkt-semana-scroll-react">
+            <div
+              className="mkt-semana-rejilla-react"
+              style={{ "--mkt-horas-visibles": HORAS_VISIBLES.length } as CSSProperties}
+            >
+              <div className="mkt-semana-horas-react">
+                {HORAS_VISIBLES.map((h) => (
+                  <div key={h} className="mkt-semana-hora-etiqueta-react">
+                    {String(h).padStart(2, "0")}:00
+                  </div>
+                ))}
+              </div>
+
+              {celdasDeLaSemana(cursor).map((fecha) => {
+                const clave = iso(fecha);
+                const delDia = porDia[clave] ?? [];
+                const conHora = delDia
+                  .map((item) => {
+                    const pos = posicionEnRejilla(item.hora ?? "");
+                    return pos ? { item, pos } : null;
+                  })
+                  .filter((b): b is { item: CalendarioItem; pos: Posicion } => b !== null);
+                const bloques = distribuirColumnas(conHora);
+
+                return (
+                  <div
+                    key={clave}
+                    className={`mkt-semana-columna-react${clave === hoy ? " mkt-semana-columna-hoy-react" : ""}`}
+                  >
+                    {bloques.map(({ item, pos, columna, columnas }) =>
+                      botonEvento(item, {
+                        className: "mkt-evento-horario-react",
+                        style: {
+                          top: `${pos.top}%`,
+                          height: `${pos.alto}%`,
+                          left: `${(columna / columnas) * 100}%`,
+                          width: `${100 / columnas}%`,
+                        },
+                      }),
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      ) : null}
     </section>
   );
 }
