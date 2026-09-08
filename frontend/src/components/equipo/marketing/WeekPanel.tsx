@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { useApi } from "../DeptoApi";
 import { AlertBanner } from "../../feedback/AlertBanner";
+import { Esqueleto } from "../../feedback/Esqueleto";
 import { AvataresDeResponsables } from "./Avatares";
 import { Badge } from "@/components/ui/badge";
 import type { ApiFailure } from "../../../types/api";
@@ -164,7 +165,7 @@ export function WeekPanel() {
     );
   }, [publicaciones]);
 
-  if (isLoading) return <p className="mkt-cargando-react">Cargando...</p>;
+  if (isLoading) return <Esqueleto filas={4} alto={64} />;
 
   const mias = soloMias
     ? tasks.filter((t) => t.responsables.includes(usuario))

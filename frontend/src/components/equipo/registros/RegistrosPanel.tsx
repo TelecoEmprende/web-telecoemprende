@@ -3,6 +3,7 @@ import { Pencil, Plus, Trash2 } from "lucide-react";
 
 import { useApi } from "../DeptoApi";
 import { AlertBanner } from "../../feedback/AlertBanner";
+import { Esqueleto } from "../../feedback/Esqueleto";
 import {
   Dialog,
   DialogContent,
@@ -105,7 +106,7 @@ export function RegistrosPanel({
 
   const abierto = creando || editando !== null;
 
-  if (isLoading) return <p className="mkt-cargando-react">Cargando...</p>;
+  if (isLoading) return <Esqueleto filas={4} alto={64} />;
 
   return (
     <section className="mkt-panel-react">
