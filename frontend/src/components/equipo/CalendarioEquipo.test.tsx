@@ -70,5 +70,10 @@ describe("CalendarioEquipo — tu agenda", () => {
 
     const cuando = await screen.findByText(/Hace \d+ días/);
     expect(cuando).toHaveClass("mkt-agenda-vencida-react");
+
+    // Antes el saludo solo contaba hoy/mañana: con una única tarea ya
+    // vencida y nada para hoy o mañana, decía "ninguna cosa" -- que se lee
+    // como "vas al día" siendo mentira.
+    expect(await screen.findByText(/1 cosa pendiente/)).toBeInTheDocument();
   });
 });

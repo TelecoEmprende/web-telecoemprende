@@ -200,6 +200,7 @@
 
 .mkt-form-react input[type="text"],
 .mkt-form-react input[type="date"],
+.mkt-form-react input[type="time"],
 .mkt-form-react textarea,
 .mkt-form-react select {
   width: 100%;
@@ -215,10 +216,96 @@
 
 .mkt-form-react input[type="text"]:focus,
 .mkt-form-react input[type="date"]:focus,
+.mkt-form-react input[type="time"]:focus,
 .mkt-form-react textarea:focus,
 .mkt-form-react select:focus {
   outline: 2px solid var(--color-orange);
   outline-offset: 1px;
+}
+
+/* ---------- Selector de miembros (responsables / asistentes) ---------- */
+
+/* Mismo look que el resto de campos del formulario (input[type="text"] etc,
+   arriba), pero es un <button> -- abre un Popover con el roster en vez de
+   escribir emails de memoria. */
+.mkt-selector-miembros-react {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-family: inherit;
+  font-size: 0.9rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.mkt-selector-miembros-react:focus-visible {
+  outline: 2px solid var(--color-orange);
+  outline-offset: 1px;
+}
+
+.mkt-selector-placeholder-react {
+  color: var(--color-text-muted);
+}
+
+.mkt-selector-elegidos-react {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.mkt-selector-nombres-react {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mkt-selector-flecha-react {
+  flex-shrink: 0;
+  color: var(--color-text-muted);
+}
+
+.mkt-selector-contenido-react {
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+.mkt-selector-vacio-react {
+  margin: 0;
+  padding: 8px;
+  color: var(--color-text-muted);
+  font-size: 0.86rem;
+}
+
+.mkt-selector-lista-react {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.mkt-selector-fila-react {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 6px 8px;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+}
+
+.mkt-selector-fila-react:hover {
+  background: var(--color-background);
 }
 
 /* ---------- Campañas ---------- */
