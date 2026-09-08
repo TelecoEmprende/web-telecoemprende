@@ -16,6 +16,7 @@ import { CalendarioPanel } from "../components/admin/CalendarioPanel";
 import { EquipoAccesosPanel } from "../components/admin/EquipoAccesosPanel";
 import { EstadoTabs, type EstadoFiltro } from "../components/admin/EstadoTabs";
 import { RecordsTable } from "../components/admin/RecordsTable";
+import { Button } from "../components/ui/button";
 import type { ApiFailure } from "../types/api";
 import type { Registro } from "../types/admin";
 
@@ -169,7 +170,7 @@ export function AdminPage() {
       <main className="page-content">
         <section className="admin-shell-react">
           <div className="container-react">
-            <section className="admin-card-react">
+            <section className="admin-card-react shadcn-scope">
               {message ? (
                 <AlertBanner variant={messageVariant} message={message} />
               ) : null}
@@ -216,20 +217,22 @@ export function AdminPage() {
                           (r) => r.estado === estadoActivo && !r.notificado,
                         ).length;
                         return (
-                          <div className="admin-notify-bar-react">
-                            <p>
+                          <div className="mb-5 flex flex-wrap items-center justify-between gap-3.5 rounded-2xl border border-[#dde5f1] bg-[#f8fbff] px-[18px] py-3.5">
+                            <p className="text-[0.92rem] text-muted-foreground">
                               <strong>{pendientesNotificar}</strong> pendientes de enviar en esta
                               pestaña. Reclasificar a alguien vuelve a dejarlo pendiente de un nuevo
                               envío.
                             </p>
-                            <button
+                            <Button
                               type="button"
-                              className="secondary-btn-react"
+                              variant="outline"
+                              size="lg"
+                              className="h-12 px-[18px] font-extrabold max-[720px]:w-full"
                               disabled={isNotifying || pendientesNotificar === 0}
                               onClick={() => void handleNotificar()}
                             >
                               {isNotifying ? "Enviando..." : "Enviar notificaciones"}
-                            </button>
+                            </Button>
                           </div>
                         );
                       })()
