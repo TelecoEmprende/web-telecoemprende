@@ -276,6 +276,14 @@
 .mkt-selector-contenido-react {
   max-height: 280px;
   overflow-y: auto;
+  /* Sin esto, arrastrar el dedo sobre una fila (casilla + label, que es casi
+     toda la lista) no desliza -- el navegador espera a ver si algún
+     `pointerdown` de ahí va a interceptar el gesto antes de decidir si
+     hace scroll, y se lo salta. `pan-y` le dice de antemano que el scroll
+     vertical siempre gana aquí, toque lo que toque el dedo. Solo la barra
+     de scroll (que no es parte de ningún elemento interactivo) funcionaba
+     antes de esto. */
+  touch-action: pan-y;
 }
 
 .mkt-selector-vacio-react {
