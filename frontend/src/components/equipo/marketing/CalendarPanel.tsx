@@ -275,7 +275,9 @@ export function CalendarPanel({ onAbrirCampaign }: Props) {
             </p>
           ) : null}
 
-          <div className="mkt-calendario-react">
+          <div
+            className={`mkt-calendario-react${vista === "semana" ? " mkt-calendario-semana-react" : ""}`}
+          >
             {DIAS.map((dia) => (
               <div key={dia} className="mkt-calendario-cabecera-react">
                 {dia}
@@ -292,7 +294,9 @@ export function CalendarPanel({ onAbrirCampaign }: Props) {
 
               const clave = iso(fecha);
               const delDia = porDia[clave] ?? [];
-              const visibles = delDia.slice(0, MAX_POR_DIA);
+              // En semana hay columnas altas, estilo Google Calendar: caben
+              // más elementos por día antes de plegar el resto.
+              const visibles = delDia.slice(0, vista === "semana" ? 10 : MAX_POR_DIA);
               const ocultos = delDia.length - visibles.length;
 
               return (
