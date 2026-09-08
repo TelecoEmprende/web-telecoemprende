@@ -39,7 +39,7 @@ function inicialesDe(email: string) {
   return nombre.slice(0, 2).toUpperCase();
 }
 
-function etiquetaDe(email: string) {
+export function etiquetaDe(email: string) {
   const nombre = nombreDe(email);
   return nombre.charAt(0).toUpperCase() + nombre.slice(1);
 }

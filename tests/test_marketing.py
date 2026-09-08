@@ -11,6 +11,8 @@ import app  # noqa: E402
 import backend.services.equipo as equipo_service  # noqa: E402
 import backend.services.marketing as marketing_service  # noqa: E402
 import backend.services.security as security_service  # noqa: E402
+import backend.services.slack as marketing_api_slack  # noqa: E402
+import urllib.error  # noqa: E402
 from werkzeug.security import generate_password_hash  # noqa: E402
 
 
@@ -534,3 +536,250 @@ class MiembrosTests(MarketingTestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class AislamientoDepartamentoTestCase(MarketingTestCase):
+    """El mismo blueprint sirve a Marketing y a Eventos (ver `app.py`).
+
+    Lo que estas pruebas vigilan es que compartir rutas no signifique compartir
+    datos: cada departamento solo ve y solo toca lo suyo, aunque conozca el id.
+    """
+
+    def test_eventos_no_ve_las_campanas_de_marketing(self):
+        self.login(equipos=["marketing", "eventos"])
+        self.crear_campaign(nombre="Campaña de Marketing")
+
+        respuesta = self.client.get("/api/eventos/campaigns")
+        self.assertEqual(respuesta.status_code, 200)
+        self.assertEqual(respuesta.get_json()["campaigns"], [])
+
+    def test_eventos_no_ve_las_tareas_de_marketing(self):
+        self.login(equipos=["marketing", "eventos"])
+        self.client.post("/api/marketing/tasks", json={"titulo": "Guion del reel"})
+
+        respuesta = self.client.get("/api/eventos/tasks")
+        self.assertEqual(respuesta.status_code, 200)
+        self.assertEqual(respuesta.get_json()["tasks"], [])
+
+    def test_la_tarea_creada_en_eventos_es_de_eventos(self):
+        self.login(equipos=["marketing", "eventos"])
+        crear = self.client.post("/api/eventos/tasks", json={"titulo": "Reservar sala"})
+        self.assertEqual(crear.status_code, 201, crear.get_json())
+        self.assertEqual(crear.get_json()["task"]["departamento"], "eventos")
+
+        propias = self.client.get("/api/eventos/tasks").get_json()["tasks"]
+        self.assertEqual([t["titulo"] for t in propias], ["Reservar sala"])
+        self.assertEqual(self.client.get("/api/marketing/tasks").get_json()["tasks"], [])
+
+    def test_no_se_edita_una_tarea_de_otro_departamento_por_id(self):
+        self.login(equipos=["marketing", "eventos"])
+        task_id = self.client.post(
+            "/api/marketing/tasks", json={"titulo": "Guion del reel"}
+        ).get_json()["task"]["id"]
+
+        # Mismo id, misma sesión, pero por la ruta del otro departamento.
+        editar = self.client.put(
+            f"/api/eventos/tasks/{task_id}", json={"titulo": "Secuestrada"}
+        )
+        self.assertEqual(editar.status_code, 404)
+
+        borrar = self.client.delete(f"/api/eventos/tasks/{task_id}")
+        self.assertEqual(borrar.status_code, 404)
+
+        leer = self.client.get(f"/api/eventos/tasks/{task_id}")
+        self.assertEqual(leer.status_code, 404)
+
+        # Y sigue intacta en el suyo.
+        sigue = self.client.get(f"/api/marketing/tasks/{task_id}").get_json()["task"]
+        self.assertEqual(sigue["titulo"], "Guion del reel")
+
+    def test_no_se_cuelga_una_tarea_de_una_campana_de_otro_departamento(self):
+        self.login(equipos=["marketing", "eventos"])
+        campaign_id = self.crear_campaign(nombre="Campaña de Marketing")["id"]
+
+        respuesta = self.client.post(
+            "/api/eventos/tasks",
+            json={"titulo": "Colada", "campaign_id": campaign_id},
+        )
+        self.assertEqual(respuesta.status_code, 404)
+
+    def test_estar_en_marketing_no_da_acceso_a_eventos(self):
+        self.login(equipos=["marketing"])
+
+        self.assertEqual(self.client.get("/api/eventos/tasks").status_code, 401)
+        self.assertEqual(self.client.get("/api/eventos/campaigns").status_code, 401)
+        self.assertEqual(self.client.get("/api/marketing/tasks").status_code, 200)
+
+    def test_miembros_son_los_del_departamento_de_la_ruta(self):
+        self.login(equipos=["marketing", "eventos"])
+        self.seed_acceso("solo-eventos@example.com", "x", ["eventos"])
+
+        de_eventos = self.client.get("/api/eventos/miembros").get_json()["miembros"]
+        self.assertIn("solo-eventos@example.com", [m["email"] for m in de_eventos])
+
+        de_marketing = self.client.get("/api/marketing/miembros").get_json()["miembros"]
+        self.assertNotIn("solo-eventos@example.com", [m["email"] for m in de_marketing])
+
+
+
+class SlackTestCase(MarketingTestCase):
+    """Los avisos son best-effort: si Slack falla o no está configurado, la
+    operación que los dispara tiene que seguir funcionando igual."""
+
+    def setUp(self):
+        super().setUp()
+        self.enviados = []
+        self._enviar_real = marketing_api_slack.enviar
+        marketing_api_slack.enviar = lambda texto: self.enviados.append(texto) or True
+
+    def tearDown(self):
+        marketing_api_slack.enviar = self._enviar_real
+
+    def test_crear_una_tarea_avisa_a_slack(self):
+        self.login()
+        self.client.post(
+            "/api/marketing/tasks",
+            json={"titulo": "Guion del reel", "responsables": ["diego@telecoemprende.es"]},
+        )
+
+        self.assertEqual(len(self.enviados), 1)
+        self.assertIn("Guion del reel", self.enviados[0])
+        self.assertIn("marketing", self.enviados[0])
+        self.assertIn("diego", self.enviados[0])
+
+    def test_cambiar_de_estado_avisa_a_slack(self):
+        self.login()
+        task_id = self.client.post(
+            "/api/marketing/tasks", json={"titulo": "Guion del reel"}
+        ).get_json()["task"]["id"]
+        self.enviados.clear()
+
+        self.client.put(f"/api/marketing/tasks/{task_id}", json={"estado": "acabado"})
+
+        self.assertEqual(len(self.enviados), 1)
+        self.assertIn("Acabado", self.enviados[0])
+
+    def test_editar_sin_tocar_el_estado_no_avisa(self):
+        self.login()
+        task_id = self.client.post(
+            "/api/marketing/tasks", json={"titulo": "Guion del reel"}
+        ).get_json()["task"]["id"]
+        self.enviados.clear()
+
+        self.client.put(f"/api/marketing/tasks/{task_id}", json={"titulo": "Otro guion"})
+
+        self.assertEqual(self.enviados, [])
+
+    def test_si_slack_falla_la_tarea_se_crea_igual(self):
+        def explota(texto):
+            raise urllib.error.URLError("slack caído")
+
+        marketing_api_slack.enviar = explota
+        self.login()
+
+        # `enviar` traga sus propios errores, así que el fallo real que se
+        # simula aquí es el peor caso: que se escape una excepción.
+        with self.assertRaises(urllib.error.URLError):
+            self.client.post("/api/marketing/tasks", json={"titulo": "Guion del reel"})
+
+        # Y aun así la tarea quedó escrita: el aviso va después del INSERT.
+        marketing_api_slack.enviar = lambda texto: True
+        tareas = self.client.get("/api/marketing/tasks").get_json()["tasks"]
+        self.assertEqual([t["titulo"] for t in tareas], ["Guion del reel"])
+
+
+class FichaMiembroTestCase(MarketingTestCase):
+    """Directorio y ficha: carga de trabajo calculada, perfil guardado."""
+
+    def test_el_directorio_cuenta_las_tareas_abiertas_de_cada_uno(self):
+        self.login()
+        self.seed_acceso("hugo@telecoemprende.es", "x", ["marketing"])
+
+        self.client.post(
+            "/api/marketing/tasks",
+            json={"titulo": "Guion", "responsables": ["hugo@telecoemprende.es"]},
+        )
+        acabada = self.client.post(
+            "/api/marketing/tasks",
+            json={"titulo": "Reel", "responsables": ["hugo@telecoemprende.es"]},
+        ).get_json()["task"]["id"]
+        self.client.put(f"/api/marketing/tasks/{acabada}", json={"estado": "acabado"})
+
+        miembros = self.client.get("/api/marketing/miembros").get_json()["miembros"]
+        hugo = next(m for m in miembros if m["email"] == "hugo@telecoemprende.es")
+        # Solo cuenta lo que sigue abierto: la acabada ya no pesa.
+        self.assertEqual(hugo["abiertas"], 1)
+
+    def test_la_carga_no_mezcla_departamentos(self):
+        self.login(equipos=["marketing", "eventos"])
+        self.seed_acceso("hugo@telecoemprende.es", "x", ["marketing", "eventos"])
+        self.client.post(
+            "/api/eventos/tasks",
+            json={"titulo": "Montaje", "responsables": ["hugo@telecoemprende.es"]},
+        )
+
+        en_marketing = self.client.get("/api/marketing/miembros").get_json()["miembros"]
+        hugo = next(m for m in en_marketing if m["email"] == "hugo@telecoemprende.es")
+        self.assertEqual(hugo["abiertas"], 0)
+
+        en_eventos = self.client.get("/api/eventos/miembros").get_json()["miembros"]
+        hugo = next(m for m in en_eventos if m["email"] == "hugo@telecoemprende.es")
+        self.assertEqual(hugo["abiertas"], 1)
+
+    def test_la_ficha_trae_totales_y_actividad(self):
+        self.login()
+        self.seed_acceso("hugo@telecoemprende.es", "x", ["marketing"])
+        campaign_id = self.crear_campaign()["id"]
+        self.client.post(
+            "/api/marketing/tasks",
+            json={
+                "titulo": "Guion del reel",
+                "campaign_id": campaign_id,
+                "responsables": ["hugo@telecoemprende.es"],
+            },
+        )
+
+        ficha = self.client.get(
+            "/api/marketing/miembros/ficha?email=hugo@telecoemprende.es"
+        ).get_json()["ficha"]
+
+        self.assertEqual(ficha["abiertas"], 1)
+        self.assertEqual(ficha["completadas"], 0)
+        self.assertEqual(ficha["campanas"], 1)
+        self.assertEqual([a["titulo"] for a in ficha["actividad"]], ["Guion del reel"])
+
+    def test_se_guardan_etiquetas_y_nota(self):
+        self.login()
+        self.seed_acceso("hugo@telecoemprende.es", "x", ["marketing"])
+
+        guardar = self.client.put(
+            "/api/marketing/miembros/ficha",
+            json={
+                "email": "hugo@telecoemprende.es",
+                "tags": ["Reels", "Fotografía", "  "],
+                "notas": "Mejor una cosa a la vez.",
+            },
+        )
+        self.assertEqual(guardar.status_code, 200)
+
+        ficha = self.client.get(
+            "/api/marketing/miembros/ficha?email=hugo@telecoemprende.es"
+        ).get_json()["ficha"]
+        # La etiqueta en blanco se descarta y el resto queda ordenado.
+        self.assertEqual(ficha["tags"], ["Fotografía", "Reels"])
+        self.assertEqual(ficha["notas"], "Mejor una cosa a la vez.")
+
+    def test_no_se_lee_la_ficha_de_alguien_de_otro_departamento(self):
+        self.login(equipos=["marketing"])
+        self.seed_acceso("solo-eventos@example.com", "x", ["eventos"])
+
+        leer = self.client.get(
+            "/api/marketing/miembros/ficha?email=solo-eventos@example.com"
+        )
+        self.assertEqual(leer.status_code, 404)
+
+        escribir = self.client.put(
+            "/api/marketing/miembros/ficha",
+            json={"email": "solo-eventos@example.com", "notas": "colada"},
+        )
+        self.assertEqual(escribir.status_code, 404)
