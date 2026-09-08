@@ -51,8 +51,10 @@ describe("CalendarioEquipo — tu agenda", () => {
     expect(await screen.findByText("Hola, Abril 👋")).toBeInTheDocument();
     expect(await screen.findByText("Escribir guion")).toBeInTheDocument();
     expect(screen.getByText("Reservar sala")).toBeInTheDocument();
-    expect(screen.getByText("Marketing")).toBeInTheDocument();
-    expect(screen.getByText("Eventos")).toBeInTheDocument();
+    // "Marketing"/"Eventos" salen dos veces cada uno: en la fila de la tarea
+    // y en la leyenda de abajo.
+    expect(screen.getAllByText("Marketing").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Eventos").length).toBeGreaterThan(0);
   });
 
   it("marca como vencida una tarea con deadline pasado", async () => {
