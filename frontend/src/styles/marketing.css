@@ -1363,6 +1363,23 @@ button.mkt-evento-react:hover {
   font-size: 0.74rem;
 }
 
+/* El 32px de arriba cabe apretado en una celda del mes con ratón de por
+   medio, pero es un objetivo táctil real -- "añadir tarea" desde el
+   calendario en el móvil -- y por debajo del mínimo de 44px que respeta el
+   resto del sitio. `pointer: coarse` lo sube solo donde hace falta (dedo),
+   sin tocar el ritmo ya ajustado de las celdas en escritorio. */
+@media (pointer: coarse) {
+  .mkt-dia-form-react input {
+    min-height: 44px;
+  }
+
+  .mkt-dia-form-react .mkt-btn-mini-react {
+    min-height: 44px;
+    padding: 10px 14px;
+    font-size: 0.82rem;
+  }
+}
+
 /* Las celdas crecían con su contenido y rompían el ritmo de la fila. */
 .mkt-dia-react {
   display: flex;
@@ -1529,10 +1546,29 @@ button.mkt-evento-react:hover {
   color: var(--color-navy);
 }
 
+/* Bajo 720px, 7 columnas de verdad ya no caben apretadas a `1fr`: se
+   quedaban en ~45px, ilegibles. Mismo patrón que el tablero de tareas y el
+   mes del calendario un poco más abajo: ancho mínimo por columna y scroll
+   horizontal con swipe, en vez de aplastar hasta perder el contenido.
+   `.mkt-semana-react` es el único que hace scroll en X -- así la cabecera
+   (arriba) y la rejilla de horas (abajo) se mueven juntas sin desincronizar
+   sus columnas; `.mkt-semana-scroll-react` se queda solo con el scroll en Y
+   de las horas, y `width: max-content` evita que abra un segundo scroll en
+   X por su cuenta. */
 @media (max-width: 720px) {
+  .mkt-semana-react {
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
+
   .mkt-semana-todo-el-dia-react,
   .mkt-semana-rejilla-react {
-    grid-template-columns: 38px repeat(7, minmax(0, 1fr));
+    grid-template-columns: 36px repeat(7, minmax(78px, 1fr));
+    min-width: 600px;
+  }
+
+  .mkt-semana-scroll-react {
+    width: max-content;
   }
 
   .mkt-semana-rejilla-react {
@@ -1541,6 +1577,10 @@ button.mkt-evento-react:hover {
 
   .mkt-semana-hora-etiqueta-react {
     font-size: 0.56rem;
+  }
+
+  .mkt-semana-dia-cabecera-react {
+    font-size: 0.62rem;
   }
 }
 
@@ -1586,6 +1626,38 @@ button.mkt-evento-react:hover {
   .mkt-columna-react {
     flex: 0 0 260px;
     scroll-snap-align: start;
+  }
+}
+
+/* Mismo ajuste que el `@media (max-width: 720px)` de la rejilla de horas,
+   para cuando lo estrecho es la columna (sidebar expandido) y no la
+   ventana. */
+@container (max-width: 720px) {
+  .mkt-semana-react {
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
+
+  .mkt-semana-todo-el-dia-react,
+  .mkt-semana-rejilla-react {
+    grid-template-columns: 36px repeat(7, minmax(78px, 1fr));
+    min-width: 600px;
+  }
+
+  .mkt-semana-scroll-react {
+    width: max-content;
+  }
+
+  .mkt-semana-rejilla-react {
+    --mkt-hora-alto: 36px;
+  }
+
+  .mkt-semana-hora-etiqueta-react {
+    font-size: 0.56rem;
+  }
+
+  .mkt-semana-dia-cabecera-react {
+    font-size: 0.62rem;
   }
 }
 
