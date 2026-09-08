@@ -324,8 +324,11 @@ export function CalendarioEquipo() {
       <header className="mkt-saludo-react">
         <h3>Hola{email ? `, ${etiquetaDe(email)}` : ""} 👋</h3>
         <p className="mkt-meta-react">
-          {tituloDeHoy()} — {cosasPorDelante === 0 ? "nada" : cosasPorDelante}{" "}
-          {cosasPorDelante === 1 ? "cosa" : "cosas"} por delante hoy y mañana
+          {tituloDeHoy()} —{" "}
+          {cosasPorDelante === 0
+            ? "ninguna cosa"
+            : `${cosasPorDelante} ${cosasPorDelante === 1 ? "cosa" : "cosas"}`}{" "}
+          por delante hoy y mañana
         </p>
       </header>
 
