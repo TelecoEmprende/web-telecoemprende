@@ -2,7 +2,11 @@ import logging
 
 from flask import Blueprint, jsonify, request, session
 
-from backend.config import LOGIN_BLOCK_WINDOW_SECONDS, MAX_LOGIN_ATTEMPTS_PER_WINDOW
+from backend.config import (
+    LOGIN_BLOCK_WINDOW_SECONDS,
+    MAX_EMAIL_LEN,
+    MAX_LOGIN_ATTEMPTS_PER_WINDOW,
+)
 from backend.schemas import build_response
 from backend.services.equipo import (
     equipo_session_info,
@@ -11,6 +15,7 @@ from backend.services.equipo import (
     listar_eventos_calendario,
     login_equipo,
     logout_equipo,
+    registrar_equipo_acceso,
 )
 from backend.services.marketing import init_marketing_db, mis_tareas
 from backend.services.security import demasiadas_peticiones, limpiar_texto, obtener_ip_real
@@ -50,6 +55,54 @@ def api_equipo_login():
     # Mensaje genérico: no revela si el email existe o no.
     logger.warning("equipo login failed ip=%s", ip)
     return jsonify(build_response(False, "Credenciales incorrectas.")), 401
+
+
+@equipo_api.route("/registro", methods=["POST"])
+def api_equipo_registro():
+    """Alta propia: crea la cuenta desactivada y sin equipos, admin le asigna
+    el rol y la activa desde /admin.
+
+    ponytail: temporal, mientras entra el equipo. Para quitarla, borrar esta
+    ruta, `registrar_equipo_acceso` y el modo "crear cuenta" del login.
+    """
+    init_equipo_db()
+
+    ip = obtener_ip_real()
+    if demasiadas_peticiones(
+        ip,
+        max_requests=MAX_LOGIN_ATTEMPTS_PER_WINDOW,
+        window_seconds=LOGIN_BLOCK_WINDOW_SECONDS,
+        bucket="equipo_registro",
+    ):
+        logger.warning("equipo registro rate-limited ip=%s", ip)
+        return (
+            jsonify(build_response(False, "Demasiados intentos. Espera unos minutos.")),
+            429,
+        )
+
+    payload = request.get_json(silent=True) or {}
+    email = limpiar_texto(str(payload.get("email", ""))).lower()
+    password = str(payload.get("password", ""))
+
+    # Mismo criterio que el alta desde /admin: no se exige correo UPM, solo que
+    # tenga forma de email (puede haber gente externa colaborando).
+    if not email or "@" not in email or len(email) > MAX_EMAIL_LEN:
+        return jsonify(build_response(False, "Introduce un email válido.")), 400
+
+    if len(password) < 8:
+        return jsonify(build_response(False, "La contraseña debe tener al menos 8 caracteres.")), 400
+
+    creado = registrar_equipo_acceso(email, password)
+    logger.info("equipo registro ip=%s creado=%s", ip, creado)
+
+    # La misma respuesta exista o no la cuenta: distinguirlas convertiría esta
+    # ruta en un enumerador de qué correos están dados de alta.
+    return (
+        jsonify(build_response(
+            True, "Cuenta creada. Un admin tiene que darte acceso antes de que puedas entrar."
+        )),
+        201,
+    )
 
 
 @equipo_api.route("/logout", methods=["POST"])

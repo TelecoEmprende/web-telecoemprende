@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-import { getEquipoSession, loginEquipo, logoutEquipo } from "../api/equipo";
+import { getEquipoSession, loginEquipo, logoutEquipo, registrarEquipo } from "../api/equipo";
 import { Header } from "../components/layout/Header";
 import { SidebarProvider, SidebarTrigger } from "../components/ui/sidebar";
 import { CalendarioEquipo } from "../components/equipo/CalendarioEquipo";
@@ -11,7 +11,7 @@ import {
   teamDe,
   type Seccion,
 } from "../components/equipo/EquipoSidebar";
-import { EquipoLoginForm } from "../components/equipo/EquipoLoginForm";
+import { EquipoLoginForm, type ModoAcceso } from "../components/equipo/EquipoLoginForm";
 import { DeptoDashboard } from "../components/equipo/DeptoDashboard";
 import type { ApiFailure } from "../types/api";
 import type { Cargo, Team } from "../types/equipo";
@@ -25,6 +25,8 @@ export function EquipoPage() {
   const [vpDe, setVpDe] = useState<Team[]>([]);
   const [cargo, setCargo] = useState<Cargo>("");
   const [loginError, setLoginError] = useState<string | null>(null);
+  // ponytail: solo lo usa el alta temporal de cuentas (ver EquipoLoginForm).
+  const [registroMessage, setRegistroMessage] = useState<string | null>(null);
   // Se abre en el inicio del club, que es lo único común a todo el mundo; las
   // secciones de cada departamento cuelgan debajo en el sidebar.
   const [seccion, setSeccion] = useState<Seccion>("club");
@@ -57,11 +59,20 @@ export function EquipoPage() {
     };
   }, []);
 
-  async function handleLogin(email: string, password: string) {
+  async function handleLogin(email: string, password: string, modo: ModoAcceso) {
     setIsSubmitting(true);
     setLoginError(null);
+    setRegistroMessage(null);
 
     try {
+      if (modo === "registro") {
+        const response = await registrarEquipo(email, password);
+        if (response.ok) {
+          setRegistroMessage(response.message ?? "Cuenta creada.");
+        }
+        return;
+      }
+
       const response = await loginEquipo(email, password);
 
       if (response.ok) {
@@ -72,10 +83,18 @@ export function EquipoPage() {
       }
     } catch (error) {
       const apiError = error as ApiFailure;
-      setLoginError(apiError.message || "No se pudo iniciar sesión.");
+      setLoginError(
+        apiError.message ||
+          (modo === "registro" ? "No se pudo crear la cuenta." : "No se pudo iniciar sesión."),
+      );
     } finally {
       setIsSubmitting(false);
     }
+  }
+
+  function limpiarMensajes() {
+    setLoginError(null);
+    setRegistroMessage(null);
   }
 
   async function handleLogout() {
@@ -110,7 +129,9 @@ export function EquipoPage() {
             <EquipoLoginForm
               isSubmitting={isSubmitting}
               errorMessage={loginError}
+              successMessage={registroMessage}
               onSubmit={handleLogin}
+              onModeChange={limpiarMensajes}
             />
           )}
         </main>
