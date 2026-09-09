@@ -230,7 +230,7 @@ function dibujarNPC(p, ahora) {
     ctx.fillRect(x + 6, y + 16, TILE_SIZE - 12, 12);
     ctx.fillStyle = p.colorSprite;
     ctx.fillRect(x + 8, y + 4, TILE_SIZE - 16, 12);
-    ctx.fillStyle = "#faf5ec";
+    ctx.fillStyle = "#faf7f1";
     ctx.font = "bold 8px monospace";
     ctx.textAlign = "center";
     ctx.fillText(p.iniciales, x + TILE_SIZE / 2, y + 25);

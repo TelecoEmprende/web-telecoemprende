@@ -62,7 +62,7 @@
 
 .barra__marca b {
   font-size: 16px;
-  font-variation-settings: 'wght' 700;
+  font-weight: 700;
   letter-spacing: -0.012em;
 }
 
@@ -94,7 +94,7 @@
   background: transparent;
   cursor: pointer;
   font-size: 13px;
-  font-variation-settings: 'wght' 600;
+  font-weight: 600;
   color: var(--texto);
   white-space: nowrap;
   transition:
@@ -154,9 +154,7 @@
   font-size: 12px;
   letter-spacing: 0.08em;
   color: var(--texto-tenue);
-  font-variation-settings:
-    'wdth' 92,
-    'wght' 700;
+  font-weight: 700;
   cursor: pointer;
   transition:
     background 0.2s var(--salida),
@@ -187,7 +185,7 @@
   color: var(--tinta);
   text-decoration: none;
   font-size: 14px;
-  font-variation-settings: 'wght' 750;
+  font-weight: 700;
   white-space: nowrap;
   box-shadow: 0 8px 22px rgba(244, 176, 68, 0.28);
   transition:
@@ -229,9 +227,7 @@
   font-size: clamp(34px, 4.2vw, 60px);
   line-height: 0.94;
   letter-spacing: -0.038em;
-  font-variation-settings:
-    'wdth' 100,
-    'wght' 780;
+  font-weight: 700;
   text-wrap: balance;
 }
 
@@ -249,7 +245,7 @@
   font-size: clamp(15px, 1.5vw, 17px);
   line-height: 1.55;
   color: var(--tinta);
-  font-variation-settings: 'wght' 560;
+  font-weight: 500;
 }
 
 .portada__invitacion {
@@ -259,9 +255,7 @@
   font-size: 12px;
   letter-spacing: 0.18em;
   text-transform: uppercase;
-  font-variation-settings:
-    'wdth' 88,
-    'wght' 700;
+  font-weight: 700;
 }
 
 /* --------------------------------------------------------------------------
@@ -369,7 +363,7 @@
   font-size: clamp(16px, 1.5vw, 18px);
   line-height: 1.1;
   letter-spacing: -0.022em;
-  font-variation-settings: 'wght' 700;
+  font-weight: 700;
 }
 
 /* Dice en tres palabras qué se hace en cada departamento: es lo que más
@@ -381,9 +375,7 @@
   letter-spacing: 0.11em;
   text-transform: uppercase;
   color: var(--naranja-tinta);
-  font-variation-settings:
-    'wdth' 92,
-    'wght' 700;
+  font-weight: 700;
   transition: color 0.3s var(--salida);
 }
 
@@ -449,9 +441,7 @@ main > section:nth-of-type(3) {
   font-size: clamp(28px, 3.4vw, 48px);
   line-height: 1;
   letter-spacing: -0.038em;
-  font-variation-settings:
-    'wdth' 102,
-    'wght' 760;
+  font-weight: 700;
 }
 
 .cabecera__gancho {
@@ -461,7 +451,7 @@ main > section:nth-of-type(3) {
   font-size: clamp(15px, 1.5vw, 18px);
   line-height: 1.4;
   color: var(--naranja-tinta);
-  font-variation-settings: 'wght' 620;
+  font-weight: 600;
 }
 
 .cabecera__resumen {
@@ -520,9 +510,7 @@ main > section:nth-of-type(3) {
   letter-spacing: 0.2em;
   text-transform: uppercase;
   color: var(--naranja-tinta);
-  font-variation-settings:
-    'wdth' 86,
-    'wght' 700;
+  font-weight: 700;
 }
 
 .proyecto__nombre {
@@ -530,7 +518,7 @@ main > section:nth-of-type(3) {
   font-size: clamp(20px, 2.2vw, 28px);
   letter-spacing: -0.028em;
   line-height: 1.1;
-  font-variation-settings: 'wght' 720;
+  font-weight: 700;
 }
 
 .proyecto__descripcion {
@@ -548,7 +536,7 @@ main > section:nth-of-type(3) {
   justify-self: start;
   color: var(--tinta);
   font-size: 14px;
-  font-variation-settings: 'wght' 650;
+  font-weight: 700;
   text-decoration: none;
   border-bottom: 1px solid var(--linea);
   padding-bottom: 3px;
@@ -700,9 +688,7 @@ main > section:nth-of-type(3) {
   font-size: clamp(15px, 1.6vw, 19px);
   letter-spacing: 0.02em;
   color: var(--tinta);
-  font-variation-settings:
-    'wdth' 92,
-    'wght' 760;
+  font-weight: 700;
 }
 
 .charla__pie {
@@ -714,7 +700,7 @@ main > section:nth-of-type(3) {
   font-size: clamp(17px, 1.8vw, 22px);
   letter-spacing: -0.026em;
   line-height: 1.15;
-  font-variation-settings: 'wght' 720;
+  font-weight: 700;
 }
 
 .charla__cargo {
@@ -722,7 +708,7 @@ main > section:nth-of-type(3) {
   font-size: 14.5px;
   line-height: 1.35;
   color: var(--naranja-tinta);
-  font-variation-settings: 'wght' 620;
+  font-weight: 600;
 }
 
 .charla__tipo {
@@ -731,9 +717,7 @@ main > section:nth-of-type(3) {
   letter-spacing: 0.18em;
   text-transform: uppercase;
   color: var(--texto-tenue);
-  font-variation-settings:
-    'wdth' 86,
-    'wght' 700;
+  font-weight: 700;
 }
 
 /* --- Las capturas de las redes, pisándose --- */
@@ -846,7 +830,7 @@ main > section:nth-of-type(3) {
   padding: 4px 2px;
   font-size: 12.5px;
   color: var(--texto);
-  font-variation-settings: 'wght' 620;
+  font-weight: 600;
   text-decoration: none;
   border-bottom: 1px solid transparent;
   transition:
@@ -973,7 +957,7 @@ main > section:nth-of-type(3) {
   gap: 6px;
   font-size: 12.5px;
   color: var(--texto);
-  font-variation-settings: 'wght' 620;
+  font-weight: 600;
 }
 
 .reel__pie::after {
@@ -1129,7 +1113,7 @@ main > section:nth-of-type(3) {
   background: transparent;
   color: var(--papel);
   font-size: 13px;
-  font-variation-settings: 'wght' 600;
+  font-weight: 600;
   cursor: pointer;
   transition:
     background 0.3s var(--salida),
@@ -1246,9 +1230,7 @@ main > section:nth-of-type(3) {
 .pie__marca b {
   font-size: clamp(19px, 2vw, 23px);
   letter-spacing: -0.01em;
-  font-variation-settings:
-    'wdth' 92,
-    'wght' 700;
+  font-weight: 700;
 }
 
 .pie__descripcion {
@@ -1262,7 +1244,7 @@ main > section:nth-of-type(3) {
   color: var(--naranja);
   text-decoration: none;
   font-size: 15px;
-  font-variation-settings: 'wght' 600;
+  font-weight: 600;
   border-bottom: 1px solid transparent;
   transition: border-color 0.3s var(--salida);
 }
@@ -1311,7 +1293,7 @@ main > section:nth-of-type(3) {
   color: var(--papel);
   text-decoration: none;
   font-size: clamp(14px, 1.4vw, 16px);
-  font-variation-settings: 'wght' 600;
+  font-weight: 600;
   transition: color 0.3s var(--salida);
 }
 
@@ -1684,12 +1666,11 @@ main > section:nth-of-type(3) {
 .portada__test-gancho {
   margin: 0;
   max-width: 16ch;
+  font-family: var(--display);
   font-size: clamp(30px, 4.4vw, 62px);
+  font-weight: 400;
   line-height: 0.98;
-  letter-spacing: -0.04em;
-  font-variation-settings:
-    'wdth' 102,
-    'wght' 780;
+  letter-spacing: 0.01em;
   text-wrap: balance;
 }
 
@@ -1712,13 +1693,13 @@ main > section:nth-of-type(3) {
   border-radius: 14px;
   text-decoration: none;
   padding: clamp(16px, 1.7vw, 21px) clamp(28px, 3vw, 40px);
-  background: linear-gradient(120deg, var(--oro), #f7c065 55%, #f0902e);
+  background: linear-gradient(120deg, var(--oro) 0%, #f6bc63 52%, var(--naranja) 100%);
   color: var(--tinta);
   /* La sombra es la misma de la web del club, pero más corta: aquí cae sobre
      la tinta y una estela larga se vuelve un halo marrón. */
   box-shadow: 0 10px 26px rgba(224, 104, 14, 0.22);
   font-size: clamp(16px, 1.7vw, 19px);
-  font-variation-settings: 'wght' 750;
+  font-weight: 700;
   cursor: pointer;
   transition:
     filter 0.3s var(--salida),
@@ -1768,9 +1749,7 @@ main > section:nth-of-type(3) {
   letter-spacing: 0.2em;
   text-transform: uppercase;
   color: var(--texto-tenue);
-  font-variation-settings:
-    'wdth' 86,
-    'wght' 700;
+  font-weight: 700;
 }
 
 .test__cerrar {
@@ -1784,7 +1763,7 @@ main > section:nth-of-type(3) {
   background: transparent;
   color: var(--texto);
   font-size: 13px;
-  font-variation-settings: 'wght' 620;
+  font-weight: 600;
   cursor: pointer;
   transition:
     background 0.3s var(--salida),
@@ -1846,9 +1825,7 @@ main > section:nth-of-type(3) {
   font-size: clamp(26px, 4vw, 44px);
   line-height: 1;
   letter-spacing: -0.04em;
-  font-variation-settings:
-    'wdth' 102,
-    'wght' 780;
+  font-weight: 700;
 }
 
 .test__enunciado {
@@ -1915,7 +1892,7 @@ main > section:nth-of-type(3) {
   border-radius: 50%;
   border: 1px solid var(--linea);
   font-size: 13px;
-  font-variation-settings: 'wght' 700;
+  font-weight: 700;
   color: var(--naranja-tinta);
   transition:
     border-color 0.3s var(--salida),
@@ -1940,7 +1917,7 @@ main > section:nth-of-type(3) {
   padding: 6px 0;
   color: var(--texto);
   font-size: 14px;
-  font-variation-settings: 'wght' 600;
+  font-weight: 600;
   cursor: pointer;
   border-bottom: 1px solid var(--linea);
   transition: color 0.3s var(--salida);
@@ -1974,13 +1951,13 @@ main > section:nth-of-type(3) {
   font-size: clamp(15px, 1.6vw, 18px);
   letter-spacing: -0.02em;
   color: var(--texto);
-  font-variation-settings: 'wght' 620;
+  font-weight: 600;
 }
 
 .marcador__fila[data-gana='true'] .marcador__nombre,
 .marcador__fila[data-gana='true'] .marcador__cifra {
   color: var(--tinta);
-  font-variation-settings: 'wght' 760;
+  font-weight: 700;
 }
 
 .marcador__barra {
@@ -2033,9 +2010,7 @@ main > section:nth-of-type(3) {
   letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--texto-tenue);
-  font-variation-settings:
-    'wdth' 86,
-    'wght' 600;
+  font-weight: 600;
 }
 
 /* --- El papel de equipo --- */
@@ -2056,18 +2031,14 @@ main > section:nth-of-type(3) {
   letter-spacing: 0.2em;
   text-transform: uppercase;
   color: var(--texto-tenue);
-  font-variation-settings:
-    'wdth' 86,
-    'wght' 700;
+  font-weight: 700;
 }
 
 .papel__nombre {
   margin: 0 0 8px;
   font-size: clamp(21px, 2.4vw, 27px);
   letter-spacing: -0.02em;
-  font-variation-settings:
-    'wdth' 96,
-    'wght' 760;
+  font-weight: 700;
 }
 
 .papel__texto {
@@ -2100,7 +2071,7 @@ main > section:nth-of-type(3) {
   background: var(--tinta);
   color: var(--papel);
   font-size: clamp(15px, 1.7vw, 18px);
-  font-variation-settings: 'wght' 700;
+  font-weight: 700;
   cursor: pointer;
   transition:
     background 0.3s var(--salida),
@@ -2198,7 +2169,7 @@ main > section:nth-of-type(3) {
   background: color-mix(in srgb, var(--tinta) 45%, transparent);
   color: var(--papel);
   font-size: clamp(20px, 2.6vw, 34px);
-  font-variation-settings: 'wght' 780;
+  font-weight: 700;
   letter-spacing: -0.02em;
   line-height: 1;
   opacity: 0;

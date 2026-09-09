@@ -1,34 +1,87 @@
+/* Tokens de marca — TelecoEmprende.
+   Fuente: la guía de marca (docs/brand-guide.html). Cuatro colores oficiales
+   y dos tipografías; TODO lo demás de la web se deriva de aquí. Si un valor
+   de color aparece a mano en otra hoja, es que se ha escapado de la marca. */
 :root {
-  /* Marca TelecoEmprende 2026/27 */
-  --color-gold: #f4b044;
-  --color-orange: #e0680e;
-  --color-orange-dark: #b95208;
-  --color-steel: #88a5b7;
+  /* ---------- Los cuatro colores oficiales ---------- */
+  /* Tinta: color ancla. Fondos oscuros, texto de cuerpo, base de toda pieza. */
   --color-navy: #112532;
-  --color-navy-soft: #18374b;
-  --color-navy-deep: #0b1a24;
-  --color-cream: #faf5ec;
+  /* Ámbar: acento principal. Titulares, highlights, Eventos. */
+  --color-gold: #f4b044;
+  /* Naranja: acento de energía. CTAs, fechas, urgencia, Marketing. */
+  --color-orange: #e0680e;
+  /* Acero: neutro frío. Tech, superficies suaves, divisores.
+     Nunca en texto pequeño sobre papel: ahí no llega de contraste. */
+  --color-steel: #88a5b7;
 
-  /* Tokens heredados (admin, páginas legacy) */
-  --color-primary: #e0680e;
-  --color-primary-dark: #b95208;
+  /* ---------- Derivados de los cuatro ---------- */
+  --color-navy-deep: #0a1720;
+  --color-navy-soft: #18374b;
+  --color-gold-soft: #f8d18f;
+  --color-orange-dark: #b95208;
+  /* Acero aclarado: el texto secundario sobre tinta. El acero puro se queda
+     corto de contraste sobre fondo oscuro. */
+  --color-steel-light: #b4c7d3;
+
+  /* ---------- Papel y tinta secundaria ---------- */
+  --color-paper: #faf7f1;
+  --color-paper-line: #e2ddd0;
+  --color-slate: #46545c;
+
+  /* ---------- Alias de rol (lo que usan las hojas) ---------- */
+  --color-primary: var(--color-orange);
+  --color-primary-dark: var(--color-orange-dark);
   --color-surface: #ffffff;
   --color-surface-soft: rgba(255, 255, 255, 0.86);
-  --color-background: #f6efe3;
-  --color-text: #112532;
-  --color-text-muted: #4e6373;
-  --color-border: #e8ddca;
+  --color-background: var(--color-paper);
+  --color-cream: var(--color-paper);
+  --color-text: var(--color-navy);
+  --color-text-muted: var(--color-slate);
+  --color-text-on-dark: var(--color-paper);
+  --color-text-on-dark-muted: var(--color-steel-light);
+  --color-border: var(--color-paper-line);
+  /* El acero es el cuarto color, no un adorno: la guía lo manda a superficies
+     grandes y a los divisores. Se mezcla con BLANCO, no con el papel: el papel
+     es crema y al mezclarlo apagaba el azul hasta dejarlo en gris (17% sobre
+     papel daba #e7e9e7; sobre blanco da #ebf0f3, que sí es azul).
+     La tinta encima de los tres pasa de 8:1, así que se puede escribir sobre
+     ellos; lo que la guía prohíbe es el acero puro en texto pequeño. */
+  --color-steel-soft: color-mix(in srgb, var(--color-steel) 38%, #ffffff);
+  --color-steel-tint: color-mix(in srgb, var(--color-steel) 55%, #ffffff);
+  --color-divider: color-mix(in srgb, var(--color-steel) 45%, #ffffff);
+
+  /* Departamentos: cada uno con su color, según la guía. */
+  --color-depto-tech: var(--color-steel);
+  --color-depto-marketing: var(--color-orange);
+  --color-depto-eventos: var(--color-gold);
+
+  /* ---------- Estados ---------- */
   --color-info-bg: #fdf1dd;
   --color-info-text: #9a5b06;
   --color-success-bg: #e3f6e8;
   --color-success-text: #1d7a3d;
   --color-error-bg: #fde8ea;
   --color-error-text: #b42318;
+
+  /* Ámbar a naranja: el degradado de los CTA. El tono intermedio es la
+     mezcla de los dos oficiales, no un quinto color. */
+  --gradient-cta: linear-gradient(120deg, var(--color-gold) 0%, #f6bc63 52%, var(--color-orange) 100%);
+
   --shadow-soft: 0 16px 40px rgba(17, 37, 50, 0.08);
   --radius-xl: 28px;
   --radius-lg: 20px;
   --radius-md: 14px;
   --container-width: 1180px;
+
+  /* ---------- Tipografía ----------
+     Dos voces: Anton grita los titulares, Space Grotesk lo explica todo.
+     Anton solo tiene un peso (400): poner font-weight:900 encima no engorda
+     nada, y el tracking negativo que pedía Inter aquí aprieta de más. */
+  --font-display: "Anton", "Space Grotesk", sans-serif;
+  --font-body: "Space Grotesk", "Inter", sans-serif;
+  --tracking-display: 0.01em;
+  --leading-display: 1.02;
+  --leading-body: 1.55;
 
   /* Movimiento. Las curvas de fábrica (`ease`) son demasiado flojas para
      movimiento deliberado; estas son las que usa el resto del proyecto
@@ -40,6 +93,4 @@
   --dur-press: 160ms;
   --dur-fast: 150ms;
   --dur-menu: 180ms;
-
-  --font-display: "Space Grotesk", "Inter", sans-serif;
 }

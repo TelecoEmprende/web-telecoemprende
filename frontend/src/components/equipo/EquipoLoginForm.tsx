@@ -111,7 +111,14 @@ export function EquipoLoginForm({
         </Button>
       </form>
 
-      <Button type="button" variant="link" className="mt-3 px-0" onClick={cambiarModo}>
+      {/* `bg-transparent`: con el Preflight de Tailwind desactivado, un botón
+          sin fondo propio se queda con el gris del navegador. */}
+      <Button
+        type="button"
+        variant="link"
+        className="mt-3 bg-transparent px-0"
+        onClick={cambiarModo}
+      >
         {esRegistro ? "Ya tengo cuenta" : "No tengo cuenta todavía"}
       </Button>
     </section>
