@@ -58,6 +58,12 @@ export function Header({ adminMode = false, teamMode = false, hidePublicNav = fa
             <>
               <NavLink to="/">Inicio</NavLink>
               <NavLink to="/admin">Admin</NavLink>
+              {/* El camino de vuelta: el sidebar de /equipo ya enlaza a /admin,
+                  pero desde aquí no había forma de volver sin escribir la URL.
+                  Quien entra a /admin solo con la contraseña no tiene sesión de
+                  equipo, así que puede caer en el login de /equipo -- que es
+                  justo donde tiene que caer. */}
+              <NavLink to="/equipo">Equipo</NavLink>
             </>
           ) : teamMode ? (
             <NavLink to="/">Inicio</NavLink>
