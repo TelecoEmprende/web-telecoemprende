@@ -214,6 +214,38 @@ def crear_equipo_acceso(
     }
 
 
+def registrar_equipo_acceso(email: str, password: str) -> bool:
+    """Alta que se pide la propia persona: cuenta desactivada y sin equipos.
+
+    No pasa por `_acceso_valido` a propósito -- la cuenta nace justamente sin
+    nada (equipos '{}', cargo ''), y con `activo = FALSE` no puede iniciar
+    sesión (ver `login_equipo`), así que no da acceso a nada hasta que admin le
+    asigna equipos/cargo y la activa desde el panel.
+
+    `ON CONFLICT DO NOTHING` en vez de SELECT + INSERT: una sola sentencia, sin
+    carrera entre dos altas del mismo email a la vez. Devuelve False si ya
+    existía.
+
+    ponytail: alta temporal mientras entra el equipo. Para quitarla, borrar
+    esta función, la ruta POST /api/equipo/registro y el modo "crear cuenta"
+    del formulario de login.
+    """
+    with _get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                INSERT INTO equipo_accesos (email, password_hash, activo)
+                VALUES (%s, %s, FALSE)
+                ON CONFLICT (email) DO NOTHING
+                """,
+                (email.strip().lower(), generate_password_hash(password)),
+            )
+            creado = cur.rowcount > 0
+        conn.commit()
+
+    return creado
+
+
 def actualizar_equipo_acceso(
     acceso_id: int,
     equipos: list[str] | None = None,

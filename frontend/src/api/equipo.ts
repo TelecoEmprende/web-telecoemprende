@@ -10,6 +10,14 @@ export function loginEquipo(email: string, password: string) {
   });
 }
 
+/** ponytail: alta temporal mientras entra el equipo (ver /api/equipo/registro). */
+export function registrarEquipo(email: string, password: string) {
+  return apiRequest<ApiResult>("/api/equipo/registro", {
+    method: "POST",
+    body: JSON.stringify({ email, password }),
+  });
+}
+
 export function logoutEquipo() {
   return apiRequest<ApiResult>("/api/equipo/logout", {
     method: "POST",
