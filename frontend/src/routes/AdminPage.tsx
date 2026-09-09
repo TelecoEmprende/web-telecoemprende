@@ -217,7 +217,7 @@ export function AdminPage() {
                           (r) => r.estado === estadoActivo && !r.notificado,
                         ).length;
                         return (
-                          <div className="mb-5 flex flex-wrap items-center justify-between gap-3.5 rounded-2xl border border-[#dde5f1] bg-[#f8fbff] px-[18px] py-3.5">
+                          <div className="mb-5 flex flex-wrap items-center justify-between gap-3.5 rounded-2xl border border-[var(--color-paper-line)] bg-[var(--color-paper)] px-[18px] py-3.5">
                             <p className="text-[0.92rem] text-muted-foreground">
                               <strong>{pendientesNotificar}</strong> pendientes de enviar en esta
                               pestaña. Reclasificar a alguien vuelve a dejarlo pendiente de un nuevo
@@ -227,7 +227,7 @@ export function AdminPage() {
                               type="button"
                               variant="outline"
                               size="lg"
-                              className="h-12 px-[18px] font-extrabold max-[720px]:w-full"
+                              className="h-12 px-[18px] font-bold max-[720px]:w-full"
                               disabled={isNotifying || pendientesNotificar === 0}
                               onClick={() => void handleNotificar()}
                             >

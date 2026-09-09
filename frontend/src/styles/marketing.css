@@ -15,7 +15,7 @@
   gap: 6px;
   padding-bottom: 14px;
   margin-bottom: 20px;
-  border-bottom: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-divider);
   /* Una sola fila: al partirse en dos, la pestaña activa quedaba sola abajo
      y se leía como un fallo de render. */
   overflow-x: auto;
@@ -68,7 +68,7 @@
 .mkt-detalle-header-react h3 {
   margin: 0;
   font-size: 1.35rem;
-  font-weight: 900;
+  font-weight: 700;
   letter-spacing: -0.03em;
   color: var(--color-navy);
 }
@@ -119,12 +119,12 @@
   padding: 11px 20px;
   border: none;
   border-radius: var(--radius-md);
-  background: linear-gradient(120deg, var(--color-gold), #f7c065 55%, #f0902e);
+  background: var(--gradient-cta);
   color: var(--color-navy);
   box-shadow: 0 10px 24px rgba(224, 104, 14, 0.28);
   font-family: inherit;
   font-size: 0.95rem;
-  font-weight: 800;
+  font-weight: 700;
   cursor: pointer;
   transition: transform var(--dur-press) var(--ease-out),
     filter var(--dur-press) var(--ease-out),
@@ -372,7 +372,7 @@
 
 .mkt-campaign-nombre-react {
   font-size: 1.05rem;
-  font-weight: 800;
+  font-weight: 700;
   color: var(--color-navy);
 }
 
@@ -441,7 +441,7 @@
 .mkt-content-card-react h4 {
   margin: 0;
   font-size: 1.05rem;
-  font-weight: 800;
+  font-weight: 700;
   color: var(--color-navy);
 }
 
@@ -468,7 +468,7 @@
 .mkt-tareas-react {
   margin-top: 16px;
   padding-top: 14px;
-  border-top: 1px solid var(--color-border);
+  border-top: 1px solid var(--color-divider);
 }
 
 .mkt-tareas-lista-react {
@@ -621,7 +621,7 @@
   justify-content: space-between;
   margin: 0 0 12px;
   font-size: 0.9rem;
-  font-weight: 800;
+  font-weight: 700;
   color: var(--color-navy);
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -707,7 +707,7 @@
   text-align: center;
   color: var(--color-text-muted);
   font-size: 0.76rem;
-  font-weight: 800;
+  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
@@ -734,7 +734,7 @@
   margin-bottom: 4px;
   color: var(--color-text-muted);
   font-size: 0.76rem;
-  font-weight: 800;
+  font-weight: 700;
 }
 
 .mkt-evento-react {
@@ -903,7 +903,7 @@
   align-items: center;
   gap: 4px;
   padding: 26px 20px;
-  border-right: 1px solid var(--color-border);
+  border-right: 1px solid var(--color-divider);
   text-align: center;
 }
 
@@ -916,7 +916,7 @@
 
 .mkt-ficha-nombre-react {
   margin: 0;
-  font-family: var(--font-display);
+  font-family: var(--font-body);
   font-size: 1.1rem;
   font-weight: 700;
   color: var(--color-navy);
@@ -990,7 +990,7 @@
   margin: 0;
   font-family: var(--font-display);
   font-size: 1.6rem;
-  font-weight: 700;
+  font-weight: 400;
   line-height: 1.1;
   color: var(--color-navy);
   font-variant-numeric: tabular-nums;
@@ -1024,7 +1024,7 @@
   align-items: baseline;
   gap: 10px;
   padding: 9px 0;
-  border-bottom: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-divider);
   font-size: 0.9rem;
 }
 
@@ -1093,7 +1093,7 @@
 
   .mkt-ficha-lateral-react {
     border-right: none;
-    border-bottom: 1px solid var(--color-border);
+    border-bottom: 1px solid var(--color-divider);
   }
 }
 
@@ -1137,7 +1137,7 @@
 .mkt-modal-header-react h3 {
   margin: 0;
   font-size: 1.3rem;
-  font-weight: 900;
+  font-weight: 700;
   letter-spacing: -0.03em;
   color: var(--color-navy);
 }
@@ -1206,13 +1206,13 @@
 
 .mkt-resumen-react strong {
   font-size: 1.5rem;
-  font-weight: 900;
+  font-weight: 700;
   letter-spacing: -0.03em;
 }
 
 .mkt-resumen-alerta-react {
   color: var(--color-error-text);
-  font-weight: 800;
+  font-weight: 700;
 }
 
 .mkt-buscador-react {
@@ -1270,7 +1270,7 @@
   gap: 10px;
   margin: 0 0 10px;
   font-size: 0.82rem;
-  font-weight: 800;
+  font-weight: 700;
   color: var(--color-text-muted);
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -1331,7 +1331,7 @@
 .mkt-fila-padre-react,
 .mkt-task-padre-react {
   font-size: 0.72rem;
-  font-weight: 800;
+  font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--color-text-muted);
@@ -1357,7 +1357,7 @@
   padding: 4px 10px;
   border-radius: 999px;
   font-size: 0.78rem;
-  font-weight: 800;
+  font-weight: 700;
   white-space: nowrap;
   background: var(--color-background);
   color: var(--color-text-muted);
@@ -1387,7 +1387,7 @@
 
 .mkt-listo-react {
   font-size: 0.78rem;
-  font-weight: 800;
+  font-weight: 700;
   color: var(--color-success-text);
   white-space: nowrap;
 }
@@ -1401,7 +1401,7 @@
 
 .mkt-vencida-react {
   color: var(--color-error-text);
-  font-weight: 800;
+  font-weight: 700;
 }
 
 /* ==========================================================================
@@ -1438,7 +1438,7 @@
 .mkt-zona-peligro-react {
   margin-top: 28px;
   padding-top: 18px;
-  border-top: 1px solid var(--color-border);
+  border-top: 1px solid var(--color-divider);
 }
 
 /* La confirmación vive en la página, en español y con Cancelar visible. Un
@@ -1490,7 +1490,7 @@
   color: var(--color-text-muted);
   font-family: inherit;
   font-size: 0.76rem;
-  font-weight: 800;
+  font-weight: 700;
   cursor: pointer;
 }
 
@@ -1608,7 +1608,7 @@ button.mkt-evento-react:hover {
 .mkt-semana-todo-el-dia-react {
   gap: 1px;
   background: var(--color-border);
-  border-bottom: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-divider);
 }
 
 .mkt-semana-gutter-react {
@@ -1619,7 +1619,7 @@ button.mkt-evento-react:hover {
   background: var(--color-surface);
   color: var(--color-text-muted);
   font-size: 0.6rem;
-  font-weight: 800;
+  font-weight: 700;
   text-align: center;
   text-transform: uppercase;
   letter-spacing: 0.03em;
@@ -1650,7 +1650,7 @@ button.mkt-evento-react:hover {
   color: var(--color-text-muted);
   font-family: inherit;
   font-size: 0.72rem;
-  font-weight: 800;
+  font-weight: 700;
   text-transform: uppercase;
   cursor: pointer;
 }
@@ -1690,7 +1690,7 @@ button.mkt-evento-react:hover {
 }
 
 .mkt-semana-horas-react {
-  border-right: 1px solid var(--color-border);
+  border-right: 1px solid var(--color-divider);
 }
 
 .mkt-semana-hora-etiqueta-react {
@@ -1707,7 +1707,7 @@ button.mkt-evento-react:hover {
 
 .mkt-semana-columna-react {
   position: relative;
-  border-right: 1px solid var(--color-border);
+  border-right: 1px solid var(--color-divider);
   background-image: repeating-linear-gradient(
     to bottom,
     var(--color-border) 0,
@@ -1736,7 +1736,7 @@ button.mkt-evento-react:hover {
 .mkt-evento-hora-react {
   display: block;
   font-size: 0.6rem;
-  font-weight: 800;
+  font-weight: 700;
   opacity: 0.85;
 }
 
@@ -1865,13 +1865,13 @@ button.mkt-evento-react:hover {
 .mkt-adjuntos-react {
   margin-top: 16px;
   padding-top: 14px;
-  border-top: 1px solid var(--color-border);
+  border-top: 1px solid var(--color-divider);
 }
 
 .mkt-adjuntos-titulo-react {
   margin: 0 0 10px;
   font-size: 0.74rem;
-  font-weight: 800;
+  font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--color-text-muted);
@@ -1883,7 +1883,7 @@ button.mkt-evento-react:hover {
 .mkt-form-seccion-react {
   margin-top: 22px;
   padding-top: 16px;
-  border-top: 1px solid var(--color-border);
+  border-top: 1px solid var(--color-divider);
 }
 
 .mkt-enlace-nuevo-react {
@@ -2024,7 +2024,7 @@ button.mkt-evento-react:hover {
 
 .mkt-tile-numero-react {
   font-size: 1.7rem;
-  font-weight: 900;
+  font-weight: 700;
   letter-spacing: -0.04em;
   color: var(--color-navy);
   line-height: 1.1;
@@ -2069,7 +2069,7 @@ button.mkt-evento-react:hover {
 .mkt-resumen-depto-numero-react {
   font-family: inherit;
   font-size: 1rem;
-  font-weight: 900;
+  font-weight: 700;
   color: var(--color-navy);
 }
 
@@ -2161,7 +2161,7 @@ button.mkt-evento-react:hover {
 .mkt-tl-etiqueta-react {
   margin: 0 0 8px;
   font-size: 0.76rem;
-  font-weight: 800;
+  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: var(--color-text-muted);
@@ -2348,7 +2348,7 @@ button.mkt-evento-react {
 .reg-item-cuerpo-react {
   margin-top: 12px;
   padding-top: 12px;
-  border-top: 1px solid var(--color-border);
+  border-top: 1px solid var(--color-divider);
   color: var(--color-text-muted);
   font-size: 0.93rem;
 }
@@ -2373,7 +2373,7 @@ button.mkt-evento-react {
 .reg-confirmar-react {
   margin: 12px 0 0;
   padding-top: 12px;
-  border-top: 1px solid var(--color-border);
+  border-top: 1px solid var(--color-divider);
   font-size: 0.9rem;
   color: var(--color-text-muted);
 }
@@ -2473,7 +2473,7 @@ button.mkt-evento-react {
   margin: 0;
   font-family: var(--font-display);
   font-size: 1.35rem;
-  font-weight: 700;
+  font-weight: 400;
   color: var(--color-navy);
   font-variant-numeric: tabular-nums;
 }
@@ -2491,7 +2491,7 @@ button.mkt-evento-react {
 .reg-importe-react {
   font-family: var(--font-display);
   font-size: 1.05rem;
-  font-weight: 700;
+  font-weight: 400;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
@@ -2537,11 +2537,11 @@ button.mkt-evento-react {
   gap: 12px;
   padding: 12px 16px;
   background: var(--color-surface);
-  border-left: 3px solid var(--color-border);
+  border-left: 3px solid var(--color-divider);
 }
 
 .mkt-agenda-item-react + .mkt-agenda-item-react {
-  border-top: 1px solid var(--color-border);
+  border-top: 1px solid var(--color-divider);
 }
 
 .mkt-agenda-marketing-react { border-left-color: var(--color-orange); }
@@ -2551,7 +2551,7 @@ button.mkt-evento-react {
 .mkt-agenda-cuando-react {
   flex-shrink: 0;
   font-size: 0.74rem;
-  font-weight: 800;
+  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.03em;
   color: var(--color-text-muted);
@@ -2607,14 +2607,14 @@ button.mkt-evento-react {
 .mkt-semana-letra-react {
   display: block;
   font-size: 0.62rem;
-  font-weight: 800;
+  font-weight: 700;
   color: var(--color-text-muted);
   text-transform: uppercase;
 }
 
 .mkt-semana-numero-react {
   display: block;
-  font-weight: 800;
+  font-weight: 700;
   font-size: 1.05rem;
   margin-top: 2px;
   color: var(--color-navy);

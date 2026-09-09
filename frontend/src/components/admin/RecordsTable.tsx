@@ -31,7 +31,7 @@ const ESTADO_BADGE_LABELS: Record<Estado, string> = {
   waitlist: "Waitlist",
 };
 const ESTADO_BADGE_CLASS: Record<Estado, string> = {
-  pendiente: "bg-[#eef1f5] text-slate-600",
+  pendiente: "bg-[var(--color-paper-line)] text-[var(--color-slate)]",
   aceptado: "bg-[var(--color-success-bg)] text-[var(--color-success-text)]",
   rechazado: "bg-[var(--color-error-bg)] text-[var(--color-error-text)]",
   waitlist: "bg-[var(--color-info-bg)] text-[var(--color-info-text)]",
@@ -45,8 +45,8 @@ const SIN_VALOR = "none";
 // filas antiguas insertadas antes de que existiera esa validación).
 const DRIVE_LINK_PATTERN = /^https:\/\/(www\.)?drive\.google\.com\//i;
 
-const TH = "border-b border-[#eef2f7] bg-[#f8fbff] px-[18px] py-4 text-left text-sm font-extrabold text-[#344054] max-[720px]:px-3.5";
-const TD = "border-b border-[#eef2f7] px-[18px] py-4 text-left align-top text-foreground max-[720px]:px-3.5";
+const TH = "border-b border-[var(--color-divider)] bg-[var(--color-paper)] px-[18px] py-4 text-left text-sm font-bold text-[var(--color-slate)] max-[720px]:px-3.5";
+const TD = "border-b border-[var(--color-divider)] px-[18px] py-4 text-left align-top text-foreground max-[720px]:px-3.5";
 const TD_ANCHA = `${TD} min-w-[220px]`;
 const INPUT = "w-full min-w-[100px]";
 
@@ -73,7 +73,7 @@ type RecordsTableProps = {
 function EstadoBadge({ registro }: { registro: Registro }) {
   return (
     <span
-      className={`inline-flex items-center rounded-full px-3 py-[5px] text-[0.8rem] font-extrabold whitespace-nowrap ${ESTADO_BADGE_CLASS[registro.estado]}`}
+      className={`inline-flex items-center rounded-full px-3 py-[5px] text-[0.8rem] font-bold whitespace-nowrap ${ESTADO_BADGE_CLASS[registro.estado]}`}
     >
       {ESTADO_BADGE_LABELS[registro.estado]}
       {registro.estado !== "pendiente" && registro.notificado ? " ✓" : ""}
@@ -185,9 +185,9 @@ export function RecordsTable({ registros, onUpdate, onDelete, onEstadoChange }: 
   }
 
   return (
-    <div className="overflow-x-auto rounded-[22px] border border-[#dde5f1] bg-white max-[720px]:-mx-[18px] max-[720px]:rounded-none max-[720px]:border-x-0 max-[420px]:-mx-4">
+    <div className="overflow-x-auto rounded-[22px] border border-[var(--color-paper-line)] bg-white max-[720px]:-mx-[18px] max-[720px]:rounded-none max-[720px]:border-x-0 max-[420px]:-mx-4">
       {error && (
-        <div className="border-b border-[#f0d5d8] bg-[var(--color-error-bg)] px-4 py-2.5 text-sm font-bold text-[var(--color-error-text)]">
+        <div className="border-b border-[color-mix(in_srgb,var(--color-error-text)_28%,white)] bg-[var(--color-error-bg)] px-4 py-2.5 text-sm font-bold text-[var(--color-error-text)]">
           {error}
         </div>
       )}
@@ -238,7 +238,7 @@ export function RecordsTable({ registros, onUpdate, onDelete, onEstadoChange }: 
         </thead>
         <tbody>
           {registros.map((registro) => (
-            <tr key={registro.id} className="hover:bg-[#fbfdff]">
+            <tr key={registro.id} className="hover:bg-[var(--color-paper)]">
               {editingId === registro.id ? (
                 <>
                   <td className={TD}>
@@ -362,7 +362,7 @@ export function RecordsTable({ registros, onUpdate, onDelete, onEstadoChange }: 
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="text-[#7f8c8d]"
+                      className="text-[var(--color-slate)]"
                       title="Cancelar"
                       disabled={saving}
                       onClick={cancelEdit}
@@ -417,7 +417,7 @@ export function RecordsTable({ registros, onUpdate, onDelete, onEstadoChange }: 
                       </Button>
                       <Button
                         size="sm"
-                        className="bg-[#e6a417] text-white hover:bg-[#e6a417]/90"
+                        className="bg-[var(--color-gold)] text-[var(--color-navy)] hover:bg-[var(--color-gold)]/90"
                         title="Waitlist"
                         disabled={changingEstadoId === registro.id || registro.estado === "waitlist"}
                         onClick={() => void changeEstado(registro.id, "waitlist")}
@@ -428,7 +428,7 @@ export function RecordsTable({ registros, onUpdate, onDelete, onEstadoChange }: 
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="text-[#e67e22]"
+                      className="text-[var(--color-orange)]"
                       title="Editar"
                       onClick={() => startEdit(registro)}
                     >

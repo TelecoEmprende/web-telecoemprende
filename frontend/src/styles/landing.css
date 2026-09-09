@@ -1,6 +1,7 @@
 /* ============================================================
    Landing TelecoEmprende 2026/27
-   Paleta: navy #112532 · gold #F4B044 · orange #E0680E · steel #88A5B7
+   Paleta: tinta · ámbar · naranja · acero. Los valores están en tokens.css;
+   aquí no se escribe ningún color a mano.
    ============================================================ */
 
 .lp-shell {
@@ -59,9 +60,9 @@
 .lp-nav-name {
   font-family: var(--font-display);
   font-size: 1.28rem;
-  font-weight: 700;
-  letter-spacing: -0.035em;
-  color: #f6f1e6;
+  font-weight: 400;
+  letter-spacing: var(--tracking-display);
+  color: var(--color-paper);
 }
 
 .lp-nav-name span {
@@ -75,7 +76,7 @@
 }
 
 .lp-nav-links a {
-  color: #c9d7e0;
+  color: var(--color-text-on-dark-muted);
   font-weight: 600;
   font-size: 0.96rem;
   transition: color 0.15s ease;
@@ -110,7 +111,7 @@
   border-radius: 999px;
   background: var(--color-gold);
   color: var(--color-navy);
-  font-weight: 800;
+  font-weight: 700;
   font-size: 0.94rem;
   box-shadow: 0 8px 22px rgba(244, 176, 68, 0.28);
   transition: transform var(--dur-press) ease, filter var(--dur-press) ease;
@@ -180,8 +181,8 @@
   min-height: 28px;
   border-radius: 999px;
   background: transparent;
-  color: #c9d7e0;
-  font-weight: 800;
+  color: var(--color-text-on-dark-muted);
+  font-weight: 700;
   font-size: 0.78rem;
   letter-spacing: 0.02em;
   cursor: pointer;
@@ -211,7 +212,7 @@
   width: 22px;
   height: 2px;
   border-radius: 2px;
-  background: #f6f1e6;
+  background: var(--color-paper);
   transition: transform 0.2s ease, opacity 0.2s ease;
 }
 
@@ -240,7 +241,7 @@
   background:
     radial-gradient(circle at 12% -10%, rgba(136, 165, 183, 0.14), transparent 42%),
     linear-gradient(165deg, var(--color-navy) 0%, var(--color-navy-deep) 100%);
-  color: #f6f1e6;
+  color: var(--color-paper);
   padding: 92px 0 108px;
 }
 
@@ -289,7 +290,7 @@
   border: 1px solid rgba(244, 176, 68, 0.3);
   color: var(--color-gold);
   font-size: 0.82rem;
-  font-weight: 800;
+  font-weight: 700;
   letter-spacing: 0.09em;
   text-transform: uppercase;
 }
@@ -329,17 +330,17 @@
   margin: 0 0 22px;
   font-family: var(--font-display);
   font-size: clamp(2.7rem, 5.4vw, 4.4rem);
-  font-weight: 700;
+  font-weight: 400;
   line-height: 1.03;
-  letter-spacing: -0.032em;
-  color: #fdfaf3;
+  letter-spacing: var(--tracking-display);
+  color: var(--color-paper);
 }
 
+/* Solo el color. El marcador de rotulador que llevaba detrás se pensó para
+   una tipografía con menos mancha; con Anton el bloque competía con la propia
+   palabra, y el ámbar ya la destaca de sobra. */
 .lp-hero h1 span {
   color: var(--color-gold);
-  background: linear-gradient(transparent 66%, rgba(224, 104, 14, 0.38) 66%);
-  padding: 0 0.08em;
-  border-radius: 4px;
 }
 
 .lp-hero-lead {
@@ -347,7 +348,7 @@
   max-width: 56ch;
   font-size: 1.13rem;
   line-height: 1.76;
-  color: #b9c9d4;
+  color: var(--color-text-on-dark-muted);
 }
 
 .lp-hero-actions {
@@ -366,7 +367,7 @@
   min-height: 54px;
   padding: 0 26px;
   border-radius: 14px;
-  font-weight: 800;
+  font-weight: 700;
   font-size: 1rem;
   border: 0;
   cursor: pointer;
@@ -375,7 +376,7 @@
 }
 
 .lp-btn-gold {
-  background: linear-gradient(120deg, var(--color-gold), #f7c065 55%, #f0902e);
+  background: var(--gradient-cta);
   color: var(--color-navy);
   box-shadow: 0 18px 40px rgba(224, 104, 14, 0.32);
 }
@@ -394,7 +395,7 @@
 .lp-btn-ghost {
   background: transparent;
   border: 1px solid rgba(136, 165, 183, 0.42);
-  color: #dbe6ec;
+  color: var(--color-text-on-dark-muted);
 }
 
 .lp-btn-ghost:hover {
@@ -417,7 +418,7 @@
   border-radius: 999px;
   background: rgba(136, 165, 183, 0.12);
   border: 1px solid rgba(136, 165, 183, 0.26);
-  color: #cfdde6;
+  color: var(--color-text-on-dark-muted);
   font-weight: 600;
   font-size: 0.92rem;
 }
@@ -429,10 +430,12 @@
   align-items: center;
   padding: 8px 14px;
   border-radius: 999px;
-  background: rgba(224, 104, 14, 0.11);
-  color: var(--color-orange-dark);
+  /* Etiqueta de sección: es un rótulo neutro, no una llamada a la acción, así
+     que va en acero y no en naranja. */
+  background: var(--color-steel-tint);
+  color: var(--color-navy);
   font-size: 0.78rem;
-  font-weight: 800;
+  font-weight: 700;
   letter-spacing: 0.09em;
   text-transform: uppercase;
 }
@@ -448,14 +451,14 @@
   max-width: 26ch;
   font-family: var(--font-display);
   font-size: clamp(1.95rem, 3.6vw, 2.85rem);
-  font-weight: 700;
+  font-weight: 400;
   line-height: 1.12;
-  letter-spacing: -0.024em;
+  letter-spacing: var(--tracking-display);
   color: var(--color-navy);
 }
 
 .lp-heading-dark {
-  color: #f6f1e6;
+  color: var(--color-paper);
 }
 
 .lp-section-lead {
@@ -467,7 +470,7 @@
 }
 
 .lp-section-lead-dark {
-  color: #a9bcc9;
+  color: var(--color-text-on-dark-muted);
 }
 
 .lp-reveal-word {
@@ -486,6 +489,9 @@
      flechas/puntos, que pesan menos que un párrafo, y el padding-top de
      .lp-departments (96px) se suma al de aquí sin colapsar. */
   padding: 96px 0 40px;
+  /* Banda fría entre el hero (tinta) y Departamentos (papel): es la superficie
+     grande donde el acero hace de color, no de línea. */
+  background: var(--color-steel-soft);
 }
 
 .lp-team-carousel {
@@ -529,7 +535,7 @@
 .lp-team-photo {
   aspect-ratio: 4 / 5;
   overflow: hidden;
-  background: #ece4d3;
+  background: var(--color-steel-tint);
 }
 
 .lp-team-photo img {
@@ -545,7 +551,7 @@
 
 .lp-team-body h3 {
   margin: 0 0 8px;
-  font-family: var(--font-display);
+  font-family: var(--font-body);
   font-size: 1.3rem;
   font-weight: 700;
   letter-spacing: -0.02em;
@@ -574,7 +580,7 @@
   background: rgba(224, 104, 14, 0.11);
   color: var(--color-orange-dark);
   font-size: 0.76rem;
-  font-weight: 800;
+  font-weight: 700;
   letter-spacing: 0.02em;
   text-transform: uppercase;
 }
@@ -627,7 +633,7 @@
 .lp-team-arrow:hover:not(:disabled) {
   background: var(--color-navy);
   border-color: var(--color-navy);
-  color: #f6f1e6;
+  color: var(--color-paper);
   transform: translateY(-2px);
 }
 
@@ -738,7 +744,7 @@
   background: var(--color-gold);
   color: var(--color-navy);
   font-size: 0.8rem;
-  font-weight: 800;
+  font-weight: 700;
   letter-spacing: 0.02em;
   box-shadow: 0 10px 24px rgba(0, 0, 0, 0.3);
 }
@@ -774,16 +780,16 @@
 
 .lp-event-body h3 {
   margin: 0 0 10px;
-  font-family: var(--font-display);
+  font-family: var(--font-body);
   font-size: 1.32rem;
   font-weight: 700;
   letter-spacing: -0.02em;
-  color: #f6f1e6;
+  color: var(--color-paper);
 }
 
 .lp-event-body p {
   margin: 0;
-  color: #a9bcc9;
+  color: var(--color-text-on-dark-muted);
   font-size: 0.97rem;
   line-height: 1.68;
 }
@@ -802,7 +808,7 @@
   height: 64px;
   object-fit: cover;
   border-radius: 10px;
-  border: 1px solid rgba(250, 245, 236, 0.14);
+  border: 1px solid rgba(250, 247, 241, 0.14);
 }
 
 /* ---------- Inscripción (restyle del formulario compartido) ---------- */
@@ -811,7 +817,7 @@
 
 .lp-requirements {
   padding: 88px 0 96px;
-  background: linear-gradient(180deg, rgba(136, 165, 183, 0.1), transparent 60%), var(--color-cream);
+  background: linear-gradient(180deg, var(--color-steel-tint), transparent 62%), var(--color-steel-soft);
 }
 
 .lp-requirements-grid {
@@ -837,13 +843,13 @@
   height: 52px;
   margin-bottom: 16px;
   border-radius: 16px;
-  background: rgba(224, 104, 14, 0.11);
+  background: color-mix(in srgb, var(--depto) 18%, transparent);
   font-size: 1.5rem;
 }
 
 .lp-requirement-card h3 {
   margin: 0 0 10px;
-  font-family: var(--font-display);
+  font-family: var(--font-body);
   font-size: 1.24rem;
   font-weight: 700;
   letter-spacing: -0.02em;
@@ -855,6 +861,14 @@
   color: var(--color-text-muted);
   font-size: 0.98rem;
   line-height: 1.65;
+}
+
+/* `.lp-highlight` vive en dos superficies: el hero (tinta) y Requisitos
+   (banda clara). El subrayado ámbar es el mismo en las dos; lo que cambia es
+   el color del texto, así que solo el del hero se sube a blanco -- ponerlo en
+   la clase compartida lo habría hecho invisible en Requisitos. */
+.lp-hero .lp-highlight {
+  color: var(--color-text-on-dark);
 }
 
 .lp-highlight {
@@ -888,6 +902,22 @@
   border-radius: 24px;
   box-shadow: var(--shadow-soft);
   overflow: hidden;
+  /* Un color por departamento, como pide la guía: acero para Tech, naranja
+     para Marketing, ámbar para Eventos. El naranja queda de reserva. */
+  --depto: var(--color-orange);
+  border-top: 3px solid var(--depto);
+}
+
+.lp-department-card[data-depto="tech"] {
+  --depto: var(--color-depto-tech);
+}
+
+.lp-department-card[data-depto="marketing"] {
+  --depto: var(--color-depto-marketing);
+}
+
+.lp-department-card[data-depto="eventos"] {
+  --depto: var(--color-depto-eventos);
 }
 
 .lp-department-icon {
@@ -904,7 +934,7 @@
 
 .lp-department-card h3 {
   margin: 0 0 14px;
-  font-family: var(--font-display);
+  font-family: var(--font-body);
   font-size: 1.24rem;
   font-weight: 700;
   letter-spacing: -0.02em;
@@ -936,14 +966,14 @@
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: var(--color-orange);
+  background: var(--depto);
 }
 
 /* ---------- Gracias (post-inscripción) ---------- */
 
 .lp-legal {
   padding: 96px 0 108px;
-  background: linear-gradient(180deg, rgba(136, 165, 183, 0.1), transparent 60%), var(--color-cream);
+  background: linear-gradient(180deg, var(--color-steel-tint), transparent 62%), var(--color-steel-soft);
 }
 
 .lp-legal-container {
@@ -972,7 +1002,7 @@
 
 .lp-thankyou {
   padding: 96px 0 108px;
-  background: linear-gradient(180deg, rgba(136, 165, 183, 0.1), transparent 60%), var(--color-cream);
+  background: linear-gradient(180deg, var(--color-steel-tint), transparent 62%), var(--color-steel-soft);
 }
 
 .lp-thankyou-card {
@@ -997,9 +1027,9 @@
   display: block;
   font-family: var(--font-display);
   font-size: clamp(3.2rem, 10vw, 5.5rem);
-  font-weight: 700;
+  font-weight: 400;
   line-height: 1;
-  letter-spacing: -0.04em;
+  letter-spacing: var(--tracking-display);
   color: var(--color-orange);
   margin-bottom: 8px;
 }
@@ -1020,7 +1050,7 @@
   display: block;
   margin-bottom: 8px;
   font-size: 1rem;
-  font-weight: 800;
+  font-weight: 700;
   color: var(--color-navy);
 }
 
@@ -1065,7 +1095,7 @@
   display: block;
   margin-bottom: 6px;
   font-size: 0.98rem;
-  font-weight: 800;
+  font-weight: 700;
   color: var(--color-navy);
 }
 
@@ -1093,7 +1123,7 @@
 }
 
 .lp-btn-whatsapp {
-  background: linear-gradient(120deg, var(--color-gold), #f7c065 55%, #f0902e);
+  background: var(--gradient-cta);
   color: var(--color-navy);
   box-shadow: 0 18px 40px rgba(224, 104, 14, 0.24);
 }
@@ -1112,6 +1142,7 @@
   width: 26px;
   height: 26px;
   border-radius: 999px;
+  /* Verde de WhatsApp: color de la otra marca, no de la nuestra. */
   background: #25d366;
   color: #fff;
   flex-shrink: 0;
@@ -1135,7 +1166,7 @@
 .section-copy-card-react h2,
 .panel-card-react h2 {
   font-family: var(--font-display);
-  letter-spacing: -0.024em;
+  letter-spacing: var(--tracking-display);
 }
 
 .form-card-react {
@@ -1145,16 +1176,16 @@
 
 .field-group-react input:focus,
 .field-group-react select:focus {
-  border-color: #eba668;
+  border-color: var(--color-gold);
   box-shadow: 0 0 0 4px rgba(224, 104, 14, 0.12);
 }
 
 .field-group-react select {
   width: 100%;
   min-height: 54px;
-  border: 1px solid #d7dfeb;
+  border: 1px solid var(--color-paper-line);
   border-radius: 16px;
-  background-color: #fdfefe;
+  background-color: var(--color-surface);
   padding: 0 44px 0 16px;
   color: var(--color-text);
   outline: none;
@@ -1174,7 +1205,7 @@
 
 .field-label-react {
   font-weight: 700;
-  color: #344054;
+  color: var(--color-slate);
 }
 
 .level-toggle-react {
@@ -1183,7 +1214,7 @@
   gap: 6px;
   padding: 6px;
   border-radius: 16px;
-  background: #f3ecdd;
+  background: var(--color-paper-line);
   border: 1px solid var(--color-border);
 }
 
@@ -1205,7 +1236,7 @@
 .level-toggle-react button.active {
   background: var(--color-gold);
   color: var(--color-navy);
-  font-weight: 800;
+  font-weight: 700;
   box-shadow: 0 6px 14px rgba(224, 104, 14, 0.24);
 }
 
@@ -1213,7 +1244,7 @@
 .primary-btn-react,
 .panel-btn-react,
 .highlight-btn-react {
-  background: linear-gradient(120deg, var(--color-gold), #f7c065 55%, #f0902e);
+  background: var(--gradient-cta);
   color: var(--color-navy);
   box-shadow: 0 18px 40px rgba(224, 104, 14, 0.26);
 }
@@ -1226,7 +1257,7 @@
 
 .lp-footer {
   background: var(--color-navy-deep);
-  color: #c9d7e0;
+  color: var(--color-text-on-dark-muted);
   padding: 56px 0;
   border-top: 1px solid rgba(136, 165, 183, 0.14);
 }
@@ -1258,19 +1289,19 @@
   display: block;
   font-family: var(--font-display);
   font-size: 1.18rem;
-  letter-spacing: -0.02em;
-  color: #f6f1e6;
+  letter-spacing: var(--tracking-display);
+  color: var(--color-paper);
 }
 
 .lp-footer-brand p {
   margin: 6px 0 0;
-  color: #8fa6b4;
+  color: var(--color-text-on-dark-muted);
   font-size: 0.95rem;
   line-height: 1.6;
 }
 
 .lp-footer-contact a {
-  color: #c9d7e0;
+  color: var(--color-text-on-dark-muted);
   font-weight: 600;
   transition: color 0.15s ease;
 }
@@ -1286,7 +1317,7 @@
 }
 
 .lp-footer-links a {
-  color: #c9d7e0;
+  color: var(--color-text-on-dark-muted);
   font-weight: 600;
   font-size: 0.95rem;
   transition: color 0.15s ease;
@@ -1310,7 +1341,7 @@
   height: 38px;
   border-radius: 999px;
   background: rgba(136, 165, 183, 0.12);
-  color: #c9d7e0;
+  color: var(--color-text-on-dark-muted);
   transition: background 0.15s ease, color 0.15s ease, transform 0.15s ease;
 }
 
@@ -1327,7 +1358,7 @@
 
 .lp-footer-note {
   margin: 0;
-  color: #6d8595;
+  color: var(--color-steel);
   font-size: 0.9rem;
 }
 
@@ -1394,7 +1425,7 @@
     padding: 12px 18px 18px;
     background: var(--color-navy);
     border-bottom: 1px solid rgba(136, 165, 183, 0.16);
-    box-shadow: 0 20px 40px rgba(9, 20, 27, 0.35);
+    box-shadow: 0 20px 40px rgba(17, 37, 50, 0.35);
     opacity: 0;
     transform: translateY(-8px);
     transition:

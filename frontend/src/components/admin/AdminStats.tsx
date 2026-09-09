@@ -32,7 +32,7 @@ function agruparPor(registros: Registro[], campo: (r: Registro) => string) {
 function StatCard({
   value,
   label,
-  className = "border-[#e2e9f3] bg-[#f8fbff]",
+  className = "border-[var(--color-paper-line)] bg-[var(--color-paper)]",
   valueClassName = "text-[var(--color-navy)]",
 }: {
   value: number;
@@ -42,7 +42,7 @@ function StatCard({
 }) {
   return (
     <div className={`flex flex-col gap-1 rounded-[18px] border px-[18px] py-4 ${className}`}>
-      <span className={`text-[1.7rem] font-black tracking-[-0.03em] ${valueClassName}`}>
+      <span className={`text-[1.7rem] font-bold tracking-[-0.03em] ${valueClassName}`}>
         {value}
       </span>
       <span className="text-[0.82rem] font-bold text-muted-foreground">{label}</span>
@@ -52,8 +52,8 @@ function StatCard({
 
 function ChartCard({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <div className="rounded-[18px] border border-[#e2e9f3] bg-white px-5 py-[18px]">
-      <h2 className="mb-3.5 text-[0.92rem] font-extrabold text-foreground">{title}</h2>
+    <div className="rounded-[18px] border border-[var(--color-paper-line)] bg-white px-5 py-[18px]">
+      <h2 className="mb-3.5 text-[0.92rem] font-bold text-foreground">{title}</h2>
       {children}
     </div>
   );
@@ -70,7 +70,7 @@ function Breakdown({ filas, total }: { filas: [string, number][]; total: number 
           <span className="overflow-hidden text-ellipsis whitespace-nowrap font-bold text-foreground">
             {nombre}
           </span>
-          <span className="h-2 overflow-hidden rounded-full bg-[#eef2f7]">
+          <span className="h-2 overflow-hidden rounded-full bg-[var(--color-paper-line)]">
             <span
               className="block h-full rounded-full bg-[var(--color-navy)]"
               style={{ width: `${porcentaje(count, total)}%` }}
@@ -129,25 +129,25 @@ export function AdminStats({ registros }: AdminStatsProps) {
         <StatCard
           value={porEstado.aceptado}
           label={`Aceptados · ${porcentaje(porEstado.aceptado, total)}%`}
-          className="border-[#cdedd9] bg-[var(--color-success-bg)]"
+          className="border-[color-mix(in_srgb,var(--color-success-text)_28%,white)] bg-[var(--color-success-bg)]"
           valueClassName="text-[var(--color-success-text)]"
         />
         <StatCard
           value={porEstado.waitlist}
           label={`Waitlist · ${porcentaje(porEstado.waitlist, total)}%`}
-          className="border-[#f5e3bc] bg-[var(--color-info-bg)]"
+          className="border-[color-mix(in_srgb,var(--color-info-text)_28%,white)] bg-[var(--color-info-bg)]"
           valueClassName="text-[var(--color-info-text)]"
         />
         <StatCard
           value={porEstado.rechazado}
           label={`Rechazados · ${porcentaje(porEstado.rechazado, total)}%`}
-          className="border-[#f6cfd2] bg-[var(--color-error-bg)]"
+          className="border-[color-mix(in_srgb,var(--color-error-text)_28%,white)] bg-[var(--color-error-bg)]"
           valueClassName="text-[var(--color-error-text)]"
         />
         <StatCard
           value={pendientesNotificar}
           label="Por notificar"
-          valueClassName="text-slate-600"
+          valueClassName="text-[var(--color-slate)]"
         />
       </div>
 

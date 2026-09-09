@@ -3,6 +3,8 @@ import { useTranslation } from "../../i18n/translations";
 type Bilingual = { es: string; en: string };
 
 type Department = {
+  /** Cada departamento tiene su color en la guía de marca (ver tokens.css). */
+  depto: "tech" | "marketing" | "eventos";
   icon: string;
   title: Bilingual;
   lines: [Bilingual, Bilingual, Bilingual];
@@ -10,6 +12,7 @@ type Department = {
 
 const DEPARTMENTS: Department[] = [
   {
+    depto: "tech",
     icon: "💻",
     title: { es: "Tech/Ingeniería", en: "Tech/Engineering" },
     lines: [
@@ -28,6 +31,7 @@ const DEPARTMENTS: Department[] = [
     ],
   },
   {
+    depto: "marketing",
     icon: "📣",
     title: { es: "Marketing/Comms", en: "Marketing/Comms" },
     lines: [
@@ -46,6 +50,7 @@ const DEPARTMENTS: Department[] = [
     ],
   },
   {
+    depto: "eventos",
     icon: "🎤",
     title: { es: "Eventos/Logística", en: "Events/Logistics" },
     lines: [
@@ -77,7 +82,7 @@ export function DepartmentsSection() {
 
         <div className="lp-departments-grid">
           {DEPARTMENTS.map((dept) => (
-            <article className="lp-department-card" key={dept.title.es}>
+            <article className="lp-department-card" data-depto={dept.depto} key={dept.title.es}>
               <span className="lp-department-icon" aria-hidden="true">
                 {dept.icon}
               </span>
