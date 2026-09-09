@@ -113,6 +113,19 @@ def privacidad():
     return serve_frontend_index()
 
 
+# Las dos rutas que faltaban del router de React: sin ellas, en local caían en
+# el 404 de Flask (en Vercel las recoge el rewrite del servicio frontend, y en
+# Docker el try_files de nginx, así que solo se notaba aquí).
+@app.route("/gracias", methods=["GET"])
+def gracias():
+    return serve_frontend_index()
+
+
+@app.route("/charla-santi-y-pablo", methods=["GET"])
+def charla_santi_y_pablo():
+    return serve_frontend_index()
+
+
 @app.route("/assets/<path:filename>", methods=["GET"])
 def frontend_assets(filename):
     if not FRONTEND_ASSETS_DIR.exists():

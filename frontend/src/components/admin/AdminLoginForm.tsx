@@ -22,7 +22,7 @@ export function AdminLoginForm({
 
   return (
     <div className="max-w-[540px]">
-      <h1 className="mb-2.5 text-[2rem] font-black tracking-[-0.04em] max-[720px]:text-[1.7rem]">
+      <h1 className="mb-2.5 text-[2rem] font-bold tracking-[-0.04em] max-[720px]:text-[1.7rem]">
         Acceso al panel
       </h1>
       <p className="leading-[1.7] text-muted-foreground max-[720px]:text-[0.96rem]">

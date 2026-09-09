@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Archivo:ital,wdth,wght@0,62..125,100..900;1,62..125,100..900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Anton&family=Space+Grotesk:wght@400;500;600;700&display=swap');
 
 :root {
   /* Paleta de marca TelecoEmprende 2026/27, la misma que la web principal
@@ -9,10 +9,12 @@
   --tinta: #112532;
 
   /* Superficies */
-  --papel: #faf5ec;
-  /* Un punto más oscuro que el papel, solo para alternar el fondo de una
-     sección a otra: al deslizar se nota el cambio sin necesidad de rayas. */
-  --papel-alt: #f3ecdd;
+  --papel: #faf7f1;
+  /* La banda fría que alterna con el papel de una sección a otra. Es el acero
+     de la marca mezclado con blanco, no con el papel: con el papel (que es
+     crema) el azul se apaga hasta quedarse en gris. */
+  --acero-suave: color-mix(in srgb, var(--acero) 38%, #ffffff);
+  --papel-alt: var(--acero-suave);
   --papel-2: #f1e9d9;
   --papel-3: #e3d9c3;
 
@@ -22,12 +24,13 @@
 
   /* Texto. Los tonos están elegidos para pasar el contraste mínimo (4.5:1)
      sobre --papel, incluso en las etiquetas pequeñas en mayúsculas. */
-  --texto: #33505f; /* 7.9:1 */
+  --texto: #46545c; /* slate de la guía, 8.0:1 sobre papel */
   --texto-tenue: #56707f; /* 4.8:1 */
   --naranja-tinta: #a8490a; /* 5.3:1 — el naranja de marca en versión legible */
   --linea: #d8cdb8;
   --linea-fuerte: #112532;
 
+  --display: 'Anton', sans-serif;
   --radio: 2px;
   --salida: cubic-bezier(0.16, 1, 0.3, 1);
 
@@ -57,7 +60,7 @@ body {
   margin: 0;
   background: var(--papel);
   color: var(--tinta);
-  font-family: 'Archivo', system-ui, -apple-system, sans-serif;
+  font-family: 'Space Grotesk', system-ui, -apple-system, sans-serif;
   font-synthesis-weight: none;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -107,6 +110,16 @@ h3,
 .hueco__texto,
 .red__etiqueta {
   text-wrap: balance;
+}
+
+/* La pareja de la guía de marca: Anton grita los titulares, Space Grotesk
+   (el cuerpo, ya en body) lo explica. Anton solo tiene un peso. */
+h1,
+h2 {
+  font-family: var(--display);
+  font-weight: 400;
+  letter-spacing: 0.01em;
+  line-height: 1.02;
 }
 
 button {

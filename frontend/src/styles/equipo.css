@@ -35,8 +35,8 @@
    cualquier regla sin capa le gana, que es justo lo que hace falta cuando el
    selector apunta al MISMO elemento. */
 .equipo-workspace-react {
-  --color-background: #f6efe3;
-  --color-border: #e8ddca;
+  --color-background: var(--color-paper);
+  --color-border: var(--color-paper-line);
   --radius-lg: 20px;
   --radius-md: 14px;
   --radius-xl: 28px;
@@ -104,7 +104,7 @@
 
 .equipo-marca-texto-react strong {
   font-size: 1rem;
-  font-weight: 800;
+  font-weight: 700;
   white-space: nowrap;
 }
 
@@ -145,15 +145,15 @@
   gap: 12px;
   height: 60px;
   padding: 0 20px;
-  border-bottom: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-divider);
   background: var(--color-surface);
 }
 
 .equipo-barra-react h2 {
   margin: 0;
   font-size: 1.15rem;
-  font-weight: 900;
-  letter-spacing: -0.03em;
+  font-weight: 700;
+  letter-spacing: var(--tracking-display);
   color: var(--color-navy);
 }
 
@@ -161,7 +161,7 @@
    de Marketing y "Calendario" del club se leen igual en la barra. */
 .equipo-barra-depto-react {
   font-size: 0.78rem;
-  font-weight: 800;
+  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--color-text-muted);
@@ -199,7 +199,7 @@
 .equipo-panel-header-react h3 {
   margin: 0;
   font-size: 1.35rem;
-  font-weight: 900;
+  font-weight: 700;
   letter-spacing: -0.03em;
   color: var(--color-navy);
 }
@@ -220,7 +220,7 @@
 .equipo-tarjeta-react h4 {
   margin: 0 0 6px;
   font-size: 1rem;
-  font-weight: 800;
+  font-weight: 700;
   color: var(--color-navy);
 }
 
@@ -307,7 +307,7 @@ span.mkt-dia-numero-react:hover {
   margin-bottom: 2px;
   color: var(--color-orange-dark);
   font-size: 0.74rem;
-  font-weight: 800;
+  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
@@ -395,8 +395,8 @@ span.mkt-dia-numero-react:hover {
 .equipo-login-react h1 {
   margin: 0;
   font-size: 1.5rem;
-  font-weight: 900;
-  letter-spacing: -0.03em;
+  font-weight: 700;
+  letter-spacing: var(--tracking-display);
   color: var(--color-navy);
 }
 
@@ -485,4 +485,23 @@ span.mkt-dia-numero-react:hover {
 :where([data-slot="sidebar-trigger"]) svg {
   display: block;
   flex-shrink: 0;
+}
+
+
+/* Cabecera dentro del área de equipo: el fondo de la página es tinta, así que
+   la barra blanca translúcida de la web pública se leía como una losa gris.
+   Aquí va en tinta suave, con el texto en papel. */
+.equipo-shell-react .header-inner-react {
+  background: linear-gradient(180deg, var(--color-navy-soft), var(--color-navy));
+  border-color: rgba(255, 255, 255, 0.12);
+  box-shadow: 0 10px 26px rgba(17, 37, 50, 0.35);
+}
+
+.equipo-shell-react .header-inner-react::before {
+  display: none;
+}
+
+.equipo-shell-react .brand-name-react,
+.equipo-shell-react .header-nav-react a {
+  color: var(--color-paper);
 }

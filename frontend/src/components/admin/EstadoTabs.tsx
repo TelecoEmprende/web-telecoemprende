@@ -19,7 +19,7 @@ const ESTADO_ACTIVO_CLASS: Record<EstadoFiltro, string> = {
     "border-[var(--color-success-text)] bg-[var(--color-success-text)] text-white",
   rechazado:
     "border-[var(--color-error-text)] bg-[var(--color-error-text)] text-white",
-  waitlist: "border-[#e6a417] bg-[#e6a417] text-white",
+  waitlist: "border-[var(--color-gold)] bg-[var(--color-gold)] text-[var(--color-navy)]",
 };
 
 const ORDEN: EstadoFiltro[] = ["todos", "pendiente", "aceptado", "rechazado", "waitlist"];
@@ -42,10 +42,10 @@ export function EstadoTabs({ registros, estadoActivo, onEstadoChange }: EstadoTa
             type="button"
             role="tab"
             aria-selected={activo}
-            className={`cursor-pointer rounded-full border px-4 py-2.5 text-sm font-extrabold ${
+            className={`cursor-pointer rounded-full border px-4 py-2.5 text-sm font-bold ${
               activo
                 ? ESTADO_ACTIVO_CLASS[estado]
-                : "border-[#d7dfeb] bg-white text-muted-foreground"
+                : "border-[var(--color-paper-line)] bg-white text-muted-foreground"
             }`}
             onClick={() => onEstadoChange(estado)}
           >

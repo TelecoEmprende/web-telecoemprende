@@ -1,11 +1,11 @@
 :root {
   --color-navy: #112532;
-  --color-navy-deep: #0b1a24;
+  --color-navy-deep: #0a1720;
   --color-navy-soft: #18374b;
   --color-orange: #e0680e;
   --color-orange-dark: #b95208;
   --color-gold: #f4b044;
-  --color-cream: #faf5ec;
+  --color-cream: #faf7f1;
 }
 
 * {
@@ -21,7 +21,7 @@ body {
 body {
   background: linear-gradient(175deg, var(--color-navy) 0%, var(--color-navy-deep) 100%);
   color: var(--color-cream);
-  font-family: "Inter", system-ui, sans-serif;
+  font-family: "Space Grotesk", system-ui, sans-serif;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
@@ -61,7 +61,7 @@ body {
 
 #screen-intro p {
   max-width: 46ch;
-  color: #a9bcc9;
+  color: #b4c7d3;
   line-height: 1.7;
   margin: 0 0 32px;
 }
@@ -173,7 +173,7 @@ body {
 }
 
 #screen-mundo .hint {
-  color: #a9bcc9;
+  color: #b4c7d3;
   font-size: 0.8rem;
   margin: 0;
 }
