@@ -47,14 +47,15 @@
      es la única pista de dónde estás. */
   --sidebar: var(--color-navy);
   --sidebar-foreground: var(--color-cream);
-  /* Naranja oscuro de la marca en los rellenos (el Impulso pleno con texto
-     blanco se queda en 3.4:1); el anillo de foco sí va en Impulso. */
-  --sidebar-primary: var(--color-orange-dark);
-  --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: var(--color-orange-dark);
-  --sidebar-accent-foreground: #ffffff;
-  --sidebar-border: var(--color-navy-soft);
-  --sidebar-ring: var(--color-orange);
+  /* Item activo en Impulso; el texto encima va en Noche (blanco sobre Impulso
+     a 15px no llega). Anillo de foco en Azul claro, que sobre el sidebar
+     Noche destaca. */
+  --sidebar-primary: var(--color-impulso);
+  --sidebar-primary-foreground: var(--color-noche);
+  --sidebar-accent: var(--color-impulso);
+  --sidebar-accent-foreground: var(--color-noche);
+  --sidebar-border: rgba(255, 255, 255, 0.12);
+  --sidebar-ring: var(--color-azul-claro);
 
   min-height: 100vh;
   background: var(--color-background);
@@ -155,7 +156,8 @@
   margin: 0;
   font-size: 1.15rem;
   font-weight: 700;
-  letter-spacing: var(--tracking-display);
+  /* Inter, no Anton: interletrado ceñido, no el +0.02em de las mayúsculas. */
+  letter-spacing: -0.01em;
   color: var(--color-navy);
 }
 
@@ -279,7 +281,7 @@ span.mkt-dia-numero-react:hover {
    usa su chip de "en revisión". */
 .equipo-evento-chip-react {
   background: rgba(var(--color-impulso-rgb), 0.16);
-  color: var(--color-orange-dark);
+  color: var(--color-impulso);
 }
 
 .equipo-proximos-react {
@@ -307,7 +309,7 @@ span.mkt-dia-numero-react:hover {
 .equipo-evento-fecha-react {
   display: block;
   margin-bottom: 2px;
-  color: var(--color-orange-dark);
+  color: var(--color-impulso);
   font-size: 0.74rem;
   font-weight: 700;
   text-transform: uppercase;
@@ -352,10 +354,10 @@ span.mkt-dia-numero-react:hover {
   --muted-foreground: var(--color-text-muted);
   --border: var(--color-border);
   --input: rgba(var(--color-noche-rgb), 0.18);
-  --primary: var(--color-orange-dark);
-  --primary-foreground: #ffffff;
+  --primary: var(--color-impulso);
+  --primary-foreground: var(--color-noche);
   --destructive: var(--color-error-text);
-  --ring: var(--color-orange);
+  --ring: var(--color-azul);
 
   width: 100%;
   max-width: 400px;
@@ -398,7 +400,7 @@ span.mkt-dia-numero-react:hover {
   margin: 0;
   font-size: 1.5rem;
   font-weight: 700;
-  letter-spacing: var(--tracking-display);
+  letter-spacing: -0.01em;
   color: var(--color-navy);
 }
 

@@ -108,6 +108,8 @@
   background: var(--color-gold);
 }
 
+/* Botón pequeño de la barra: a este tamaño el blanco sobre Impulso no llega,
+   así que va en Chispa con Noche encima (8.4:1) — combo "BLOQUE" de la guía. */
 .lp-nav-cta {
   display: inline-flex;
   align-items: center;
@@ -115,11 +117,11 @@
   min-height: 42px;
   padding: 0 20px;
   border-radius: 999px;
-  background: var(--color-orange-dark);
-  color: var(--color-text-on-dark);
+  background: var(--color-chispa);
+  color: var(--color-noche);
   font-weight: 700;
   font-size: 0.94rem;
-  transition: transform var(--dur-press) ease, background var(--dur-press) ease;
+  transition: transform var(--dur-press) ease, filter var(--dur-press) ease;
   flex-shrink: 0;
 }
 
@@ -128,7 +130,7 @@
 @media (hover: hover) and (pointer: fine) {
   .lp-nav-cta:hover {
     transform: translateY(-1px);
-    background: var(--color-impulso);
+    filter: brightness(1.04);
   }
 }
 
@@ -331,11 +333,11 @@
   margin: 0 0 22px;
   font-family: var(--font-display);
   text-transform: uppercase;
-  /* Display: Anton condensada aguanta bien el tamaño; techo ~5.5rem (88px). */
+  /* Display: Anton condensada aguanta el tamaño; techo ~5.5rem (88px). */
   font-size: clamp(2.9rem, 6.4vw, 5.5rem);
   font-weight: 400;
-  line-height: 0.98;
-  letter-spacing: 0.005em;
+  line-height: 1;
+  letter-spacing: 0.012em;
   color: var(--color-paper);
 }
 
@@ -351,7 +353,7 @@
   max-width: 56ch;
   font-size: 1.13rem;
   line-height: 1.62;
-  color: var(--color-text-on-dark-muted);
+  color: var(--color-text-on-dark);
 }
 
 .lp-hero-actions {
@@ -371,25 +373,25 @@
   padding: 0 26px;
   border-radius: 14px;
   font-weight: 700;
-  font-size: 1rem;
+  /* Blanco sobre Impulso solo pasa a ≥18 px (regla de la guía): el botón se
+     fija ahí. */
+  font-size: 1.125rem;
   border: 0;
   cursor: pointer;
   transition: transform var(--dur-press) ease, filter var(--dur-press) ease,
     border-color var(--dur-press) ease, color var(--dur-press) ease;
 }
 
-/* v2: botón plano en naranja, sin degradado ni sombra. El Impulso puro
-   #e0680e con texto blanco se queda en 3.4:1; se usa el naranja oscuro de la
-   marca (4.9:1) y el hover lo lleva al Impulso pleno. */
+/* v2: botón plano en Impulso con texto blanco. Sin degradado ni sombra. */
 .lp-btn-gold {
-  background: var(--color-orange-dark);
-  color: var(--color-text-on-dark);
+  background: var(--color-impulso);
+  color: #ffffff;
 }
 
 @media (hover: hover) and (pointer: fine) {
   .lp-btn-gold:hover {
     transform: translateY(-2px);
-    background: var(--color-impulso);
+    filter: brightness(1.06);
   }
 }
 
@@ -487,7 +489,7 @@
 }
 
 .lp-section-lead-dark {
-  color: var(--color-text-on-dark-muted);
+  color: var(--color-text-on-dark);
 }
 
 .lp-reveal-word {
@@ -577,7 +579,7 @@
 
 .lp-team-alias {
   margin-left: 9px;
-  color: var(--color-primary);
+  color: var(--color-text-muted);
   font-size: 0.94em;
 }
 
@@ -595,7 +597,7 @@
   padding: 3px 10px;
   border-radius: 999px;
   background: rgba(var(--color-impulso-rgb), 0.11);
-  color: var(--color-orange-dark);
+  color: var(--color-noche);
   font-size: 0.76rem;
   font-weight: 700;
   letter-spacing: 0.02em;
@@ -817,7 +819,7 @@
 
 .lp-event-body p {
   margin: 0;
-  color: var(--color-text-on-dark-muted);
+  color: var(--color-text-on-dark);
   font-size: 0.97rem;
   line-height: 1.68;
 }
@@ -872,7 +874,7 @@
   margin-bottom: 16px;
   border-radius: 16px;
   background: color-mix(in srgb, var(--color-impulso) 14%, transparent);
-  color: var(--color-primary);
+  color: var(--color-noche);
 }
 
 .lp-requirement-card h3 {
@@ -901,7 +903,7 @@
 
 .lp-highlight {
   background: none;
-  color: var(--color-orange-dark);
+  color: var(--color-noche);
   font-weight: 700;
   text-decoration: underline;
   text-decoration-color: var(--color-gold);
@@ -1012,6 +1014,7 @@
   margin-top: 36px;
   font-family: var(--font-display);
   text-transform: uppercase;
+  letter-spacing: var(--tracking-display);
   font-size: 1.3rem;
   color: var(--color-navy);
 }
@@ -1022,7 +1025,9 @@
 }
 
 .lp-legal-container a {
-  color: var(--color-primary);
+  color: var(--color-azul);
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 
 .lp-legal-back {
@@ -1138,7 +1143,7 @@
 .lp-thankyou-point-icon {
   grid-area: icon;
   display: flex;
-  color: var(--color-primary);
+  color: var(--color-noche);
 }
 
 .lp-thankyou-point strong {
@@ -1170,19 +1175,18 @@
 }
 
 .lp-btn-outline:hover {
-  border-color: var(--color-orange);
-  color: var(--color-orange-dark);
+  border-color: var(--color-impulso);
 }
 
 .lp-btn-whatsapp {
-  background: var(--color-orange-dark);
-  color: var(--color-text-on-dark);
+  background: var(--color-impulso);
+  color: #ffffff;
 }
 
 @media (hover: hover) and (pointer: fine) {
   .lp-btn-whatsapp:hover {
     transform: translateY(-2px);
-    background: var(--color-impulso);
+    filter: brightness(1.06);
   }
 }
 
@@ -1210,7 +1214,7 @@
 
 .section-eyebrow-react {
   background: rgba(var(--color-impulso-rgb), 0.11);
-  color: var(--color-orange-dark);
+  color: var(--color-noche);
   letter-spacing: 0.09em;
 }
 
@@ -1295,15 +1299,17 @@
 .primary-btn-react,
 .panel-btn-react,
 .highlight-btn-react {
-  background: var(--color-orange-dark);
-  color: var(--color-text-on-dark);
+  background: var(--color-impulso);
+  color: #ffffff;
+  /* Blanco sobre Impulso solo pasa a ≥18 px (regla de la guía). */
+  font-size: 1.125rem;
 }
 
 .submit-btn-react:hover,
 .primary-btn-react:hover,
 .panel-btn-react:hover,
 .highlight-btn-react:hover {
-  background: var(--color-impulso);
+  filter: brightness(1.06);
 }
 
 .checkbox-row-react input {
