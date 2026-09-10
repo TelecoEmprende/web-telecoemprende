@@ -47,9 +47,11 @@
      es la única pista de dónde estás. */
   --sidebar: var(--color-navy);
   --sidebar-foreground: var(--color-cream);
-  --sidebar-primary: var(--color-orange);
+  /* Naranja oscuro de la marca en los rellenos (el Impulso pleno con texto
+     blanco se queda en 3.4:1); el anillo de foco sí va en Impulso. */
+  --sidebar-primary: var(--color-orange-dark);
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: var(--color-orange);
+  --sidebar-accent: var(--color-orange-dark);
   --sidebar-accent-foreground: #ffffff;
   --sidebar-border: var(--color-navy-soft);
   --sidebar-ring: var(--color-orange);
@@ -350,7 +352,7 @@ span.mkt-dia-numero-react:hover {
   --muted-foreground: var(--color-text-muted);
   --border: var(--color-border);
   --input: rgba(var(--color-noche-rgb), 0.18);
-  --primary: var(--color-orange);
+  --primary: var(--color-orange-dark);
   --primary-foreground: #ffffff;
   --destructive: var(--color-error-text);
   --ring: var(--color-orange);

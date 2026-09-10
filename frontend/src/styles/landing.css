@@ -162,7 +162,6 @@
   width: calc(50% - 3px);
   border-radius: 999px;
   background: var(--color-gold);
-  box-shadow: 0 6px 16px rgba(var(--color-chispa-rgb), 0.28);
   transition: transform 0.22s cubic-bezier(0.65, 0, 0.35, 1);
 }
 
@@ -578,7 +577,7 @@
 
 .lp-team-alias {
   margin-left: 9px;
-  color: var(--color-orange);
+  color: var(--color-primary);
   font-size: 0.94em;
 }
 
@@ -690,7 +689,7 @@
 
 .lp-team-dot.is-active {
   transform: scaleX(2.75);
-  background: linear-gradient(90deg, var(--color-gold), var(--color-orange));
+  background: var(--color-impulso);
 }
 
 .lp-team-dot:focus-visible {
@@ -701,7 +700,8 @@
 /* ---------- Eventos ---------- */
 
 /* v2: Eventos comparte el plano Azul TE del hero para dar columna vertebral a
-   la página, con su propio círculo Impulso entrando por arriba a la izquierda. */
+   la página, con su propio círculo Impulso entrando por la esquina superior
+   derecha (el titular vive arriba a la izquierda, el círculo no lo pisa). */
 .lp-events {
   position: relative;
   overflow: hidden;
@@ -713,10 +713,10 @@
   content: "";
   position: absolute;
   z-index: 0;
-  width: min(38vw, 420px);
-  height: min(38vw, 420px);
-  top: -22%;
-  left: -6%;
+  width: min(26vw, 300px);
+  height: min(26vw, 300px);
+  top: -12%;
+  right: -7%;
   border-radius: 50%;
   background: var(--color-impulso);
 }
@@ -872,7 +872,7 @@
   margin-bottom: 16px;
   border-radius: 16px;
   background: color-mix(in srgb, var(--color-impulso) 14%, transparent);
-  color: var(--color-impulso);
+  color: var(--color-primary);
 }
 
 .lp-requirement-card h3 {
@@ -1138,7 +1138,7 @@
 .lp-thankyou-point-icon {
   grid-area: icon;
   display: flex;
-  color: var(--color-impulso);
+  color: var(--color-primary);
 }
 
 .lp-thankyou-point strong {
@@ -1289,7 +1289,6 @@
   background: var(--color-gold);
   color: var(--color-navy);
   font-weight: 700;
-  box-shadow: 0 6px 14px rgba(var(--color-impulso-rgb), 0.24);
 }
 
 .submit-btn-react,

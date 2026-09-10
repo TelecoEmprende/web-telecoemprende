@@ -57,8 +57,6 @@
   font-weight: 700;
   font-size: 0.88rem;
   letter-spacing: 0.08em;
-  box-shadow:
-    0 0 24px rgba(29, 122, 61, 0.16);
 }
 
 .spots-badge-react {
@@ -69,7 +67,6 @@
   border: 1px solid rgba(180, 35, 24, 0.24);
   font-size: 0.86rem;
   font-weight: 700;
-  box-shadow: 0 0 24px rgba(180, 35, 24, 0.16);
 }
 
 .hero-description-react {
@@ -289,7 +286,7 @@
 }
 
 .meta-item-react svg {
-  color: var(--color-impulso);
+  color: var(--color-primary);
   flex-shrink: 0;
 }
 
@@ -517,7 +514,7 @@
   height: 42px;
   border-radius: 14px;
   background: color-mix(in srgb, var(--color-impulso) 14%, transparent);
-  color: var(--color-impulso);
+  color: var(--color-primary);
   flex-shrink: 0;
 }
 
@@ -585,7 +582,7 @@
 }
 
 .trust-label-react svg {
-  color: var(--color-impulso);
+  color: var(--color-primary);
 }
 
 .trust-item-react strong {

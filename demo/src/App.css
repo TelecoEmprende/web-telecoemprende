@@ -32,7 +32,11 @@
     background 0.2s var(--salida);
 }
 
+/* Al hacer scroll la barra se solidifica: es cuando aparecen los accesos y
+   cuando puede quedar sobre la columna oscura de la portada, donde el fondo
+   translúcido enturbiaba el texto. */
 .barra--compacta {
+  background: var(--papel);
   border-bottom-color: var(--linea);
 }
 
