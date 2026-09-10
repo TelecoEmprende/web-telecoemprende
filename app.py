@@ -97,8 +97,14 @@ def index():
     return serve_frontend_index()
 
 
+# Las vistas del panel las resuelve el router de React, así que aquí solo hay
+# que devolver el index en vez de un 404 (en Vercel ya lo hace el rewrite del
+# servicio frontend; esto es para el Flask local). Se enumeran en vez de
+# aceptar `<path:>`: un comodín volvería a servir rutas retiradas a propósito,
+# como el viejo GET /admin/logout. Vista nueva en el router = vista nueva aquí.
 @app.route("/admin", methods=["GET"])
-def admin():
+@app.route("/admin/<any(inscripciones, equipo, calendario):_vista>", methods=["GET"])
+def admin(_vista: str = ""):
     crear_excel_si_no_existe()
     return serve_frontend_index()
 

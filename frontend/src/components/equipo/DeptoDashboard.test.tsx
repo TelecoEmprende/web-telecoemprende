@@ -683,7 +683,7 @@ describe("/equipo — panel de Eventos", () => {
 
     // Y la barra lo rotula como Club, no como Eventos: el contenido es de todo
     // el equipo aunque la ruta cuelgue de un departamento.
-    expect(document.querySelector(".equipo-barra-depto-react")?.textContent).toBe("Club");
+    expect(document.querySelector(".workspace-barra-depto-react")?.textContent).toBe("Club");
   });
 
   it("pide los datos al departamento de Eventos, no al de Marketing", async () => {
