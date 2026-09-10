@@ -19,25 +19,35 @@
   position: sticky;
   top: 0;
   z-index: 30;
-  display: grid;
-  grid-template-columns: auto 1fr auto;
-  align-items: center;
-  gap: 24px;
-  padding: 14px var(--lateral);
-  background: color-mix(in srgb, var(--papel) 88%, transparent);
-  backdrop-filter: blur(12px);
+  /* Barra oscura translúcida, como .lp-nav en la web del club. */
+  color: var(--papel);
+  background: rgba(var(--tinta-rgb), 0.85);
+  backdrop-filter: blur(14px) saturate(140%);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
   border-bottom: 1px solid transparent;
   transition:
     border-color 0.2s var(--salida),
     background 0.2s var(--salida);
 }
 
+/* El fondo de la barra va a sangre; su contenido se centra en una columna
+   como en la web del club (.lp-container + .lp-nav-inner). */
+.barra__interior {
+  max-width: 1180px;
+  margin-inline: auto;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 24px;
+  padding: 12px var(--lateral);
+}
+
 /* Al hacer scroll la barra se solidifica: es cuando aparecen los accesos y
    cuando puede quedar sobre la columna oscura de la portada, donde el fondo
    translúcido enturbiaba el texto. */
 .barra--compacta {
-  background: var(--papel);
-  border-bottom-color: var(--linea);
+  background: rgba(var(--tinta-rgb), 0.94);
+  border-bottom-color: rgba(255, 255, 255, 0.1);
 }
 
 .barra__marca {
@@ -53,20 +63,28 @@
   height: 34px;
 }
 
-/* "Emprende" en Impulso, como en la web principal del club. Es un elemento de
+/* "Emprende" destacado, como en la web principal del club. Es un elemento de
    marca (Anton, bold), no texto corrido. */
 .marca__naranja {
   color: var(--naranja);
 }
 
+/* En el pie, el wordmark va todo en blanco (como .lp-footer-brand strong). */
 .pie .marca__naranja {
-  color: var(--naranja);
+  color: var(--papel);
+}
+
+/* En la barra oscura, "Emprende" va en Chispa como el span de .lp-nav-name. */
+.barra .marca__naranja {
+  color: var(--oro);
 }
 
 .barra__marca b {
   font-family: var(--display);
   text-transform: uppercase;
-  font-size: 18px;
+  /* Mismo tamaño y color que .lp-nav-name en la web del club (1.28rem, papel). */
+  font-size: 1.28rem;
+  color: var(--papel);
   font-weight: 400;
   letter-spacing: 0.02em;
   /* Anton hereda el interlineado 1.55 del cuerpo y su caja de glifos tiene
@@ -94,7 +112,6 @@
 }
 
 .barra__salto {
-  color: var(--texto);
   text-decoration: none;
   display: inline-flex;
   align-items: center;
@@ -104,9 +121,11 @@
   border-radius: 999px;
   background: transparent;
   cursor: pointer;
-  font-size: 13px;
+  /* Mismos enlaces de navegación que .lp-nav-links a en la web: azul claro
+     sobre la barra oscura, Chispa al pasar y en el activo. */
+  font-size: 0.96rem;
   font-weight: 600;
-  color: var(--texto);
+  color: var(--acero-claro);
   white-space: nowrap;
   transition:
     background 0.3s var(--salida),
@@ -116,15 +135,15 @@
 
 @media (hover: hover) and (pointer: fine) {
   .barra__salto:hover {
-    background: var(--papel-2);
-    color: var(--tinta);
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--papel);
   }
 }
 
 .barra__salto[aria-current='true'] {
-  background: var(--tinta);
-  border-color: var(--tinta);
-  color: var(--papel);
+  background: var(--oro);
+  border-color: var(--oro);
+  color: var(--tinta);
 }
 
 .barra__salto-icono {
@@ -153,7 +172,7 @@
   display: flex;
   gap: 2px;
   padding: 3px;
-  border: 1px solid var(--linea);
+  border: 1px solid rgba(255, 255, 255, 0.16);
   border-radius: 999px;
 }
 
@@ -162,9 +181,10 @@
   background: transparent;
   padding: 5px 10px;
   border-radius: 999px;
-  font-size: 12px;
+  /* Igual que .lp-lang-toggle button en la web (0.78rem). */
+  font-size: 0.78rem;
   letter-spacing: 0.08em;
-  color: var(--texto-tenue);
+  color: var(--acero-claro);
   font-weight: 700;
   cursor: pointer;
   transition:
@@ -173,13 +193,13 @@
 }
 
 .barra__idioma button[aria-pressed='true'] {
-  background: var(--tinta);
-  color: var(--papel);
+  background: var(--oro);
+  color: var(--tinta);
 }
 
 @media (hover: hover) and (pointer: fine) {
   .barra__idioma button:not([aria-pressed='true']):hover {
-    color: var(--tinta);
+    color: var(--papel);
   }
 }
 
@@ -195,10 +215,10 @@
   background: var(--oro);
   color: var(--tinta);
   text-decoration: none;
-  font-size: 14px;
+  /* Igual que .lp-nav-cta en la web (0.94rem). */
+  font-size: 0.94rem;
   font-weight: 700;
   white-space: nowrap;
-  box-shadow: 0 8px 22px rgba(var(--tinta-rgb), 0.18);
   transition:
     filter 0.3s var(--salida),
     transform 0.3s var(--salida);
@@ -1201,15 +1221,12 @@ main > section:nth-of-type(3) {
  * El pie va sobre tinta: toda la página se lee sobre papel, así que el
  * cambio de fondo cierra el recorrido sin dibujar ninguna raya.
  *
- * Los dos tonos de texto están medidos contra la tinta: 10,5:1 el claro y
- * 6,1:1 el tenue, los dos por encima del 4,5:1 que hace falta.
+ * Como el pie de la web del club (.lp-footer): texto en blanco (papel),
+ * la nota legal en blanco atenuado, y el hover en Chispa. Nada de naranja.
  */
 .pie {
-  --pie-texto: var(--acero-claro);
-  /* Azul claro atenuado: legible sobre la tinta (5:1) sin competir con
-     --pie-texto. Antes usaba --acero, que en v2 pasó a Azul TE pleno y sobre
-     tinta se quedaba en 1.5:1 (ilegible). */
-  --pie-tenue: color-mix(in srgb, var(--acero-claro) 70%, var(--tinta));
+  --pie-texto: var(--papel);
+  --pie-tenue: rgba(255, 255, 255, 0.62);
 
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
@@ -1248,7 +1265,8 @@ main > section:nth-of-type(3) {
 .pie__marca b {
   font-family: var(--display);
   text-transform: uppercase;
-  font-size: clamp(20px, 2vw, 24px);
+  /* Mismo cuerpo que .lp-footer-brand strong en la web (1.18rem). */
+  font-size: 1.18rem;
   line-height: 1;
   letter-spacing: 0.02em;
   font-weight: 400;
@@ -1262,17 +1280,18 @@ main > section:nth-of-type(3) {
 }
 
 .pie__correo {
-  color: var(--naranja);
+  color: var(--pie-texto);
   text-decoration: none;
   font-size: 15px;
   font-weight: 600;
-  border-bottom: 1px solid transparent;
-  transition: border-color 0.3s var(--salida);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+  transition: border-color 0.3s var(--salida), color 0.3s var(--salida);
 }
 
 @media (hover: hover) and (pointer: fine) {
   .pie__correo:hover {
-    border-bottom-color: var(--naranja);
+    color: var(--oro);
+    border-bottom-color: var(--oro);
   }
 }
 
@@ -1289,10 +1308,11 @@ main > section:nth-of-type(3) {
   height: 42px;
   border-radius: 50%;
   color: var(--papel);
-  background: color-mix(in srgb, var(--papel) 10%, transparent);
+  background: rgba(255, 255, 255, 0.08);
   transition:
     background 0.3s var(--salida),
-    color 0.3s var(--salida);
+    color 0.3s var(--salida),
+    transform 0.3s var(--salida);
 }
 
 .pie__red-icono {
@@ -1329,12 +1349,13 @@ main > section:nth-of-type(3) {
 
 @media (hover: hover) and (pointer: fine) {
   .pie__red:hover {
-    background: var(--naranja);
-    color: var(--tinta);
+    background: color-mix(in srgb, var(--oro) 18%, transparent);
+    color: var(--oro);
+    transform: translateY(-2px);
   }
 
   .pie__enlaces a:hover {
-    color: var(--naranja);
+    color: var(--oro);
   }
 }
 
@@ -1511,7 +1532,7 @@ main > section:nth-of-type(3) {
   /* La marca ocupaba lo que quisiera y empujaba los tres accesos fuera de
      la barra, con lo que el de Tech quedaba cortado por debajo del nombre.
      Ahora la marca cede espacio y los accesos no se encogen nunca. */
-  .barra {
+  .barra__interior {
     grid-template-columns: minmax(0, auto) auto auto;
     gap: 12px;
   }
@@ -1579,7 +1600,7 @@ main > section:nth-of-type(3) {
  * hasta cortarlo con puntos suspensivos.
  */
 @media (max-width: 760px) {
-  .barra {
+  .barra__interior {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
@@ -1643,7 +1664,7 @@ main > section:nth-of-type(3) {
   }
 
   .barra__marca b {
-    font-size: 16px;
+    font-size: 1.05rem;
   }
 
   .barra__salto {
@@ -1680,7 +1701,8 @@ main > section:nth-of-type(3) {
   gap: 18px;
   padding: clamp(44px, 6vw, 88px) var(--lateral) clamp(44px, 6vw, 88px)
     clamp(32px, 4vw, 64px);
-  background: var(--tinta);
+  /* El plano Azul TE de la portada, como .lp-hero en la web del club. */
+  background: var(--azul);
   color: var(--papel);
 }
 
@@ -1701,7 +1723,9 @@ main > section:nth-of-type(3) {
   max-width: 42ch;
   font-size: clamp(15px, 1.6vw, 19px);
   line-height: 1.55;
-  color: var(--acero-claro);
+  /* Blanco sobre Azul TE para la entradilla (el azul claro no llega a 4.5:1
+     aquí), como .lp-hero-lead en la web. */
+  color: var(--papel);
 }
 
 /* El botón principal es el mismo que el de la portada de la web del club
