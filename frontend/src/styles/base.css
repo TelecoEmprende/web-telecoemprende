@@ -55,6 +55,13 @@ h2 {
   font-weight: 400;
   letter-spacing: var(--tracking-display);
   line-height: var(--leading-display);
+  /* Reparte las líneas para que no quede una palabra suelta abajo ("... LO" /
+     "SIGUIENTE ..."); el navegador corta la frase por donde se lee. */
+  text-wrap: balance;
+}
+
+p {
+  text-wrap: pretty;
 }
 
 /* Escala Anton (adaptación web de la guía v2: Display 76–168 es escala de

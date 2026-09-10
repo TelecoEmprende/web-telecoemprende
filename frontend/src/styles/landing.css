@@ -336,9 +336,12 @@
   /* Display: Anton condensada aguanta el tamaño; techo ~5.5rem (88px). */
   font-size: clamp(2.9rem, 6.4vw, 5.5rem);
   font-weight: 400;
-  line-height: 1;
+  /* En móvil el hero parte en dos o tres líneas: a 1 las mayúsculas de Anton
+     se rozan. */
+  line-height: 1.05;
   letter-spacing: 0.012em;
   color: var(--color-paper);
+  text-wrap: balance;
 }
 
 /* Solo el color. El marcador de rotulador que llevaba detrás se pensó para
@@ -410,6 +413,25 @@
   background: rgba(255, 255, 255, 0.1);
 }
 
+/* Una sola acción sólida por pantalla: la secundaria del hero baja a enlace
+   discreto para que el ojo vaya al botón. */
+.lp-hero-secondary {
+  display: inline-flex;
+  align-items: center;
+  min-height: 54px;
+  font-weight: 600;
+  font-size: 1rem;
+  color: var(--color-text-on-dark);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  text-decoration-color: rgba(255, 255, 255, 0.4);
+  transition: text-decoration-color var(--dur-press) ease;
+}
+
+.lp-hero-secondary:hover {
+  text-decoration-color: rgba(255, 255, 255, 0.9);
+}
+
 .lp-hero-chips {
   display: flex;
   flex-wrap: wrap;
@@ -464,16 +486,19 @@
 }
 
 .lp-heading {
-  margin: 20px 0 16px;
+  /* Aire: el rótulo pega al titular y el titular deja respirar antes del
+     contenido (una idea por sección, sin agolpar). */
+  margin: 14px 0 30px;
   max-width: 28ch;
   font-family: var(--font-display);
   text-transform: uppercase;
   /* Titular: un escalón claro por debajo del Display del hero. */
   font-size: clamp(2.15rem, 4vw, 3.1rem);
   font-weight: 400;
-  line-height: 1.04;
+  line-height: 1.1;
   letter-spacing: var(--tracking-display);
   color: var(--color-navy);
+  text-wrap: balance;
 }
 
 .lp-heading-dark {
@@ -506,8 +531,8 @@
 .lp-about {
   /* Menos que las demás secciones abajo: el carrusel ya termina en las
      flechas/puntos, que pesan menos que un párrafo, y el padding-top de
-     .lp-departments (96px) se suma al de aquí sin colapsar. */
-  padding: 96px 0 40px;
+     .lp-departments se suma al de aquí sin colapsar. */
+  padding: 120px 0 48px;
   /* Banda fría entre el hero (tinta) y Departamentos (papel): es la superficie
      grande donde el acero hace de color, no de línea. */
   background: var(--color-steel-soft);
@@ -707,7 +732,7 @@
 .lp-events {
   position: relative;
   overflow: hidden;
-  padding: 96px 0 104px;
+  padding: 124px 0 124px;
   background: var(--color-azul);
 }
 
@@ -846,7 +871,7 @@
 /* ---------- Requisitos de la solicitud ---------- */
 
 .lp-requirements {
-  padding: 88px 0 96px;
+  padding: 120px 0 120px;
   background: linear-gradient(180deg, var(--color-steel-tint), transparent 62%), var(--color-steel-soft);
 }
 
@@ -914,7 +939,7 @@
 /* ---------- Departamentos ---------- */
 
 .lp-departments {
-  padding: 96px 0;
+  padding: 124px 0;
 }
 
 .lp-departments-grid {
@@ -1545,7 +1570,7 @@
   .lp-requirements,
   .lp-thankyou,
   .form-section-react {
-    padding: 64px 0 72px;
+    padding: 84px 0 88px;
   }
 
   .lp-departments-grid,
