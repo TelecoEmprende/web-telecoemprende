@@ -250,6 +250,7 @@
 
 .portada__aclaracion {
   margin: 0 0 28px;
+  border-radius: var(--radio-media);
   padding: 16px 20px;
   border-left: 1px solid var(--linea-fuerte);
   background: var(--papel-2);
@@ -768,7 +769,7 @@ main > section:nth-of-type(3) {
 
 .red__pantalla {
   width: 100%;
-  border-radius: 16px;
+  border-radius: var(--radio-media);
   overflow: hidden;
   box-shadow: 0 20px 44px -24px rgba(var(--tinta-rgb), 0.55);
   transition:
@@ -791,7 +792,7 @@ main > section:nth-of-type(3) {
 
 .red__pantalla img,
 .red__pantalla .hueco {
-  border-radius: 16px;
+  border-radius: var(--radio-media);
 }
 
 .red:focus-within {
@@ -894,7 +895,7 @@ main > section:nth-of-type(3) {
   width: auto;
   max-width: 100%;
   object-fit: contain;
-  border-radius: 2px;
+  border-radius: var(--radio-media);
 }
 
 .carteles .cartel .hueco {
@@ -947,7 +948,7 @@ main > section:nth-of-type(3) {
   height: 100%;
   min-height: 0;
   object-fit: cover;
-  border-radius: 18px;
+  border-radius: var(--radio-media);
   background: var(--tinta);
   box-shadow: 0 22px 48px -26px rgba(var(--tinta-rgb), 0.6);
   transition:
@@ -988,7 +989,7 @@ main > section:nth-of-type(3) {
 }
 
 .reel .hueco {
-  border-radius: 18px;
+  border-radius: var(--radio-media);
   height: 100%;
 }
 
@@ -1009,6 +1010,7 @@ main > section:nth-of-type(3) {
 .figura__boton {
   width: 100%;
   padding: 0;
+  border-radius: var(--radio-media);
   border: 1px solid var(--linea);
   background: var(--papel-2);
   cursor: zoom-in;
@@ -1038,6 +1040,7 @@ main > section:nth-of-type(3) {
 /* Hueco de una imagen que todavía no existe */
 .hueco {
   display: flex;
+  border-radius: var(--radio-media);
   flex-direction: column;
   align-items: center;
   justify-content: center;
@@ -1164,6 +1167,7 @@ main > section:nth-of-type(3) {
   max-height: 78vh;
   width: auto;
   object-fit: contain;
+  border-radius: var(--radio-media);
   border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
@@ -2035,6 +2039,7 @@ main > section:nth-of-type(3) {
    los botones de salida que vienen debajo. */
 .papel {
   margin: 0 0 clamp(24px, 3vw, 34px);
+  border-radius: var(--radio-media);
   padding: clamp(18px, 2.4vw, 24px) clamp(18px, 2.4vw, 26px);
   background: var(--papel-2);
   border-left: 3px solid var(--naranja);
@@ -2159,7 +2164,7 @@ main > section:nth-of-type(3) {
   max-width: 760px;
   line-height: 0;
   border: 3px solid color-mix(in srgb, var(--tinta) 22%, transparent);
-  border-radius: 8px;
+  border-radius: var(--radio-media);
   overflow: hidden;
   transition:
     border-color 0.3s var(--salida),

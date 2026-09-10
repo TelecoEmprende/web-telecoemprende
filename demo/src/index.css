@@ -34,6 +34,9 @@
 
   --display: 'Anton', sans-serif;
   --radio: 2px;
+  /* Carteles, fotos y tarjetas van con esquina redondeada, como la web
+     principal (--radius-md). */
+  --radio-media: 14px;
   --salida: cubic-bezier(0.16, 1, 0.3, 1);
 
   color-scheme: light;
