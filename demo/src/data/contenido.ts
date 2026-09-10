@@ -123,8 +123,8 @@ export const club = {
   titularDestacado: { es: 'dónde montarlo', en: 'somewhere to build' },
   /** El mensaje que quita el miedo a acercarse. Sale destacado en la portada. */
   aclaracion: {
-    es: 'No hace falta traer una idea de negocio, ni saber todavía qué quieres hacer. Solo ganas de construir algo con más gente.',
-    en: "You don't need to bring a business idea, or even know yet what you want to do. Just the urge to build something with other people.",
+    es: 'No necesitas una idea de negocio ni saber aún qué quieres hacer. Solo ganas de construir algo con más gente.',
+    en: "You don't need a business idea, or even to know yet what you want to do. Just the urge to build something with other people.",
   },
   invitacion: {
     es: 'Elige por dónde quieres entrar.',
@@ -170,12 +170,12 @@ export const tech = {
   nombre: { es: 'Tech / Ingeniería', en: 'Tech / Engineering' },
   lema: { es: 'Construir y mantener', en: 'Build and maintain' },
   gancho: {
-    es: 'Lo que el club usa todos los días lo ha hecho alguien de aquí.',
-    en: 'Everything the club uses every day was built by someone in here.',
+    es: 'Lo que el club usa todos los días lo ha hecho alguien de aquí',
+    en: 'Everything the club uses every day was built by someone in here',
   },
   resumen: {
-    es: 'Aquí se construye y se mantiene lo que el club usa todos los días: la red que conecta a los antiguos alumnos con los que seguimos en la escuela, y la web del club, que es pública y la lleva gente de aquí. Se entra sin saber programar; se sale habiendo entregado algo que funciona y que usa gente de verdad.',
-    en: 'This is where we build and maintain what the club uses every day: the network connecting former students with those of us still at the school, and the club website, which is public and run by people from here. You come in without knowing how to code; you leave having shipped something that works and that real people use.',
+    es: 'La web pública del club y la red de alumni las mantiene gente de aquí, con el código en abierto. Entras sin saber programar y sales habiendo entregado algo que usa gente de verdad.',
+    en: "The club's public website and the alumni network are kept running by people from here, with the code out in the open. You come in without knowing how to code and leave having shipped something real people use.",
   },
   proyectos: [
     {
@@ -229,12 +229,12 @@ export const marketing = {
   nombre: { es: 'Marketing / Comms', en: 'Marketing / Comms' },
   lema: { es: 'Contar y que llegue', en: 'Tell it so it lands' },
   gancho: {
-    es: 'Si has oído hablar del club, es por este departamento.',
-    en: 'If you have heard of the club, it is because of this department.',
+    es: 'Si has oído hablar del club, es por este departamento',
+    en: 'If you have heard of the club, it is because of this department',
   },
   resumen: {
-    es: 'Aquí se decide cómo se cuenta el club por fuera: el Instagram y el LinkedIn, los carteles de cada charla, el texto que hace que alguien deje de hacer scroll. Es el departamento que convierte un evento en sala llena, y el que hace que TelecoEmprende se reconozca de un vistazo.',
-    en: 'This is where we decide how the club looks from the outside: Instagram and LinkedIn, the poster for every talk, the line that makes someone stop scrolling. It is the department that turns an event into a full room, and the one that makes TelecoEmprende recognisable at a glance.',
+    es: 'Instagram, LinkedIn, los carteles de cada charla y el texto que frena el scroll. Es lo que convierte un evento en sala llena y lo que hace que el club se reconozca de un vistazo.',
+    en: "Instagram, LinkedIn, the poster for every talk and the line that stops the scroll. It's what turns an event into a full room and what makes the club recognisable at a glance.",
   },
   /** Las redes del club, en capturas verticales de móvil. */
   redes: [
@@ -302,12 +302,12 @@ export const eventos = {
   nombre: { es: 'Eventos / Logística', en: 'Events / Logistics' },
   lema: { es: 'Que salga bien el día', en: 'Making the day run' },
   gancho: {
-    es: 'Esto ya ha pasado en la ETSIT. Lo siguiente lo montas tú.',
-    en: "This already happened at ETSIT. You build what's next.",
+    es: 'Esto ya ha pasado en la ETSIT. Lo siguiente lo montas tú',
+    en: "This already happened at ETSIT. You build what's next",
   },
   resumen: {
-    es: 'Aquí se monta un evento de principio a fin: se elige a quién traer, se escribe el correo, se reserva la sala, se cuadran los horarios y se resuelven los imprevistos del día. Es la parte del club que más se nota, porque cuando sale bien parece que no ha costado nada.',
-    en: 'This is where an event is put together from start to finish: choosing who to bring in, writing the email, booking the room, lining up the schedule and sorting out whatever comes up on the day. It is the most visible part of the club, because when it goes well it looks like it took no effort at all.',
+    es: 'Un evento de principio a fin: a quién traer, el correo, la sala, los horarios y los imprevistos del día. La parte más visible del club: cuando sale bien, parece que no costó nada.',
+    en: 'An event from start to finish: who to bring, the email, the room, the schedule and whatever comes up on the day. The most visible part of the club: when it goes well, it looks like it took no effort.',
   },
   charlas: [
     {
@@ -714,8 +714,8 @@ export const test = {
 export const juego = {
   gancho: { es: '¿Prefieres jugar antes de decidirte?', en: 'Fancy a game before you decide?' },
   descripcion: {
-    es: 'Mientras te lo piensas, échale un ojo a nuestro mini-juego. Todavía lo estamos montando, pero ya puedes echar un vistazo.',
-    en: "While you think it over, check out our mini-game. We're still building it, but you can already take a peek.",
+    es: 'Conoce la historia de antiguos alumnos de la escuela en un pequeño juego.',
+    en: "Get to know the stories of the school's former students in a small game.",
   },
   boton: { es: 'Jugar', en: 'Play' },
   /** Ruta absoluta: el juego vive en telecoemprende.es/juego, fuera de /demo. */

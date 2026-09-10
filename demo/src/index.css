@@ -147,6 +147,7 @@ button {
 /* Sobre fondo oscuro la tinta desaparece —es el propio fondo—, así que ahí
    el anillo pasa al oro del logo, que sobre tinta da 8,4:1. */
 [aria-current='true']:focus-visible,
+.barra :focus-visible,
 .pie :focus-visible,
 .visor :focus-visible,
 .visor__cerrar:focus-visible {

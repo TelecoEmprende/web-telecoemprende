@@ -190,6 +190,7 @@ function App() {
   return (
     <>
       <header className={`barra ${barraVisible ? 'barra--compacta' : ''}`}>
+       <div className="barra__interior">
         {/* El logo lleva a la web principal del club, no al principio de
             esta página: para volver arriba están las tres puertas. */}
         <a
@@ -246,6 +247,7 @@ function App() {
             accesos se subían a la primera fila. No se ve ni se lee: mide
             cero. */}
         <span className="barra__corte" aria-hidden="true" />
+       </div>
       </header>
 
       <main>
