@@ -39,36 +39,41 @@ body {
   line-height: var(--leading-body);
   color: var(--color-text);
   background:
-    radial-gradient(circle at top left, rgba(224, 104, 14, 0.05), transparent 28%),
-    radial-gradient(circle at top right, rgba(244, 176, 68, 0.09), transparent 24%),
+    radial-gradient(circle at top left, rgba(var(--color-impulso-rgb), 0.05), transparent 28%),
+    radial-gradient(circle at top right, rgba(var(--color-chispa-rgb), 0.09), transparent 24%),
     linear-gradient(180deg, #ffffff 0%, var(--color-paper) 100%);
 }
 
-/* La pareja de la guía, puesta en el sitio de menor especificidad posible:
-   h1/h2 en Anton, h3 en Grotesk 700, y la escala 44/30/20 como suelo. Toda
-   regla de clase que ya fija su tamaño o su fuente sigue mandando sobre esto
-   -- aquí solo se define lo que nadie ha dicho. */
+/* La pareja de la guía v2, puesta en el sitio de menor especificidad posible:
+   h1/h2 en Anton (siempre mayúsculas), h3 en Inter 700, y la escala 44/30/20
+   como suelo. Toda regla de clase que ya fija su tamaño o su fuente sigue
+   mandando sobre esto -- aquí solo se define lo que nadie ha dicho. */
 h1,
 h2 {
   font-family: var(--font-display);
+  text-transform: uppercase;
   font-weight: 400;
   letter-spacing: var(--tracking-display);
   line-height: var(--leading-display);
 }
 
+/* Escala Anton (adaptación web de la guía v2: Display 76–168 es escala de
+   cartel; en pantalla el techo son ~6rem). Estos son suelos — las clases
+   .lp-hero h1 / .lp-heading fijan el tamaño real por sección. */
 h1 {
-  font-size: 44px;
+  font-size: clamp(2.4rem, 5vw, 3.25rem);
 }
 
 h2 {
-  font-size: 30px;
+  font-size: clamp(1.9rem, 3.4vw, 2.4rem);
 }
 
 h3 {
   font-family: var(--font-body);
   font-weight: 700;
-  font-size: 20px;
+  font-size: 1.2rem;
   line-height: 1.3;
+  letter-spacing: -0.01em;
 }
 
 a {

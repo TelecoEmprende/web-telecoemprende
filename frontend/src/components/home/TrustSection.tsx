@@ -1,14 +1,19 @@
-const ITEMS = [
+import { Rocket, Target, Users, type LucideIcon } from "lucide-react";
+
+const ITEMS: { Icon: LucideIcon; label: string; value: string }[] = [
   {
-    label: "👥 Comunidad",
+    Icon: Users,
+    label: "Comunidad",
     value: "Estudiantes, alumni y emprendedores de toda la UPM.",
   },
   {
-    label: "🎯 Enfoque",
+    Icon: Target,
+    label: "Enfoque",
     value: "Ideas, conexión y ejecución.",
   },
   {
-    label: "🚀 Organizado por",
+    Icon: Rocket,
+    label: "Organizado por",
     value: "TelecoEmprende, nacido en la ETSIT y abierto a toda la UPM.",
   },
 ];
@@ -26,7 +31,10 @@ export function TrustSection() {
             >
               {ITEMS.map((item) => (
                 <div className="trust-item-react" key={`${trackIndex}-${item.label}`}>
-                  <span className="trust-label-react">{item.label}</span>
+                  <span className="trust-label-react">
+                    <item.Icon size={14} strokeWidth={1.75} aria-hidden="true" />
+                    {item.label}
+                  </span>
                   <strong>{item.value}</strong>
                 </div>
               ))}

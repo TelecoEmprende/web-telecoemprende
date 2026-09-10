@@ -16,7 +16,7 @@
 
 .admin-card-react {
   background: rgba(255, 255, 255, 0.82);
-  border: 1px solid rgba(226, 221, 208, 0.95);
+  border: 1px solid rgba(var(--color-papel-hueso-rgb), 0.95);
   border-radius: 30px;
   box-shadow: var(--shadow-soft);
   padding: 34px;
