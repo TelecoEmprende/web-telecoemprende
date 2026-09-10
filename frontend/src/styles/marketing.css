@@ -114,13 +114,15 @@
    del hero de una página de aterrizaje. Es la acción principal de cada
    panel (crear, guardar, asignar) -- `.mkt-btn-mini-react` se queda como
    estaba para todo lo demás. */
+/* En /equipo los botones son más pequeños que en la web pública; a ese tamaño
+   el blanco sobre Impulso no llega, así que el texto va en Noche (4.6:1). */
 .mkt-btn-react {
   min-height: 44px;
   padding: 11px 20px;
   border: none;
   border-radius: var(--radius-md);
-  background: var(--color-orange-dark);
-  color: #fff;
+  background: var(--color-impulso);
+  color: var(--color-noche);
   font-family: inherit;
   font-size: 0.95rem;
   font-weight: 700;
@@ -604,7 +606,7 @@
 }
 
 .mkt-columna-react[data-estado="por_revisar"] .mkt-contador-react {
-  background: var(--color-orange-dark);
+  background: var(--color-impulso);
   color: #fff;
 }
 
@@ -875,8 +877,8 @@
 }
 
 .mkt-filtros-react [aria-pressed="true"] {
-  background: var(--color-orange-dark);
-  border-color: var(--color-orange-dark);
+  background: var(--color-impulso);
+  border-color: var(--color-impulso);
   color: #fff;
 }
 
@@ -1373,7 +1375,7 @@
 }
 
 .mkt-cuando-hoy-react {
-  background: var(--color-orange-dark);
+  background: var(--color-impulso);
   color: #fff;
 }
 
@@ -2100,7 +2102,7 @@ button.mkt-evento-react:hover {
 
 .mkt-pipeline-en_revision-react {
   background: rgba(var(--color-impulso-rgb), 0.16);
-  color: var(--color-orange-dark);
+  color: var(--color-impulso);
 }
 
 .mkt-pipeline-programado-react,
@@ -2158,7 +2160,7 @@ button.mkt-evento-react:hover {
   transform: rotate(45deg);
   width: 11px;
   height: 11px;
-  border-color: var(--color-orange-dark);
+  border-color: var(--color-impulso);
   background: var(--color-gold);
 }
 
@@ -2172,7 +2174,7 @@ button.mkt-evento-react:hover {
 }
 
 .mkt-tl-dia-hoy-react .mkt-tl-etiqueta-react {
-  color: var(--color-orange-dark);
+  color: var(--color-impulso);
 }
 
 .mkt-tl-hito-react {
@@ -2388,7 +2390,7 @@ button.mkt-evento-react {
   gap: 6px;
   font-size: 0.85rem;
   font-weight: 600;
-  color: var(--color-orange-dark);
+  color: var(--color-impulso);
   text-decoration: none;
 }
 
@@ -2448,7 +2450,7 @@ button.mkt-evento-react {
   font-weight: 700;
   padding: 2px 9px;
   border-radius: 999px;
-  background: var(--color-orange-dark);
+  background: var(--color-impulso);
   color: #fff;
 }
 
