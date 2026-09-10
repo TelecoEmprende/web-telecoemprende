@@ -1,35 +1,36 @@
 @import url('https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600;700&display=swap');
 
 :root {
-  /* Paleta de marca TelecoEmprende · Manual de Identidad Visual v2.0, la misma
-     que la web principal (frontend/src/styles/tokens.css). "Azul de base,
-     naranja de acción." */
-  --azul: #1350b8;   /* Azul TE: color de marca */
-  --oro: #f4b044;    /* Chispa */
-  --naranja: #e0680e;/* Impulso: acción */
-  --acero: #1350b8;  /* v2 quita "acero"; sus superficies frías pasan a azul */
-  --tinta: #112532;  /* Noche: texto y bloques de apoyo */
+  /* Los 8 colores del Manual de Identidad Visual v2.0, iguales que la web
+     principal (frontend/src/styles/tokens.css). Nada fuera de estos: los
+     tonos derivados son mezclas u opacidades de ellos. */
+  --azul: #1350b8;          /* Azul TE */
+  --oro: #f4b044;           /* Chispa */
+  --naranja: #e0680e;       /* Impulso */
+  --tinta: #112532;         /* Noche */
+  --papel: #f7f5f1;         /* Papel */
+  --papel-hueso: #ede9e2;   /* Papel hueso */
+  --azul-profundo: #0e43a0; /* Azul profundo */
+  --azul-claro: #a9c4f0;    /* Azul claro */
+  --tinta-rgb: 17, 37, 50;  /* Noche, para sombras */
 
-  /* Superficies */
-  --papel: #f7f5f1;
-  /* La banda fría que alterna con el papel de una sección a otra: azul de la
-     marca mezclado con blanco. */
-  --acero-suave: color-mix(in srgb, var(--acero) 12%, #ffffff);
+  /* --- Roles, todo derivado de los 8 --- */
+  /* "acero" desaparece: donde había un neutro frío ahora hay azul. */
+  --acero: var(--azul);
+  --acero-claro: var(--azul-claro);   /* texto secundario sobre fondos Noche */
+  /* Banda fría que alterna con el papel: Azul TE muy diluido en papel. */
+  --acero-suave: color-mix(in srgb, var(--azul) 8%, var(--papel));
   --papel-alt: var(--acero-suave);
-  --papel-2: #ede9e2;
-  --papel-3: #e3ddd0;
+  --papel-2: var(--papel-hueso);
+  --papel-3: color-mix(in srgb, var(--papel-hueso) 82%, var(--tinta));
 
-  /* Texto secundario sobre las secciones oscuras (portada, pie, visor):
-     Azul claro de la guía. */
-  --acero-claro: #a9c4f0;
-
-  /* Texto. Los tonos están elegidos para pasar el contraste mínimo (4.5:1)
-     sobre --papel, incluso en las etiquetas pequeñas en mayúsculas. */
-  --texto: #46545c; /* slate de la guía, 8.0:1 sobre papel */
-  --texto-tenue: #56707f; /* 4.8:1 */
-  --naranja-tinta: #a8490a; /* 5.3:1 — el naranja de marca en versión legible */
-  --linea: #d8cdb8;
-  --linea-fuerte: #112532;
+  /* Texto: Noche a distintas opacidades sobre el papel. */
+  --texto: color-mix(in srgb, var(--tinta) 78%, var(--papel));       /* ~7:1 */
+  --texto-tenue: color-mix(in srgb, var(--tinta) 62%, var(--papel)); /* ~4.6:1 */
+  /* El naranja de la marca como acento. Para texto pequeño se usa Noche. */
+  --naranja-tinta: var(--naranja);
+  --linea: color-mix(in srgb, var(--tinta) 14%, var(--papel));
+  --linea-fuerte: var(--tinta);
 
   --display: 'Anton', sans-serif;
   --radio: 2px;
@@ -120,7 +121,7 @@ h2 {
   font-family: var(--display);
   text-transform: uppercase;
   font-weight: 400;
-  letter-spacing: 0.01em;
+  letter-spacing: 0.02em;
   line-height: 1.02;
 }
 
