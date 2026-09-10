@@ -1,3 +1,5 @@
+/* Paleta TelecoEmprende v2.0: Noche · Impulso · Chispa. El juego mantiene su
+   fondo oscuro (Noche es "bloque de apoyo") y su tipografía retro. */
 :root {
   --color-navy: #112532;
   --color-navy-deep: #0a1720;
@@ -5,7 +7,7 @@
   --color-orange: #e0680e;
   --color-orange-dark: #b95208;
   --color-gold: #f4b044;
-  --color-cream: #faf7f1;
+  --color-cream: #f7f5f1;
 }
 
 * {
@@ -21,7 +23,7 @@ body {
 body {
   background: linear-gradient(175deg, var(--color-navy) 0%, var(--color-navy-deep) 100%);
   color: var(--color-cream);
-  font-family: "Space Grotesk", system-ui, sans-serif;
+  font-family: "Inter", system-ui, sans-serif;
   min-height: 100vh;
   display: flex;
   flex-direction: column;

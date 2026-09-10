@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { Link, Navigate, useLocation } from "react-router-dom";
+import { GraduationCap, ListChecks, MapPin, Rocket, Search } from "lucide-react";
 
 import { LandingFooter } from "../components/layout/LandingFooter";
 import { LandingNav } from "../components/home/LandingNav";
@@ -49,17 +50,32 @@ export function ThankYouPage() {
               </div>
 
               <div className="lp-thankyou-meta" aria-label={t.thankYou.metaLabel}>
-                <div className="lp-thankyou-meta-item">{t.thankYou.meta1}</div>
-                <div className="lp-thankyou-meta-item">{t.thankYou.meta2}</div>
-                <div className="lp-thankyou-meta-item">{t.thankYou.meta3}</div>
+                <div className="lp-thankyou-meta-item">
+                  <GraduationCap size={15} strokeWidth={1.75} aria-hidden="true" />
+                  {t.thankYou.meta1}
+                </div>
+                <div className="lp-thankyou-meta-item">
+                  <MapPin size={15} strokeWidth={1.75} aria-hidden="true" />
+                  {t.thankYou.meta2}
+                </div>
+                <div className="lp-thankyou-meta-item">
+                  <Rocket size={15} strokeWidth={1.75} aria-hidden="true" />
+                  {t.thankYou.meta3}
+                </div>
               </div>
 
               <div className="lp-thankyou-points">
                 <div className="lp-thankyou-point">
+                  <span className="lp-thankyou-point-icon" aria-hidden="true">
+                    <Search size={18} strokeWidth={1.75} />
+                  </span>
                   <strong>{t.thankYou.point1Title}</strong>
                   <span>{t.thankYou.point1Body}</span>
                 </div>
                 <div className="lp-thankyou-point">
+                  <span className="lp-thankyou-point-icon" aria-hidden="true">
+                    <ListChecks size={18} strokeWidth={1.75} />
+                  </span>
                   <strong>{t.thankYou.point2Title}</strong>
                   <span>{t.thankYou.point2Body}</span>
                 </div>

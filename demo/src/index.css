@@ -1,26 +1,27 @@
-@import url('https://fonts.googleapis.com/css2?family=Anton&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600;700&display=swap');
 
 :root {
-  /* Paleta de marca TelecoEmprende 2026/27, la misma que la web principal
-     (frontend/src/styles/tokens.css). */
-  --oro: #f4b044;
-  --naranja: #e0680e;
-  --acero: #88a5b7;
-  --tinta: #112532;
+  /* Paleta de marca TelecoEmprende · Manual de Identidad Visual v2.0, la misma
+     que la web principal (frontend/src/styles/tokens.css). "Azul de base,
+     naranja de acción." */
+  --azul: #1350b8;   /* Azul TE: color de marca */
+  --oro: #f4b044;    /* Chispa */
+  --naranja: #e0680e;/* Impulso: acción */
+  --acero: #1350b8;  /* v2 quita "acero"; sus superficies frías pasan a azul */
+  --tinta: #112532;  /* Noche: texto y bloques de apoyo */
 
   /* Superficies */
-  --papel: #faf7f1;
-  /* La banda fría que alterna con el papel de una sección a otra. Es el acero
-     de la marca mezclado con blanco, no con el papel: con el papel (que es
-     crema) el azul se apaga hasta quedarse en gris. */
-  --acero-suave: color-mix(in srgb, var(--acero) 38%, #ffffff);
+  --papel: #f7f5f1;
+  /* La banda fría que alterna con el papel de una sección a otra: azul de la
+     marca mezclado con blanco. */
+  --acero-suave: color-mix(in srgb, var(--acero) 12%, #ffffff);
   --papel-alt: var(--acero-suave);
-  --papel-2: #f1e9d9;
-  --papel-3: #e3d9c3;
+  --papel-2: #ede9e2;
+  --papel-3: #e3ddd0;
 
-  /* Sobre la tinta el acero del logo da 6,1:1 y su versión clara 10,5:1:
-     los dos tonos de texto de las secciones oscuras (portada, pie, visor). */
-  --acero-claro: #c3d5e0;
+  /* Texto secundario sobre las secciones oscuras (portada, pie, visor):
+     Azul claro de la guía. */
+  --acero-claro: #a9c4f0;
 
   /* Texto. Los tonos están elegidos para pasar el contraste mínimo (4.5:1)
      sobre --papel, incluso en las etiquetas pequeñas en mayúsculas. */
@@ -60,7 +61,7 @@ body {
   margin: 0;
   background: var(--papel);
   color: var(--tinta);
-  font-family: 'Space Grotesk', system-ui, -apple-system, sans-serif;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
   font-synthesis-weight: none;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -112,11 +113,12 @@ h3,
   text-wrap: balance;
 }
 
-/* La pareja de la guía de marca: Anton grita los titulares, Space Grotesk
-   (el cuerpo, ya en body) lo explica. Anton solo tiene un peso. */
+/* La pareja de la guía de marca: Anton grita los titulares (un peso, siempre
+   en mayúsculas), Inter (el cuerpo, ya en body) lo explica. */
 h1,
 h2 {
   font-family: var(--display);
+  text-transform: uppercase;
   font-weight: 400;
   letter-spacing: 0.01em;
   line-height: 1.02;

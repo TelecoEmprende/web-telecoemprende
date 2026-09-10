@@ -1,4 +1,5 @@
 import { FormEvent, useEffect, useState } from "react";
+import { Mail, StickyNote } from "lucide-react";
 
 import { useApi } from "../DeptoApi";
 import { AlertBanner } from "../../feedback/AlertBanner";
@@ -175,7 +176,7 @@ export function MemberDialog({ email, onCerrar, onGuardado }: Props) {
 
               <div className="mkt-ficha-contacto-react">
                 <a className="mkt-btn-mini-react" href={`mailto:${email}`}>
-                  ✉️ {email}
+                  <Mail size={14} strokeWidth={1.75} aria-hidden="true" /> {email}
                 </a>
                 <button
                   type="button"
@@ -304,7 +305,10 @@ export function MemberDialog({ email, onCerrar, onGuardado }: Props) {
                 ) : (
                   <>
                     {notas ? (
-                      <p className="mkt-nota-privada-react">📝 Nota del equipo: {notas}</p>
+                      <p className="mkt-nota-privada-react">
+                        <StickyNote size={14} strokeWidth={1.75} aria-hidden="true" /> Nota del
+                        equipo: {notas}
+                      </p>
                     ) : null}
                     <div className="mkt-ficha-acciones-react">
                       <button

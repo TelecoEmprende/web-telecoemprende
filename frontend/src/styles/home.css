@@ -125,12 +125,12 @@
 }
 
 .series-kicker-react {
-  background: rgba(224, 104, 14, 0.1);
+  background: rgba(var(--color-impulso-rgb), 0.1);
   color: var(--color-primary);
 }
 
 .series-step-react {
-  background: rgba(17, 37, 50, 0.1);
+  background: rgba(var(--color-noche-rgb), 0.1);
   color: var(--color-primary);
 }
 
@@ -152,7 +152,7 @@
 
 .series-card-react {
   border-radius: 24px;
-  border: 1px solid rgba(226, 221, 208, 0.94);
+  border: 1px solid rgba(var(--color-papel-hueso-rgb), 0.94);
 }
 
 .series-card-react strong {
@@ -178,8 +178,8 @@
   align-items: center;
   padding: 20px 20px 0;
   background:
-    radial-gradient(circle at top right, rgba(244, 176, 68, 0.18), transparent 34%),
-    linear-gradient(145deg, rgba(255, 255, 255, 0.98), rgba(250, 247, 241, 0.9));
+    radial-gradient(circle at top right, rgba(var(--color-chispa-rgb), 0.18), transparent 34%),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.98), rgba(var(--color-papel-rgb), 0.9));
   overflow: hidden;
 }
 
@@ -227,8 +227,8 @@
   align-items: center;
   padding: 20px 16px 18px;
   background:
-    radial-gradient(circle at top right, rgba(244, 176, 68, 0.18), transparent 34%),
-    linear-gradient(145deg, rgba(255, 255, 255, 0.98), rgba(250, 247, 241, 0.9));
+    radial-gradient(circle at top right, rgba(var(--color-chispa-rgb), 0.18), transparent 34%),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.98), rgba(var(--color-papel-rgb), 0.9));
   text-align: center;
   gap: 12px;
 }
@@ -276,6 +276,9 @@
 }
 
 .meta-item-react {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
   background: rgba(255, 255, 255, 0.9);
   border: 1px solid var(--color-paper-line);
   border-radius: 999px;
@@ -283,6 +286,11 @@
   font-size: 0.95rem;
   font-weight: 700;
   color: var(--color-slate);
+}
+
+.meta-item-react svg {
+  color: var(--color-impulso);
+  flex-shrink: 0;
 }
 
 .hero-actions-react {
@@ -302,13 +310,12 @@
   min-height: 56px;
   padding: 0 22px;
   border-radius: 16px;
-  background: linear-gradient(135deg, var(--color-primary), var(--color-gold));
+  background: var(--color-orange-dark);
   color: #fff;
   font-weight: 700;
   border: 0;
-  box-shadow: 0 20px 50px rgba(17, 37, 50, 0.12);
   cursor: pointer;
-  transition: transform var(--dur-press) ease, filter var(--dur-press) ease;
+  transition: transform var(--dur-press) ease, background var(--dur-press) ease;
 }
 
 /* Una pantalla táctil dispara :hover al tocar y el estado se queda pegado
@@ -317,7 +324,7 @@
   .primary-btn-react:hover,
   .panel-btn-react:hover {
     transform: translateY(-1px);
-    filter: brightness(1.02);
+    background: var(--color-impulso);
   }
 }
 
@@ -333,7 +340,7 @@
   min-height: 56px;
   padding: 0 18px;
   border-radius: 16px;
-  border: 1px solid rgba(17, 37, 50, 0.16);
+  border: 1px solid rgba(var(--color-noche-rgb), 0.16);
   background: rgba(255, 255, 255, 0.84);
   display: inline-flex;
   align-items: center;
@@ -382,10 +389,9 @@
   padding: 0 22px;
   width: fit-content;
   border-radius: 16px;
-  background: linear-gradient(135deg, var(--color-primary), var(--color-gold));
+  background: var(--color-orange-dark);
   color: #fff;
   font-weight: 700;
-  box-shadow: 0 20px 50px rgba(17, 37, 50, 0.12);
   margin-left: auto;
   margin-right: auto;
 }
@@ -418,7 +424,7 @@
 .section-copy-card-react,
 .form-card-react,
 .trust-item-react {
-  border: 1px solid rgba(226, 221, 208, 0.95);
+  border: 1px solid rgba(var(--color-papel-hueso-rgb), 0.95);
   box-shadow: var(--shadow-soft);
 }
 
@@ -449,7 +455,7 @@
 }
 
 .panel-mini-tag-react {
-  background: rgba(224, 104, 14, 0.1);
+  background: rgba(var(--color-impulso-rgb), 0.1);
   color: var(--color-primary);
 }
 
@@ -500,7 +506,7 @@
   padding: 14px 16px;
   border-radius: 20px;
   background: rgba(255, 255, 255, 0.9);
-  border: 1px solid rgba(226, 221, 208, 0.95);
+  border: 1px solid rgba(var(--color-papel-hueso-rgb), 0.95);
 }
 
 .panel-flow-icon-react {
@@ -510,8 +516,8 @@
   width: 42px;
   height: 42px;
   border-radius: 14px;
-  background: linear-gradient(135deg, rgba(17, 37, 50, 0.12), rgba(244, 176, 68, 0.26));
-  font-size: 1.15rem;
+  background: color-mix(in srgb, var(--color-impulso) 14%, transparent);
+  color: var(--color-impulso);
   flex-shrink: 0;
 }
 
@@ -562,18 +568,24 @@
 @media (hover: hover) and (pointer: fine) {
   .trust-item-react:hover {
     transform: translateY(-2px);
-    box-shadow: 0 16px 30px rgba(17, 37, 50, 0.07);
+    box-shadow: 0 16px 30px rgba(var(--color-noche-rgb), 0.07);
   }
 }
 
 .trust-label-react {
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: 6px;
   font-size: 0.82rem;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--color-slate);
   font-weight: 700;
   margin-bottom: 10px;
+}
+
+.trust-label-react svg {
+  color: var(--color-impulso);
 }
 
 .trust-item-react strong {
@@ -599,7 +611,7 @@
   max-width: 760px;
   margin: 0 auto;
   background: rgba(255, 255, 255, 0.82);
-  border: 1px solid rgba(226, 221, 208, 0.95);
+  border: 1px solid rgba(var(--color-papel-hueso-rgb), 0.95);
   box-shadow: var(--shadow-soft);
   backdrop-filter: blur(8px);
   border-radius: 34px;
@@ -625,8 +637,8 @@
   margin-bottom: 22px;
   padding: 20px 22px;
   border-radius: 24px;
-  background: linear-gradient(135deg, rgba(17, 37, 50, 0.08), rgba(244, 176, 68, 0.14));
-  border: 1px solid rgba(226, 221, 208, 0.92);
+  background: linear-gradient(135deg, rgba(var(--color-noche-rgb), 0.08), rgba(var(--color-chispa-rgb), 0.14));
+  border: 1px solid rgba(var(--color-papel-hueso-rgb), 0.92);
 }
 
 .thank-you-note-react strong {
@@ -660,7 +672,7 @@
   padding: 18px 18px 16px;
   border-radius: 22px;
   background: rgba(255, 255, 255, 0.92);
-  border: 1px solid rgba(226, 221, 208, 0.95);
+  border: 1px solid rgba(var(--color-papel-hueso-rgb), 0.95);
 }
 
 .thank-you-point-react strong {
@@ -704,7 +716,7 @@
   margin-bottom: 12px;
   padding: 8px 12px;
   border-radius: 999px;
-  background: rgba(224, 104, 14, 0.1);
+  background: rgba(var(--color-impulso-rgb), 0.1);
   color: var(--color-primary);
   font-size: 0.8rem;
   font-weight: 700;
@@ -1011,19 +1023,6 @@
 
   .section-eyebrow-react {
     margin-bottom: 10px;
-  }
-
-  .form-card-react {
-    position: relative;
-    overflow: hidden;
-  }
-
-  .form-card-react::before {
-    content: "";
-    position: absolute;
-    inset: 0 0 auto;
-    height: 5px;
-    background: linear-gradient(90deg, var(--color-gold), var(--color-orange));
   }
 
   .registration-form-react {
