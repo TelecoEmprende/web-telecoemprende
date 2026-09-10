@@ -53,11 +53,10 @@
   height: 34px;
 }
 
-/* "Emprende" en naranja, como en la web principal del club. Sobre fondo
-   claro hace falta el naranja oscuro —el de marca se queda en 3,1:1 y no
-   llega—; sobre la tinta del pie sí va el de marca, que ahí da 4,6:1. */
+/* "Emprende" en Impulso, como en la web principal del club. Es un elemento de
+   marca (Anton, bold), no texto corrido. */
 .marca__naranja {
-  color: var(--naranja-tinta);
+  color: var(--naranja);
 }
 
 .pie .marca__naranja {
@@ -69,7 +68,7 @@
   text-transform: uppercase;
   font-size: 18px;
   font-weight: 400;
-  letter-spacing: 0.01em;
+  letter-spacing: 0.02em;
   /* Anton hereda el interlineado 1.55 del cuerpo y su caja de glifos tiene
      hueco de sobra por arriba: sin esto, el wordmark cae por debajo del
      centro de la barra. line-height:1 + un pelo de nudge lo centra. */
@@ -199,7 +198,7 @@
   font-size: 14px;
   font-weight: 700;
   white-space: nowrap;
-  box-shadow: 0 8px 22px rgba(244, 176, 68, 0.28);
+  box-shadow: 0 8px 22px rgba(var(--tinta-rgb), 0.18);
   transition:
     filter 0.3s var(--salida),
     transform 0.3s var(--salida);
@@ -240,7 +239,7 @@
      apretaba de más la caja alta. */
   font-size: clamp(34px, 4.4vw, 62px);
   line-height: 0.96;
-  letter-spacing: 0.01em;
+  letter-spacing: 0.02em;
   text-wrap: balance;
 }
 
@@ -251,6 +250,7 @@
 
 .portada__aclaracion {
   margin: 0 0 28px;
+  border-radius: var(--radio-media);
   padding: 16px 20px;
   border-left: 1px solid var(--linea-fuerte);
   background: var(--papel-2);
@@ -363,7 +363,7 @@
 .selector__icono {
   width: 22px;
   height: 22px;
-  color: var(--naranja-tinta);
+  color: var(--tinta);
   transition: color 0.3s var(--salida);
 }
 
@@ -387,7 +387,7 @@
   font-size: 11.5px;
   letter-spacing: 0.11em;
   text-transform: uppercase;
-  color: var(--naranja-tinta);
+  color: var(--tinta);
   font-weight: 700;
   transition: color 0.3s var(--salida);
 }
@@ -408,7 +408,7 @@
 
 @media (hover: hover) and (pointer: fine) {
   .selector__fila:hover .selector__flecha {
-    color: var(--naranja-tinta);
+    color: var(--tinta);
     transform: translateX(4px);
   }
 }
@@ -453,7 +453,7 @@ main > section:nth-of-type(3) {
   margin: 0 0 14px;
   font-size: clamp(30px, 3.6vw, 50px);
   line-height: 0.96;
-  letter-spacing: 0.01em;
+  letter-spacing: 0.02em;
 }
 
 .cabecera__gancho {
@@ -462,7 +462,7 @@ main > section:nth-of-type(3) {
   border-bottom: 2px solid var(--linea-fuerte);
   font-size: clamp(15px, 1.5vw, 18px);
   line-height: 1.4;
-  color: var(--naranja-tinta);
+  color: var(--tinta);
   font-weight: 600;
 }
 
@@ -502,7 +502,7 @@ main > section:nth-of-type(3) {
   place-items: center;
   background: #fff;
   border: 1px solid var(--linea);
-  box-shadow: 0 8px 20px -10px rgba(10, 31, 53, 0.4);
+  box-shadow: 0 8px 20px -10px rgba(var(--tinta-rgb), 0.4);
   pointer-events: none;
 }
 
@@ -521,7 +521,7 @@ main > section:nth-of-type(3) {
   font-size: 11px;
   letter-spacing: 0.2em;
   text-transform: uppercase;
-  color: var(--naranja-tinta);
+  color: var(--tinta);
   font-weight: 700;
 }
 
@@ -628,7 +628,7 @@ main > section:nth-of-type(3) {
   border-radius: 50%;
   display: grid;
   place-items: center;
-  background: rgba(10, 31, 53, 0.82);
+  background: rgba(var(--tinta-rgb), 0.82);
   backdrop-filter: blur(3px);
   color: var(--papel);
   pointer-events: none;
@@ -665,7 +665,7 @@ main > section:nth-of-type(3) {
   place-items: center;
   background: #fff;
   border: 1px solid var(--linea);
-  box-shadow: 0 8px 20px -10px rgba(10, 31, 53, 0.4);
+  box-shadow: 0 8px 20px -10px rgba(var(--tinta-rgb), 0.4);
   overflow: hidden;
   transition: transform 0.2s var(--salida);
 }
@@ -719,7 +719,7 @@ main > section:nth-of-type(3) {
   margin: 0 0 6px;
   font-size: 14.5px;
   line-height: 1.35;
-  color: var(--naranja-tinta);
+  color: var(--tinta);
   font-weight: 600;
 }
 
@@ -769,9 +769,9 @@ main > section:nth-of-type(3) {
 
 .red__pantalla {
   width: 100%;
-  border-radius: 16px;
+  border-radius: var(--radio-media);
   overflow: hidden;
-  box-shadow: 0 20px 44px -24px rgba(10, 31, 53, 0.55);
+  box-shadow: 0 20px 44px -24px rgba(var(--tinta-rgb), 0.55);
   transition:
     transform 0.2s var(--salida),
     box-shadow 0.2s var(--salida);
@@ -783,7 +783,7 @@ main > section:nth-of-type(3) {
 
 .red--2 .red__pantalla {
   transform: rotate(3.6deg);
-  box-shadow: 0 26px 54px -22px rgba(10, 31, 53, 0.65);
+  box-shadow: 0 26px 54px -22px rgba(var(--tinta-rgb), 0.65);
 }
 
 .red__pantalla img {
@@ -792,7 +792,7 @@ main > section:nth-of-type(3) {
 
 .red__pantalla img,
 .red__pantalla .hueco {
-  border-radius: 16px;
+  border-radius: var(--radio-media);
 }
 
 .red:focus-within {
@@ -882,7 +882,7 @@ main > section:nth-of-type(3) {
   min-height: 0;
   border: 0;
   background: transparent;
-  box-shadow: 0 16px 34px -18px rgba(10, 31, 53, 0.55);
+  box-shadow: 0 16px 34px -18px rgba(var(--tinta-rgb), 0.55);
   transition:
     transform 0.2s var(--salida),
     box-shadow 0.2s var(--salida);
@@ -895,7 +895,7 @@ main > section:nth-of-type(3) {
   width: auto;
   max-width: 100%;
   object-fit: contain;
-  border-radius: 2px;
+  border-radius: var(--radio-media);
 }
 
 .carteles .cartel .hueco {
@@ -916,7 +916,7 @@ main > section:nth-of-type(3) {
   align-self: end;
   transform: rotate(2.4deg);
   z-index: 2;
-  box-shadow: 0 22px 46px -20px rgba(10, 31, 53, 0.65);
+  box-shadow: 0 22px 46px -20px rgba(var(--tinta-rgb), 0.65);
 }
 
 .carteles .cartel:focus-visible {
@@ -948,9 +948,9 @@ main > section:nth-of-type(3) {
   height: 100%;
   min-height: 0;
   object-fit: cover;
-  border-radius: 18px;
+  border-radius: var(--radio-media);
   background: var(--tinta);
-  box-shadow: 0 22px 48px -26px rgba(10, 31, 53, 0.6);
+  box-shadow: 0 22px 48px -26px rgba(var(--tinta-rgb), 0.6);
   transition:
     transform 0.2s var(--salida),
     box-shadow 0.2s var(--salida);
@@ -959,7 +959,7 @@ main > section:nth-of-type(3) {
 @media (hover: hover) and (pointer: fine) {
   .reel--enlace:hover .reel__video {
     transform: translateY(-4px);
-    box-shadow: 0 28px 56px -24px rgba(10, 31, 53, 0.7);
+    box-shadow: 0 28px 56px -24px rgba(var(--tinta-rgb), 0.7);
   }
 }
 
@@ -989,7 +989,7 @@ main > section:nth-of-type(3) {
 }
 
 .reel .hueco {
-  border-radius: 18px;
+  border-radius: var(--radio-media);
   height: 100%;
 }
 
@@ -1010,6 +1010,7 @@ main > section:nth-of-type(3) {
 .figura__boton {
   width: 100%;
   padding: 0;
+  border-radius: var(--radio-media);
   border: 1px solid var(--linea);
   background: var(--papel-2);
   cursor: zoom-in;
@@ -1028,7 +1029,7 @@ main > section:nth-of-type(3) {
 @media (hover: hover) and (pointer: fine) {
   .figura__boton:hover {
     border-color: var(--tinta);
-    box-shadow: 0 16px 38px -20px rgba(10, 31, 53, 0.55);
+    box-shadow: 0 16px 38px -20px rgba(var(--tinta-rgb), 0.55);
   }
 
   .figura__boton:hover img {
@@ -1039,6 +1040,7 @@ main > section:nth-of-type(3) {
 /* Hueco de una imagen que todavía no existe */
 .hueco {
   display: flex;
+  border-radius: var(--radio-media);
   flex-direction: column;
   align-items: center;
   justify-content: center;
@@ -1101,7 +1103,7 @@ main > section:nth-of-type(3) {
   align-items: center;
   justify-content: center;
   padding: clamp(20px, 5vw, 64px);
-  background: rgba(10, 31, 53, 0.92);
+  background: rgba(var(--tinta-rgb), 0.92);
   backdrop-filter: blur(6px);
   animation: aparecer 0.22s var(--salida);
 }
@@ -1120,7 +1122,7 @@ main > section:nth-of-type(3) {
   align-items: center;
   gap: 8px;
   padding: 10px 16px;
-  border: 1px solid rgba(244, 241, 236, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.35);
   border-radius: 999px;
   background: transparent;
   color: var(--papel);
@@ -1134,7 +1136,7 @@ main > section:nth-of-type(3) {
 
 @media (hover: hover) and (pointer: fine) {
   .visor__cerrar:hover {
-    background: rgba(244, 241, 236, 0.12);
+    background: rgba(255, 255, 255, 0.12);
     border-color: var(--papel);
   }
 }
@@ -1165,7 +1167,8 @@ main > section:nth-of-type(3) {
   max-height: 78vh;
   width: auto;
   object-fit: contain;
-  border: 1px solid rgba(244, 241, 236, 0.2);
+  border-radius: var(--radio-media);
+  border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 /* El reproductor ocupa el ancho disponible manteniendo 16:9. */
@@ -1173,8 +1176,8 @@ main > section:nth-of-type(3) {
   width: min(1100px, 92vw);
   aspect-ratio: 16 / 9;
   max-height: 78vh;
-  border: 1px solid rgba(244, 241, 236, 0.2);
-  background: #000;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: var(--tinta);
 }
 
 .visor__video iframe {
@@ -1247,7 +1250,7 @@ main > section:nth-of-type(3) {
   text-transform: uppercase;
   font-size: clamp(20px, 2vw, 24px);
   line-height: 1;
-  letter-spacing: 0.01em;
+  letter-spacing: 0.02em;
   font-weight: 400;
 }
 
@@ -1689,7 +1692,7 @@ main > section:nth-of-type(3) {
   font-size: clamp(30px, 4.4vw, 62px);
   font-weight: 400;
   line-height: 0.98;
-  letter-spacing: 0.01em;
+  letter-spacing: 0.02em;
   text-wrap: balance;
 }
 
@@ -1712,9 +1715,10 @@ main > section:nth-of-type(3) {
   border-radius: 14px;
   text-decoration: none;
   padding: clamp(16px, 1.7vw, 21px) clamp(28px, 3vw, 40px);
-  background: var(--naranja-tinta);
+  background: var(--naranja);
   color: #fff;
-  font-size: clamp(16px, 1.7vw, 19px);
+  /* Blanco sobre Impulso pide ≥18px (regla de la guía). */
+  font-size: clamp(18px, 1.7vw, 20px);
   font-weight: 700;
   cursor: pointer;
   transition:
@@ -1840,7 +1844,7 @@ main > section:nth-of-type(3) {
   margin: 0 0 10px;
   font-size: clamp(27px, 4vw, 46px);
   line-height: 0.98;
-  letter-spacing: 0.01em;
+  letter-spacing: 0.02em;
 }
 
 .test__enunciado {
@@ -1908,7 +1912,7 @@ main > section:nth-of-type(3) {
   border: 1px solid var(--linea);
   font-size: 13px;
   font-weight: 700;
-  color: var(--naranja-tinta);
+  color: var(--tinta);
   transition:
     border-color 0.3s var(--salida),
     color 0.3s var(--salida);
@@ -2035,6 +2039,7 @@ main > section:nth-of-type(3) {
    los botones de salida que vienen debajo. */
 .papel {
   margin: 0 0 clamp(24px, 3vw, 34px);
+  border-radius: var(--radio-media);
   padding: clamp(18px, 2.4vw, 24px) clamp(18px, 2.4vw, 26px);
   background: var(--papel-2);
   border-left: 3px solid var(--naranja);
@@ -2159,7 +2164,7 @@ main > section:nth-of-type(3) {
   max-width: 760px;
   line-height: 0;
   border: 3px solid color-mix(in srgb, var(--tinta) 22%, transparent);
-  border-radius: 8px;
+  border-radius: var(--radio-media);
   overflow: hidden;
   transition:
     border-color 0.3s var(--salida),

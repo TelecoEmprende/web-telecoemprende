@@ -1,13 +1,15 @@
-/* Paleta TelecoEmprende v2.0: Noche · Impulso · Chispa. El juego mantiene su
-   fondo oscuro (Noche es "bloque de apoyo") y su tipografía retro. */
+/* Los 8 colores del Manual de Identidad Visual v2.0. El juego mantiene su
+   fondo oscuro (Noche) y su tipografía retro; el arte del mundo (césped,
+   edificios) tiene sus propios colores, que no son de marca. */
 :root {
-  --color-navy: #112532;
-  --color-navy-deep: #0a1720;
-  --color-navy-soft: #18374b;
-  --color-orange: #e0680e;
-  --color-orange-dark: #b95208;
-  --color-gold: #f4b044;
-  --color-cream: #f7f5f1;
+  --color-navy: #112532;          /* Noche */
+  --color-navy-deep: #112532;     /* Noche */
+  --color-navy-soft: #0e43a0;     /* Azul profundo */
+  --color-orange: #e0680e;        /* Impulso */
+  --color-orange-dark: #e0680e;   /* Impulso */
+  --color-gold: #f4b044;          /* Chispa */
+  --color-cream: #f7f5f1;         /* Papel */
+  --color-azul-claro: #a9c4f0;    /* Azul claro: texto secundario sobre oscuro */
 }
 
 * {
@@ -63,7 +65,7 @@ body {
 
 #screen-intro p {
   max-width: 46ch;
-  color: #b4c7d3;
+  color: var(--color-azul-claro);
   line-height: 1.7;
   margin: 0 0 32px;
 }
@@ -175,7 +177,7 @@ body {
 }
 
 #screen-mundo .hint {
-  color: #b4c7d3;
+  color: var(--color-azul-claro);
   font-size: 0.8rem;
   margin: 0;
 }
@@ -286,7 +288,7 @@ body {
   padding: 10px 12px;
   border: 2px solid var(--color-navy-soft);
   border-radius: 6px;
-  background: rgba(11, 26, 36, 0.6);
+  background: rgba(17, 37, 50, 0.6);
   color: var(--color-cream);
   font-family: inherit;
   font-size: 0.95rem;
@@ -321,9 +323,9 @@ body {
   position: fixed;
   top: 14px;
   right: 14px;
-  background: rgba(11, 26, 36, 0.7);
+  background: rgba(17, 37, 50, 0.7);
   color: var(--color-cream);
-  border: 1px solid rgba(250, 245, 236, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.3);
   border-radius: 8px;
   padding: 8px 12px;
   font-size: 0.75rem;
@@ -376,5 +378,5 @@ body {
   margin: 22px auto 0;
   font-size: 0.8rem;
   line-height: 1.5;
-  color: #7e93a3;
+  color: var(--color-azul-claro);
 }

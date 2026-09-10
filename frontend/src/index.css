@@ -153,12 +153,12 @@
     --radius-md: calc(var(--radius) * 0.8);
     --radius-xl: calc(var(--radius) * 1.4);
 
-    /* Impulso pleno con texto claro se queda en 3.4:1; el relleno de los
-       botones usa el naranja oscuro de la marca (4.7:1). El anillo de foco sí
-       va en Impulso pleno. */
-    --primary: var(--color-orange-dark);
-    --primary-foreground: var(--color-cream);
-    --ring: var(--color-orange);
+    /* Botones de /admin y /equipo: Impulso de relleno, pero el blanco encima
+       solo pasa a ≥18 px y los botones de shadcn son text-sm; el texto va en
+       Noche (4.6:1). Anillo de foco en Azul TE, que contrasta de sobra. */
+    --primary: var(--color-impulso);
+    --primary-foreground: var(--color-noche);
+    --ring: var(--color-azul);
     /* Los neutros de fábrica de shadcn son grises fríos; la marca los tiene
        cálidos. Sin esto, los paneles de /admin y /equipo dibujan sus bordes
        y su texto secundario fuera de la paleta. */

@@ -164,7 +164,7 @@
   bottom: 4px;
   width: calc(50% - 4px);
   border-radius: 999px;
-  background: var(--color-orange-dark);
+  background: var(--color-impulso);
   transition: transform 0.22s ease;
 }
 
@@ -273,7 +273,7 @@
   min-height: 56px;
   padding: 0 22px;
   border-radius: 16px;
-  background: var(--color-orange-dark);
+  background: var(--color-impulso);
   color: #fff;
   font-weight: 700;
   border: 0;
