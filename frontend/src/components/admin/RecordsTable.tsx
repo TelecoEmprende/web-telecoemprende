@@ -1,8 +1,7 @@
 import { useState } from "react";
-import { Check, Loader2, Pencil, Trash2, X } from "lucide-react";
+import { Check, Pencil, Trash2 } from "lucide-react";
 
-import { updateRegistration, deleteRegistration, updateRegistrationEstado } from "../../api/admin";
-import { UPM_SCHOOLS } from "../../data/upmSchools";
+import { deleteRegistration, updateRegistrationEstado } from "../../api/admin";
 import type { Estado, Registro } from "../../types/admin";
 import type { ApiFailure } from "../../types/api";
 import {
@@ -15,17 +14,8 @@ import {
   AlertDialogTitle,
 } from "../ui/alert-dialog";
 import { Button } from "../ui/button";
-import { Input } from "../ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "../ui/select";
+import { RegistroDialog, type EditData } from "./RegistroDialog";
 
-const DEPARTAMENTOS = ["Tech/Ingeniería", "Marketing/Comms", "Eventos/Logística"];
-const NIVELES = ["Grado", "Máster"];
 const ESTADO_BADGE_LABELS: Record<Estado, string> = {
   pendiente: "Pendiente",
   aceptado: "Aceptado",
@@ -38,9 +28,6 @@ const ESTADO_BADGE_CLASS: Record<Estado, string> = {
   rechazado: "bg-[var(--color-error-bg)] text-[var(--color-error-text)]",
   waitlist: "bg-[var(--color-info-bg)] text-[var(--color-info-text)]",
 };
-// Radix rechaza un SelectItem con value="", así que los huecos vacíos
-// ("—", "sin elegir") viajan como este centinela y se traducen en los bordes.
-const SIN_VALOR = "none";
 // El backend ya valida el esquema al crear/editar, pero esto es defensa en
 // profundidad: nunca renderizar como enlace clicable un valor que no venga
 // de antemano garantizado como https://drive.google.com/... (por ejemplo,
@@ -50,24 +37,10 @@ const DRIVE_LINK_PATTERN = /^https:\/\/(www\.)?drive\.google\.com\//i;
 const TH = "border-b border-[var(--color-divider)] bg-[var(--color-paper)] px-[18px] py-4 text-left text-sm font-bold text-[var(--color-slate)] max-[720px]:px-3.5";
 const TD = "border-b border-[var(--color-divider)] px-[18px] py-4 text-left align-top text-foreground max-[720px]:px-3.5";
 const TD_ANCHA = `${TD} min-w-[220px]`;
-const INPUT = "w-full min-w-[100px]";
 
 type RecordsTableProps = {
   registros: Registro[];
-  onUpdate: (
-    id: number,
-    data: {
-      nombre: string;
-      apellidos: string;
-      escuela: string;
-      nivel: string;
-      estudios: string;
-      email: string;
-      telefono: string;
-      departamento: string;
-      drive_link: string;
-    },
-  ) => void;
+  onUpdate: (id: number, data: EditData) => void;
   onDelete: (id: number) => void;
   onEstadoChange: (id: number, estado: Estado) => void;
 };
@@ -86,74 +59,11 @@ function EstadoBadge({ registro }: { registro: Registro }) {
 }
 
 export function RecordsTable({ registros, onUpdate, onDelete, onEstadoChange }: RecordsTableProps) {
-  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editando, setEditando] = useState<Registro | null>(null);
   const [changingEstadoId, setChangingEstadoId] = useState<number | null>(null);
-  const [editData, setEditData] = useState({
-    nombre: "",
-    apellidos: "",
-    escuela: "",
-    nivel: "",
-    estudios: "",
-    email: "",
-    telefono: "",
-    departamento: "",
-    drive_link: "",
-  });
-  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
   const [deleting, setDeleting] = useState(false);
-
-  function startEdit(r: Registro) {
-    setEditingId(r.id);
-    setEditData({
-      nombre: r.nombre,
-      apellidos: r.apellidos,
-      escuela: r.escuela,
-      nivel: r.nivel,
-      estudios: r.estudios,
-      email: r.email,
-      telefono: r.telefono,
-      departamento: r.departamento,
-      drive_link: r.drive_link,
-    });
-    setError(null);
-  }
-
-  function cancelEdit() {
-    setEditingId(null);
-    setError(null);
-  }
-
-  async function saveEdit() {
-    if (editingId === null) return;
-    if (
-      !editData.nombre ||
-      !editData.apellidos ||
-      !editData.estudios ||
-      !editData.email ||
-      !editData.telefono ||
-      !editData.departamento ||
-      !editData.drive_link
-    ) {
-      setError("Todos los campos son obligatorios.");
-      return;
-    }
-    setSaving(true);
-    setError(null);
-    try {
-      const res = await updateRegistration(editingId, editData);
-      if (res.ok) {
-        onUpdate(editingId, editData);
-        setEditingId(null);
-      }
-    } catch (e) {
-      const apiErr = e as ApiFailure;
-      setError(apiErr.message || "Error al actualizar.");
-    } finally {
-      setSaving(false);
-    }
-  }
 
   async function changeEstado(id: number, estado: Estado) {
     setChangingEstadoId(id);
@@ -164,8 +74,7 @@ export function RecordsTable({ registros, onUpdate, onDelete, onEstadoChange }: 
         onEstadoChange(id, estado);
       }
     } catch (e) {
-      const apiErr = e as ApiFailure;
-      setError(apiErr.message || "Error al cambiar el estado.");
+      setError((e as ApiFailure).message || "Error al cambiar el estado.");
     } finally {
       setChangingEstadoId(null);
     }
@@ -181,8 +90,7 @@ export function RecordsTable({ registros, onUpdate, onDelete, onEstadoChange }: 
         setConfirmDeleteId(null);
       }
     } catch (e) {
-      const apiErr = e as ApiFailure;
-      setError(apiErr.message || "Error al eliminar.");
+      setError((e as ApiFailure).message || "Error al eliminar.");
     } finally {
       setDeleting(false);
     }
@@ -195,6 +103,12 @@ export function RecordsTable({ registros, onUpdate, onDelete, onEstadoChange }: 
           {error}
         </div>
       )}
+
+      <RegistroDialog
+        registro={editando}
+        onClose={() => setEditando(null)}
+        onGuardado={onUpdate}
+      />
 
       <AlertDialog
         open={confirmDeleteId !== null}
@@ -243,217 +157,77 @@ export function RecordsTable({ registros, onUpdate, onDelete, onEstadoChange }: 
         <tbody>
           {registros.map((registro) => (
             <tr key={registro.id} className="hover:bg-[var(--color-paper)]">
-              {editingId === registro.id ? (
-                <>
-                  <td className={TD}>
-                    <Input
-                      className={INPUT}
-                      value={editData.nombre}
-                      onChange={(e) => setEditData({ ...editData, nombre: e.target.value })}
-                    />
-                  </td>
-                  <td className={TD}>
-                    <Input
-                      className={INPUT}
-                      value={editData.apellidos}
-                      onChange={(e) => setEditData({ ...editData, apellidos: e.target.value })}
-                    />
-                  </td>
-                  <td className={TD_ANCHA}>
-                    <Select
-                      value={editData.escuela || SIN_VALOR}
-                      onValueChange={(value) =>
-                        setEditData({ ...editData, escuela: value === SIN_VALOR ? "" : value })
-                      }
-                    >
-                      <SelectTrigger size="sm" className="w-full">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value={SIN_VALOR}>—</SelectItem>
-                        {UPM_SCHOOLS.map((school) => (
-                          <SelectItem value={school.name} key={school.code}>
-                            {school.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </td>
-                  <td className={TD}>
-                    <Select
-                      value={editData.nivel || SIN_VALOR}
-                      onValueChange={(value) =>
-                        setEditData({ ...editData, nivel: value === SIN_VALOR ? "" : value })
-                      }
-                    >
-                      <SelectTrigger size="sm" className="w-full">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value={SIN_VALOR}>—</SelectItem>
-                        {NIVELES.map((option) => (
-                          <SelectItem value={option} key={option}>
-                            {option}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </td>
-                  <td className={TD_ANCHA}>
-                    <Input
-                      className={INPUT}
-                      value={editData.estudios}
-                      onChange={(e) => setEditData({ ...editData, estudios: e.target.value })}
-                    />
-                  </td>
-                  <td className={TD_ANCHA}>
-                    <Input
-                      className={INPUT}
-                      type="email"
-                      value={editData.email}
-                      onChange={(e) => setEditData({ ...editData, email: e.target.value })}
-                    />
-                  </td>
-                  <td className={TD}>
-                    <Input
-                      className={INPUT}
-                      type="tel"
-                      value={editData.telefono}
-                      onChange={(e) => setEditData({ ...editData, telefono: e.target.value })}
-                    />
-                  </td>
-                  <td className={TD}>
-                    <Select
-                      value={editData.departamento || undefined}
-                      onValueChange={(value) => setEditData({ ...editData, departamento: value })}
-                    >
-                      <SelectTrigger size="sm" className="w-full">
-                        <SelectValue placeholder="Elige un departamento" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {DEPARTAMENTOS.map((option) => (
-                          <SelectItem value={option} key={option}>
-                            {option}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </td>
-                  <td className={TD}>
-                    <Input
-                      className={INPUT}
-                      type="url"
-                      value={editData.drive_link}
-                      onChange={(e) => setEditData({ ...editData, drive_link: e.target.value })}
-                    />
-                  </td>
-                  <td className={TD}>{registro.privacidad}</td>
-                  <td className={TD}>{registro.fecha}</td>
-                  <td className={TD}>
-                    <EstadoBadge registro={registro} />
-                  </td>
-                  <td className={`${TD} whitespace-nowrap`}>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="text-[var(--color-success-text)]"
-                      title="Guardar"
-                      disabled={saving}
-                      onClick={() => void saveEdit()}
-                    >
-                      {saving ? (
-                        <Loader2 size={16} className="animate-spin" />
-                      ) : (
-                        <Check size={16} strokeWidth={2.25} />
-                      )}
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="text-[var(--color-slate)]"
-                      title="Cancelar"
-                      disabled={saving}
-                      onClick={cancelEdit}
-                    >
-                      <X size={16} strokeWidth={2.25} />
-                    </Button>
-                  </td>
-                </>
-              ) : (
-                <>
-                  <td className={TD}>{registro.nombre}</td>
-                  <td className={TD}>{registro.apellidos}</td>
-                  <td className={TD_ANCHA}>{registro.escuela || "—"}</td>
-                  <td className={TD}>{registro.nivel || "—"}</td>
-                  <td className={TD_ANCHA}>{registro.estudios}</td>
-                  <td className={TD_ANCHA}>{registro.email}</td>
-                  <td className={TD}>{registro.telefono || "—"}</td>
-                  <td className={TD}>{registro.departamento || "—"}</td>
-                  <td className={TD}>
-                    {registro.drive_link && DRIVE_LINK_PATTERN.test(registro.drive_link) ? (
-                      <a href={registro.drive_link} target="_blank" rel="noreferrer">
-                        Ver enlace
-                      </a>
-                    ) : (
-                      "—"
-                    )}
-                  </td>
-                  <td className={TD}>{registro.privacidad}</td>
-                  <td className={TD}>{registro.fecha}</td>
-                  <td className={TD}>
-                    <EstadoBadge registro={registro} />
-                  </td>
-                  <td className={`${TD} whitespace-nowrap`}>
-                    <span className="mr-2.5 inline-flex gap-1.5">
-                      <Button
-                        size="sm"
-                        className="bg-[var(--color-success-text)] text-white hover:bg-[var(--color-success-text)]/90"
-                        title="Aceptar"
-                        disabled={changingEstadoId === registro.id || registro.estado === "aceptado"}
-                        onClick={() => void changeEstado(registro.id, "aceptado")}
-                      >
-                        Aceptar
-                      </Button>
-                      <Button
-                        size="sm"
-                        className="bg-[var(--color-error-text)] text-white hover:bg-[var(--color-error-text)]/90"
-                        title="Rechazar"
-                        disabled={changingEstadoId === registro.id || registro.estado === "rechazado"}
-                        onClick={() => void changeEstado(registro.id, "rechazado")}
-                      >
-                        Rechazar
-                      </Button>
-                      <Button
-                        size="sm"
-                        className="bg-[var(--color-gold)] text-[var(--color-navy)] hover:bg-[var(--color-gold)]/90"
-                        title="Waitlist"
-                        disabled={changingEstadoId === registro.id || registro.estado === "waitlist"}
-                        onClick={() => void changeEstado(registro.id, "waitlist")}
-                      >
-                        Waitlist
-                      </Button>
-                    </span>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="text-[var(--color-orange)]"
-                      title="Editar"
-                      onClick={() => startEdit(registro)}
-                    >
-                      <Pencil size={15} strokeWidth={1.75} />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="text-[var(--color-error-text)]"
-                      title="Eliminar"
-                      onClick={() => setConfirmDeleteId(registro.id)}
-                    >
-                      <Trash2 size={15} strokeWidth={1.75} />
-                    </Button>
-                  </td>
-                </>
-              )}
+              <td className={TD}>{registro.nombre}</td>
+              <td className={TD}>{registro.apellidos}</td>
+              <td className={TD_ANCHA}>{registro.escuela || "—"}</td>
+              <td className={TD}>{registro.nivel || "—"}</td>
+              <td className={TD_ANCHA}>{registro.estudios}</td>
+              <td className={TD_ANCHA}>{registro.email}</td>
+              <td className={TD}>{registro.telefono || "—"}</td>
+              <td className={TD}>{registro.departamento || "—"}</td>
+              <td className={TD}>
+                {registro.drive_link && DRIVE_LINK_PATTERN.test(registro.drive_link) ? (
+                  <a href={registro.drive_link} target="_blank" rel="noreferrer">
+                    Ver enlace
+                  </a>
+                ) : (
+                  "—"
+                )}
+              </td>
+              <td className={TD}>{registro.privacidad}</td>
+              <td className={TD}>{registro.fecha}</td>
+              <td className={TD}>
+                <EstadoBadge registro={registro} />
+              </td>
+              <td className={`${TD} whitespace-nowrap`}>
+                <span className="mr-2.5 inline-flex gap-1.5">
+                  <Button
+                    size="sm"
+                    className="bg-[var(--color-success-text)] text-white hover:bg-[var(--color-success-text)]/90"
+                    title="Aceptar"
+                    disabled={changingEstadoId === registro.id || registro.estado === "aceptado"}
+                    onClick={() => void changeEstado(registro.id, "aceptado")}
+                  >
+                    Aceptar
+                  </Button>
+                  <Button
+                    size="sm"
+                    className="bg-[var(--color-error-text)] text-white hover:bg-[var(--color-error-text)]/90"
+                    title="Rechazar"
+                    disabled={changingEstadoId === registro.id || registro.estado === "rechazado"}
+                    onClick={() => void changeEstado(registro.id, "rechazado")}
+                  >
+                    Rechazar
+                  </Button>
+                  <Button
+                    size="sm"
+                    className="bg-[var(--color-gold)] text-[var(--color-navy)] hover:bg-[var(--color-gold)]/90"
+                    title="Waitlist"
+                    disabled={changingEstadoId === registro.id || registro.estado === "waitlist"}
+                    onClick={() => void changeEstado(registro.id, "waitlist")}
+                  >
+                    Waitlist
+                  </Button>
+                </span>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="text-[var(--color-orange)]"
+                  title="Editar"
+                  onClick={() => setEditando(registro)}
+                >
+                  <Pencil size={15} strokeWidth={1.75} />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="text-[var(--color-error-text)]"
+                  title="Eliminar"
+                  onClick={() => setConfirmDeleteId(registro.id)}
+                >
+                  <Trash2 size={15} strokeWidth={1.75} />
+                </Button>
+              </td>
             </tr>
           ))}
         </tbody>
