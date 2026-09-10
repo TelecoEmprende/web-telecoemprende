@@ -152,6 +152,7 @@ export function EquipoPage() {
           onSeccion={setSeccion}
           teams={teams}
           vpDe={vpDe}
+          cargo={cargo}
           tieneAccesoAdmin={tieneAccesoAdmin}
           onLogout={() => void handleLogout()}
           isLoggingOut={isLoggingOut}
