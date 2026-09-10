@@ -2,7 +2,7 @@
    Dos pantallas distintas:
 
    - `.equipo-shell-react`: el login, sobre el navy del club.
-   - `.equipo-workspace-react`: el panel una vez dentro. Sidebar navy + área
+   - `.workspace-react`: el panel una vez dentro. Sidebar navy + área
      de trabajo crema, el patrón que estrenó Marketing y que ahora comparten
      todos los departamentos. Antes esto vivía en `marketing.css` y tapaba
      este shell desde fuera con `:has()`; ahora el shell ES esa pantalla, así
@@ -52,7 +52,7 @@
    Va fuera de `@layer`: el bloque de `.shadcn-scope` está en `@layer base` y
    cualquier regla sin capa le gana, que es justo lo que hace falta cuando el
    selector apunta al MISMO elemento. */
-.equipo-workspace-react {
+.workspace-react {
   --color-background: var(--color-paper);
   --color-border: var(--color-paper-line);
   --radius-lg: 20px;
@@ -79,18 +79,18 @@
 /* El disparador que pliega el sidebar hereda `color` de `.shadcn-scope.dark`,
    que es crema: invisible sobre la barra blanca. Es el único control para
    llegar a la navegación en móvil, no puede depender de una herencia. */
-.equipo-workspace-react [data-slot="sidebar-trigger"] {
+.workspace-react [data-slot="sidebar-trigger"] {
   color: var(--color-navy);
 }
 
 /* El texto del sidebar sale en `text-sm` (0.875rem), pequeño para una nav que
    se usa constantemente. Fuera de `@layer` para ganarle a esa utilidad. */
-.equipo-workspace-react [data-slot="sidebar-menu-button"] {
+.workspace-react [data-slot="sidebar-menu-button"] {
   font-size: 0.95rem;
 }
 
 /* Etiqueta de grupo: rótulo Inter en mayúsculas sobre el azul del sidebar. */
-.equipo-workspace-react [data-slot="sidebar-group-label"] {
+.workspace-react [data-slot="sidebar-group-label"] {
   font-size: 0.72rem;
   font-weight: 500;
   letter-spacing: var(--tracking-label);
@@ -100,11 +100,11 @@
 
 /* Item activo: además del velo blanco de --sidebar-accent, una barra Impulso
    pegada al borde izquierdo — el color de acción marcando dónde estás. */
-.equipo-workspace-react [data-slot="sidebar-menu-button"] {
+.workspace-react [data-slot="sidebar-menu-button"] {
   position: relative;
 }
 
-.equipo-workspace-react [data-slot="sidebar-menu-button"][data-active="true"]::before {
+.workspace-react [data-slot="sidebar-menu-button"][data-active="true"]::before {
   content: "";
   position: absolute;
   left: 0;
@@ -117,7 +117,7 @@
 
 /* ---------- Marca en la cabecera del sidebar ---------- */
 
-.equipo-marca-react {
+.workspace-marca-react {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -125,7 +125,7 @@
   min-width: 0;
 }
 
-.equipo-marca-logo-react {
+.workspace-marca-logo-react {
   width: 32px;
   height: 32px;
   flex-shrink: 0;
@@ -134,7 +134,7 @@
   object-fit: contain;
 }
 
-.equipo-marca-texto-react {
+.workspace-marca-texto-react {
   display: flex;
   flex-direction: column;
   line-height: 1.25;
@@ -142,7 +142,7 @@
   overflow: hidden;
 }
 
-.equipo-marca-texto-react strong {
+.workspace-marca-texto-react strong {
   font-family: var(--font-display);
   text-transform: uppercase;
   font-size: 1.15rem;
@@ -152,7 +152,7 @@
   white-space: nowrap;
 }
 
-.equipo-marca-texto-react span {
+.workspace-marca-texto-react span {
   font-size: 0.7rem;
   font-weight: 500;
   letter-spacing: var(--tracking-label);
@@ -163,13 +163,13 @@
 }
 
 /* Plegado a iconos: el texto de la marca estorba, solo queda el logo. */
-[data-state="collapsed"] .equipo-marca-texto-react {
+[data-state="collapsed"] .workspace-marca-texto-react {
   display: none;
 }
 
 /* ---------- Área de trabajo ---------- */
 
-.equipo-main-react {
+.workspace-main-react {
   flex: 1;
   min-width: 0;
   display: flex;
@@ -184,7 +184,7 @@
 }
 
 /* Barra superior con el disparador del sidebar y en qué sección estás. */
-.equipo-barra-react {
+.workspace-barra-react {
   position: sticky;
   top: 0;
   z-index: 10;
@@ -197,7 +197,7 @@
   background: var(--color-surface);
 }
 
-.equipo-barra-react h2 {
+.workspace-barra-react h2 {
   margin: 0;
   font-family: var(--font-display);
   text-transform: uppercase;
@@ -210,7 +210,7 @@
 
 /* El departamento al que pertenece la sección abierta: rótulo Inter 500 en
    mayúsculas (Etiqueta de la guía). */
-.equipo-barra-depto-react {
+.workspace-barra-depto-react {
   font-size: 0.72rem;
   font-weight: 500;
   text-transform: uppercase;
@@ -218,7 +218,7 @@
   color: var(--color-text-muted);
 }
 
-.equipo-contenido-react {
+.workspace-contenido-react {
   flex: 1;
   padding: 26px 24px 60px;
   /* Las media queries miden la ventana, pero lo que se estrecha aquí es la
@@ -227,7 +227,7 @@
 }
 
 @media (max-width: 620px) {
-  .equipo-contenido-react {
+  .workspace-contenido-react {
     padding: 18px 14px 44px;
   }
 }
@@ -419,7 +419,7 @@ span.mkt-dia-numero-react:hover {
   border-radius: var(--radius-lg);
   background: var(--color-surface);
   box-shadow: var(--shadow-soft);
-  /* Igual que en `.equipo-main-react`: las etiquetas de shadcn no se pintan a
+  /* Igual que en `.workspace-main-react`: las etiquetas de shadcn no se pintan a
      sí mismas y heredaban el crema del shell, ilegible sobre la tarjeta. */
   color: var(--color-text);
 }

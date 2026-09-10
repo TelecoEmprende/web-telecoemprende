@@ -1,7 +1,7 @@
 import { Route, Routes } from "react-router-dom";
 
 import { LanguageProvider } from "./i18n/LanguageContext";
-import { AdminPage } from "./routes/AdminPage";
+import { adminRoutes } from "./routes/admin";
 import { EquipoPage } from "./routes/EquipoPage";
 import { EventoSantiPabloPage } from "./routes/EventoSantiPabloPage";
 import { NotFoundPage } from "./routes/ErrorPage";
@@ -17,7 +17,7 @@ export default function App() {
         <Route path="/charla-santi-y-pablo" element={<EventoSantiPabloPage />} />
         <Route path="/gracias" element={<ThankYouPage />} />
         <Route path="/privacidad" element={<PrivacyPolicyPage />} />
-        <Route path="/admin" element={<AdminPage />} />
+        {adminRoutes}
         <Route path="/equipo" element={<EquipoPage />} />
         <Route path="*" element={<NotFoundPage />} />
       </Routes>

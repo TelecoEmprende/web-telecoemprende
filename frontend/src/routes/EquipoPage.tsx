@@ -145,7 +145,7 @@ export function EquipoPage() {
   return (
     // El workspace se lleva la pantalla entera: no hay cabecera del sitio, la
     // navegación (y la salida) están en el sidebar.
-    <div className="shadcn-scope dark equipo-workspace-react font-sans">
+    <div className="shadcn-scope dark workspace-react font-sans">
       <SidebarProvider>
         <EquipoSidebar
           seccion={seccion}
@@ -158,14 +158,14 @@ export function EquipoPage() {
           isLoggingOut={isLoggingOut}
         />
 
-        <main className="equipo-main-react">
-          <header className="equipo-barra-react">
+        <main className="workspace-main-react">
+          <header className="workspace-barra-react">
             <SidebarTrigger />
-            <span className="equipo-barra-depto-react">{deptoDe(seccion)}</span>
+            <span className="workspace-barra-depto-react">{deptoDe(seccion)}</span>
             <h2>{titulo}</h2>
           </header>
 
-          <div className="equipo-contenido-react">
+          <div className="workspace-contenido-react">
             {seccion === "club" ? <CalendarioEquipo /> : null}
             {deptoActual ? (
               // `key` para que cambiar de departamento remonte los paneles: si

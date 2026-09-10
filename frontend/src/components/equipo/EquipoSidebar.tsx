@@ -333,9 +333,9 @@ export function EquipoSidebar({
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader>
-        <div className="equipo-marca-react">
-          <img src="/logo.png" alt="" className="equipo-marca-logo-react" />
-          <span className="equipo-marca-texto-react">
+        <div className="workspace-marca-react">
+          <img src="/logo.png" alt="" className="workspace-marca-logo-react" />
+          <span className="workspace-marca-texto-react">
             <strong>TelecoEmprende</strong>
             <span>{cargo ? CARGO_LABEL[cargo] : "Equipo"}</span>
           </span>
