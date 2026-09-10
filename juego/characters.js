@@ -34,8 +34,7 @@
 //
 // Las conversaciones (y sobre todo las respuestas a las preguntas) son una
 // RECREACIÓN del club a partir de esa información pública: no son citas
-// literales de estas personas. El aviso está también a la vista en la pantalla
-// de inicio del juego (index.html). Si añades contenido, mantén esa separación:
+// literales de estas personas. Si añades contenido, mantén esa separación:
 // datos verificables en la biografía, opinión general en la conversación.
 //
 // Las fotos las aportó el club (carpeta UPM/TelecoEmprende 2026-2027).
