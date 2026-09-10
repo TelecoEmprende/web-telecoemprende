@@ -388,15 +388,6 @@ body {
   display: none !important;
 }
 
-/* Aviso de la portada: los diálogos son una recreación, no citas literales. */
-.aviso {
-  max-width: 46ch;
-  margin: 22px auto 0;
-  font-size: 0.8rem;
-  line-height: 1.5;
-  color: var(--color-azul-claro);
-}
-
 /*
  * Menos movimiento: el cursor de "continuar" deja de parpadear y los botones
  * no se levantan ni se hunden. Mover al personaje es la mecánica del juego, no
