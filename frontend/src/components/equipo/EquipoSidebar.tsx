@@ -34,7 +34,7 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar";
-import type { Cargo, Team } from "../../types/equipo";
+import type { Team } from "../../types/equipo";
 
 /** Una entrada de la navegación. El id identifica la sección abierta en todo
  *  `/equipo`: al ser plano (`mkt-tareas`, no `marketing` + `tareas`) el estado
@@ -157,11 +157,6 @@ const TEAM_LABEL: Record<Team, string> = {
   ingenieria: "Ingeniería",
 };
 
-const CARGO_LABEL: Record<Exclude<Cargo, "">, string> = {
-  presidente: "Presidente",
-  boardmember: "Board member",
-};
-
 /** Todas las secciones visibles para esa persona, en el orden del sidebar.
  *  El shell lo usa para saber en qué sección abrir y cómo titular la barra. */
 export function seccionesDe(teams: Team[]): Item[] {
@@ -196,7 +191,6 @@ type Props = {
   teams: Team[];
   /** Subconjunto de `teams` donde la persona es VP. */
   vpDe: Team[];
-  cargo: Cargo;
   tieneAccesoAdmin: boolean;
   onLogout: () => void;
   isLoggingOut: boolean;
@@ -207,7 +201,6 @@ export function EquipoSidebar({
   onSeccion,
   teams,
   vpDe,
-  cargo,
   tieneAccesoAdmin,
   onLogout,
   isLoggingOut,
@@ -337,7 +330,6 @@ export function EquipoSidebar({
           <img src="/logo.png" alt="" className="equipo-marca-logo-react" />
           <span className="equipo-marca-texto-react">
             <strong>TelecoEmprende</strong>
-            <span>{cargo ? CARGO_LABEL[cargo] : "Equipo"}</span>
           </span>
         </div>
       </SidebarHeader>
