@@ -2200,7 +2200,7 @@ main > section:nth-of-type(3) {
   height: auto;
   display: block;
   image-rendering: pixelated;
-  transition: filter 0.3s var(--salida), transform 0.4s var(--salida);
+  transition: filter 0.25s var(--salida), transform 0.25s var(--salida);
 }
 
 /* El rótulo que aparece encima al pasar el ratón. */
@@ -2229,7 +2229,7 @@ main > section:nth-of-type(3) {
   height: 3px;
   background: var(--naranja);
   opacity: 0;
-  transition: opacity 0.3s var(--salida), transform 0.4s var(--salida);
+  transition: opacity 0.25s var(--salida), transform 0.25s var(--salida);
 }
 
 @media (hover: hover) and (pointer: fine) {
@@ -2241,7 +2241,7 @@ main > section:nth-of-type(3) {
 
   .portada__juego-captura:hover img,
   .portada__juego-captura:focus-visible img {
-    filter: blur(4px) brightness(0.75);
+    filter: blur(2px) brightness(0.75);
     transform: scale(1.03);
   }
 

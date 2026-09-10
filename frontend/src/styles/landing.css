@@ -299,32 +299,42 @@
 }
 
 .lp-hero-dot {
+  position: relative;
   width: 8px;
   height: 8px;
   border-radius: 999px;
   background: var(--color-gold);
-  box-shadow: 0 0 0 0 rgba(var(--color-chispa-rgb), 0.5);
+}
+
+/* El anillo que late: un pseudo-elemento que escala y se desvanece. Antes era
+   una animación de box-shadow (repinta cada frame); transform + opacity van por
+   GPU. */
+.lp-hero-dot::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: rgba(var(--color-chispa-rgb), 0.5);
   animation: lp-pulse 2.2s ease-out infinite;
 }
 
 @keyframes lp-pulse {
   0% {
-    box-shadow: 0 0 0 0 rgba(var(--color-chispa-rgb), 0.5);
+    transform: scale(1);
+    opacity: 0.5;
   }
 
-  70% {
-    box-shadow: 0 0 0 9px rgba(var(--color-chispa-rgb), 0);
-  }
-
+  70%,
   100% {
-    box-shadow: 0 0 0 0 rgba(var(--color-chispa-rgb), 0);
+    transform: scale(3.25);
+    opacity: 0;
   }
 }
 
 /* El punto late en bucle: es lo primero que hay que parar. Se queda quieto y
    visible, que es para lo que está. */
 @media (prefers-reduced-motion: reduce) {
-  .lp-hero-dot {
+  .lp-hero-dot::after {
     animation: none;
   }
 }
@@ -1307,7 +1317,7 @@
   color: var(--color-text-muted);
   font-weight: 700;
   cursor: pointer;
-  transition: background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+  transition: background 0.15s ease, color 0.15s ease;
 }
 
 .level-toggle-react button:hover {
