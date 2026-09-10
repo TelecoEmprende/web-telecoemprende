@@ -1014,6 +1014,7 @@
   margin-top: 36px;
   font-family: var(--font-display);
   text-transform: uppercase;
+  letter-spacing: var(--tracking-display);
   font-size: 1.3rem;
   color: var(--color-navy);
 }

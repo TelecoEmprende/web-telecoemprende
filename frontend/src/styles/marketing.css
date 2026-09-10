@@ -990,6 +990,7 @@
   margin: 0;
   font-family: var(--font-display);
   text-transform: uppercase;
+  letter-spacing: var(--tracking-display);
   font-size: 1.6rem;
   font-weight: 400;
   line-height: 1.1;
@@ -2479,6 +2480,7 @@ button.mkt-evento-react {
   margin: 0;
   font-family: var(--font-display);
   text-transform: uppercase;
+  letter-spacing: var(--tracking-display);
   font-size: 1.35rem;
   font-weight: 400;
   color: var(--color-navy);
@@ -2498,6 +2500,7 @@ button.mkt-evento-react {
 .reg-importe-react {
   font-family: var(--font-display);
   text-transform: uppercase;
+  letter-spacing: var(--tracking-display);
   font-size: 1.05rem;
   font-weight: 400;
   font-variant-numeric: tabular-nums;
