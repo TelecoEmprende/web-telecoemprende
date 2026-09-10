@@ -5,7 +5,7 @@
 
 export const TILE_SIZE = 32;
 export const MAP_COLS = 24;
-export const MAP_ROWS = 16;
+export const MAP_ROWS = 20; // +4 filas al sur: da sitio a un jardín tras el eje sur
 
 // Tiles no transitables. Todo lo que no esté aquí se puede pisar.
 const SOLIDOS = new Set([
@@ -75,6 +75,18 @@ function construirMapa() {
   // Bancos junto a la plaza.
   mapa[9][17] = "banco";
   mapa[11][17] = "banco";
+
+  // Jardín sur: un patio nuevo al final del eje sur, conectado por un ramal
+  // del camino. Da una segunda zona que explorar además de la plaza central.
+  rect(mapa, 10, 14, 10, 15, "camino"); // ramal: baja desde el eje sur (fila 13)
+  rect(mapa, 6, 16, 17, 17, "plaza"); // patio del jardín
+  mapa[16][8] = "banco";
+  mapa[17][13] = "banco";
+  const arbolesJardin = [
+    [5, 16], [5, 17], [18, 16], [18, 17], // setos laterales
+    [6, 18], [8, 18], [12, 18], [14, 18], [16, 18], // muro verde al fondo (col. 10 libre: es el paso)
+  ];
+  for (const [c, r] of arbolesJardin) mapa[r][c] = "arbol";
 
   return mapa;
 }
@@ -268,6 +280,7 @@ const ETIQUETAS = [
   { texto: "SECRETARÍA", c0: 11, r0: 9, c1: 16, r1: 10 },
   { texto: "DEPORTES", c0: 3, r0: 10, c1: 5, r1: 12 },
   { texto: "PARKING", c0: 19, r0: 2, c1: 22, r1: 5 },
+  { texto: "JARDÍN", c0: 6, r0: 16, c1: 17, r1: 17 },
 ];
 
 function dibujarEtiquetas(ctx) {

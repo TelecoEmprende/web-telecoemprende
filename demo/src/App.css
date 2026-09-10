@@ -31,7 +31,10 @@
 }
 
 /* El fondo de la barra va a sangre; su contenido se centra en una columna
-   como en la web del club (.lp-container + .lp-nav-inner). */
+   como en la web del club (.lp-container + .lp-nav-inner): mismo max-width
+   (1180px) y el mismo margen lateral fijo (24px, 18px en móvil) — no el
+   --lateral fluido que usan portada/depto/pie, que a partir de ~500px de
+   ancho ya mete más aire del que tiene la barra de la web principal. */
 .barra__interior {
   max-width: 1180px;
   margin-inline: auto;
@@ -39,7 +42,7 @@
   grid-template-columns: auto 1fr auto;
   align-items: center;
   gap: 24px;
-  padding: 12px var(--lateral);
+  padding: 12px 24px;
 }
 
 /* Al hacer scroll la barra se solidifica: es cuando aparecen los accesos y
@@ -58,9 +61,15 @@
   color: inherit;
 }
 
+/* El logo lleva tinta dentro: sobre la barra oscura necesita su papel
+   debajo, igual que en el pie (.pie__marca img) y en la web principal
+   (.lp-nav-logo). */
 .barra__marca img {
   width: 34px;
   height: 34px;
+  padding: 3px;
+  border-radius: 9px;
+  background: var(--papel);
 }
 
 /* "Emprende" destacado, como en la web principal del club. Es un elemento de
@@ -115,8 +124,14 @@
   text-decoration: none;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
   padding: 8px 14px;
+  /* En el móvil el nombre se oculta y solo queda el icono: el padding se
+     reduce en los breakpoints de abajo para que quepan los tres en una
+     fila, y sin este mínimo el botón caía por debajo de 44x44. */
+  min-width: 44px;
+  min-height: 44px;
   border: 1px solid transparent;
   border-radius: 999px;
   background: transparent;
@@ -210,6 +225,7 @@
 .barra__solicitud {
   display: inline-flex;
   align-items: center;
+  min-height: 44px;
   padding: 11px 20px;
   border-radius: 999px;
   background: var(--oro);
@@ -1304,8 +1320,8 @@ main > section:nth-of-type(3) {
 .pie__red {
   display: grid;
   place-items: center;
-  width: 42px;
-  height: 42px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
   color: var(--papel);
   background: rgba(255, 255, 255, 0.08);
@@ -1409,6 +1425,70 @@ main > section:nth-of-type(3) {
   }
 }
 
+/* Entre 900 y ~1080px la barra desbordaba: el nombre, los tres accesos (con
+   su etiqueta visible) y las acciones no cabían en una fila y el navegador
+   no tenía dónde encogerlos, así que salían por el borde derecho de la
+   página. Este breakpoint --antes pegado al de .portada de abajo, que no
+   llegaba tan ancho-- adelanta la misma solución que ya había para ≤900px:
+   la marca cede espacio (con puntos suspensivos) y los accesos no se
+   encogen nunca. */
+@media (max-width: 1100px) {
+  .barra__interior {
+    grid-template-columns: minmax(0, auto) auto auto;
+    gap: 12px;
+  }
+
+  .barra__marca {
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  .barra__marca b {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* El botón se queda —es lo que se pide en esta página—, así que la barra
+     sigue teniendo tres columnas y quien cede espacio es el nombre. */
+  .barra__solicitud {
+    padding: 10px 16px;
+    font-size: 13px;
+  }
+
+  .barra__saltos {
+    justify-content: flex-end;
+    flex: none;
+  }
+
+  .barra--compacta .barra__saltos {
+    /* Con los accesos visibles, el nombre sobra antes que ellos. */
+    margin-left: auto;
+  }
+
+  /* `display: none` sacaba el nombre del árbol de accesibilidad y dejaba
+     tres botones sin nombre: se oculta a la vista, no a quien escucha. */
+  .barra__salto-nombre {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .barra__salto {
+    padding: 13px;
+  }
+
+  .barra__salto-icono {
+    width: 19px;
+    height: 19px;
+  }
+}
+
 @media (max-width: 900px) {
   /* En vertical manda el mismo criterio que en ancho: el test primero, y
      las tres puertas debajo como acceso secundario. El mensaje se descompone
@@ -1438,6 +1518,13 @@ main > section:nth-of-type(3) {
     order: 3;
     padding: clamp(28px, 7vw, 40px) var(--lateral);
     gap: 14px;
+  }
+
+  /* La tarjeta del juego va detrás de las puertas, no delante. Mismo order
+     que su captura (ver .portada__juego-captura más abajo), así quedan
+     pegadas. */
+  .portada__test--juego {
+    order: 6;
   }
 
   .portada__invitacion {
@@ -1528,64 +1615,6 @@ main > section:nth-of-type(3) {
     width: min(100%, 420px);
     justify-self: center;
   }
-
-  /* La marca ocupaba lo que quisiera y empujaba los tres accesos fuera de
-     la barra, con lo que el de Tech quedaba cortado por debajo del nombre.
-     Ahora la marca cede espacio y los accesos no se encogen nunca. */
-  .barra__interior {
-    grid-template-columns: minmax(0, auto) auto auto;
-    gap: 12px;
-  }
-
-  .barra__marca {
-    min-width: 0;
-    overflow: hidden;
-  }
-
-  .barra__marca b {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  /* El botón se queda —es lo que se pide en esta página—, así que la barra
-     sigue teniendo tres columnas y quien cede espacio es el nombre. */
-  .barra__solicitud {
-    padding: 10px 16px;
-    font-size: 13px;
-  }
-
-  .barra__saltos {
-    justify-content: flex-end;
-    flex: none;
-  }
-
-  .barra--compacta .barra__saltos {
-    /* Con los accesos visibles, el nombre sobra antes que ellos. */
-    margin-left: auto;
-  }
-
-  /* `display: none` sacaba el nombre del árbol de accesibilidad y dejaba
-     tres botones sin nombre: se oculta a la vista, no a quien escucha. */
-  .barra__salto-nombre {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    padding: 0;
-    margin: -1px;
-    overflow: hidden;
-    clip-path: inset(50%);
-    white-space: nowrap;
-  }
-
-  .barra__salto {
-    padding: 13px;
-  }
-
-  .barra__salto-icono {
-    width: 19px;
-    height: 19px;
-  }
 }
 
 /*
@@ -1605,6 +1634,9 @@ main > section:nth-of-type(3) {
     flex-wrap: wrap;
     align-items: center;
     gap: 10px;
+    /* Mismo margen lateral que .lp-container en móvil (18px). */
+    padding-left: 18px;
+    padding-right: 18px;
   }
 
   .barra__marca {

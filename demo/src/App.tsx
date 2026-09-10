@@ -196,8 +196,6 @@ function App() {
         <a
           className="barra__marca"
           href={club.web}
-          target="_blank"
-          rel="noopener noreferrer"
           title={t(interfaz.irALaWeb)}
         >
           <img src={rutaImagen('/logo.png')} alt="" width={34} height={34} />
@@ -231,12 +229,10 @@ function App() {
           <SelectorIdioma />
 
           {/* La demo se ve en el stand y en el móvil de quien pasa, así que
-              el formulario se abre aparte y aquí se sigue donde se estaba. */}
+              se navega en la misma pestaña: es la web del club, no un sitio ajeno. */}
           <a
             className="barra__solicitud"
             href={club.solicitud.url}
-            target="_blank"
-            rel="noopener noreferrer"
           >
             {t(club.solicitud.texto)}
           </a>
@@ -284,14 +280,12 @@ function App() {
           {/* Segunda llamada a la acción, debajo del test: el mini-juego de
               la web principal. Mismo estilo que el test, para que se lea
               como parte del mismo bloque de la portada. */}
-          <div className="portada__test">
+          <div className="portada__test portada__test--juego">
             <p className="portada__test-gancho">{t(juego.gancho)}</p>
             <p className="portada__test-texto">{t(juego.descripcion)}</p>
             <a
               className="portada__test-boton"
               href={juego.url}
-              target="_blank"
-              rel="noopener noreferrer"
             >
               {t(juego.boton)}
             </a>
@@ -304,8 +298,6 @@ function App() {
           <a
             className="portada__juego-captura"
             href={juego.url}
-            target="_blank"
-            rel="noopener noreferrer"
             tabIndex={-1}
             aria-hidden="true"
           >
