@@ -67,9 +67,12 @@
 .mkt-panel-header-react h3,
 .mkt-detalle-header-react h3 {
   margin: 0;
-  font-size: 1.35rem;
-  font-weight: 700;
-  letter-spacing: -0.03em;
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  font-size: 1.5rem;
+  font-weight: 400;
+  letter-spacing: var(--tracking-display);
+  line-height: 1;
   color: var(--color-navy);
 }
 
@@ -2555,9 +2558,9 @@ button.mkt-evento-react {
   border-top: 1px solid var(--color-divider);
 }
 
-.mkt-agenda-marketing-react { border-left-color: var(--color-orange); }
-.mkt-agenda-eventos-react { border-left-color: var(--color-success-text); }
-.mkt-agenda-ingenieria-react { border-left-color: var(--color-steel); }
+.mkt-agenda-marketing-react { border-left-color: var(--color-depto-marketing); }
+.mkt-agenda-eventos-react { border-left-color: var(--color-depto-eventos); }
+.mkt-agenda-ingenieria-react { border-left-color: var(--color-depto-tech); }
 
 .mkt-agenda-cuando-react {
   flex-shrink: 0;
@@ -2650,9 +2653,9 @@ button.mkt-evento-react {
   background: var(--color-steel);
 }
 
-.mkt-semana-punto-react.mkt-agenda-marketing-react { background: var(--color-orange); }
-.mkt-semana-punto-react.mkt-agenda-eventos-react { background: var(--color-success-text); }
-.mkt-semana-punto-react.mkt-agenda-ingenieria-react { background: var(--color-steel); }
+.mkt-semana-punto-react.mkt-agenda-marketing-react { background: var(--color-depto-marketing); }
+.mkt-semana-punto-react.mkt-agenda-eventos-react { background: var(--color-depto-eventos); }
+.mkt-semana-punto-react.mkt-agenda-ingenieria-react { background: var(--color-depto-tech); }
 .mkt-semana-punto-club-react { background: var(--color-gold); }
 
 /* ---------- Inicio: agenda + calendario en columnas ---------- */
@@ -2687,9 +2690,9 @@ button.mkt-evento-react {
   background: var(--color-steel);
 }
 
-.mkt-agenda-leyenda-punto-react.mkt-agenda-marketing-react::before { background: var(--color-orange); }
-.mkt-agenda-leyenda-punto-react.mkt-agenda-eventos-react::before { background: var(--color-success-text); }
-.mkt-agenda-leyenda-punto-react.mkt-agenda-ingenieria-react::before { background: var(--color-steel); }
+.mkt-agenda-leyenda-punto-react.mkt-agenda-marketing-react::before { background: var(--color-depto-marketing); }
+.mkt-agenda-leyenda-punto-react.mkt-agenda-eventos-react::before { background: var(--color-depto-eventos); }
+.mkt-agenda-leyenda-punto-react.mkt-agenda-ingenieria-react::before { background: var(--color-depto-tech); }
 .mkt-agenda-leyenda-vencida-react::before { background: var(--color-error-text); }
 
 .mkt-inicio-lateral-react {
