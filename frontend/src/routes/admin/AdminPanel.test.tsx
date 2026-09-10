@@ -31,8 +31,11 @@ const REGISTRO = {
   nombre: "Juan",
   apellidos: "Perez",
   escuela: "ETSIT",
+  nivel: "Grado",
   estudios: "Grado - GIST",
   email: "juan@example.com",
+  telefono: "600000000",
+  departamento: "Tech/Ingeniería",
   drive_link: "https://drive.google.com/drive/folders/abc123",
   privacidad: "Sí",
   fecha: "2026-04-16 11:00:00",
@@ -144,19 +147,52 @@ describe("panel /admin", () => {
     expect(screen.getByRole("button", { name: /copiar emails \(1\)/i })).toBeInTheDocument();
   });
 
-  // Los controles de la fila pasaron de <input>/<select>/overlay propios a
-  // Input/Select/AlertDialog de shadcn: esto comprueba que editar y borrar
-  // siguen llegando a la API igual que antes.
-  it("switches a row into edit mode with its values loaded", async () => {
+  // Editar dejó de ser una fila que se convierte en formulario y pasó a ser
+  // una ventana: la tabla solo lee.
+  it("opens the edit dialog with the row values loaded", async () => {
     const user = await loginYVerTabla();
 
     await user.click(screen.getByTitle("Editar"));
 
-    const fila = screen.getByDisplayValue("Juan").closest("tr") as HTMLElement;
-    expect(within(fila).getByDisplayValue("juan@example.com")).toBeInTheDocument();
-    // escuela, nivel y departamento son ahora Select de shadcn
-    expect(within(fila).getAllByRole("combobox")).toHaveLength(3);
-    expect(within(fila).getByText("Elige un departamento")).toBeInTheDocument();
+    const dialogo = await screen.findByRole("dialog");
+    expect(within(dialogo).getByLabelText("Nombre")).toHaveValue("Juan");
+    expect(within(dialogo).getByLabelText("Email")).toHaveValue("juan@example.com");
+    // escuela, nivel y departamento siguen siendo Select de shadcn
+    expect(within(dialogo).getAllByRole("combobox")).toHaveLength(3);
+  });
+
+  it("saves the dialog and sends the changes to the API", async () => {
+    updateRegistration.mockResolvedValueOnce({ ok: true });
+    const user = await loginYVerTabla();
+
+    await user.click(screen.getByTitle("Editar"));
+    const dialogo = await screen.findByRole("dialog");
+    await user.clear(within(dialogo).getByLabelText("Teléfono"));
+    await user.type(within(dialogo).getByLabelText("Teléfono"), "600111222");
+    await user.click(within(dialogo).getByRole("button", { name: "Guardar cambios" }));
+
+    await waitFor(() => {
+      expect(updateRegistration).toHaveBeenCalledWith(
+        1,
+        expect.objectContaining({ telefono: "600111222", nombre: "Juan" }),
+      );
+    });
+    // Cerrar la ventana deja la tabla con el valor nuevo, sin recargar.
+    expect(await screen.findByText("600111222")).toBeInTheDocument();
+  });
+
+  it("refuses to save with an empty required field", async () => {
+    const user = await loginYVerTabla();
+
+    await user.click(screen.getByTitle("Editar"));
+    const dialogo = await screen.findByRole("dialog");
+    await user.clear(within(dialogo).getByLabelText("Email"));
+    await user.click(within(dialogo).getByRole("button", { name: "Guardar cambios" }));
+
+    expect(await within(dialogo).findByRole("alert")).toHaveTextContent(
+      "Todos los campos son obligatorios.",
+    );
+    expect(updateRegistration).not.toHaveBeenCalled();
   });
 
   it("asks for confirmation before deleting and then calls the API", async () => {

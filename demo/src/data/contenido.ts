@@ -376,6 +376,7 @@ export const eventos = {
           es: 'Samuel Gil con miembros del club al final de su charla en la ETSIT',
           en: 'Samuel Gil with club members at the end of his talk at ETSIT',
         },
+        video: 'https://www.youtube.com/watch?v=PQNYrPgVkTI',
       },
       logo: {
         src: '/img/eventos/logo-jme.jpg',

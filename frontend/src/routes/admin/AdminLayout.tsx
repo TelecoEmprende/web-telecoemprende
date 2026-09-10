@@ -121,7 +121,12 @@ export function AdminLayout() {
   }
 
   return (
-    <div className="shadcn-scope dark workspace-react font-sans">
+    // Sin `dark`, al revés que /equipo: aquel pinta sus paneles a mano, pero
+    // los del panel (toolbar, tabs, stats, tabla) están escritos con
+    // `text-muted-foreground` sobre fondos blancos, y en `.shadcn-scope.dark`
+    // ese token es crema -- texto claro sobre claro, ilegible. El sidebar no
+    // se entera: su azul sale de los `--sidebar-*` de `.workspace-react`.
+    <div className="shadcn-scope workspace-react font-sans">
       <SidebarProvider>
         <AdminSidebar onLogout={() => void handleLogout()} isLoggingOut={isLoggingOut} />
 

@@ -313,6 +313,10 @@ function construirGuion(p) {
 function abrirDialogo(p) {
   pararMundo();
   personajeActual = p;
+  // Se marca como conocido al abrir, no al terminar el guion: "✕ Salir" y
+  // Escape cierran el diálogo sin pasar por el final (game.js:450, 486), así
+  // que ese era el único sitio por el que pasan de verdad TODAS las salidas.
+  marcarDescubierto(p.id);
   guion = construirGuion(p);
   paginaActual = 0;
   dialogoRetrato.innerHTML = renderAvatarHTML(p);
@@ -418,7 +422,6 @@ function avanzarDialogo() {
   if (paginaActual < guion.length) {
     mostrarPaso();
   } else {
-    marcarDescubierto(personajeActual.id);
     mostrarCierre();
   }
 }
