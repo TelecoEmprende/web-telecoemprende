@@ -119,22 +119,20 @@
   padding: 11px 20px;
   border: none;
   border-radius: var(--radius-md);
-  background: var(--gradient-cta);
-  color: var(--color-navy);
-  box-shadow: 0 10px 24px rgba(var(--color-impulso-rgb), 0.28);
+  background: var(--color-orange-dark);
+  color: #fff;
   font-family: inherit;
   font-size: 0.95rem;
   font-weight: 700;
   cursor: pointer;
   transition: transform var(--dur-press) var(--ease-out),
-    filter var(--dur-press) var(--ease-out),
-    box-shadow var(--dur-press) var(--ease-out);
+    background var(--dur-press) var(--ease-out);
 }
 
 @media (hover: hover) and (pointer: fine) {
   .mkt-btn-react:hover:not(:disabled) {
     transform: translateY(-1px);
-    filter: brightness(1.04);
+    background: var(--color-impulso);
   }
 }
 
@@ -606,7 +604,7 @@
 }
 
 .mkt-columna-react[data-estado="por_revisar"] .mkt-contador-react {
-  background: var(--color-orange);
+  background: var(--color-orange-dark);
   color: #fff;
 }
 
@@ -1375,7 +1373,7 @@
 }
 
 .mkt-cuando-hoy-react {
-  background: var(--color-orange);
+  background: var(--color-orange-dark);
   color: #fff;
 }
 
