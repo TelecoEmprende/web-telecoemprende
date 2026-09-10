@@ -1,7 +1,12 @@
+import { Handshake, Mic, Rocket } from "lucide-react";
+
 import { useTranslation } from "../../i18n/translations";
+
+const CHIP_ICONS = [Mic, Handshake, Rocket];
 
 export function HeroSection() {
   const { t } = useTranslation();
+  const chips = [t.hero.chip1, t.hero.chip2, t.hero.chip3];
 
   return (
     <section className="lp-hero" id="inicio">
@@ -34,9 +39,15 @@ export function HeroSection() {
           </div>
 
           <ul className="lp-hero-chips" aria-label={t.hero.chipsLabel}>
-            <li>{t.hero.chip1}</li>
-            <li>{t.hero.chip2}</li>
-            <li>{t.hero.chip3}</li>
+            {chips.map((chip, i) => {
+              const Icon = CHIP_ICONS[i];
+              return (
+                <li key={chip}>
+                  <Icon size={16} strokeWidth={1.75} aria-hidden="true" />
+                  {chip}
+                </li>
+              );
+            })}
           </ul>
         </div>
       </div>

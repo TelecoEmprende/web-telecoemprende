@@ -1,3 +1,5 @@
+import { Calendar, Clock, Lightbulb, MapPin, TrendingUp, Video } from "lucide-react";
+
 import { Header } from "../components/layout/Header";
 import { Footer } from "../components/layout/Footer";
 import { RegistrationForm } from "../components/home/RegistrationForm";
@@ -32,9 +34,16 @@ TelecoEmprende presenta una charla con Santi y Pablo, creadores de contenido que
 Compartirán su proceso real: qué hicieron, qué no funcionó y cómo acabaron conectando con su audiencia.              </p>
 
               <div className="event-meta-react">
-                <div className="meta-item-react">📍 Sala de Profesores, Edificio C, ETSIT UPM</div>
-                <div className="meta-item-react">📅 1 de Junio</div>
-                <div className="meta-item-react">⏰ 16:00 - 17:00</div>
+                <div className="meta-item-react">
+                  <MapPin size={15} strokeWidth={1.75} aria-hidden="true" />
+                  Sala de Profesores, Edificio C, ETSIT UPM
+                </div>
+                <div className="meta-item-react">
+                  <Calendar size={15} strokeWidth={1.75} aria-hidden="true" />1 de Junio
+                </div>
+                <div className="meta-item-react">
+                  <Clock size={15} strokeWidth={1.75} aria-hidden="true" />16:00 - 17:00
+                </div>
               </div>
 
               <div className="series-showcase-react" aria-label="Ponentes del evento">
@@ -76,7 +85,7 @@ Compartirán su proceso real: qué hicieron, qué no funcionó y cómo acabaron 
               <div className="highlight-box-react" id="detalle">
                 <div className="highlight-line-react" />
                 <div>
-                  <strong>🚆 TelecoEmprende</strong>
+                  <strong>TelecoEmprende</strong>
                   <p>
                     Club de emprendimiento de la ETSIT UPM. 
                   </p>
@@ -119,7 +128,9 @@ Pablo (Zaragoza) destaca por su mentalidad creativa y su constante búsqueda de 
 
                 <div className="panel-flow-react" aria-label="Qué verás en la charla">
                   <div className="panel-flow-step-react">
-                    <span className="panel-flow-icon-react" aria-hidden="true">🎥</span>
+                    <span className="panel-flow-icon-react" aria-hidden="true">
+                      <Video size={20} strokeWidth={1.75} />
+                    </span>
                     <div>
                       <strong>Cómo empezar desde cero</strong>
                       <span>Sin equipo caro ni experiencia previa. Solo constancia y criterio.</span>
@@ -127,7 +138,9 @@ Pablo (Zaragoza) destaca por su mentalidad creativa y su constante búsqueda de 
                   </div>
 
                   <div className="panel-flow-step-react">
-                    <span className="panel-flow-icon-react" aria-hidden="true">📊</span>
+                    <span className="panel-flow-icon-react" aria-hidden="true">
+                      <TrendingUp size={20} strokeWidth={1.75} />
+                    </span>
                     <div>
                       <strong>Hacer crecer un canal</strong>
                       <span>Qué funciona, qué no, y cómo encontrar tu propia voz.</span>
@@ -135,7 +148,9 @@ Pablo (Zaragoza) destaca por su mentalidad creativa y su constante búsqueda de 
                   </div>
 
                   <div className="panel-flow-step-react">
-                    <span className="panel-flow-icon-react" aria-hidden="true">💡</span>
+                    <span className="panel-flow-icon-react" aria-hidden="true">
+                      <Lightbulb size={20} strokeWidth={1.75} />
+                    </span>
                     <div>
                       <strong>El salto a crear algo propio</strong>
                       <span>De la creación de contenido a construir proyectos reales.</span>

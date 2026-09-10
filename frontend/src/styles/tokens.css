@@ -1,59 +1,65 @@
-/* Tokens de marca — TelecoEmprende.
-   Fuente: la guía de marca (docs/brand-guide.html). Cuatro colores oficiales
-   y dos tipografías; TODO lo demás de la web se deriva de aquí. Si un valor
-   de color aparece a mano en otra hoja, es que se ha escapado de la marca. */
+/* Tokens de marca — TelecoEmprende · Manual de Identidad Visual v2.0 (sept 2026).
+   Fuente: docs/brand-guide.html. "Azul de base, naranja de acción."
+   TODO color de la web se deriva de aquí. Si un hex aparece a mano en otra
+   hoja, es que se ha escapado de la marca.
+
+   Proporción de referencia por pieza: Azul 60 · Papel 22 · Impulso 10 ·
+   Chispa 5 · Noche 3. */
 :root {
-  /* ---------- Los cuatro colores oficiales ---------- */
-  /* Tinta: color ancla. Fondos oscuros, texto de cuerpo, base de toda pieza. */
-  --color-navy: #112532;
-  /* Ámbar: acento principal. Titulares, highlights, Eventos. */
-  --color-gold: #f4b044;
-  /* Naranja: acento de energía. CTAs, fechas, urgencia, Marketing. */
-  --color-orange: #e0680e;
-  /* Acero: neutro frío. Tech, superficies suaves, divisores.
-     Nunca en texto pequeño sobre papel: ahí no llega de contraste. */
-  --color-steel: #88a5b7;
+  /* ---------- Paleta oficial ---------- */
+  /* Azul TE: color de marca y fondo por defecto. Lo que hace reconocible una
+     pieza a distancia. */
+  --color-azul: #1350b8;
+  --color-azul-rgb: 19, 80, 184;
+  /* Impulso: color de acción. UNO por pieza — lo que queremos que se lea o se
+     pulse primero. Nunca como texto largo sobre azul (2.2:1). */
+  --color-impulso: #e0680e;
+  --color-impulso-rgb: 224, 104, 14;
+  /* Chispa: ilumina sobre azul. Destacados y bloques, nunca texto pequeño
+     sobre papel. */
+  --color-chispa: #f4b044;
+  --color-chispa-rgb: 244, 176, 68;
+  /* Noche: texto y bloques de apoyo. NUNCA como fondo dominante. */
+  --color-noche: #112532;
+  --color-noche-rgb: 17, 37, 50;
 
-  /* ---------- Derivados de los cuatro ---------- */
-  --color-navy-deep: #0a1720;
-  --color-navy-soft: #18374b;
-  --color-gold-soft: #f8d18f;
-  --color-orange-dark: #b95208;
-  /* Acero aclarado: el texto secundario sobre tinta. El acero puro se queda
-     corto de contraste sobre fondo oscuro. */
-  --color-steel-light: #b4c7d3;
+  /* ---------- Neutros y capas ---------- */
+  --color-papel: #f7f5f1;          /* fondo claro por defecto */
+  --color-papel-rgb: 247, 245, 241;
+  --color-papel-hueso: #ede9e2;    /* secciones alternas y tarjetas */
+  --color-papel-hueso-rgb: 237, 233, 226;
+  --color-azul-claro-rgb: 169, 196, 240;
+  --color-azul-profundo: #0e43a0;  /* capas y formas sobre Azul TE */
+  --color-azul-claro: #a9c4f0;     /* etiquetas y texto secundario sobre azul */
 
-  /* ---------- Papel y tinta secundaria ---------- */
-  --color-paper: #faf7f1;
-  --color-paper-line: #e2ddd0;
-  --color-slate: #46545c;
+  /* ---------- Degradados: sólo estos tres, siempre a 135°, entre colores
+     vecinos de la paleta. Fondos grandes y formas sólidas; jamás el logo,
+     iconos ni texto largo. ---------- */
+  --gradient-profundidad: linear-gradient(135deg, var(--color-azul), var(--color-azul-profundo));
+  --gradient-calor: linear-gradient(135deg, var(--color-chispa), var(--color-impulso));
+  --gradient-contacto: linear-gradient(135deg, var(--color-impulso), var(--color-azul));
 
   /* ---------- Alias de rol (lo que usan las hojas) ---------- */
-  --color-primary: var(--color-orange);
-  --color-primary-dark: var(--color-orange-dark);
+  --color-primary: var(--color-impulso);
+  --color-primary-dark: #b95208;
   --color-surface: #ffffff;
   --color-surface-soft: rgba(255, 255, 255, 0.86);
-  --color-background: var(--color-paper);
-  --color-cream: var(--color-paper);
-  --color-text: var(--color-navy);
-  --color-text-muted: var(--color-slate);
-  --color-text-on-dark: var(--color-paper);
-  --color-text-on-dark-muted: var(--color-steel-light);
-  --color-border: var(--color-paper-line);
-  /* El acero es el cuarto color, no un adorno: la guía lo manda a superficies
-     grandes y a los divisores. Se mezcla con BLANCO, no con el papel: el papel
-     es crema y al mezclarlo apagaba el azul hasta dejarlo en gris (17% sobre
-     papel daba #e7e9e7; sobre blanco da #ebf0f3, que sí es azul).
-     La tinta encima de los tres pasa de 8:1, así que se puede escribir sobre
-     ellos; lo que la guía prohíbe es el acero puro en texto pequeño. */
-  --color-steel-soft: color-mix(in srgb, var(--color-steel) 38%, #ffffff);
-  --color-steel-tint: color-mix(in srgb, var(--color-steel) 55%, #ffffff);
-  --color-divider: color-mix(in srgb, var(--color-steel) 45%, #ffffff);
+  --color-background: var(--color-papel);
+  --color-cream: var(--color-papel);
+  --color-text: var(--color-noche);          /* Noche sobre Papel · 14.9:1 */
+  --color-text-muted: #46545c;
+  --color-text-on-dark: #ffffff;             /* Blanco sobre Azul · 7.3:1 */
+  /* Texto secundario sobre azul. La guía lo pone en Azul claro #a9c4f0, pero
+     ahí se queda en 4.1:1 y no pasa AA; se sube un punto (5.3:1) sin dejar de
+     ser el mismo azul. #a9c4f0 se reserva para bordes, puntos y etiquetas. */
+  --color-text-on-dark-muted: #cdddf7;
+  --color-border: var(--color-papel-hueso);
+  --color-divider: var(--color-papel-hueso);
 
-  /* Departamentos: cada uno con su color, según la guía. */
-  --color-depto-tech: var(--color-steel);
-  --color-depto-marketing: var(--color-orange);
-  --color-depto-eventos: var(--color-gold);
+  /* Departamentos: Tech = Azul, Marketing = Impulso, Eventos = Noche. */
+  --color-depto-tech: var(--color-azul);
+  --color-depto-marketing: var(--color-impulso);
+  --color-depto-eventos: var(--color-noche);
 
   /* ---------- Estados ---------- */
   --color-info-bg: #fdf1dd;
@@ -63,29 +69,34 @@
   --color-error-bg: #fde8ea;
   --color-error-text: #b42318;
 
-  /* Ámbar a naranja: el degradado de los CTA. El tono intermedio es la
-     mezcla de los dos oficiales, no un quinto color. */
-  --gradient-cta: linear-gradient(120deg, var(--color-gold) 0%, #f6bc63 52%, var(--color-orange) 100%);
-
-  --shadow-soft: 0 16px 40px rgba(17, 37, 50, 0.08);
+  /* ---------- Forma ----------
+     La guía v2 pide rectángulos rectos, pero el club prefiere mantener las
+     cajas, botones y campos con esquinas redondeadas. El círculo sigue siendo
+     la forma del sistema gráfico (portadas, bandas). */
   --radius-xl: 28px;
   --radius-lg: 20px;
   --radius-md: 14px;
+  --radius-circle: 999px;
+
+  --shadow-soft: 0 16px 40px rgba(var(--color-noche-rgb), 0.08);
   --container-width: 1180px;
 
   /* ---------- Tipografía ----------
-     Dos voces: Anton grita los titulares, Space Grotesk lo explica todo.
-     Anton solo tiene un peso (400): poner font-weight:900 encima no engorda
-     nada, y el tracking negativo que pedía Inter aquí aprieta de más. */
-  --font-display: "Anton", "Space Grotesk", sans-serif;
-  --font-body: "Space Grotesk", "Inter", sans-serif;
+     Anton grita los titulares: un único peso (400), mayúsculas, ≥24 px, nunca
+     un párrafo. Inter sostiene todo lo demás — cuerpo 400–700 e interlineado
+     1.5–1.6; las etiquetas van en Inter 500, mayúsculas y con tracking amplio.
+     Ambas gratuitas y en Google Fonts. */
+  --font-display: "Anton", "Arial Narrow", "Oswald", sans-serif;
+  --font-body: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  /* Anton va en mayúsculas por todo el sitio; condensada y en caja alta pide
+     un pelo de aire para no empastarse (la guía usa +0.01 en subtítulos). */
   --tracking-display: 0.01em;
-  --leading-display: 1.02;
+  --leading-display: 0.96;
   --leading-body: 1.55;
+  --tracking-label: 0.14em;       /* Etiqueta: Inter 500, 11–13 px, MAYÚS */
 
   /* Movimiento. Las curvas de fábrica (`ease`) son demasiado flojas para
-     movimiento deliberado; estas son las que usa el resto del proyecto
-     (ver `--salida` en demo/src/index.css). */
+     movimiento deliberado; estas son las que usa el resto del proyecto. */
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
   --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
 
@@ -93,4 +104,27 @@
   --dur-press: 160ms;
   --dur-fast: 150ms;
   --dur-menu: 180ms;
+
+  /* ================================================================
+     Compat v1 → v2. Los nombres viejos siguen resolviendo mientras se
+     hace el barrido hoja por hoja; se irán borrando a medida que cada
+     archivo pase a los nombres nuevos. `acero` desaparece de la paleta:
+     sus usos (Tech, superficies frías, divisores) reparten entre azul y
+     papel hueso.
+     ================================================================ */
+  --color-navy: var(--color-noche);
+  --color-navy-deep: #0a1720;
+  --color-navy-soft: #18374b;
+  --color-gold: var(--color-chispa);
+  --color-gold-soft: #f8d18f;
+  --color-orange: var(--color-impulso);
+  --color-orange-dark: #b95208;
+  --color-steel: var(--color-azul-claro);
+  --color-steel-light: var(--color-azul-claro);
+  --color-steel-soft: color-mix(in srgb, var(--color-azul) 10%, #ffffff);
+  --color-steel-tint: color-mix(in srgb, var(--color-azul) 22%, #ffffff);
+  --color-paper: var(--color-papel);
+  --color-paper-line: var(--color-papel-hueso);
+  --color-slate: #46545c;
+  --gradient-cta: var(--gradient-calor);
 }

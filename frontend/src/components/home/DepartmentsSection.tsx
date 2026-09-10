@@ -1,3 +1,5 @@
+import { CalendarDays, Code2, Megaphone, type LucideIcon } from "lucide-react";
+
 import { useTranslation } from "../../i18n/translations";
 
 type Bilingual = { es: string; en: string };
@@ -5,7 +7,7 @@ type Bilingual = { es: string; en: string };
 type Department = {
   /** Cada departamento tiene su color en la guía de marca (ver tokens.css). */
   depto: "tech" | "marketing" | "eventos";
-  icon: string;
+  Icon: LucideIcon;
   title: Bilingual;
   lines: [Bilingual, Bilingual, Bilingual];
 };
@@ -13,7 +15,7 @@ type Department = {
 const DEPARTMENTS: Department[] = [
   {
     depto: "tech",
-    icon: "💻",
+    Icon: Code2,
     title: { es: "Tech/Ingeniería", en: "Tech/Engineering" },
     lines: [
       {
@@ -32,7 +34,7 @@ const DEPARTMENTS: Department[] = [
   },
   {
     depto: "marketing",
-    icon: "📣",
+    Icon: Megaphone,
     title: { es: "Marketing/Comms", en: "Marketing/Comms" },
     lines: [
       {
@@ -51,7 +53,7 @@ const DEPARTMENTS: Department[] = [
   },
   {
     depto: "eventos",
-    icon: "🎤",
+    Icon: CalendarDays,
     title: { es: "Eventos/Logística", en: "Events/Logistics" },
     lines: [
       {
@@ -84,7 +86,7 @@ export function DepartmentsSection() {
           {DEPARTMENTS.map((dept) => (
             <article className="lp-department-card" data-depto={dept.depto} key={dept.title.es}>
               <span className="lp-department-icon" aria-hidden="true">
-                {dept.icon}
+                <dept.Icon size={24} strokeWidth={1.75} />
               </span>
               <h3>{dept.title[language]}</h3>
               <ul className="lp-department-lines">
