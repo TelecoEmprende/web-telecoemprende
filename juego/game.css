@@ -324,10 +324,10 @@ body {
   }
 }
 
-.dialogo-salir {
+.dialogo-salir,
+.salir-web {
   position: fixed;
   top: 14px;
-  right: 14px;
   background: rgba(17, 37, 50, 0.7);
   color: var(--color-cream);
   border: 1px solid rgba(255, 255, 255, 0.3);
@@ -335,6 +335,17 @@ body {
   padding: 8px 12px;
   font-size: 0.75rem;
   cursor: pointer;
+}
+
+.dialogo-salir {
+  right: 14px;
+}
+
+/* Por encima del diálogo (z-index del .screen) para no quedar tapado. */
+.salir-web {
+  left: 14px;
+  z-index: 10;
+  text-decoration: none;
 }
 
 .dialogo-cierre {

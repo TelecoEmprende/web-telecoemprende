@@ -142,6 +142,7 @@ export const PERSONAJES = [
     cierre:
       "Si lo tuyo es contar y vender lo que otros construyen, encajas en el departamento de Marketing/Comms del club.",
     departamentos: ["marketing"],
+    // Entre Edificio C y el Hall: bien separado de la plaza central.
     posicion: { col: 7, row: 4 },
   },
   {
@@ -191,7 +192,8 @@ export const PERSONAJES = [
     cierre:
       "Ningún proyecto me convence sin producto, sin comunicación y sin que alguien lo ejecute. Mi camino no apunta a un único departamento: explora los tres y encuentra el tuyo.",
     departamentos: ["tech", "marketing", "eventos"],
-    posicion: { col: 15, row: 8 },
+    // Junto al parking: llega en coche, lejos del resto (inversor de paso).
+    posicion: { col: 20, row: 4 },
   },
   {
     id: "enrique-garcia-moreno",
@@ -289,7 +291,8 @@ export const PERSONAJES = [
     cierre:
       "Si te imaginas construyendo la tecnología que hace posible un producto usado por millones de personas, tu sitio está en el departamento de Tech/Ingeniería.",
     departamentos: ["tech"],
-    posicion: { col: 19, row: 7 },
+    // Bajo CEMDATIC/Biblioteca, separado de Enrique en la plaza.
+    posicion: { col: 16, row: 8 },
   },
   {
     id: "rebeca-minguela",
@@ -435,6 +438,7 @@ export const PERSONAJES = [
     cierre:
       "Hoy construyo tecnología que ayuda a la gente. Si te imaginas usando la ingeniería para resolver problemas que importan, el departamento de Tech/Ingeniería es tu sitio.",
     departamentos: ["tech"],
-    posicion: { col: 4, row: 9 },
+    // Junto a la pista de deportes, en el extremo opuesto del mapa.
+    posicion: { col: 4, row: 10 },
   },
 ];
