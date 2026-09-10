@@ -39,9 +39,12 @@
   --gradient-calor: linear-gradient(135deg, var(--color-chispa), var(--color-impulso));
   --gradient-contacto: linear-gradient(135deg, var(--color-impulso), var(--color-azul));
 
-  /* ---------- Alias de rol (lo que usan las hojas) ---------- */
-  --color-primary: var(--color-impulso);
-  --color-primary-dark: #b95208;
+  /* ---------- Alias de rol (lo que usan las hojas) ----------
+     --color-primary se usa sobre todo como color de TEXTO/acento sobre fondo
+     claro, y el Impulso pleno ahí se queda en 3.1:1. Apunta al naranja oscuro
+     de la marca (~5.7:1); los rellenos de botón lo fijan aparte. */
+  --color-primary: var(--color-orange-dark);
+  --color-primary-dark: #a8490a;
   --color-surface: #ffffff;
   --color-surface-soft: rgba(255, 255, 255, 0.86);
   --color-background: var(--color-papel);

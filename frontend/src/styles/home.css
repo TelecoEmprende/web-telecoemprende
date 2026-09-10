@@ -289,7 +289,7 @@
 }
 
 .meta-item-react svg {
-  color: var(--color-impulso);
+  color: var(--color-primary);
   flex-shrink: 0;
 }
 
@@ -517,7 +517,7 @@
   height: 42px;
   border-radius: 14px;
   background: color-mix(in srgb, var(--color-impulso) 14%, transparent);
-  color: var(--color-impulso);
+  color: var(--color-primary);
   flex-shrink: 0;
 }
 
@@ -585,7 +585,7 @@
 }
 
 .trust-label-react svg {
-  color: var(--color-impulso);
+  color: var(--color-primary);
 }
 
 .trust-item-react strong {

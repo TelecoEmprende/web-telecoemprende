@@ -578,7 +578,7 @@
 
 .lp-team-alias {
   margin-left: 9px;
-  color: var(--color-orange);
+  color: var(--color-primary);
   font-size: 0.94em;
 }
 
@@ -872,7 +872,7 @@
   margin-bottom: 16px;
   border-radius: 16px;
   background: color-mix(in srgb, var(--color-impulso) 14%, transparent);
-  color: var(--color-impulso);
+  color: var(--color-primary);
 }
 
 .lp-requirement-card h3 {
@@ -1138,7 +1138,7 @@
 .lp-thankyou-point-icon {
   grid-area: icon;
   display: flex;
-  color: var(--color-impulso);
+  color: var(--color-primary);
 }
 
 .lp-thankyou-point strong {

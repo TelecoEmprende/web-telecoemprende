@@ -1665,7 +1665,7 @@ button.mkt-evento-react:hover {
 }
 
 .mkt-semana-dia-hoy-react .mkt-semana-dia-cabecera-react {
-  color: var(--color-orange);
+  color: var(--color-primary);
 }
 
 .mkt-semana-dia-numero-react {
@@ -2627,7 +2627,7 @@ button.mkt-evento-react {
 }
 
 .mkt-semana-dia-hoy-react .mkt-semana-numero-react {
-  color: var(--color-orange);
+  color: var(--color-primary);
 }
 
 .mkt-semana-puntos-react {
