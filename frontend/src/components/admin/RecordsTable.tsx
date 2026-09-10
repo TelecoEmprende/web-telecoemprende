@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { Check, Loader2, Pencil, Trash2, X } from "lucide-react";
+
 import { updateRegistration, deleteRegistration, updateRegistrationEstado } from "../../api/admin";
 import { UPM_SCHOOLS } from "../../data/upmSchools";
 import type { Estado, Registro } from "../../types/admin";
@@ -76,7 +78,9 @@ function EstadoBadge({ registro }: { registro: Registro }) {
       className={`inline-flex items-center rounded-full px-3 py-[5px] text-[0.8rem] font-bold whitespace-nowrap ${ESTADO_BADGE_CLASS[registro.estado]}`}
     >
       {ESTADO_BADGE_LABELS[registro.estado]}
-      {registro.estado !== "pendiente" && registro.notificado ? " ✓" : ""}
+      {registro.estado !== "pendiente" && registro.notificado ? (
+        <Check size={13} strokeWidth={2.5} className="ml-1" aria-label="notificado" />
+      ) : null}
     </span>
   );
 }
@@ -357,7 +361,11 @@ export function RecordsTable({ registros, onUpdate, onDelete, onEstadoChange }: 
                       disabled={saving}
                       onClick={() => void saveEdit()}
                     >
-                      {saving ? "…" : "✓"}
+                      {saving ? (
+                        <Loader2 size={16} className="animate-spin" />
+                      ) : (
+                        <Check size={16} strokeWidth={2.25} />
+                      )}
                     </Button>
                     <Button
                       variant="ghost"
@@ -367,7 +375,7 @@ export function RecordsTable({ registros, onUpdate, onDelete, onEstadoChange }: 
                       disabled={saving}
                       onClick={cancelEdit}
                     >
-                      ✕
+                      <X size={16} strokeWidth={2.25} />
                     </Button>
                   </td>
                 </>
@@ -432,7 +440,7 @@ export function RecordsTable({ registros, onUpdate, onDelete, onEstadoChange }: 
                       title="Editar"
                       onClick={() => startEdit(registro)}
                     >
-                      ✎
+                      <Pencil size={15} strokeWidth={1.75} />
                     </Button>
                     <Button
                       variant="ghost"
@@ -441,7 +449,7 @@ export function RecordsTable({ registros, onUpdate, onDelete, onEstadoChange }: 
                       title="Eliminar"
                       onClick={() => setConfirmDeleteId(registro.id)}
                     >
-                      🗑
+                      <Trash2 size={15} strokeWidth={1.75} />
                     </Button>
                   </td>
                 </>

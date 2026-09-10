@@ -1,7 +1,7 @@
 /* ============================================================
    Landing TelecoEmprende 2026/27
-   Paleta: tinta · ámbar · naranja · acero. Los valores están en tokens.css;
-   aquí no se escribe ningún color a mano.
+   Paleta v2: Azul TE · Impulso · Chispa · Noche. Los valores están en
+   tokens.css; aquí no se escribe ningún color a mano.
    ============================================================ */
 
 .lp-shell {
@@ -28,10 +28,10 @@
   position: sticky;
   top: 0;
   z-index: 50;
-  background: rgba(17, 37, 50, 0.88);
+  background: rgba(var(--color-noche-rgb), 0.88);
   backdrop-filter: blur(14px) saturate(140%);
   -webkit-backdrop-filter: blur(14px) saturate(140%);
-  border-bottom: 1px solid rgba(136, 165, 183, 0.16);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .lp-nav-inner {
@@ -59,10 +59,16 @@
 
 .lp-nav-name {
   font-family: var(--font-display);
+  text-transform: uppercase;
   font-size: 1.28rem;
   font-weight: 400;
   letter-spacing: var(--tracking-display);
   color: var(--color-paper);
+  /* Anton hereda el interlineado del cuerpo y con su caja de glifos alta
+     queda por debajo del centro junto al logo. */
+  line-height: 1;
+  display: inline-block;
+  transform: translateY(-0.045em);
 }
 
 .lp-nav-name span {
@@ -109,12 +115,11 @@
   min-height: 42px;
   padding: 0 20px;
   border-radius: 999px;
-  background: var(--color-gold);
-  color: var(--color-navy);
+  background: var(--color-orange-dark);
+  color: var(--color-text-on-dark);
   font-weight: 700;
   font-size: 0.94rem;
-  box-shadow: 0 8px 22px rgba(244, 176, 68, 0.28);
-  transition: transform var(--dur-press) ease, filter var(--dur-press) ease;
+  transition: transform var(--dur-press) ease, background var(--dur-press) ease;
   flex-shrink: 0;
 }
 
@@ -123,7 +128,7 @@
 @media (hover: hover) and (pointer: fine) {
   .lp-nav-cta:hover {
     transform: translateY(-1px);
-    filter: brightness(1.05);
+    background: var(--color-impulso);
   }
 }
 
@@ -157,7 +162,6 @@
   width: calc(50% - 3px);
   border-radius: 999px;
   background: var(--color-gold);
-  box-shadow: 0 6px 16px rgba(244, 176, 68, 0.28);
   transition: transform 0.22s cubic-bezier(0.65, 0, 0.35, 1);
 }
 
@@ -235,37 +239,34 @@
 
 /* ---------- Hero ---------- */
 
+/* v2: un plano Azul TE y un único círculo sólido en Impulso que entra desde un
+   borde. Sin degradados detrás del texto, sin blur. */
 .lp-hero {
   position: relative;
   overflow: hidden;
-  background:
-    radial-gradient(circle at 12% -10%, rgba(136, 165, 183, 0.14), transparent 42%),
-    linear-gradient(165deg, var(--color-navy) 0%, var(--color-navy-deep) 100%);
-  color: var(--color-paper);
+  background: var(--color-azul);
+  color: var(--color-text-on-dark);
   padding: 92px 0 108px;
 }
 
 .lp-hero-glow {
   position: absolute;
-  border-radius: 999px;
-  filter: blur(70px);
+  border-radius: 50%;
   pointer-events: none;
 }
 
+/* El círculo del sistema: sólido, entrando por la esquina inferior derecha. */
 .lp-hero-glow-gold {
-  width: 420px;
-  height: 420px;
-  top: -160px;
-  right: -80px;
-  background: radial-gradient(circle, rgba(244, 176, 68, 0.22), transparent 70%);
+  width: min(46vw, 520px);
+  height: min(46vw, 520px);
+  bottom: -34%;
+  right: -8%;
+  background: var(--color-impulso);
 }
 
+/* v2 admite un solo círculo por pieza. */
 .lp-hero-glow-orange {
-  width: 380px;
-  height: 380px;
-  bottom: -180px;
-  left: -120px;
-  background: radial-gradient(circle, rgba(224, 104, 14, 0.2), transparent 70%);
+  display: none;
 }
 
 .lp-hero-grid {
@@ -286,9 +287,9 @@
   margin: 0 0 22px;
   padding: 9px 16px;
   border-radius: 999px;
-  background: rgba(244, 176, 68, 0.12);
-  border: 1px solid rgba(244, 176, 68, 0.3);
-  color: var(--color-gold);
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  color: #fff;
   font-size: 0.82rem;
   font-weight: 700;
   letter-spacing: 0.09em;
@@ -300,21 +301,21 @@
   height: 8px;
   border-radius: 999px;
   background: var(--color-gold);
-  box-shadow: 0 0 0 0 rgba(244, 176, 68, 0.5);
+  box-shadow: 0 0 0 0 rgba(var(--color-chispa-rgb), 0.5);
   animation: lp-pulse 2.2s ease-out infinite;
 }
 
 @keyframes lp-pulse {
   0% {
-    box-shadow: 0 0 0 0 rgba(244, 176, 68, 0.5);
+    box-shadow: 0 0 0 0 rgba(var(--color-chispa-rgb), 0.5);
   }
 
   70% {
-    box-shadow: 0 0 0 9px rgba(244, 176, 68, 0);
+    box-shadow: 0 0 0 9px rgba(var(--color-chispa-rgb), 0);
   }
 
   100% {
-    box-shadow: 0 0 0 0 rgba(244, 176, 68, 0);
+    box-shadow: 0 0 0 0 rgba(var(--color-chispa-rgb), 0);
   }
 }
 
@@ -329,10 +330,12 @@
 .lp-hero h1 {
   margin: 0 0 22px;
   font-family: var(--font-display);
-  font-size: clamp(2.7rem, 5.4vw, 4.4rem);
+  text-transform: uppercase;
+  /* Display: Anton condensada aguanta bien el tamaño; techo ~5.5rem (88px). */
+  font-size: clamp(2.9rem, 6.4vw, 5.5rem);
   font-weight: 400;
-  line-height: 1.03;
-  letter-spacing: var(--tracking-display);
+  line-height: 0.98;
+  letter-spacing: 0.005em;
   color: var(--color-paper);
 }
 
@@ -347,7 +350,7 @@
   margin: 0 auto 34px;
   max-width: 56ch;
   font-size: 1.13rem;
-  line-height: 1.76;
+  line-height: 1.62;
   color: var(--color-text-on-dark-muted);
 }
 
@@ -375,16 +378,18 @@
     border-color var(--dur-press) ease, color var(--dur-press) ease;
 }
 
+/* v2: botón plano en naranja, sin degradado ni sombra. El Impulso puro
+   #e0680e con texto blanco se queda en 3.4:1; se usa el naranja oscuro de la
+   marca (4.9:1) y el hover lo lleva al Impulso pleno. */
 .lp-btn-gold {
-  background: var(--gradient-cta);
-  color: var(--color-navy);
-  box-shadow: 0 18px 40px rgba(224, 104, 14, 0.32);
+  background: var(--color-orange-dark);
+  color: var(--color-text-on-dark);
 }
 
 @media (hover: hover) and (pointer: fine) {
   .lp-btn-gold:hover {
     transform: translateY(-2px);
-    filter: brightness(1.04);
+    background: var(--color-impulso);
   }
 }
 
@@ -394,13 +399,13 @@
 
 .lp-btn-ghost {
   background: transparent;
-  border: 1px solid rgba(136, 165, 183, 0.42);
-  color: var(--color-text-on-dark-muted);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  color: var(--color-text-on-dark);
 }
 
 .lp-btn-ghost:hover {
-  border-color: var(--color-gold);
-  color: var(--color-gold);
+  border-color: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .lp-hero-chips {
@@ -414,13 +419,21 @@
 }
 
 .lp-hero-chips li {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   padding: 9px 16px;
   border-radius: 999px;
-  background: rgba(136, 165, 183, 0.12);
-  border: 1px solid rgba(136, 165, 183, 0.26);
-  color: var(--color-text-on-dark-muted);
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: #fff;
   font-weight: 600;
   font-size: 0.92rem;
+}
+
+.lp-hero-chips svg {
+  flex-shrink: 0;
+  opacity: 0.85;
 }
 
 /* ---------- Elementos comunes de sección ---------- */
@@ -440,19 +453,23 @@
   text-transform: uppercase;
 }
 
+/* Sobre azul, la Chispa como texto pequeño no llega a 4.5:1; el rótulo pasa a
+   blanco sobre un chip translúcido. */
 .lp-eyebrow-dark {
-  background: rgba(244, 176, 68, 0.13);
-  color: var(--color-gold);
-  border: 1px solid rgba(244, 176, 68, 0.28);
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.22);
 }
 
 .lp-heading {
   margin: 20px 0 16px;
-  max-width: 26ch;
+  max-width: 28ch;
   font-family: var(--font-display);
-  font-size: clamp(1.95rem, 3.6vw, 2.85rem);
+  text-transform: uppercase;
+  /* Titular: un escalón claro por debajo del Display del hero. */
+  font-size: clamp(2.15rem, 4vw, 3.1rem);
   font-weight: 400;
-  line-height: 1.12;
+  line-height: 1.04;
   letter-spacing: var(--tracking-display);
   color: var(--color-navy);
 }
@@ -463,9 +480,9 @@
 
 .lp-section-lead {
   margin: 0;
-  max-width: 68ch;
+  max-width: 66ch;
   font-size: 1.08rem;
-  line-height: 1.75;
+  line-height: 1.62;
   color: var(--color-text-muted);
 }
 
@@ -474,7 +491,7 @@
 }
 
 .lp-reveal-word {
-  color: rgba(17, 37, 50, 0.3);
+  color: rgba(var(--color-noche-rgb), 0.3);
   transition: color 0.4s ease;
 }
 
@@ -560,7 +577,7 @@
 
 .lp-team-alias {
   margin-left: 9px;
-  color: var(--color-orange);
+  color: var(--color-primary);
   font-size: 0.94em;
 }
 
@@ -577,7 +594,7 @@
   display: inline-block;
   padding: 3px 10px;
   border-radius: 999px;
-  background: rgba(224, 104, 14, 0.11);
+  background: rgba(var(--color-impulso-rgb), 0.11);
   color: var(--color-orange-dark);
   font-size: 0.76rem;
   font-weight: 700;
@@ -672,7 +689,7 @@
 
 .lp-team-dot.is-active {
   transform: scaleX(2.75);
-  background: linear-gradient(90deg, var(--color-gold), var(--color-orange));
+  background: var(--color-impulso);
 }
 
 .lp-team-dot:focus-visible {
@@ -682,20 +699,31 @@
 
 /* ---------- Eventos ---------- */
 
+/* v2: Eventos comparte el plano Azul TE del hero para dar columna vertebral a
+   la página, con su propio círculo Impulso entrando por la esquina superior
+   derecha (el titular vive arriba a la izquierda, el círculo no lo pisa). */
 .lp-events {
   position: relative;
+  overflow: hidden;
   padding: 96px 0 104px;
-  background:
-    radial-gradient(circle at 88% 0%, rgba(244, 176, 68, 0.08), transparent 38%),
-    linear-gradient(175deg, var(--color-navy) 0%, var(--color-navy-deep) 100%);
+  background: var(--color-azul);
 }
 
 .lp-events::before {
   content: "";
   position: absolute;
-  inset: 0 0 auto;
-  height: 3px;
-  background: linear-gradient(90deg, var(--color-gold), var(--color-orange), transparent 70%);
+  z-index: 0;
+  width: min(26vw, 300px);
+  height: min(26vw, 300px);
+  top: -12%;
+  right: -7%;
+  border-radius: 50%;
+  background: var(--color-impulso);
+}
+
+.lp-events > .lp-container {
+  position: relative;
+  z-index: 1;
 }
 
 .lp-events-grid {
@@ -708,8 +736,8 @@
 .lp-event-card {
   display: flex;
   flex-direction: column;
-  background: rgba(136, 165, 183, 0.09);
-  border: 1px solid rgba(136, 165, 183, 0.2);
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.16);
   border-radius: 24px;
   overflow: hidden;
   transition: transform 0.18s ease, border-color 0.18s ease;
@@ -718,7 +746,7 @@
 @media (hover: hover) and (pointer: fine) {
   .lp-event-card:hover {
     transform: translateY(-4px);
-    border-color: rgba(244, 176, 68, 0.45);
+    border-color: rgba(255, 255, 255, 0.4);
   }
 }
 
@@ -808,7 +836,7 @@
   height: 64px;
   object-fit: cover;
   border-radius: 10px;
-  border: 1px solid rgba(250, 247, 241, 0.14);
+  border: 1px solid rgba(var(--color-papel-rgb), 0.14);
 }
 
 /* ---------- Inscripción (restyle del formulario compartido) ---------- */
@@ -843,8 +871,8 @@
   height: 52px;
   margin-bottom: 16px;
   border-radius: 16px;
-  background: color-mix(in srgb, var(--depto) 18%, transparent);
-  font-size: 1.5rem;
+  background: color-mix(in srgb, var(--color-impulso) 14%, transparent);
+  color: var(--color-primary);
 }
 
 .lp-requirement-card h3 {
@@ -902,10 +930,10 @@
   border-radius: 24px;
   box-shadow: var(--shadow-soft);
   overflow: hidden;
-  /* Un color por departamento, como pide la guía: acero para Tech, naranja
-     para Marketing, ámbar para Eventos. El naranja queda de reserva. */
-  --depto: var(--color-orange);
-  border-top: 3px solid var(--depto);
+  /* Un color por departamento: Tech = Azul, Marketing = Impulso, Eventos =
+     Noche. Se expresa en el icono y en los topos de la lista, no con una
+     franja de borde. */
+  --depto: var(--color-impulso);
 }
 
 .lp-department-card[data-depto="tech"] {
@@ -928,8 +956,8 @@
   height: 52px;
   margin-bottom: 16px;
   border-radius: 16px;
-  background: rgba(224, 104, 14, 0.11);
-  font-size: 1.5rem;
+  background: color-mix(in srgb, var(--depto) 16%, transparent);
+  color: var(--depto);
 }
 
 .lp-department-card h3 {
@@ -983,6 +1011,7 @@
 .lp-legal-container h2 {
   margin-top: 36px;
   font-family: var(--font-display);
+  text-transform: uppercase;
   font-size: 1.3rem;
   color: var(--color-navy);
 }
@@ -1026,6 +1055,7 @@
 .lp-error-code {
   display: block;
   font-family: var(--font-display);
+  text-transform: uppercase;
   font-size: clamp(3.2rem, 10vw, 5.5rem);
   font-weight: 400;
   line-height: 1;
@@ -1042,8 +1072,8 @@
   margin-bottom: 26px;
   padding: 22px 24px;
   border-radius: 22px;
-  background: linear-gradient(135deg, rgba(224, 104, 14, 0.08), rgba(244, 176, 68, 0.14));
-  border: 1px solid rgba(244, 176, 68, 0.3);
+  background: linear-gradient(135deg, rgba(var(--color-impulso-rgb), 0.08), rgba(var(--color-chispa-rgb), 0.14));
+  border: 1px solid rgba(var(--color-chispa-rgb), 0.3);
 }
 
 .lp-thankyou-note strong {
@@ -1068,13 +1098,20 @@
 }
 
 .lp-thankyou-meta-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
   padding: 9px 16px;
   border-radius: 999px;
-  background: rgba(136, 165, 183, 0.12);
-  border: 1px solid rgba(136, 165, 183, 0.28);
+  background: rgba(var(--color-azul-rgb), 0.12);
+  border: 1px solid rgba(var(--color-azul-rgb), 0.28);
   color: var(--color-navy-soft);
   font-weight: 700;
   font-size: 0.92rem;
+}
+
+.lp-thankyou-meta-item svg {
+  color: var(--color-azul);
 }
 
 .lp-thankyou-points {
@@ -1085,13 +1122,27 @@
 }
 
 .lp-thankyou-point {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-areas:
+    "icon title"
+    "icon body";
+  column-gap: 12px;
+  align-items: start;
   padding: 20px 20px 18px;
   border-radius: 20px;
-  background: rgba(136, 165, 183, 0.07);
+  background: rgba(var(--color-azul-rgb), 0.07);
   border: 1px solid var(--color-border);
 }
 
+.lp-thankyou-point-icon {
+  grid-area: icon;
+  display: flex;
+  color: var(--color-primary);
+}
+
 .lp-thankyou-point strong {
+  grid-area: title;
   display: block;
   margin-bottom: 6px;
   font-size: 0.98rem;
@@ -1099,7 +1150,8 @@
   color: var(--color-navy);
 }
 
-.lp-thankyou-point span {
+.lp-thankyou-point span:last-child {
+  grid-area: body;
   display: block;
   color: var(--color-text-muted);
   line-height: 1.55;
@@ -1123,15 +1175,14 @@
 }
 
 .lp-btn-whatsapp {
-  background: var(--gradient-cta);
-  color: var(--color-navy);
-  box-shadow: 0 18px 40px rgba(224, 104, 14, 0.24);
+  background: var(--color-orange-dark);
+  color: var(--color-text-on-dark);
 }
 
 @media (hover: hover) and (pointer: fine) {
   .lp-btn-whatsapp:hover {
     transform: translateY(-2px);
-    filter: brightness(1.04);
+    background: var(--color-impulso);
   }
 }
 
@@ -1158,7 +1209,7 @@
 }
 
 .section-eyebrow-react {
-  background: rgba(224, 104, 14, 0.11);
+  background: rgba(var(--color-impulso-rgb), 0.11);
   color: var(--color-orange-dark);
   letter-spacing: 0.09em;
 }
@@ -1166,6 +1217,7 @@
 .section-copy-card-react h2,
 .panel-card-react h2 {
   font-family: var(--font-display);
+  text-transform: uppercase;
   letter-spacing: var(--tracking-display);
 }
 
@@ -1177,7 +1229,7 @@
 .field-group-react input:focus,
 .field-group-react select:focus {
   border-color: var(--color-gold);
-  box-shadow: 0 0 0 4px rgba(224, 104, 14, 0.12);
+  box-shadow: 0 0 0 4px rgba(var(--color-impulso-rgb), 0.12);
 }
 
 .field-group-react select {
@@ -1237,16 +1289,21 @@
   background: var(--color-gold);
   color: var(--color-navy);
   font-weight: 700;
-  box-shadow: 0 6px 14px rgba(224, 104, 14, 0.24);
 }
 
 .submit-btn-react,
 .primary-btn-react,
 .panel-btn-react,
 .highlight-btn-react {
-  background: var(--gradient-cta);
-  color: var(--color-navy);
-  box-shadow: 0 18px 40px rgba(224, 104, 14, 0.26);
+  background: var(--color-orange-dark);
+  color: var(--color-text-on-dark);
+}
+
+.submit-btn-react:hover,
+.primary-btn-react:hover,
+.panel-btn-react:hover,
+.highlight-btn-react:hover {
+  background: var(--color-impulso);
 }
 
 .checkbox-row-react input {
@@ -1259,7 +1316,7 @@
   background: var(--color-navy-deep);
   color: var(--color-text-on-dark-muted);
   padding: 56px 0;
-  border-top: 1px solid rgba(136, 165, 183, 0.14);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .lp-footer-inner {
@@ -1288,7 +1345,9 @@
 .lp-footer-brand strong {
   display: block;
   font-family: var(--font-display);
+  text-transform: uppercase;
   font-size: 1.18rem;
+  line-height: 1;
   letter-spacing: var(--tracking-display);
   color: var(--color-paper);
 }
@@ -1340,13 +1399,13 @@
   width: 38px;
   height: 38px;
   border-radius: 999px;
-  background: rgba(136, 165, 183, 0.12);
+  background: rgba(255, 255, 255, 0.08);
   color: var(--color-text-on-dark-muted);
   transition: background 0.15s ease, color 0.15s ease, transform 0.15s ease;
 }
 
 .lp-footer-social a:hover {
-  background: rgba(244, 176, 68, 0.16);
+  background: rgba(var(--color-chispa-rgb), 0.16);
   color: var(--color-gold);
   transform: translateY(-2px);
 }
@@ -1424,8 +1483,8 @@
     margin-top: 1px;
     padding: 12px 18px 18px;
     background: var(--color-navy);
-    border-bottom: 1px solid rgba(136, 165, 183, 0.16);
-    box-shadow: 0 20px 40px rgba(17, 37, 50, 0.35);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 20px 40px rgba(var(--color-noche-rgb), 0.35);
     opacity: 0;
     transform: translateY(-8px);
     transition:
@@ -1454,7 +1513,7 @@
   }
 
   .lp-nav-links a:hover {
-    background: rgba(244, 176, 68, 0.1);
+    background: rgba(var(--color-chispa-rgb), 0.1);
   }
 
   .lp-hero {

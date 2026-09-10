@@ -47,9 +47,11 @@
      es la única pista de dónde estás. */
   --sidebar: var(--color-navy);
   --sidebar-foreground: var(--color-cream);
-  --sidebar-primary: var(--color-orange);
+  /* Naranja oscuro de la marca en los rellenos (el Impulso pleno con texto
+     blanco se queda en 3.4:1); el anillo de foco sí va en Impulso. */
+  --sidebar-primary: var(--color-orange-dark);
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: var(--color-orange);
+  --sidebar-accent: var(--color-orange-dark);
   --sidebar-accent-foreground: #ffffff;
   --sidebar-border: var(--color-navy-soft);
   --sidebar-ring: var(--color-orange);
@@ -276,7 +278,7 @@ span.mkt-dia-numero-react:hover {
    los colores de la leyenda de Marketing: naranja de marca, el mismo tono que
    usa su chip de "en revisión". */
 .equipo-evento-chip-react {
-  background: rgba(224, 104, 14, 0.16);
+  background: rgba(var(--color-impulso-rgb), 0.16);
   color: var(--color-orange-dark);
 }
 
@@ -349,8 +351,8 @@ span.mkt-dia-numero-react:hover {
   --card-foreground: var(--color-navy);
   --muted-foreground: var(--color-text-muted);
   --border: var(--color-border);
-  --input: rgba(17, 37, 50, 0.18);
-  --primary: var(--color-orange);
+  --input: rgba(var(--color-noche-rgb), 0.18);
+  --primary: var(--color-orange-dark);
   --primary-foreground: #ffffff;
   --destructive: var(--color-error-text);
   --ring: var(--color-orange);
@@ -383,7 +385,7 @@ span.mkt-dia-numero-react:hover {
      `.shadcn-scope *` le gana a `border-input` y dejaba el borde en el crema
      de las tarjetas, invisible sobre el blanco del campo. Sin capa, esta regla
      gana a las dos. */
-  border-color: rgba(17, 37, 50, 0.18);
+  border-color: rgba(var(--color-noche-rgb), 0.18);
   background: var(--color-surface);
   /* `h-8` son 32px: por debajo del objetivo táctil de 44px que respeta el
      resto del proyecto (ver `.mkt-btn-mini-react`), y en un formulario que se
@@ -494,7 +496,7 @@ span.mkt-dia-numero-react:hover {
 .equipo-shell-react .header-inner-react {
   background: linear-gradient(180deg, var(--color-navy-soft), var(--color-navy));
   border-color: rgba(255, 255, 255, 0.12);
-  box-shadow: 0 10px 26px rgba(17, 37, 50, 0.35);
+  box-shadow: 0 10px 26px rgba(var(--color-noche-rgb), 0.35);
 }
 
 .equipo-shell-react .header-inner-react::before {

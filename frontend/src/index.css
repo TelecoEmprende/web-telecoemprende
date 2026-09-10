@@ -12,7 +12,7 @@
 
 @theme inline {
     --font-heading: 'Anton', sans-serif;
-    --font-sans: 'Space Grotesk', sans-serif;
+    --font-sans: 'Inter', system-ui, sans-serif;
     --color-sidebar-ring: var(--sidebar-ring);
     --color-sidebar-border: var(--sidebar-border);
     --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -153,7 +153,10 @@
     --radius-md: calc(var(--radius) * 0.8);
     --radius-xl: calc(var(--radius) * 1.4);
 
-    --primary: var(--color-orange);
+    /* Impulso pleno con texto claro se queda en 3.4:1; el relleno de los
+       botones usa el naranja oscuro de la marca (4.7:1). El anillo de foco sí
+       va en Impulso pleno. */
+    --primary: var(--color-orange-dark);
     --primary-foreground: var(--color-cream);
     --ring: var(--color-orange);
     /* Los neutros de fábrica de shadcn son grises fríos; la marca los tiene

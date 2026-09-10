@@ -27,7 +27,7 @@
   align-items: center;
   padding: 8px 12px;
   border-radius: 999px;
-  background: rgba(224, 104, 14, 0.1);
+  background: rgba(var(--color-impulso-rgb), 0.1);
   color: var(--color-primary);
   font-size: 0.8rem;
   font-weight: 700;
@@ -75,7 +75,7 @@
   height: 220px;
   top: 120px;
   left: -50px;
-  background: radial-gradient(circle, rgba(244, 176, 68, 0.26), transparent 68%);
+  background: radial-gradient(circle, rgba(var(--color-chispa-rgb), 0.26), transparent 68%);
 }
 
 .particle-background-glow-right {
@@ -83,7 +83,7 @@
   height: 260px;
   top: 240px;
   right: -80px;
-  background: radial-gradient(circle, rgba(224, 104, 14, 0.18), transparent 70%);
+  background: radial-gradient(circle, rgba(var(--color-impulso-rgb), 0.18), transparent 70%);
 }
 
 .site-header-react {
@@ -98,10 +98,10 @@
   gap: 18px;
   background: rgba(255, 255, 255, 0.72);
   backdrop-filter: blur(8px);
-  border: 1px solid rgba(226, 221, 208, 0.9);
+  border: 1px solid rgba(var(--color-papel-hueso-rgb), 0.9);
   border-radius: 24px;
   padding: 16px 20px;
-  box-shadow: 0 10px 30px rgba(17, 37, 50, 0.04);
+  box-shadow: 0 10px 30px rgba(var(--color-noche-rgb), 0.04);
 }
 
 .brand-react {
@@ -120,12 +120,12 @@
 
 .brand-name-react {
   font-family: var(--font-display);
+  text-transform: uppercase;
   font-size: 1.6rem;
   font-weight: 400;
   color: var(--color-primary);
   letter-spacing: var(--tracking-display);
-  line-height: 0.98;
-  text-transform: none;
+  line-height: 1;
 }
 
 .header-nav-react {
@@ -152,8 +152,8 @@
   padding: 4px;
   gap: 4px;
   border-radius: 999px;
-  background: rgba(226, 221, 208, 0.9);
-  border: 1px solid rgba(226, 221, 208, 0.95);
+  background: rgba(var(--color-papel-hueso-rgb), 0.9);
+  border: 1px solid rgba(var(--color-papel-hueso-rgb), 0.95);
   min-width: 240px;
 }
 
@@ -164,8 +164,7 @@
   bottom: 4px;
   width: calc(50% - 4px);
   border-radius: 999px;
-  background: linear-gradient(135deg, var(--color-primary), var(--color-gold));
-  box-shadow: 0 14px 28px rgba(17, 37, 50, 0.18);
+  background: var(--color-orange-dark);
   transition: transform 0.22s ease;
 }
 
@@ -237,7 +236,7 @@
 
 .field-group-react input:focus {
   border-color: var(--color-gold);
-  box-shadow: 0 0 0 4px rgba(224, 104, 14, 0.12);
+  box-shadow: 0 0 0 4px rgba(var(--color-impulso-rgb), 0.12);
 }
 
 /* Al enviar con varios campos mal salen cuatro o cinco a la vez: entran
@@ -274,13 +273,12 @@
   min-height: 56px;
   padding: 0 22px;
   border-radius: 16px;
-  background: linear-gradient(135deg, var(--color-primary), var(--color-gold));
+  background: var(--color-orange-dark);
   color: #fff;
   font-weight: 700;
   border: 0;
-  box-shadow: 0 20px 50px rgba(17, 37, 50, 0.12);
   cursor: pointer;
-  transition: transform var(--dur-press) ease, filter var(--dur-press) ease,
+  transition: transform var(--dur-press) ease, background var(--dur-press) ease,
     opacity var(--dur-press) ease;
 }
 
@@ -319,7 +317,7 @@
     padding-top: 10px;
     padding-bottom: 12px;
     background:
-      linear-gradient(180deg, rgba(250, 247, 241, 0.94), rgba(250, 247, 241, 0.8));
+      linear-gradient(180deg, rgba(var(--color-papel-rgb), 0.94), rgba(var(--color-papel-rgb), 0.8));
     backdrop-filter: blur(16px) saturate(135%);
   }
 
@@ -336,10 +334,10 @@
     overflow: hidden;
     border-radius: 26px;
     background:
-      linear-gradient(180deg, rgba(255, 255, 255, 0.78), rgba(250, 247, 241, 0.68));
-    border: 1px solid rgba(226, 221, 208, 0.92);
+      linear-gradient(180deg, rgba(255, 255, 255, 0.78), rgba(var(--color-papel-rgb), 0.68));
+    border: 1px solid rgba(var(--color-papel-hueso-rgb), 0.92);
     box-shadow:
-      0 10px 26px rgba(17, 37, 50, 0.05),
+      0 10px 26px rgba(var(--color-noche-rgb), 0.05),
       inset 0 1px 0 rgba(255, 255, 255, 0.55);
   }
 
@@ -349,8 +347,8 @@
     inset: 0;
     pointer-events: none;
     background:
-      radial-gradient(circle at top right, rgba(244, 176, 68, 0.12), transparent 32%),
-      radial-gradient(circle at bottom left, rgba(244, 176, 68, 0.08), transparent 34%);
+      radial-gradient(circle at top right, rgba(var(--color-chispa-rgb), 0.12), transparent 32%),
+      radial-gradient(circle at bottom left, rgba(var(--color-chispa-rgb), 0.08), transparent 34%);
   }
 
   .brand-react {
@@ -373,9 +371,9 @@
     padding: 4px;
     border-radius: 14px;
     background: rgba(255, 255, 255, 0.62);
-    border: 1px solid rgba(226, 221, 208, 0.98);
+    border: 1px solid rgba(var(--color-papel-hueso-rgb), 0.98);
     box-shadow:
-      0 8px 20px rgba(17, 37, 50, 0.08);
+      0 8px 20px rgba(var(--color-noche-rgb), 0.08);
   }
 
   .header-nav-react {
@@ -389,7 +387,7 @@
     padding: 0 14px;
     border-radius: 999px;
     background: rgba(255, 255, 255, 0.85);
-    border: 1px solid rgba(226, 221, 208, 0.95);
+    border: 1px solid rgba(var(--color-papel-hueso-rgb), 0.95);
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -402,8 +400,8 @@
     gap: 0;
     border-radius: 18px;
     background:
-      linear-gradient(180deg, rgba(226, 221, 208, 0.82), rgba(226, 221, 208, 0.74));
-    border: 1px solid rgba(226, 221, 208, 0.95);
+      linear-gradient(180deg, rgba(var(--color-papel-hueso-rgb), 0.82), rgba(var(--color-papel-hueso-rgb), 0.74));
+    border: 1px solid rgba(var(--color-papel-hueso-rgb), 0.95);
     box-shadow:
       inset 0 1px 0 rgba(255, 255, 255, 0.58);
   }
@@ -413,9 +411,9 @@
     bottom: 5px;
     width: calc(50% - 5px);
     border-radius: 16px;
-    background: linear-gradient(135deg, rgba(224, 104, 14, 0.94), rgba(244, 176, 68, 0.9));
+    background: linear-gradient(135deg, rgba(var(--color-impulso-rgb), 0.94), rgba(var(--color-chispa-rgb), 0.9));
     box-shadow:
-      0 8px 18px rgba(17, 37, 50, 0.16),
+      0 8px 18px rgba(var(--color-noche-rgb), 0.16),
       inset 0 1px 0 rgba(255, 255, 255, 0.18);
   }
 
@@ -430,7 +428,7 @@
   }
 
   .header-nav-react a.active {
-    background: rgba(224, 104, 14, 0.1);
+    background: rgba(var(--color-impulso-rgb), 0.1);
   }
 
   .public-tab-slider-react a.active {
@@ -448,7 +446,7 @@
     padding: 0 14px;
     border-radius: 999px;
     background: rgba(255, 255, 255, 0.8);
-    border: 1px solid rgba(226, 221, 208, 0.95);
+    border: 1px solid rgba(var(--color-papel-hueso-rgb), 0.95);
     display: inline-flex;
     align-items: center;
   }
