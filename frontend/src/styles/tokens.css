@@ -96,7 +96,10 @@
      se le da aire: +0.02em de base (titulares medianos y pequeños). El hero,
      que es enorme, lo aprieta un poco desde su propia regla. */
   --tracking-display: 0.02em;
-  --leading-display: 0.98;
+  /* Anton trae mucho hueco sobre las mayúsculas: a <1 los titulares de dos
+     líneas se solapan (y las tildes de la línea de abajo tocan la de arriba).
+     1.1 deja aire sin romper el aire de cartel. */
+  --leading-display: 1.1;
   --leading-body: 1.55;
   --tracking-label: 0.12em;       /* Etiqueta: Inter 500, MAYÚS */
 

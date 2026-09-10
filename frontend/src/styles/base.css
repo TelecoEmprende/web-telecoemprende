@@ -55,6 +55,13 @@ h2 {
   font-weight: 400;
   letter-spacing: var(--tracking-display);
   line-height: var(--leading-display);
+  /* Reparte las líneas para que no quede una palabra suelta abajo ("... LO" /
+     "SIGUIENTE ..."); el navegador corta la frase por donde se lee. */
+  text-wrap: balance;
+}
+
+p {
+  text-wrap: pretty;
 }
 
 /* Escala Anton (adaptación web de la guía v2: Display 76–168 es escala de
@@ -166,7 +173,7 @@ p {
     var(--color-border) 63%
   );
   background-size: 400% 100%;
-  animation: esqueleto-brillo 1.4s ease-in-out infinite;
+  animation: esqueleto-brillo 1.4s var(--ease-in-out) infinite;
 }
 
 @keyframes esqueleto-brillo {

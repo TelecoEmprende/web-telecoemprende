@@ -33,7 +33,7 @@ export function HeroSection() {
             <a href="#inscripcion" className="lp-btn lp-btn-gold">
               {t.hero.ctaPrimary} <span aria-hidden="true">→</span>
             </a>
-            <a href="#quienes-somos" className="lp-btn lp-btn-ghost">
+            <a href="#quienes-somos" className="lp-hero-secondary">
               {t.hero.ctaSecondary}
             </a>
           </div>

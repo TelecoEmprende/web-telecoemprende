@@ -10,6 +10,7 @@ const HITBOX = 20; // lado del hitbox de colisión, centrado en el tile del juga
 const INICIO = { col: 11, row: 11 };
 const COLOR_ORANGE = "#e0680e";
 const COLOR_GOLD = "#f4b044";
+const prefiereMenosMovimiento = window.matchMedia("(prefers-reduced-motion: reduce)");
 
 const screenIntro = document.getElementById("screen-intro");
 const screenMundo = document.getElementById("screen-mundo");
@@ -239,12 +240,19 @@ function dibujarNPC(p, ahora) {
     ctx.fillStyle = COLOR_GOLD;
     ctx.font = "12px sans-serif";
     ctx.textAlign = "center";
-    ctx.fillText("★", x + TILE_SIZE / 2, y - 2 + Math.sin(ahora / 300) * 2);
+    // La estrella flota, salvo si se pide menos movimiento.
+    const flote = prefiereMenosMovimiento.matches ? 0 : Math.sin(ahora / 300) * 2;
+    ctx.fillText("★", x + TILE_SIZE / 2, y - 2 + flote);
   }
 }
 
 function dibujarJugador() {
-  const bob = player.moving && Math.floor(performance.now() / 150) % 2 === 0 ? 1 : 0;
+  const bob =
+    !prefiereMenosMovimiento.matches &&
+    player.moving &&
+    Math.floor(performance.now() / 150) % 2 === 0
+      ? 1
+      : 0;
   ctx.save();
   if (player.dir === "left") {
     ctx.translate(player.x + TILE_SIZE, player.y);
@@ -336,6 +344,16 @@ function mostrarPaso() {
 /** Efecto máquina de escribir. Llama a `alTerminar` cuando acaba de escribir. */
 function escribir(texto, alTerminar) {
   dialogoTexto.textContent = "";
+
+  // Quien pide menos movimiento lee el texto entero de golpe, sin tener que
+  // hacer clic para saltarse el tecleo.
+  if (prefiereMenosMovimiento.matches) {
+    dialogoTexto.textContent = texto;
+    tipeoCompleto = true;
+    alTerminar();
+    return;
+  }
+
   let i = 0;
   function tick() {
     dialogoTexto.textContent = texto.slice(0, i);

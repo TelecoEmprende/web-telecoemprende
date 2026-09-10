@@ -78,33 +78,38 @@ body {
   color: var(--color-navy-deep);
   background: var(--color-gold);
   border: none;
-  border-bottom: 4px solid var(--color-orange-dark);
   border-radius: 4px;
   padding: 16px 28px;
   cursor: pointer;
   line-height: 1;
-  transition: transform 120ms ease, border-bottom-width 120ms ease;
+  /* El "canto" 3D es un box-shadow, no un border-bottom: al pulsar se anima el
+     offset de la sombra (pintado) y no el ancho de un borde (layout). */
+  box-shadow: 0 4px 0 var(--color-orange-dark);
+  transition: transform 120ms ease, box-shadow 120ms ease;
 }
 
-.btn-pixel:hover,
 .btn-pixel:focus-visible {
   transform: translateY(-2px);
 }
 
+/* El levantamiento, solo con ratón: en una pantalla táctil el :hover se queda
+   pegado en el último botón tocado. */
+@media (hover: hover) and (pointer: fine) {
+  .btn-pixel:hover {
+    transform: translateY(-2px);
+  }
+}
+
 .btn-pixel:active {
   transform: translateY(2px);
-  border-bottom-width: 2px;
+  box-shadow: 0 1px 0 var(--color-orange-dark);
 }
 
 .btn-pixel.secondary {
   background: transparent;
   color: var(--color-cream);
   border: 2px solid var(--color-cream);
-  border-bottom: 2px solid var(--color-cream);
-}
-
-.btn-pixel.secondary:active {
-  border-bottom-width: 2px;
+  box-shadow: none;
 }
 
 /* ---------- Mundo (overworld navegable) ---------- */
@@ -379,4 +384,27 @@ body {
   font-size: 0.8rem;
   line-height: 1.5;
   color: var(--color-azul-claro);
+}
+
+/*
+ * Menos movimiento: el cursor de "continuar" deja de parpadear y los botones
+ * no se levantan ni se hunden. Mover al personaje es la mecánica del juego, no
+ * decoración, así que eso se queda (el bucle del canvas ya para cuando no se
+ * ve el mundo). El texto se escribe de golpe: ver `escribir()` en game.js.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .dialogo-caja .avanzar {
+    animation: none;
+    opacity: 1;
+  }
+
+  .btn-pixel {
+    transition: none;
+  }
+
+  .btn-pixel:hover,
+  .btn-pixel:focus-visible,
+  .btn-pixel:active {
+    transform: none;
+  }
 }
