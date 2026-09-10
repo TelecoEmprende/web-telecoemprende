@@ -30,7 +30,7 @@ export function Pie({ departamentos, onElegir }: Props) {
   return (
     <footer className="pie">
       <div className="pie__club">
-        <a className="pie__marca" href={club.web} target="_blank" rel="noopener noreferrer">
+        <a className="pie__marca" href={club.web}>
           <img src={rutaImagen('/logo.png')} alt="" width={44} height={44} />
           <b>
             <NombreClub />
@@ -74,7 +74,14 @@ export function Pie({ departamentos, onElegir }: Props) {
         ))}
 
         {club.enlacesPie.map((enlace) => (
-          <a key={enlace.url} href={enlace.url} target="_blank" rel="noopener noreferrer">
+          // La web del club se navega en la misma pestaña; lo de fuera
+          // (Red Alumni) se abre aparte, que es otro sitio.
+          <a
+            key={enlace.url}
+            href={enlace.url}
+            target={enlace.url.startsWith(club.web) ? undefined : '_blank'}
+            rel={enlace.url.startsWith(club.web) ? undefined : 'noopener noreferrer'}
+          >
             {t(enlace.texto)}
           </a>
         ))}

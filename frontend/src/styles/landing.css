@@ -108,8 +108,10 @@
   background: var(--color-gold);
 }
 
-/* Botón pequeño de la barra: a este tamaño el blanco sobre Impulso no llega,
-   así que va en Chispa con Noche encima (8.4:1) — combo "BLOQUE" de la guía. */
+/* Botón pequeño de la barra: Noche de fondo con texto blanco (14.9:1),
+   igual en el menú móvil que en la barra — nunca ámbar con texto claro. El
+   borde es el mismo tratamiento que el selector de idioma de al lado: sin
+   él, Noche sobre Noche translúcida no se distingue como botón. */
 .lp-nav-cta {
   display: inline-flex;
   align-items: center;
@@ -117,8 +119,9 @@
   min-height: 42px;
   padding: 0 20px;
   border-radius: 999px;
-  background: var(--color-chispa);
-  color: var(--color-noche);
+  background: var(--color-navy);
+  border: 1px solid var(--color-divider-on-dark);
+  color: var(--color-text-on-dark);
   font-weight: 700;
   font-size: 0.94rem;
   transition: transform var(--dur-press) ease, filter var(--dur-press) ease;
@@ -150,7 +153,7 @@
   padding: 3px;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.16);
+  border: 1px solid var(--color-divider-on-dark);
   flex-shrink: 0;
   min-width: 76px;
 }
@@ -774,7 +777,7 @@
   display: flex;
   flex-direction: column;
   background: rgba(255, 255, 255, 0.07);
-  border: 1px solid rgba(255, 255, 255, 0.16);
+  border: 1px solid var(--color-divider-on-dark);
   border-radius: 24px;
   overflow: hidden;
   transition: transform 0.18s ease, border-color 0.18s ease;
@@ -1492,6 +1495,24 @@
     position: relative;
   }
 
+  /* En pantallas estrechas (~360px) logo + nombre + selector de idioma +
+     hamburguesa no caben a la vez: el nombre es el único elemento que puede
+     ceder, así que se trunca con ellipsis en vez de desbordar la barra. */
+  .lp-nav-brand {
+    flex-shrink: 1;
+    min-width: 0;
+  }
+
+  .lp-nav-logo {
+    flex-shrink: 0;
+  }
+
+  .lp-nav-name {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
   .lp-nav-toggle {
     display: flex;
   }
@@ -1572,6 +1593,15 @@
 
   .lp-btn {
     width: 100%;
+  }
+
+  /* .lp-hero-actions pasa a columna y estira sus hijos (align-items:
+     stretch): sin justify-content el enlace secundario queda con su texto
+     pegado al borde izquierdo de esa caja ancha. Se centra y se le da aire
+     para un touch target de sobra por encima de 44px. */
+  .lp-hero-secondary {
+    justify-content: center;
+    padding: 8px 4px;
   }
 
   .lp-about,
