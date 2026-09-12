@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
 
-import { useApi, useDepto, useDirectorio } from "../DeptoApi";
+import { useDirectorio } from "../DeptoApi";
+import { apiDepto } from "../../../api/marketing";
 import { getCalendarioEquipo } from "../../../api/equipo";
 import { AlertBanner } from "../../feedback/AlertBanner";
 import { Esqueleto } from "../../feedback/Esqueleto";
@@ -167,15 +168,23 @@ function distribuirColumnas(items: { item: CalendarioItem; pos: Posicion }[]): B
 }
 
 type Props = {
+  /** Departamentos de la persona que ha iniciado sesión. El calendario es
+   *  uno solo para todo el mundo: esto decide qué ve "solo lo mío" y a qué
+   *  departamentos puede darse de alta una tarea nueva. */
+  teams: Team[];
   /** Abrir la campaña de un elemento del calendario, para que no sea un
-   *  callejón sin salida: se ve algo, se toca, se llega a ello. */
-  onAbrirCampaign: (campaignId: number) => void;
+   *  callejón sin salida: se ve algo, se toca, se llega a ello. El
+   *  departamento va aparte porque puede ser distinto del de quien mira
+   *  (ver más abajo, `esDeUnDeptoPropio`). */
+  onAbrirCampaign: (campaignId: number, departamento: Team) => void;
 };
 
-export function CalendarPanel({ onAbrirCampaign }: Props) {
-  const { createTask, getCalendario } = useApi();
-  const depto = useDepto();
+export function CalendarPanel({ teams, onAbrirCampaign }: Props) {
   const directorio = useDirectorio();
+  // A qué departamento se da de alta una tarea nueva: si la persona está en
+  // uno solo no hay nada que elegir; si está en varios, un desplegable lo
+  // deja explícito en vez de adivinar (ver formularioNuevaTarea).
+  const [deptoNuevaTarea, setDeptoNuevaTarea] = useState<Team>(teams[0]);
 
   const [cursor, setCursor] = useState(() => {
     const hoy = new Date();
@@ -211,9 +220,12 @@ export function CalendarPanel({ onAbrirCampaign }: Props) {
     const { desde, hasta } = rangoDeVista(referencia, vista);
 
     try {
+      // "Solo lo mío" ya no significa "el departamento desde el que entré"
+      // (ahora hay un único calendario) sino "los departamentos a los que
+      // pertenezco" -- para alguien en más de uno, los ve todos igual.
       const respuesta = todosDepartamentos
         ? await getCalendarioEquipo(iso(desde), iso(hasta), deptosFiltro)
-        : await getCalendario(iso(desde), iso(hasta));
+        : await getCalendarioEquipo(iso(desde), iso(hasta), teams);
       setItems(respuesta.items);
       setError(null);
       return respuesta.items;
@@ -223,7 +235,7 @@ export function CalendarPanel({ onAbrirCampaign }: Props) {
     } finally {
       setIsLoading(false);
     }
-  }, [vista, todosDepartamentos, deptosFiltro]);
+  }, [vista, todosDepartamentos, deptosFiltro, teams]);
 
   useEffect(() => {
     let activo = true;
@@ -238,7 +250,7 @@ export function CalendarPanel({ onAbrirCampaign }: Props) {
       try {
         const respuesta = todosDepartamentos
           ? await getCalendarioEquipo(iso(desde), iso(hasta), deptosFiltro)
-          : await getCalendario(iso(desde), iso(hasta));
+          : await getCalendarioEquipo(iso(desde), iso(hasta), teams);
         if (!activo) return;
 
         const primero = respuesta.items[0];
@@ -322,7 +334,7 @@ export function CalendarPanel({ onAbrirCampaign }: Props) {
     if (!titulo) return;
 
     try {
-      await createTask({ titulo, deadline: fecha });
+      await apiDepto(deptoNuevaTarea).createTask({ titulo, deadline: fecha });
       setTituloNuevo("");
       setDiaAbierto(null);
       await cargar(cursor);
@@ -337,10 +349,13 @@ export function CalendarPanel({ onAbrirCampaign }: Props) {
   ) {
     const claseDepto = item.departamento ? ` ${DEPTO_CLASE[item.departamento] ?? ""}` : "";
     const etiquetaDepto = item.departamento ? DEPTO_LABEL[item.departamento as Team] : null;
-    // Abrir la campaña solo tiene sentido si es de ESTE departamento -- una
-    // de otro no se encontraría en su panel de Campañas (mismo id, tablero
-    // equivocado), así que un ítem cruzado se ve pero no navega a ningún sitio.
-    const esDeEsteDepto = !item.departamento || item.departamento === depto;
+    // Abrir la campaña solo tiene sentido si es de un departamento PROPIO --
+    // una del departamento de otra persona no se encontraría en su panel de
+    // Campañas (sin acceso), así que un ítem así se ve pero no navega a
+    // ningún sitio. "Propio" ya no es "el departamento activo": el
+    // calendario es uno solo y puede enseñar cualquiera de los departamentos
+    // de la persona, no solo aquel por el que se entró.
+    const esDeUnDeptoPropio = !item.departamento || teams.includes(item.departamento as Team);
 
     return (
       <button
@@ -352,7 +367,9 @@ export function CalendarPanel({ onAbrirCampaign }: Props) {
         style={extra?.style}
         title={`${item.hora ? `${item.hora} — ` : ""}${etiquetaDepto ? `${etiquetaDepto} — ` : ""}${item.padre ? `${item.padre} — ` : ""}${item.titulo}`}
         onClick={() =>
-          esDeEsteDepto && item.campaign_id !== null && onAbrirCampaign(item.campaign_id)
+          esDeUnDeptoPropio &&
+          item.campaign_id !== null &&
+          onAbrirCampaign(item.campaign_id, item.departamento as Team)
         }
       >
         {item.hora ? <span className="mkt-evento-hora-react">{item.hora}</span> : null}
@@ -378,6 +395,20 @@ export function CalendarPanel({ onAbrirCampaign }: Props) {
           void crearEnDia(clave);
         }}
       >
+        {teams.length > 1 ? (
+          <select
+            className="mkt-btn-mini-react"
+            value={deptoNuevaTarea}
+            aria-label="Departamento de la tarea nueva"
+            onChange={(event) => setDeptoNuevaTarea(event.target.value as Team)}
+          >
+            {teams.map((team) => (
+              <option key={team} value={team}>
+                {DEPTO_LABEL[team]}
+              </option>
+            ))}
+          </select>
+        ) : null}
         <input
           type="text"
           autoFocus
