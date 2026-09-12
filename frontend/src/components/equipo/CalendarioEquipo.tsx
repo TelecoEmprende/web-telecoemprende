@@ -308,7 +308,7 @@ export function CalendarioEquipo() {
         {puedeAnadirEvento ? (
           <button
             type="button"
-            className="mkt-btn-mini-react"
+            className={mostrarFormularioEvento ? "mkt-btn-mini-react" : "mkt-btn-react"}
             onClick={() => setMostrarFormularioEvento((abierto) => !abierto)}
           >
             {mostrarFormularioEvento ? "Cancelar" : "+ Evento"}

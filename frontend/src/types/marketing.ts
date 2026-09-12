@@ -1,3 +1,5 @@
+import type { Team } from "./equipo";
+
 export const TASK_ESTADOS = [
   "pendiente",
   "en_progreso",
@@ -208,6 +210,44 @@ export type SaludEquipo = {
   /** null si no hay tareas acabadas con deadline suficientes para calcularlo. */
   pct_a_tiempo: number | null;
   miembros: MiembroSalud[];
+};
+
+/** Una fila de la tabla de productividad de `MetricasClub`: solo números
+ *  reales de `tasks` (tareas cerradas, % a tiempo, abiertas, vencidas) -- sin
+ *  puntuación inventada, ver `metricas_club` en el backend. */
+export type MiembroMetricas = {
+  email: string;
+  nombre: string;
+  equipos: Team[];
+  cargo: "" | "presidente" | "boardmember";
+  abiertas: number;
+  vencidas: number;
+  completadas_periodo: number;
+  /** null si no tiene tareas cerradas con deadline en el periodo. */
+  pct_a_tiempo_periodo: number | null;
+  dias_inactivo: number | null;
+  nivel: "rojo" | "amarillo" | "verde";
+};
+
+export type AlertaDepartamento = {
+  departamento: Team;
+  /** null si el departamento nunca ha cerrado una tarea. */
+  dias_sin_cerrar: number | null;
+};
+
+/** Salud del club entero, solo para board/VP (ver `/api/equipo/metricas`). */
+export type MetricasClub = {
+  dias_periodo: number;
+  total_activos: number;
+  sobrecargados: number;
+  inactivos: number;
+  /** null si no hay tareas cerradas con deadline en el periodo. */
+  pct_a_tiempo_club: number | null;
+  participacion_semanal: { semana: string; cerradas: number }[];
+  por_departamento: Record<Team, SaludEquipo>;
+  miembros: MiembroMetricas[];
+  alertas_inactividad: MiembroMetricas[];
+  alertas_departamento: AlertaDepartamento[];
 };
 
 /** Fechas en el formato de aquí (15 oct), no en ISO crudo. */

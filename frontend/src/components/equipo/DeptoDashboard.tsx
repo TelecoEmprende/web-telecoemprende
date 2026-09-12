@@ -25,6 +25,10 @@ type Props = {
   teams: Team[];
   seccion: Seccion;
   onSeccion: (seccion: Seccion) => void;
+  /** Board del club o VP de `depto`: solo ellos ven "Salud del equipo" en el
+   *  resumen (ver `WeekPanel`) -- la puntuación de participación no se le
+   *  enseña al miembro raso, para no meter competición entre compañeros. */
+  puedeVerSalud: boolean;
 };
 
 /**
@@ -40,7 +44,7 @@ type Props = {
  * `/equipo` (ver `EquipoPage.tsx`), y este componente solo decide qué panel
  * toca.
  */
-export function DeptoDashboard({ depto, teams, seccion, onSeccion }: Props) {
+export function DeptoDashboard({ depto, teams, seccion, onSeccion, puedeVerSalud }: Props) {
   const [campaignInicial, setCampaignInicial] = useState<number | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
   const p = prefijoDe(depto);
@@ -110,7 +114,7 @@ export function DeptoDashboard({ depto, teams, seccion, onSeccion }: Props) {
   return (
     <DeptoProvider value={depto}>
       <DirectorioProvider>
-        {seccion === `${p}-home` ? <WeekPanel /> : null}
+        {seccion === `${p}-home` ? <WeekPanel puedeVerSalud={puedeVerSalud} /> : null}
         {seccion === `${p}-campanas` ? (
           <CampaignsPanel
             campaignInicial={campaignInicial}

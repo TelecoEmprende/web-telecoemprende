@@ -5,6 +5,7 @@ from flask import Blueprint, jsonify, request, session
 
 from backend.api.admin import _validar_evento_calendario
 from backend.config import (
+    CARGOS_VALIDOS,
     EQUIPOS_VALIDOS,
     LOGIN_BLOCK_WINDOW_SECONDS,
     MAX_EMAIL_LEN,
@@ -22,7 +23,12 @@ from backend.services.equipo import (
     logout_equipo,
     registrar_equipo_acceso,
 )
-from backend.services.marketing import calendario_equipo, init_marketing_db, mis_tareas
+from backend.services.marketing import (
+    calendario_equipo,
+    init_marketing_db,
+    metricas_club,
+    mis_tareas,
+)
 from backend.services.security import demasiadas_peticiones, limpiar_texto, obtener_ip_real
 
 logger = logging.getLogger("telecoemprende.equipo")
@@ -38,6 +44,19 @@ def _puede_editar_calendario_club() -> bool:
     return is_admin_authenticated() or (
         is_equipo_authenticated() and len(equipo_session_info()["vp_de"]) > 0
     )
+
+
+def _es_board_o_vp() -> bool:
+    """Board del club (cargo de dirección) o VP de cualquier departamento, o
+    admin. Igual que `_puede_editar_calendario_club` pero sumando el cargo:
+    las métricas las ve quien decide sobre el club entero, no solo quien
+    edita el calendario."""
+    if is_admin_authenticated():
+        return True
+    if not is_equipo_authenticated():
+        return False
+    sesion = equipo_session_info()
+    return sesion["cargo"] in CARGOS_VALIDOS or len(sesion["vp_de"]) > 0
 
 
 @equipo_api.route("/login", methods=["POST"])
@@ -223,3 +242,25 @@ def api_equipo_mis_tareas():
     init_marketing_db()
     email = session.get("equipo_email", "")
     return jsonify({"ok": True, "tareas": mis_tareas(email)}), 200
+
+
+@equipo_api.route("/metricas", methods=["GET"])
+def api_equipo_metricas():
+    """Salud del club entero para el board: mismo semáforo que la de cada
+    departamento, cruzando los tres, más productividad por persona. Ver
+    `metricas_club` -- gated a board/VP, igual que `/api/marketing/miembros/
+    salud` en cada departamento por separado."""
+    if not is_equipo_authenticated() and not is_admin_authenticated():
+        return jsonify(build_response(False, "No autorizado.")), 401
+    if not _es_board_o_vp():
+        return jsonify(build_response(False, "No autorizado.")), 403
+
+    init_marketing_db()
+    init_equipo_db()
+    try:
+        dias = int(request.args.get("dias", "30"))
+    except ValueError:
+        dias = 30
+    dias = max(7, min(dias, 180))
+
+    return jsonify({"ok": True, "metricas": metricas_club(dias)}), 200

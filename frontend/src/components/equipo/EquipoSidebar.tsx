@@ -1,5 +1,6 @@
 import type { LucideIcon } from "lucide-react";
 import {
+  BarChart3,
   CalendarDays,
   ChevronRight,
   ExternalLink,
@@ -66,10 +67,12 @@ type Panel =
   | "reuniones"
   | "alumni";
 
-export type Seccion = "club" | `${"mkt" | "ev" | "ing"}-${Panel}`;
+export type Seccion = "club" | "metricas" | `${"mkt" | "ev" | "ing"}-${Panel}`;
 
 const CLUB: Item[] = [
-  { id: "club", label: "Inicio", icono: Home },
+  // "Mi semana" y no "Inicio": es lo único que un miembro abre a diario,
+  // tareas y agenda de todos sus departamentos en una sola vista.
+  { id: "club", label: "Mi semana", icono: Home },
   // Los anuncios son del club entero (el backend no los acota por
   // departamento), pero se piden por la ruta de uno: se cuelgan del primer
   // departamento de la persona, ver `seccionesDe`.
@@ -165,10 +168,23 @@ const CARGO_LABEL: Record<Exclude<Cargo, "">, string> = {
   boardmember: "Board member",
 };
 
+/** "Métricas": salud del club entero, solo board o VP de algún departamento
+ *  (ver `_es_board_o_vp` en el backend -- esto solo decide si se enseña el
+ *  enlace, la 403 real la pone el servidor). No cuelga de un departamento
+ *  como Calendario/Anuncios porque no lo es: por eso vive en su propio
+ *  grupo "Board" en vez de en `clubDe`. */
+export function metricasDe(esBoardOVp: boolean): Item[] {
+  return esBoardOVp ? [{ id: "metricas", label: "Métricas", icono: BarChart3 }] : [];
+}
+
 /** Todas las secciones visibles para esa persona, en el orden del sidebar.
  *  El shell lo usa para saber en qué sección abrir y cómo titular la barra. */
-export function seccionesDe(teams: Team[]): Item[] {
-  return [...clubDe(teams), ...teams.flatMap((team) => POR_EQUIPO[team] ?? [])];
+export function seccionesDe(teams: Team[], esBoardOVp = false): Item[] {
+  return [
+    ...clubDe(teams),
+    ...metricasDe(esBoardOVp),
+    ...teams.flatMap((team) => POR_EQUIPO[team] ?? []),
+  ];
 }
 
 /** El grupo "Club": el inicio, el calendario y los anuncios, si la persona
@@ -256,6 +272,8 @@ export function EquipoSidebar({
       return siguiente;
     });
   }
+
+  const esBoardOVp = cargo === "presidente" || cargo === "boardmember" || vpDe.length > 0;
 
   // En móvil el sidebar es un cajón (Sheet) que se queda abierto tras elegir
   // sección si no se cierra a mano: habría que tocar dos veces para ver el
@@ -358,6 +376,7 @@ export function EquipoSidebar({
       <SidebarContent>
         <nav aria-label="Secciones de /equipo">
           {grupo("Club", clubDe(teams))}
+          {grupo("Board", metricasDe(esBoardOVp))}
 
           {teams.map((team) =>
             grupo(TEAM_LABEL[team], POR_EQUIPO[team] ?? [], team, vpDe.includes(team)),
