@@ -808,6 +808,47 @@
   border-color: var(--color-orange);
 }
 
+/* La fila del directorio, ahora con acciones rápidas fuera del botón de la
+   ficha: dos botones anidados no es HTML válido. */
+.mkt-miembro-fila-react {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+}
+
+.mkt-miembro-fila-react .mkt-miembro-react {
+  flex: 1;
+  min-width: 0;
+}
+
+.mkt-miembro-acciones-react {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: 0 0 auto;
+}
+
+.mkt-icon-btn-react {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  color: var(--color-slate);
+  text-decoration: none;
+  cursor: pointer;
+  transition: border-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+}
+
+.mkt-icon-btn-react:hover,
+.mkt-icon-btn-react:focus-visible {
+  border-color: var(--color-orange);
+  color: var(--color-orange);
+}
+
 .mkt-miembro-datos-react {
   display: flex;
   flex-direction: column;

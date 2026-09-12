@@ -36,6 +36,17 @@ function nombreAdivinado(email: string) {
   return prefijo ?? primerToken;
 }
 
+export type NivelCarga = "libre" | "media" | "alta";
+
+/** A partir de cuántas tareas abiertas alguien está "cargado". Un solo sitio
+ *  para el umbral: lo usan el chip del directorio (`Carga`, en
+ *  `MembersPanel.tsx`) y su filtro, para no repetir `abiertas >= 4` en dos
+ *  sitios. Cuatro o más ya no es "va cargado", es "no le eches nada más". */
+export function nivelCarga(abiertas: number): NivelCarga {
+  if (abiertas === 0) return "libre";
+  return abiertas >= 4 ? "alta" : "media";
+}
+
 export function fotoDe(email: string) {
   const nombre = nombreAdivinado(email);
   // Same-origin: la CSP del sitio es `img-src 'self' data:`, así que una foto

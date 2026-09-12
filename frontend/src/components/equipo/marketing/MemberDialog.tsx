@@ -1,10 +1,11 @@
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { Mail, StickyNote } from "lucide-react";
 
 import { useApi } from "../DeptoApi";
 import { AlertBanner } from "../../feedback/AlertBanner";
 import { Esqueleto } from "../../feedback/Esqueleto";
 import { AvatarResponsable, etiquetaDe } from "./Avatares";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -16,17 +17,31 @@ import type { ApiFailure } from "../../../types/api";
 import {
   formatearFecha,
   haceCuanto,
+  ONBOARDING_PASOS,
+  type CalendarioItem,
   type FichaMiembro,
   type TaskEstado,
 } from "../../../types/marketing";
 
 type Props = {
   email: string;
+  /** Habilidades ya apuntadas en el departamento, para el selector -- las
+   *  calcula `MembersPanel.tsx`, que ya recorre a todos los miembros. Quien
+   *  abre la ficha sin tener esa lista a mano (p. ej. `WeekPanel.tsx`) puede
+   *  omitirla: el selector arranca vacío, pero "+ nueva habilidad" sigue
+   *  funcionando igual. */
+  habilidadesConocidas?: string[];
   onCerrar: () => void;
   /** Para refrescar el directorio cuando cambian las etiquetas o se le asigna
    *  una tarea nueva (cambia su carga). */
   onGuardado: () => void;
 };
+
+function iso(fecha: Date) {
+  const mes = String(fecha.getMonth() + 1).padStart(2, "0");
+  const dia = String(fecha.getDate()).padStart(2, "0");
+  return `${fecha.getFullYear()}-${mes}-${dia}`;
+}
 
 /** La actividad reciente es el estado actual de sus tareas, no un registro de
  *  eventos (ver `ficha_miembro` en el backend) -- el verbo es una lectura de
@@ -46,12 +61,14 @@ const VERBO_ACTIVIDAD: Record<TaskEstado, string> = {
  * etiquetas y la nota, que viven en `equipo_accesos` porque son de la persona
  * y no del departamento -- así Eventos e Ingeniería ven las mismas.
  */
-export function MemberDialog({ email, onCerrar, onGuardado }: Props) {
-  const { createTask, getFichaMiembro, updateFichaMiembro } = useApi();
+export function MemberDialog({ email, habilidadesConocidas = [], onCerrar, onGuardado }: Props) {
+  const { createTask, getCalendario, getFichaMiembro, updateFichaMiembro } = useApi();
 
   const [ficha, setFicha] = useState<FichaMiembro | null>(null);
-  const [tags, setTags] = useState("");
+  const [tags, setTags] = useState<string[]>([]);
+  const [nuevaHabilidad, setNuevaHabilidad] = useState("");
   const [notas, setNotas] = useState("");
+  const [onboarding, setOnboarding] = useState<Record<string, boolean>>({});
   const [editandoPerfil, setEditandoPerfil] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [guardado, setGuardado] = useState(false);
@@ -61,6 +78,8 @@ export function MemberDialog({ email, onCerrar, onGuardado }: Props) {
   const [tituloTarea, setTituloTarea] = useState("");
   const [asignandoGuardando, setAsignandoGuardando] = useState(false);
 
+  const [proximos, setProximos] = useState<CalendarioItem[]>([]);
+
   useEffect(() => {
     let activo = true;
 
@@ -69,8 +88,9 @@ export function MemberDialog({ email, onCerrar, onGuardado }: Props) {
         const respuesta = await getFichaMiembro(email);
         if (!activo) return;
         setFicha(respuesta.ficha);
-        setTags(respuesta.ficha.tags.join(", "));
+        setTags(respuesta.ficha.tags);
         setNotas(respuesta.ficha.notas);
+        setOnboarding(respuesta.ficha.onboarding ?? {});
       } catch (err) {
         if (activo) {
           setError((err as ApiFailure)?.message || "No se pudo cargar la ficha.");
@@ -84,15 +104,50 @@ export function MemberDialog({ email, onCerrar, onGuardado }: Props) {
     };
   }, [email]);
 
+  // Aparte de la ficha: si falla, no tiene que tirar abajo el resto -- es un
+  // extra informativo ("qué tiene por delante"), no el dato central.
+  useEffect(() => {
+    let activo = true;
+
+    async function cargarProximos() {
+      const hoy = new Date();
+      const en30dias = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate() + 30);
+      try {
+        const respuesta = await getCalendario(iso(hoy), iso(en30dias));
+        if (!activo) return;
+        setProximos(respuesta.items.filter((i) => i.responsables.includes(email)).slice(0, 3));
+      } catch {
+        // Sin próximos eventos visibles, la ficha sigue siendo útil igual.
+      }
+    }
+
+    void cargarProximos();
+    return () => {
+      activo = false;
+    };
+  }, [email]);
+
+  const opcionesHabilidad = useMemo(
+    () => [...new Set([...habilidadesConocidas, ...tags])].sort(),
+    [habilidadesConocidas, tags],
+  );
+
+  const onboardingCompletados = ONBOARDING_PASOS.filter((p) => onboarding[p.key]).length;
+
+  function agregarHabilidad() {
+    const nueva = nuevaHabilidad.trim();
+    if (!nueva || tags.includes(nueva)) return;
+    setTags((actuales) => [...actuales, nueva]);
+    setNuevaHabilidad("");
+    setGuardado(false);
+  }
+
   async function guardar() {
     setIsSaving(true);
     setError(null);
 
     try {
-      await updateFichaMiembro(email, {
-        tags: tags.split(",").map((t) => t.trim()).filter(Boolean),
-        notas,
-      });
+      await updateFichaMiembro(email, { tags, notas, onboarding });
       setGuardado(true);
       setEditandoPerfil(false);
       onGuardado();
@@ -109,9 +164,11 @@ export function MemberDialog({ email, onCerrar, onGuardado }: Props) {
     // `ficha`, así que un borrador abandonado se seguía enseñando como si
     // fuera lo último guardado.
     if (ficha) {
-      setTags(ficha.tags.join(", "));
+      setTags(ficha.tags);
       setNotas(ficha.notas);
+      setOnboarding(ficha.onboarding ?? {});
     }
+    setNuevaHabilidad("");
     setEditandoPerfil(false);
   }
 
@@ -164,9 +221,9 @@ export function MemberDialog({ email, onCerrar, onGuardado }: Props) {
                 {formatearFecha(ficha.desde.slice(0, 10), true)}
               </p>
 
-              {tags.trim() ? (
+              {tags.length > 0 ? (
                 <span className="mkt-tags-react mkt-ficha-skills-react">
-                  {tags.split(",").map((t) => t.trim()).filter(Boolean).map((tag) => (
+                  {tags.map((tag) => (
                     <span key={tag} className="mkt-tag-react">
                       {tag}
                     </span>
@@ -246,24 +303,72 @@ export function MemberDialog({ email, onCerrar, onGuardado }: Props) {
                 )}
               </section>
 
+              {proximos.length > 0 ? (
+                <section className="mkt-ficha-bloque-react">
+                  <h4>Próximos eventos</h4>
+                  <ul className="mkt-ficha-actividad-react">
+                    {proximos.map((item) => (
+                      <li key={`${item.origen}-${item.id}`}>
+                        <span className="mkt-ficha-actividad-texto-react">
+                          <b>{item.titulo}</b>
+                          {item.padre ? <em> · {item.padre}</em> : null}
+                        </span>
+                        <time>{formatearFecha(item.fecha)}</time>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              ) : null}
+
               <section className="mkt-ficha-bloque-react">
                 <h4>Perfil</h4>
+                <p className="mkt-meta-react">
+                  Onboarding: {onboardingCompletados}/{ONBOARDING_PASOS.length} completado
+                </p>
 
                 {editandoPerfil ? (
                   <>
                     <div className="field-group-react">
                       <label htmlFor="mf-tags">Habilidades</label>
-                      <input
+                      <select
                         id="mf-tags"
-                        type="text"
+                        multiple
+                        size={5}
                         value={tags}
-                        placeholder="Reels, Fotografía, Copy"
+                        className="w-full rounded-lg border border-input bg-transparent px-2.5 py-1.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
                         onChange={(e) => {
-                          setTags(e.target.value);
+                          setTags([...e.target.selectedOptions].map((o) => o.value));
                           setGuardado(false);
                         }}
-                      />
-                      <p className="mkt-meta-react">Separadas por comas.</p>
+                      >
+                        {opcionesHabilidad.map((tag) => (
+                          <option key={tag} value={tag}>
+                            {tag}
+                          </option>
+                        ))}
+                      </select>
+                      <p className="mkt-meta-react">
+                        Ctrl/Cmd + clic para elegir varias, o clic y arrastrar.
+                      </p>
+                      <div className="mt-1.5 flex gap-1.5">
+                        <input
+                          type="text"
+                          value={nuevaHabilidad}
+                          placeholder="+ nueva habilidad"
+                          aria-label="Añadir una habilidad nueva"
+                          className="h-8 min-w-0 flex-1 rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+                          onChange={(e) => setNuevaHabilidad(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              agregarHabilidad();
+                            }
+                          }}
+                        />
+                        <button type="button" className="mkt-btn-mini-react" onClick={agregarHabilidad}>
+                          Añadir
+                        </button>
+                      </div>
                     </div>
 
                     <div className="field-group-react">
@@ -282,6 +387,24 @@ export function MemberDialog({ email, onCerrar, onGuardado }: Props) {
                         La ve todo el departamento. Sirve para repartir mejor, no para
                         evaluar a nadie.
                       </p>
+                    </div>
+
+                    <div className="field-group-react">
+                      <span className="mkt-meta-react">Onboarding</span>
+                      <div className="mt-1.5 flex flex-col gap-1.5">
+                        {ONBOARDING_PASOS.map((paso) => (
+                          <label key={paso.key} className="flex items-center gap-2 text-sm">
+                            <Checkbox
+                              checked={!!onboarding[paso.key]}
+                              onCheckedChange={(checked) => {
+                                setOnboarding((actual) => ({ ...actual, [paso.key]: checked === true }));
+                                setGuardado(false);
+                              }}
+                            />
+                            {paso.label}
+                          </label>
+                        ))}
+                      </div>
                     </div>
 
                     <div className="mkt-ficha-acciones-react">

@@ -54,6 +54,7 @@ from backend.services.marketing import (
     obtener_campaign,
     obtener_content,
     obtener_task,
+    salud_equipo,
 )
 
 logger = logging.getLogger("telecoemprende.marketing")
@@ -554,7 +555,7 @@ def api_miembros():
     """Directorio del departamento: quién está, qué sabe hacer y cuánto lleva
     encima. Las etiquetas salen de `equipo_accesos` (perfil de la persona); la
     carga se calcula sobre las tareas del departamento, no se guarda."""
-    from backend.services.equipo import init_equipo_db, listar_equipo_accesos
+    from backend.services.equipo import init_equipo_db, miembros_activos
 
     init_equipo_db()
     depto = departamento_actual()
@@ -568,10 +569,17 @@ def api_miembros():
             "nombre": a["nombre"],
             "abiertas": carga.get(a["email"], 0),
         }
-        for a in listar_equipo_accesos()
-        if depto in a["equipos"] and a["activo"]
+        for a in miembros_activos(depto)
     ]
     return jsonify({"ok": True, "miembros": miembros}), 200
+
+
+@marketing_api.route("/miembros/salud", methods=["GET"])
+@requiere_equipo
+def api_miembros_salud():
+    """Semáforo de carga/inactividad/plazos del departamento -- para el panel
+    de salud del VP, no para el directorio general (ver `/miembros`)."""
+    return jsonify({"ok": True, "salud": salud_equipo(departamento_actual())}), 200
 
 
 def _miembro_del_departamento(email: str) -> dict | None:
@@ -609,6 +617,7 @@ def api_ficha_miembro():
         tags=acceso["tags"],
         notas=acceso["notas"],
         nombre=acceso["nombre"],
+        onboarding=acceso["onboarding"],
         desde=acceso["created_at"],
     )
     return jsonify({"ok": True, "ficha": ficha}), 200
@@ -634,8 +643,17 @@ def api_actualizar_ficha_miembro():
         if "notas" in datos
         else None
     )
-    if tags is None and notas is None:
+    onboarding = None
+    if "onboarding" in datos:
+        onboarding = datos["onboarding"]
+        if not isinstance(onboarding, dict):
+            raise DatosInvalidos("'onboarding' debe ser un objeto.")
+        if len(onboarding) > 20:
+            raise DatosInvalidos("'onboarding' admite como mucho 20 claves.")
+        onboarding = {str(k): bool(v) for k, v in onboarding.items()}
+
+    if tags is None and notas is None and onboarding is None:
         raise DatosInvalidos("No hay nada que actualizar.")
 
-    actualizar_perfil(email, tags=tags, notas=notas)
+    actualizar_perfil(email, tags=tags, notas=notas, onboarding=onboarding)
     return jsonify(build_response(True, "Ficha actualizada.")), 200

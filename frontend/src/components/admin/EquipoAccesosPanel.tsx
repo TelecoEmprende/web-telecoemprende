@@ -1,4 +1,5 @@
 import { FormEvent, useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 
 import {
   createEquipoAcceso,
@@ -109,14 +110,19 @@ function VpDeCheckboxes({
 }
 
 export function EquipoAccesosPanel() {
+  const [searchParams] = useSearchParams();
   const [accesos, setAccesos] = useState<EquipoAcceso[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [messageVariant, setMessageVariant] = useState<"success" | "error">("success");
 
-  const [nuevoEmail, setNuevoEmail] = useState("");
-  const [nuevoNombre, setNuevoNombre] = useState("");
+  // Prellenado desde "Crear acceso de equipo →" en Inscripciones
+  // (`RecordsTable.tsx`): una candidatura aceptada trae nombre y email, el
+  // resto (escuela, programa, Drive...) no vive en `equipo_accesos` y no hay
+  // que duplicarlo aquí.
+  const [nuevoEmail, setNuevoEmail] = useState(searchParams.get("email") ?? "");
+  const [nuevoNombre, setNuevoNombre] = useState(searchParams.get("nombre") ?? "");
   const [nuevaPassword, setNuevaPassword] = useState("");
   const [nuevosEquipos, setNuevosEquipos] = useState<Team[]>([]);
   const [nuevoVpDe, setNuevoVpDe] = useState<Team[]>([]);

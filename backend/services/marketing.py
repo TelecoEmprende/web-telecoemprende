@@ -889,3 +889,86 @@ def ficha_miembro(email: str, departamento: str) -> dict:
         "campanas": totales["campanas"],
         "actividad": actividad,
     }
+
+
+def salud_equipo(departamento: str) -> dict:
+    """Semáforo por persona para el VP: mismo umbral que ya usa `Carga` en el
+    frontend (`MembersPanel.tsx`, 4+ tareas abiertas es "no le eches nada
+    más") -- no se inventa uno nuevo aquí.
+
+    Tres consultas de agregación en total (carga, última actividad,
+    cumplimiento de plazo), ninguna repetida por miembro: un departamento con
+    veinte personas cuesta lo mismo que uno con dos.
+    """
+    from backend.services.equipo import init_equipo_db, miembros_activos
+
+    init_equipo_db()
+    emails = [a["email"] for a in miembros_activos(departamento)]
+
+    abiertas_por_email = carga_por_miembro(departamento)
+
+    with _get_connection() as conn:
+        with conn.cursor() as cur:
+            # MAX(updated_at) sobre TODAS las tareas (no solo las abiertas):
+            # "sin actividad todavía" y "activo pero todo acabado" son cosas
+            # distintas, y la segunda no debería pintarse inactiva.
+            cur.execute(
+                """
+                SELECT responsable, MAX(updated_at)
+                FROM tasks, unnest(responsables) AS responsable
+                WHERE departamento = %s
+                GROUP BY responsable
+                """,
+                (departamento,),
+            )
+            ultima_actividad = dict(cur.fetchall())
+
+            cur.execute(
+                """
+                SELECT COUNT(*) FILTER (WHERE updated_at::date <= deadline), COUNT(*)
+                FROM tasks
+                WHERE departamento = %s AND estado = 'acabado' AND deadline IS NOT NULL
+                """,
+                (departamento,),
+            )
+            a_tiempo, con_deadline = cur.fetchone()
+
+    hoy = date.today()
+    miembros, sobrecargados, inactivos = [], 0, 0
+    for email in emails:
+        abiertas = abiertas_por_email.get(email, 0)
+        ultima = ultima_actividad.get(email)
+        dias_inactivo = (hoy - ultima.date()).days if ultima is not None else None
+
+        rojo_por_carga = abiertas >= 4
+        rojo_por_inactividad = dias_inactivo is not None and dias_inactivo >= 15
+        if rojo_por_carga:
+            sobrecargados += 1
+        if rojo_por_inactividad:
+            inactivos += 1
+
+        if rojo_por_carga or rojo_por_inactividad:
+            nivel = "rojo"
+        elif abiertas >= 2:
+            nivel = "amarillo"
+        else:
+            nivel = "verde"
+
+        miembros.append({
+            "email": email,
+            "abiertas": abiertas,
+            "dias_inactivo": dias_inactivo,
+            "nivel": nivel,
+        })
+
+    # Sin tareas acabadas con plazo, un 0%/100% sería un dato inventado: mejor
+    # decir que no hay datos que fingir una métrica.
+    pct_a_tiempo = round(100 * a_tiempo / con_deadline) if con_deadline else None
+
+    return {
+        "total": len(emails),
+        "sobrecargados": sobrecargados,
+        "inactivos": inactivos,
+        "pct_a_tiempo": pct_a_tiempo,
+        "miembros": miembros,
+    }
