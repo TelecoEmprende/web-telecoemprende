@@ -622,6 +622,62 @@ def calendario(desde: date, hasta: date, departamento: str) -> list[dict]:
             return [_serializar(f) for f in cur.fetchall()]
 
 
+def calendario_equipo(desde: date, hasta: date, departamentos: list[str]) -> list[dict]:
+    """Como `calendario()`, pero de varios departamentos a la vez y con
+    `departamento` en cada fila -- para la lectura cruzada de `/equipo`
+    (ver `GET /api/equipo/calendario-equipo`), que no está atada a un solo
+    blueprint y por tanto no tiene un `departamento_actual()` que usar."""
+    with _get_connection() as conn:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(
+                """
+                SELECT * FROM (
+                    SELECT 'content' AS origen, co.id, co.titulo,
+                           co.fecha_publicacion AS fecha, co.estado,
+                           co.campaign_id, co.plataforma AS detalle,
+                           NULL AS prioridad, c.nombre AS padre,
+                           co.responsables, NULL::varchar AS hora,
+                           c.departamento
+                    FROM contents co
+                    JOIN campaigns c ON c.id = co.campaign_id
+                    WHERE co.fecha_publicacion BETWEEN %(desde)s AND %(hasta)s
+                      AND c.departamento = ANY(%(departamentos)s)
+                    UNION ALL
+                    SELECT 'task' AS origen, t.id, t.titulo,
+                           t.deadline AS fecha, t.estado,
+                           t.campaign_id, t.prioridad AS detalle,
+                           t.prioridad, COALESCE(co.titulo, c.nombre) AS padre,
+                           t.responsables, NULLIF(t.hora, '') AS hora,
+                           t.departamento
+                    FROM tasks t
+                    LEFT JOIN contents co ON co.id = t.content_id
+                    LEFT JOIN campaigns c ON c.id = t.campaign_id
+                    WHERE t.deadline BETWEEN %(desde)s AND %(hasta)s
+                      AND t.departamento = ANY(%(departamentos)s)
+                    UNION ALL
+                    SELECT 'reunion' AS origen, r.id, r.titulo,
+                           r.fecha AS fecha, '' AS estado,
+                           NULL::integer AS campaign_id, r.objetivo AS detalle,
+                           NULL AS prioridad, NULL AS padre,
+                           r.asistentes AS responsables, NULLIF(r.hora, '') AS hora,
+                           r.departamento
+                    FROM reuniones r
+                    WHERE r.fecha BETWEEN %(desde)s AND %(hasta)s
+                      AND r.departamento = ANY(%(departamentos)s)
+                ) x
+                ORDER BY fecha,
+                         CASE prioridad
+                             WHEN 'alta' THEN 1 WHEN 'media' THEN 2
+                             WHEN 'baja' THEN 3 ELSE 0
+                         END,
+                         hora NULLS LAST,
+                         titulo
+                """,
+                {"desde": desde, "hasta": hasta, "departamentos": departamentos},
+            )
+            return [_serializar(f) for f in cur.fetchall()]
+
+
 # --------------------------------------------------------------------------
 # Helpers compartidos
 # --------------------------------------------------------------------------

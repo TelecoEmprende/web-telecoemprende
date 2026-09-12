@@ -1,14 +1,19 @@
 import logging
+from datetime import date, timedelta
 
 from flask import Blueprint, jsonify, request, session
 
+from backend.api.admin import _validar_evento_calendario
 from backend.config import (
+    EQUIPOS_VALIDOS,
     LOGIN_BLOCK_WINDOW_SECONDS,
     MAX_EMAIL_LEN,
     MAX_LOGIN_ATTEMPTS_PER_WINDOW,
 )
 from backend.schemas import build_response
+from backend.services.admin import is_admin_authenticated
 from backend.services.equipo import (
+    crear_evento_calendario,
     equipo_session_info,
     init_equipo_db,
     is_equipo_authenticated,
@@ -17,13 +22,22 @@ from backend.services.equipo import (
     logout_equipo,
     registrar_equipo_acceso,
 )
-from backend.services.marketing import init_marketing_db, mis_tareas
+from backend.services.marketing import calendario_equipo, init_marketing_db, mis_tareas
 from backend.services.security import demasiadas_peticiones, limpiar_texto, obtener_ip_real
 
 logger = logging.getLogger("telecoemprende.equipo")
 
 
 equipo_api = Blueprint("equipo_api", __name__, url_prefix="/api/equipo")
+
+
+def _puede_editar_calendario_club() -> bool:
+    """VP de cualquier departamento, o admin. El calendario del club es
+    compartido y no de un solo departamento, así que aquí no hay
+    `departamento_actual()` que comprobar -- basta con ser VP de alguno."""
+    return is_admin_authenticated() or (
+        is_equipo_authenticated() and len(equipo_session_info()["vp_de"]) > 0
+    )
 
 
 @equipo_api.route("/login", methods=["POST"])
@@ -129,6 +143,73 @@ def api_equipo_calendario():
 
     init_equipo_db()
     return jsonify({"ok": True, "eventos": listar_eventos_calendario()}), 200
+
+
+@equipo_api.route("/calendario", methods=["POST"])
+def api_equipo_crear_calendario():
+    """VPs pueden añadir eventos al calendario del club sin pasar por /admin
+    -- editar y borrar siguen siendo cosa de /admin (ver CalendarioPanel)."""
+    if not _puede_editar_calendario_club():
+        return jsonify(build_response(False, "No autorizado.")), 401
+
+    init_equipo_db()
+    payload = request.get_json(silent=True) or {}
+    error = _validar_evento_calendario(payload)
+    if error:
+        return jsonify(build_response(False, error)), 400
+
+    evento = crear_evento_calendario(
+        limpiar_texto(str(payload.get("titulo", ""))),
+        limpiar_texto(str(payload.get("descripcion", ""))),
+        str(payload.get("fecha", "")).strip(),
+        str(payload.get("hora", "")).strip(),
+    )
+    logger.info("equipo crea evento calendario id=%s", evento["id"])
+    return jsonify(build_response(True, "Evento creado.", evento=evento)), 201
+
+
+@equipo_api.route("/calendario-equipo", methods=["GET"])
+def api_equipo_calendario_cruzado():
+    """Lectura cruzada: deadlines/publicaciones/reuniones de los
+    departamentos pedidos (todos por defecto), para el calendario de
+    departamento con el filtro "todos los departamentos" (ver
+    `CalendarPanel.tsx`). Cualquier sesión de /equipo puede leerlo -- no hace
+    falta pertenecer al departamento cuyos datos se están mirando, es lectura,
+    no edición."""
+    if not is_equipo_authenticated() and not is_admin_authenticated():
+        return jsonify(build_response(False, "No autorizado.")), 401
+
+    init_marketing_db()
+    # `calendario_equipo()` también hace JOIN contra `reuniones` (ver el mismo
+    # comentario en `requiere_equipo`, backend/api/marketing.py).
+    from backend.services.registros import init_registros_db
+
+    init_registros_db()
+    args = request.args.to_dict()
+    hoy = date.today()
+
+    def _fecha(clave, por_defecto):
+        valor = args.get(clave)
+        if not valor:
+            return por_defecto
+        try:
+            return date.fromisoformat(valor)
+        except ValueError:
+            return por_defecto
+
+    desde = _fecha("desde", hoy.replace(day=1))
+    siguiente_mes = desde.replace(day=28) + timedelta(days=4)
+    hasta = _fecha("hasta", siguiente_mes - timedelta(days=siguiente_mes.day))
+
+    crudo = args.get("departamentos", "")
+    departamentos = [d for d in crudo.split(",") if d in EQUIPOS_VALIDOS] or list(EQUIPOS_VALIDOS)
+
+    return jsonify({
+        "ok": True,
+        "desde": desde.isoformat(),
+        "hasta": hasta.isoformat(),
+        "items": calendario_equipo(desde, hasta, departamentos),
+    }), 200
 
 
 @equipo_api.route("/mis-tareas", methods=["GET"])

@@ -1313,10 +1313,8 @@
 }
 
 .mkt-fila-check-react {
-  flex: 1;
   display: flex;
   align-items: center;
-  gap: 14px;
   min-height: 44px;
   cursor: pointer;
 }
@@ -1334,6 +1332,24 @@
   flex-direction: column;
   gap: 1px;
   min-width: 0;
+}
+
+/* El título de la fila es un botón (abre la tarea) separado de la casilla,
+   así tocar el texto ya no alterna "hecho" -- solo lo hace la casilla. */
+.mkt-fila-abrir-react {
+  flex: 1;
+  min-width: 0;
+  padding: 4px 0;
+  border: none;
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.mkt-fila-abrir-react:hover .mkt-fila-titulo-react {
+  text-decoration: underline;
 }
 
 /* De qué cuelga la cosa, encima de su nombre. Sin esto el usuario lee cuatro
@@ -2582,6 +2598,27 @@ button.mkt-evento-react {
   font-size: 0.9rem;
   font-weight: 700;
   color: var(--color-navy);
+}
+
+/* Toda la fila (hora + título + departamento) es un botón: abre la tarea
+   sin salir de "Tu agenda" para ir a buscarla al tablero del departamento. */
+.mkt-agenda-abrir-react {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.mkt-agenda-abrir-react:hover .mkt-agenda-titulo-react {
+  text-decoration: underline;
 }
 
 .mkt-saludo-react {

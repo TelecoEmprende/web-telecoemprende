@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { useApi } from "../DeptoApi";
+import { useApi, useDirectorio } from "../DeptoApi";
 import { AlertBanner } from "../../feedback/AlertBanner";
 import { Esqueleto } from "../../feedback/Esqueleto";
 import { AvataresDeResponsables } from "./Avatares";
+import { TaskDialog } from "./TaskDialog";
 import { Badge } from "@/components/ui/badge";
 import type { ApiFailure } from "../../../types/api";
 import {
@@ -51,7 +52,17 @@ function etiquetaDia(fechaISO: string, dias: number) {
   return formatearFecha(fechaISO);
 }
 
-function FilaTarea({ task, onHecha }: { task: Task; onHecha: (t: Task) => void }) {
+function FilaTarea({
+  task,
+  onHecha,
+  onAbrir,
+  directorio,
+}: {
+  task: Task;
+  onHecha: (t: Task) => void;
+  onAbrir: (t: Task) => void;
+  directorio: Record<string, string>;
+}) {
   const momento = cuando(task.deadline);
 
   return (
@@ -62,18 +73,18 @@ function FilaTarea({ task, onHecha }: { task: Task; onHecha: (t: Task) => void }
           checked={task.estado === "acabado"}
           onChange={() => onHecha(task)}
         />
-        <span className="mkt-fila-texto-react">
-          {task.content_titulo || task.campaign_nombre ? (
-            <span className="mkt-fila-padre-react">
-              {task.content_titulo ?? task.campaign_nombre}
-            </span>
-          ) : null}
-          <span className="mkt-fila-titulo-react">{task.titulo}</span>
-        </span>
       </label>
+      <button type="button" className="mkt-fila-texto-react mkt-fila-abrir-react" onClick={() => onAbrir(task)}>
+        {task.content_titulo || task.campaign_nombre ? (
+          <span className="mkt-fila-padre-react">
+            {task.content_titulo ?? task.campaign_nombre}
+          </span>
+        ) : null}
+        <span className="mkt-fila-titulo-react">{task.titulo}</span>
+      </button>
 
       <span className="mkt-fila-derecha-react">
-        <AvataresDeResponsables responsables={task.responsables} maximo={2} />
+        <AvataresDeResponsables responsables={task.responsables} directorio={directorio} maximo={2} />
         <span className={`mkt-cuando-react mkt-cuando-${momento.tono}-react`}>
           {momento.texto}
         </span>
@@ -105,6 +116,7 @@ const HORIZONTE_DIAS = 30;
 
 export function WeekPanel() {
   const { getCalendario, getCampaigns, getTasks, updateTask } = useApi();
+  const directorio = useDirectorio();
 
   const [tasks, setTasks] = useState<Task[]>([]);
   const [publicaciones, setPublicaciones] = useState<CalendarioItem[]>([]);
@@ -113,6 +125,7 @@ export function WeekPanel() {
   const [soloMias, setSoloMias] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [abierta, setAbierta] = useState<Task | null>(null);
 
   const cargar = useCallback(async () => {
     const hoy = new Date();
@@ -299,7 +312,7 @@ export function WeekPanel() {
           </h4>
           <ul className="mkt-filas-react">
             {vencidas.map((task) => (
-              <FilaTarea key={task.id} task={task} onHecha={marcarHecha} />
+              <FilaTarea key={task.id} task={task} onHecha={marcarHecha} onAbrir={setAbierta} directorio={directorio} />
             ))}
           </ul>
         </div>
@@ -329,7 +342,7 @@ export function WeekPanel() {
               {dia.tareas.length > 0 ? (
                 <ul className="mkt-filas-react">
                   {dia.tareas.map((task) => (
-                    <FilaTarea key={task.id} task={task} onHecha={marcarHecha} />
+                    <FilaTarea key={task.id} task={task} onHecha={marcarHecha} onAbrir={setAbierta} directorio={directorio} />
                   ))}
                 </ul>
               ) : null}
@@ -346,10 +359,22 @@ export function WeekPanel() {
           </h4>
           <ul className="mkt-filas-react">
             {sinFecha.map((task) => (
-              <FilaTarea key={task.id} task={task} onHecha={marcarHecha} />
+              <FilaTarea key={task.id} task={task} onHecha={marcarHecha} onAbrir={setAbierta} directorio={directorio} />
             ))}
           </ul>
         </div>
+      ) : null}
+
+      {abierta ? (
+        <TaskDialog
+          task={abierta}
+          etiquetasExistentes={[...new Set(tasks.flatMap((t) => t.tags))].sort()}
+          onCerrar={() => setAbierta(null)}
+          onGuardado={() => {
+            setAbierta(null);
+            void cargar();
+          }}
+        />
       ) : null}
     </section>
   );
