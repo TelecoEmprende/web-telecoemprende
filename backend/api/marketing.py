@@ -122,6 +122,16 @@ def requiere_equipo(func):
             return jsonify(build_response(False, "No autorizado.")), 401
 
         init_marketing_db()
+        # `calendario()` hace JOIN contra `reuniones`, que solo creaba
+        # `init_registros_db()` -- y esa función solo se llamaba desde las
+        # rutas de api/registros.py. Un departamento que nunca hubiera abierto
+        # Recursos/Reuniones antes de mirar su Calendario se encontraba con un
+        # 500 (relation "reuniones" does not exist). Se inicializa aquí, en la
+        # puerta común de todas las rutas de este blueprint, para que no
+        # dependa de qué ruta se visitó primero.
+        from backend.services.registros import init_registros_db
+
+        init_registros_db()
         try:
             return func(*args, **kwargs)
         except DatosInvalidos as error:
