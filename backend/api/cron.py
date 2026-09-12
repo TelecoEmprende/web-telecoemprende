@@ -52,10 +52,15 @@ def api_resumen_equipo():
     init_marketing_db()
     enviados = {}
     for departamento in sorted(EQUIPOS_VALIDOS):
-        salud = salud_equipo(departamento)
-        if salud["total"] == 0:
-            continue
-        enviados[departamento] = resumen_salud_equipo(salud, departamento)
+        # Un departamento que falle (p. ej. un hipo de la base de datos) no
+        # debe impedir que se avise a los otros dos -- se registra y se sigue.
+        try:
+            salud = salud_equipo(departamento)
+            if salud["total"] == 0:
+                continue
+            enviados[departamento] = resumen_salud_equipo(salud, departamento)
+        except Exception:
+            logger.exception("cron resumen-equipo: fallo en %s", departamento)
 
     logger.info("cron resumen-equipo: %s", enviados)
     return jsonify({"ok": True, "enviados": enviados}), 200

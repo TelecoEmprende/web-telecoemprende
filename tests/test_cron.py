@@ -101,6 +101,40 @@ class CronTests(unittest.TestCase):
         self.assertEqual(respuesta.get_json()["tareas"], 0)
         aviso.assert_called_once_with([])
 
+    def test_un_departamento_que_falla_no_bloquea_a_los_demas(self):
+        """Un fallo (p. ej. de base de datos) calculando la salud de un
+        departamento no debe impedir que se avise al resto -- ver
+        `api_resumen_equipo`."""
+        conn = equipo_service._get_connection()
+        with conn.cursor() as cur:
+            cur.execute(
+                "INSERT INTO equipo_accesos (email, password_hash, equipos)"
+                " VALUES (%s, %s, %s)",
+                ("eventos@example.com", generate_password_hash("x"), ["eventos"]),
+            )
+        conn.commit()
+        conn.close()
+
+        real_salud_equipo = marketing_service.salud_equipo
+
+        def salud_que_falla_en_eventos(departamento):
+            if departamento == "eventos":
+                raise RuntimeError("boom")
+            return real_salud_equipo(departamento)
+
+        with patch(
+            "backend.api.cron.salud_equipo", side_effect=salud_que_falla_en_eventos
+        ), patch("backend.api.cron.resumen_salud_equipo", return_value=True):
+            respuesta = self.client.post(
+                "/api/cron/resumen-equipo",
+                headers={"Authorization": "Bearer test-cron-secret"},
+            )
+
+        self.assertEqual(respuesta.status_code, 200)
+        enviados = respuesta.get_json()["enviados"]
+        self.assertIn("marketing", enviados)
+        self.assertNotIn("eventos", enviados)
+
 
 if __name__ == "__main__":
     unittest.main()
