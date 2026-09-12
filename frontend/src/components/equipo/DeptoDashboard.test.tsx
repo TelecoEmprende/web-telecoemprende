@@ -640,6 +640,101 @@ describe("/equipo — panel de Marketing", () => {
       "page",
     );
   });
+
+  it("el calendario cuelga del club, no de un departamento", async () => {
+    await renderMarketing();
+    await userEvent.click(screen.getByRole("button", { name: "Calendario" }));
+
+    // Misma comprobación que ya existe para Anuncios: la barra rotula "Club",
+    // no "Marketing", aunque la ruta cuelgue del primer departamento de la
+    // persona (ver `clubDe` en EquipoSidebar).
+    expect(document.querySelector(".workspace-barra-depto-react")?.textContent).toBe("Club");
+  });
+
+  it("con más de un departamento, el calendario deja elegir a cuál va la tarea nueva", async () => {
+    teamsDeSesion = ["marketing", "ingenieria"];
+
+    render(
+      <MemoryRouter>
+        <EquipoPage />
+      </MemoryRouter>,
+    );
+    await userEvent.click(await screen.findByRole("button", { name: "Calendario" }));
+
+    // Con un solo departamento no hay nada que elegir (ver el otro test de
+    // creación de tarea); con más de uno, el selector aparece.
+    const dia = await screen.findByRole("button", { name: /^Añadir tarea el 15 de/ });
+    await userEvent.click(dia);
+    await userEvent.selectOptions(
+      screen.getByLabelText("Departamento de la tarea nueva"),
+      "ingenieria",
+    );
+
+    const campo = await screen.findByLabelText(/Título de la tarea para el 15/);
+    await userEvent.type(campo, "Preparar taller{Enter}");
+
+    await waitFor(() =>
+      expect(createTask).toHaveBeenCalledWith(
+        expect.objectContaining({ titulo: "Preparar taller" }),
+      ),
+    );
+    // `apiDepto` se llamó con el departamento elegido en el selector, no con
+    // el primero de la persona por defecto.
+    expect(deptosPedidos.at(-1)).toBe("ingenieria");
+  });
+
+  it("un evento de otro departamento propio abre SU campaña, no la de aquí", async () => {
+    // Ingeniería no vale para este test: no tiene panel de Campañas (ver
+    // `PANELES_POR_EQUIPO`). Marketing y Eventos sí comparten el concepto
+    // (en Eventos se llama "Eventos" en vez de "Campañas").
+    teamsDeSesion = ["marketing", "eventos"];
+    getCalendarioEquipo.mockResolvedValue({
+      ok: true,
+      desde: "",
+      hasta: "",
+      items: [
+        {
+          origen: "task",
+          id: 9,
+          titulo: "Reservar la sala",
+          fecha: enDias(2),
+          estado: "pendiente",
+          campaign_id: 5,
+          detalle: "",
+          prioridad: "media",
+          padre: null,
+          responsables: [],
+          hora: null,
+          departamento: "eventos",
+        },
+      ],
+    });
+    getCampaign.mockResolvedValue({
+      ok: true,
+      campaign: {
+        id: 5, nombre: "Semana de bienvenida", objetivo: "", audiencia: "", fecha: null,
+        contents: [], tasks_sueltas: [],
+      },
+    });
+
+    render(
+      <MemoryRouter>
+        <EquipoPage />
+      </MemoryRouter>,
+    );
+    await userEvent.click(await screen.findByRole("button", { name: "Resumen" }));
+    await userEvent.click(screen.getByRole("button", { name: "Calendario" }));
+
+    await userEvent.click(await screen.findByRole("button", { name: /Reservar la sala/ }));
+
+    expect(
+      await screen.findByRole("heading", { name: "Semana de bienvenida" }),
+    ).toBeInTheDocument();
+    expect(getCampaign).toHaveBeenCalledWith(5);
+    // Se remontó el dashboard en el contexto de Eventos: la barra ya no dice
+    // "Club" sino el departamento al que se saltó.
+    expect(document.querySelector(".workspace-barra-depto-react")?.textContent).toBe("Eventos");
+  });
 });
 
 describe("/equipo — panel de Eventos", () => {
