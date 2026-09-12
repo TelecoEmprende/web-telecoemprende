@@ -7,6 +7,7 @@ import { CalendarioEquipo } from "../components/equipo/CalendarioEquipo";
 import {
   EquipoSidebar,
   deptoDe,
+  prefijoDe,
   seccionesDe,
   teamDe,
   type Seccion,
@@ -168,7 +169,15 @@ export function EquipoPage() {
           </header>
 
           <div className="workspace-contenido-react">
-            {seccion === "club" ? <CalendarioEquipo /> : null}
+            {seccion === "club" ? (
+              <CalendarioEquipo
+                onVerAnuncios={
+                  teams.length > 0
+                    ? () => setSeccion(`${prefijoDe(teams[0])}-anuncios` as Seccion)
+                    : undefined
+                }
+              />
+            ) : null}
             {seccion === "metricas" ? <MetricasPanel /> : null}
             {deptoActual ? (
               // `key` para que cambiar de departamento remonte los paneles: si

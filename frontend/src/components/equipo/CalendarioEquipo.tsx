@@ -2,14 +2,18 @@ import { FormEvent, useMemo, useState, useEffect } from "react";
 
 import {
   createEquipoCalendarioEvento,
+  getDirectorioClub,
   getEquipoCalendario,
   getEquipoSession,
   getMisTareas,
 } from "../../api/equipo";
+import { apiDepto } from "../../api/marketing";
 import { DeptoProvider } from "./DeptoApi";
+import { AvatarResponsable, etiquetaDe } from "./marketing/Avatares";
 import { TaskDialog } from "./marketing/TaskDialog";
 import type { ApiFailure } from "../../types/api";
-import type { EventoCalendario, Team } from "../../types/equipo";
+import type { EventoCalendario, MiembroDirectorio, Team } from "../../types/equipo";
+import { textoDe, type Registro } from "../../types/registros";
 import { diasHasta, formatearFecha as formatearFechaCorta, type Task } from "../../types/marketing";
 
 const DEPTO_LABEL: Record<string, string> = {
@@ -46,6 +50,17 @@ function tituloDeHoy() {
     month: "long",
   });
   return texto.charAt(0).toUpperCase() + texto.slice(1);
+}
+
+/** "Hace 2h" / "Hace 3 días", para el aviso del board -- una fecha exacta ahí
+ *  no dice nada de si es reciente o lleva semanas colgado. */
+function haceTiempo(iso: string) {
+  const minutos = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60000));
+  if (minutos < 60) return minutos <= 1 ? "Hace un momento" : `Hace ${minutos} min`;
+  const horas = Math.round(minutos / 60);
+  if (horas < 24) return `Hace ${horas}h`;
+  const dias = Math.round(horas / 24);
+  return dias === 1 ? "Hace 1 día" : `Hace ${dias} días`;
 }
 
 /** Lunes de la semana de `fecha`, para la tira de "esta semana" encima de
@@ -116,7 +131,13 @@ function formatearFecha(fecha: string) {
  * hay ni "+" en el día ni formulario: solo lo que `equipo.css` neutraliza del
  * estilo de botón que traen esas clases.
  */
-export function CalendarioEquipo() {
+type Props = {
+  /** Ir a la sección de Anuncios, para el enlace del aviso del board. Sin
+   *  esto (nadie lo pasa) el aviso se ve pero no navega a ningún sitio. */
+  onVerAnuncios?: () => void;
+};
+
+export function CalendarioEquipo({ onVerAnuncios }: Props) {
   const [eventos, setEventos] = useState<EventoCalendario[]>([]);
   const [cursor, setCursor] = useState(() => {
     const hoy = new Date();
@@ -124,7 +145,8 @@ export function CalendarioEquipo() {
   });
   const [tareas, setTareas] = useState<Task[]>([]);
   const [nombre, setNombre] = useState("");
-  const [teams, setTeams] = useState<string[]>([]);
+  const [email, setEmail] = useState("");
+  const [teams, setTeams] = useState<Team[]>([]);
   const [vpDe, setVpDe] = useState<string[]>([]);
   const [tareaAbierta, setTareaAbierta] = useState<Task | null>(null);
   const [mostrarFormularioEvento, setMostrarFormularioEvento] = useState(false);
@@ -132,6 +154,12 @@ export function CalendarioEquipo() {
   const [creandoEvento, setCreandoEvento] = useState(false);
   const [errorEvento, setErrorEvento] = useState<string | null>(null);
   const puedeAnadirEvento = vpDe.length > 0;
+  // "Asignadas a mí" filtra por responsable; "Mis departamentos" (por
+  // defecto) es lo de siempre: todo lo abierto de los departamentos propios.
+  const [filtroTareas, setFiltroTareas] = useState<"mias" | "departamentos">("departamentos");
+  const [anuncio, setAnuncio] = useState<Registro | null>(null);
+  const [directorio, setDirectorio] = useState<MiembroDirectorio[]>([]);
+  const [busquedaDirectorio, setBusquedaDirectorio] = useState("");
 
   async function cargarCalendario() {
     try {
@@ -151,6 +179,7 @@ export function CalendarioEquipo() {
       .then((sesion) => {
         if (!active) return;
         setNombre(sesion.nombre);
+        setEmail(sesion.email);
         setTeams(sesion.teams);
         setVpDe(sesion.vp_de);
         // Tareas abiertas de cualquier departamento al que pertenezca -- con
@@ -164,15 +193,55 @@ export function CalendarioEquipo() {
           .catch(() => {
             // Sin agenda disponible: la sección no aparece, sin más.
           });
+
+        // Los anuncios son del club entero pero se piden por la ruta de un
+        // departamento (el backend no los acota); da igual cuál mientras la
+        // persona pertenezca a él. Ya vienen ordenados fijado > recientes.
+        if (sesion.teams.length > 0) {
+          apiDepto(sesion.teams[0])
+            .listarRegistros("anuncios")
+            .then((respuesta) => {
+              if (active) setAnuncio(respuesta.anuncios[0] ?? null);
+            })
+            .catch(() => {
+              // Sin anuncios disponibles: el banner no aparece, sin más.
+            });
+        }
       })
       .catch(() => {
         // Sin sesión legible no hay nombre que saludar ni agenda que pedir.
+      });
+
+    getDirectorioClub()
+      .then((respuesta) => {
+        if (active) setDirectorio(respuesta.miembros);
+      })
+      .catch(() => {
+        // Sin directorio disponible: el widget "Quién es quién" no aparece.
       });
 
     return () => {
       active = false;
     };
   }, []);
+
+  const tareasVisibles = useMemo(
+    () =>
+      filtroTareas === "mias"
+        ? tareas.filter((t) => t.responsables.includes(email))
+        : tareas,
+    [tareas, filtroTareas, email],
+  );
+
+  const directorioVisible = useMemo(() => {
+    const q = busquedaDirectorio.trim().toLowerCase();
+    if (!q) return directorio;
+    return directorio.filter(
+      (m) =>
+        etiquetaDe(m.email, m.nombre).toLowerCase().includes(q) ||
+        m.equipos.some((eq) => (DEPTO_LABEL[eq] ?? eq).toLowerCase().includes(q)),
+    );
+  }, [directorio, busquedaDirectorio]);
 
   async function crearEvento(event: FormEvent) {
     event.preventDefault();
@@ -393,6 +462,54 @@ export function CalendarioEquipo() {
     </section>
   );
 
+  const quienEsQuien = (
+    <section className="equipo-proximos-react">
+      <header className="equipo-panel-header-react">
+        <h3>Quién es quién</h3>
+        <span className="mkt-meta-react">
+          {directorio.length} {directorio.length === 1 ? "miembro" : "miembros"}
+        </span>
+      </header>
+
+      {directorio.length > 0 ? (
+        <input
+          type="search"
+          className="mkt-buscador-react"
+          placeholder="Buscar por nombre o departamento..."
+          aria-label="Buscar en el directorio del club"
+          value={busquedaDirectorio}
+          onChange={(e) => setBusquedaDirectorio(e.target.value)}
+        />
+      ) : null}
+
+      {directorio.length === 0 ? (
+        <p className="equipo-vacio-react">Directorio no disponible ahora mismo.</p>
+      ) : directorioVisible.length === 0 ? (
+        <p className="equipo-vacio-react">Nadie coincide con esa búsqueda.</p>
+      ) : (
+        <ul className="mkt-miembros-react equipo-directorio-react">
+          {directorioVisible.slice(0, 8).map((miembro) => (
+            <li key={miembro.email} className="mkt-miembro-react">
+              <AvatarResponsable email={miembro.email} nombre={miembro.nombre} />
+              <span className="mkt-miembro-datos-react">
+                <span className="mkt-miembro-nombre-react">
+                  {etiquetaDe(miembro.email, miembro.nombre)}
+                </span>
+                <span className="mkt-meta-react">
+                  {miembro.equipos.map((eq) => DEPTO_LABEL[eq] ?? eq).join(" · ") || "Sin departamento"}
+                </span>
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {directorioVisible.length > 8 ? (
+        <p className="mkt-meta-react">+{directorioVisible.length - 8} más</p>
+      ) : null}
+    </section>
+  );
+
   return (
     <>
       <header className="mkt-saludo-react">
@@ -404,6 +521,22 @@ export function CalendarioEquipo() {
             : `${cosasPorDelante} ${cosasPorDelante === 1 ? "cosa pendiente" : "cosas pendientes"}`}
         </p>
       </header>
+
+      {anuncio ? (
+        <div className="equipo-aviso-board-react">
+          <span className="mkt-tag-react">Aviso del board</span>
+          <div className="equipo-aviso-board-cuerpo-react">
+            <strong>{textoDe(anuncio, "titulo")}</strong>
+            {textoDe(anuncio, "cuerpo") ? <p>{textoDe(anuncio, "cuerpo")}</p> : null}
+            <span className="mkt-meta-react">{haceTiempo(anuncio.created_at)}</span>
+          </div>
+          {onVerAnuncios ? (
+            <button type="button" className="mkt-btn-mini-react" onClick={onVerAnuncios}>
+              Ver anuncios
+            </button>
+          ) : null}
+        </div>
+      ) : null}
 
       <div className="mkt-semana-tira-react">
         {semana.map((dia) => {
@@ -437,13 +570,34 @@ export function CalendarioEquipo() {
             </span>
           </header>
 
-          {tareas.length === 0 ? (
+          <div className="mkt-vista-toggle-react" role="group" aria-label="Filtrar tareas">
+            <button
+              type="button"
+              className={`mkt-btn-mini-react${filtroTareas === "mias" ? " mkt-btn-mini-activo-react" : ""}`}
+              aria-pressed={filtroTareas === "mias"}
+              onClick={() => setFiltroTareas("mias")}
+            >
+              Asignadas a mí
+            </button>
+            <button
+              type="button"
+              className={`mkt-btn-mini-react${filtroTareas === "departamentos" ? " mkt-btn-mini-activo-react" : ""}`}
+              aria-pressed={filtroTareas === "departamentos"}
+              onClick={() => setFiltroTareas("departamentos")}
+            >
+              Mis departamentos
+            </button>
+          </div>
+
+          {tareasVisibles.length === 0 ? (
             <p className="mkt-vacio-react">
-              Nada pendiente en ningún departamento ahora mismo.
+              {filtroTareas === "mias"
+                ? "No tienes ninguna tarea asignada ahora mismo."
+                : "Nada pendiente en ningún departamento ahora mismo."}
             </p>
           ) : (
             <ul className="mkt-agenda-react">
-              {tareas.map((tarea) => {
+              {tareasVisibles.map((tarea) => {
                 const dias = diasHasta(tarea.deadline);
                 const vencida = dias !== null && dias < 0;
                 return (
@@ -472,9 +626,9 @@ export function CalendarioEquipo() {
             </ul>
           )}
 
-          {tareas.length > 0 ? (
+          {tareasVisibles.length > 0 ? (
             <div className="mkt-agenda-leyenda-react">
-              {[...new Set(tareas.map((t) => t.departamento))].map((depto) => (
+              {[...new Set(tareasVisibles.map((t) => t.departamento))].map((depto) => (
                 <span key={depto} className={`mkt-agenda-leyenda-punto-react ${DEPTO_CLASE[depto] ?? ""}`}>
                   {DEPTO_LABEL[depto] ?? depto}
                 </span>
@@ -489,6 +643,7 @@ export function CalendarioEquipo() {
         <div className="mkt-inicio-lateral-react">
           {calendario}
           {proximosEventos}
+          {quienEsQuien}
         </div>
       </div>
 
