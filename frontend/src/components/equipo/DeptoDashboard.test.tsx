@@ -14,6 +14,7 @@ const getMiembros = vi.fn();
 const updateTask = vi.fn();
 const createTask = vi.fn();
 const getFichaMiembro = vi.fn();
+const getSalud = vi.fn();
 const listarRegistros = vi.fn();
 const updateFichaMiembro = vi.fn();
 const duplicateCampaign = vi.fn();
@@ -49,6 +50,7 @@ vi.mock("../../api/marketing", () => ({
       getTaskComments: (...args: unknown[]) => getTaskComments(...args),
       createTaskComment: (...args: unknown[]) => createTaskComment(...args),
       getFichaMiembro: (...args: unknown[]) => getFichaMiembro(...args),
+      getSalud: (...args: unknown[]) => getSalud(...args),
       listarRegistros: (...args: unknown[]) => listarRegistros(...args),
       crearRegistro: vi.fn(),
       actualizarRegistro: vi.fn(),
@@ -143,6 +145,12 @@ describe("/equipo — panel de Marketing", () => {
       .mockResolvedValue({ ok: true, desde: "", hasta: "", items: [] });
     getMiembros.mockReset().mockResolvedValue({ ok: true, miembros: [] });
     getFichaMiembro.mockReset();
+    getSalud
+      .mockReset()
+      .mockResolvedValue({
+        ok: true,
+        salud: { total: 0, sobrecargados: 0, inactivos: 0, pct_a_tiempo: null, miembros: [] },
+      });
     listarRegistros.mockReset().mockImplementation((recurso: string) =>
       Promise.resolve({ ok: true, [recurso]: [] }),
     );
@@ -749,6 +757,12 @@ describe("/equipo — panel de Eventos", () => {
       .mockResolvedValue({ ok: true, desde: "", hasta: "", items: [] });
     getMiembros.mockReset().mockResolvedValue({ ok: true, miembros: [] });
     getFichaMiembro.mockReset();
+    getSalud
+      .mockReset()
+      .mockResolvedValue({
+        ok: true,
+        salud: { total: 0, sobrecargados: 0, inactivos: 0, pct_a_tiempo: null, miembros: [] },
+      });
     listarRegistros.mockReset().mockImplementation((recurso: string) =>
       Promise.resolve({ ok: true, [recurso]: [] }),
     );

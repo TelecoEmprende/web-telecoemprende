@@ -180,6 +180,34 @@ export type FichaMiembro = {
   completadas: number;
   campanas: number;
   actividad: ActividadMiembro[];
+  /** Claves libres, ver ONBOARDING_PASOS: qué pasos ya se han marcado. */
+  onboarding: Record<string, boolean>;
+};
+
+/** Pasos del checklist de onboarding. El backend solo guarda el objeto
+ *  `{clave: hecho}`; el copy y el orden viven aquí, en el frontend. */
+export const ONBOARDING_PASOS = [
+  { key: "github", label: "Acceso a GitHub" },
+  { key: "whatsapp", label: "Canal de WhatsApp del club" },
+  { key: "herramientas", label: "Acceso a herramientas del departamento" },
+  { key: "primera_tarea", label: "Primera tarea asignada" },
+] as const;
+
+export type MiembroSalud = {
+  email: string;
+  abiertas: number;
+  /** Días desde su última tarea completada, o null si no aplica. */
+  dias_inactivo: number | null;
+  nivel: "rojo" | "amarillo" | "verde";
+};
+
+export type SaludEquipo = {
+  total: number;
+  sobrecargados: number;
+  inactivos: number;
+  /** null si no hay tareas acabadas con deadline suficientes para calcularlo. */
+  pct_a_tiempo: number | null;
+  miembros: MiembroSalud[];
 };
 
 /** Fechas en el formato de aquí (15 oct), no en ISO crudo. */

@@ -11,10 +11,10 @@ from datetime import date, timedelta
 
 from flask import Blueprint, jsonify, request
 
-from backend.config import CRON_SECRET
+from backend.config import CRON_SECRET, EQUIPOS_VALIDOS
 from backend.schemas import build_response
-from backend.services.marketing import init_marketing_db, tareas_que_vencen
-from backend.services.slack import aviso_deadlines_manana
+from backend.services.marketing import init_marketing_db, salud_equipo, tareas_que_vencen
+from backend.services.slack import aviso_deadlines_manana, resumen_salud_equipo
 
 logger = logging.getLogger("telecoemprende.cron")
 
@@ -40,3 +40,22 @@ def api_avisar_deadlines():
     enviado = aviso_deadlines_manana(tareas)
     logger.info("cron avisar-deadlines: %s tarea(s), enviado=%s", len(tareas), enviado)
     return jsonify({"ok": True, "tareas": len(tareas), "enviado": enviado}), 200
+
+
+@cron_api.route("/resumen-equipo", methods=["POST"])
+def api_resumen_equipo():
+    """Un resumen de salud por departamento, una vez a la semana. Se salta el
+    que no tiene miembros -- no hay a quién avisar de qué."""
+    if not _autorizado():
+        return jsonify(build_response(False, "No autorizado.")), 401
+
+    init_marketing_db()
+    enviados = {}
+    for departamento in sorted(EQUIPOS_VALIDOS):
+        salud = salud_equipo(departamento)
+        if salud["total"] == 0:
+            continue
+        enviados[departamento] = resumen_salud_equipo(salud, departamento)
+
+    logger.info("cron resumen-equipo: %s", enviados)
+    return jsonify({"ok": True, "enviados": enviados}), 200
