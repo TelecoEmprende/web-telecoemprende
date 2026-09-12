@@ -133,7 +133,7 @@ export function MemberDialog({ email, onCerrar, onGuardado }: Props) {
     }
   }
 
-  const nombre = etiquetaDe(email);
+  const nombre = etiquetaDe(email, ficha?.nombre);
 
   return (
     <Dialog open onOpenChange={(abierto) => !abierto && onCerrar()}>
@@ -150,7 +150,7 @@ export function MemberDialog({ email, onCerrar, onGuardado }: Props) {
         ) : (
           <div className="mkt-ficha-react">
             <div className="mkt-ficha-lateral-react">
-              <AvatarResponsable email={email} className="mkt-ficha-avatar-react" />
+              <AvatarResponsable email={email} nombre={ficha?.nombre} className="mkt-ficha-avatar-react" />
               <p className="mkt-ficha-nombre-react">{nombre}</p>
               <p className="mkt-meta-react">
                 {ficha.cargo

@@ -523,6 +523,7 @@ def api_miembros():
             "equipos": a["equipos"],
             "activo": a["activo"],
             "tags": a["tags"],
+            "nombre": a["nombre"],
             "abiertas": carga.get(a["email"], 0),
         }
         for a in listar_equipo_accesos()
@@ -565,6 +566,7 @@ def api_ficha_miembro():
         cargo=acceso["cargo"],
         tags=acceso["tags"],
         notas=acceso["notas"],
+        nombre=acceso["nombre"],
         desde=acceso["created_at"],
     )
     return jsonify({"ok": True, "ficha": ficha}), 200

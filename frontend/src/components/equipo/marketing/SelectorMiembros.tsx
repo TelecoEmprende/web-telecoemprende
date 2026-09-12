@@ -50,6 +50,10 @@ export function SelectorMiembros({
     );
   }
 
+  function nombreDe(email: string) {
+    return miembros.find((m) => m.email === email)?.nombre;
+  }
+
   return (
     <Popover>
       <PopoverTrigger asChild>
@@ -59,10 +63,10 @@ export function SelectorMiembros({
           ) : (
             <span className="mkt-selector-elegidos-react">
               {seleccionados.map((email) => (
-                <AvatarResponsable key={email} email={email} />
+                <AvatarResponsable key={email} email={email} nombre={nombreDe(email)} />
               ))}
               <span className="mkt-selector-nombres-react">
-                {seleccionados.map(etiquetaDe).join(", ")}
+                {seleccionados.map((email) => etiquetaDe(email, nombreDe(email))).join(", ")}
               </span>
             </span>
           )}
@@ -81,8 +85,8 @@ export function SelectorMiembros({
                     checked={seleccionados.includes(m.email)}
                     onCheckedChange={() => alternar(m.email)}
                   />
-                  <AvatarResponsable email={m.email} />
-                  <span>{etiquetaDe(m.email)}</span>
+                  <AvatarResponsable email={m.email} nombre={m.nombre} />
+                  <span>{etiquetaDe(m.email, m.nombre)}</span>
                 </label>
               </li>
             ))}

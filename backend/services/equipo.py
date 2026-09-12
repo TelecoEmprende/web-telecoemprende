@@ -55,6 +55,12 @@ def init_equipo_db():
                 ALTER TABLE equipo_accesos
                 ADD COLUMN IF NOT EXISTS notas TEXT NOT NULL DEFAULT ''
             """)
+            # Nombre para mostrar: sin él, cada avatar/etiqueta de la app
+            # adivinaba el nombre a partir del email (ver Avatares.tsx).
+            cur.execute("""
+                ALTER TABLE equipo_accesos
+                ADD COLUMN IF NOT EXISTS nombre VARCHAR(80) NOT NULL DEFAULT ''
+            """)
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS calendario_eventos (
                     id SERIAL PRIMARY KEY,
@@ -78,7 +84,7 @@ def login_equipo(email: str, password: str) -> dict | None:
         with conn.cursor() as cur:
             cur.execute(
                 """
-                SELECT password_hash, equipos, vp_de, cargo
+                SELECT password_hash, equipos, vp_de, cargo, nombre
                 FROM equipo_accesos WHERE email = %s AND activo = TRUE
                 """,
                 (email,),
@@ -94,6 +100,7 @@ def login_equipo(email: str, password: str) -> dict | None:
     equipos = [e for e in row[1] if e in EQUIPOS_VALIDOS]
     vp_de = [e for e in row[2] if e in equipos]
     cargo = row[3] if row[3] in CARGOS_VALIDOS else ""
+    nombre = row[4]
 
     # session.clear() por higiene ante fijación de sesión (mismo criterio que
     # login_admin).
@@ -103,12 +110,13 @@ def login_equipo(email: str, password: str) -> dict | None:
     session["equipo_teams"] = equipos
     session["equipo_vp_de"] = vp_de
     session["equipo_cargo"] = cargo
+    session["equipo_nombre"] = nombre
     # Ingeniería, presidencia y board reciben también sesión de /admin:
     # reutiliza la misma clave de sesión que usa login_admin, así
     # is_admin_authenticated() funciona igual venga de /admin o de /equipo.
     if _tiene_permisos_admin(equipos, cargo):
         session["admin_auth"] = True
-    return {"teams": equipos, "vp_de": vp_de, "cargo": cargo}
+    return {"teams": equipos, "vp_de": vp_de, "cargo": cargo, "nombre": nombre}
 
 
 def is_equipo_authenticated() -> bool:
@@ -121,6 +129,7 @@ def equipo_session_info() -> dict:
         "vp_de": session.get("equipo_vp_de", []),
         "cargo": session.get("equipo_cargo", ""),
         "email": session.get("equipo_email", ""),
+        "nombre": session.get("equipo_nombre", ""),
     }
 
 
@@ -135,7 +144,7 @@ def listar_equipo_accesos() -> list[dict]:
             cur.execute(
                 """
                 SELECT id, email, equipos, vp_de, cargo, activo, created_at,
-                       tags, notas
+                       tags, notas, nombre
                 FROM equipo_accesos ORDER BY email
                 """
             )
@@ -152,6 +161,7 @@ def listar_equipo_accesos() -> list[dict]:
             "created_at": f[6].isoformat(),
             "tags": f[7],
             "notas": f[8],
+            "nombre": f[9],
         }
         for f in filas
     ]
@@ -175,13 +185,19 @@ def _acceso_valido(equipos: list[str], vp_de: list[str], cargo: str) -> bool:
 
 
 def crear_equipo_acceso(
-    email: str, password: str, equipos: list[str], vp_de: list[str] | None = None, cargo: str = ""
+    email: str,
+    password: str,
+    equipos: list[str],
+    vp_de: list[str] | None = None,
+    cargo: str = "",
+    nombre: str = "",
 ) -> dict | None:
     """Devuelve None si el email ya existe o si equipos/vp_de/cargo no son válidos."""
     email = email.strip().lower()
     equipos = sorted(set(equipos))
     vp_de = sorted(set(vp_de or []))
     cargo = cargo or ""
+    nombre = (nombre or "").strip()
 
     if not _acceso_valido(equipos, vp_de, cargo):
         return None
@@ -194,11 +210,11 @@ def crear_equipo_acceso(
 
             cur.execute(
                 """
-                INSERT INTO equipo_accesos (email, password_hash, equipos, vp_de, cargo)
-                VALUES (%s, %s, %s, %s, %s)
-                RETURNING id, email, equipos, vp_de, cargo, activo, created_at
+                INSERT INTO equipo_accesos (email, password_hash, equipos, vp_de, cargo, nombre)
+                VALUES (%s, %s, %s, %s, %s, %s)
+                RETURNING id, email, equipos, vp_de, cargo, activo, created_at, nombre
                 """,
-                (email, generate_password_hash(password), equipos, vp_de, cargo),
+                (email, generate_password_hash(password), equipos, vp_de, cargo, nombre),
             )
             fila = cur.fetchone()
         conn.commit()
@@ -211,6 +227,7 @@ def crear_equipo_acceso(
         "cargo": fila[4],
         "activo": fila[5],
         "created_at": fila[6].isoformat(),
+        "nombre": fila[7],
     }
 
 
@@ -253,6 +270,7 @@ def actualizar_equipo_acceso(
     cargo: str | None = None,
     activo: bool | None = None,
     password: str | None = None,
+    nombre: str | None = None,
 ) -> bool:
     """Actualiza solo los campos que se pasan. Devuelve False si el id no existe
     o si equipos/vp_de/cargo no son válidos.
@@ -304,6 +322,9 @@ def actualizar_equipo_acceso(
     if password:
         campos.append("password_hash = %s")
         valores.append(generate_password_hash(password))
+    if nombre is not None:
+        campos.append("nombre = %s")
+        valores.append(nombre.strip())
 
     if not campos:
         return False

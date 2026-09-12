@@ -3,7 +3,7 @@ import { FormEvent, useEffect, useRef, useState } from "react";
 import { AvataresDeResponsables } from "./Avatares";
 import { SelectorMiembros } from "./SelectorMiembros";
 import { TaskDialog } from "./TaskDialog";
-import { useApi } from "../DeptoApi";
+import { useApi, useDirectorio } from "../DeptoApi";
 import { AlertBanner } from "../../feedback/AlertBanner";
 import { ContadorCaracteres } from "../../feedback/ContadorCaracteres";
 import { Esqueleto } from "../../feedback/Esqueleto";
@@ -46,6 +46,7 @@ function compararTareas(a: Task, b: Task) {
  */
 export function TasksPanel() {
   const { createTask, getTasks, updateTask } = useApi();
+  const directorio = useDirectorio();
 
   const [tasks, setTasks] = useState<Task[]>([]);
   const [usuario, setUsuario] = useState("");
@@ -375,7 +376,11 @@ export function TasksPanel() {
                           ) : null}
                         </span>
 
-                        <AvataresDeResponsables responsables={task.responsables} maximo={3} />
+                        <AvataresDeResponsables
+                          responsables={task.responsables}
+                          directorio={directorio}
+                          maximo={3}
+                        />
                       </span>
                     </button>
                   );

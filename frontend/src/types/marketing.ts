@@ -104,6 +104,7 @@ export type Campaign = {
   objetivo: string;
   audiencia: string;
   fecha: string | null;
+  archivado: boolean;
   creado_por: string;
   created_at: string;
   updated_at: string;
@@ -133,6 +134,8 @@ export type CalendarioItem = {
   responsables: string[];
   /** "HH:MM", o null si es de día completo (publicaciones siempre lo son). */
   hora: string | null;
+  /** Solo en la lectura cruzada entre departamentos (`getCalendarioEquipo`). */
+  departamento?: string;
 };
 
 export type Miembro = {
@@ -141,8 +144,18 @@ export type Miembro = {
   activo: boolean;
   /** Etiquetas de habilidad, del perfil de la persona. */
   tags: string[];
+  /** Nombre para mostrar. Vacío si todavía no se ha rellenado en /admin. */
+  nombre: string;
   /** Tareas sin acabar en ESTE departamento. Se calcula, no se guarda. */
   abiertas: number;
+};
+
+export type TaskComment = {
+  id: number;
+  task_id: number;
+  autor: string;
+  texto: string;
+  created_at: string;
 };
 
 /** Una entrada del historial: el estado actual de una tarea suya. */
@@ -161,6 +174,7 @@ export type FichaMiembro = {
   cargo: string;
   tags: string[];
   notas: string;
+  nombre: string;
   desde: string;
   abiertas: number;
   completadas: number;

@@ -11,6 +11,7 @@ from backend.config import (
     LOGIN_BLOCK_WINDOW_SECONDS,
     MAX_EMAIL_LEN,
     MAX_LOGIN_ATTEMPTS_PER_WINDOW,
+    MAX_NOMBRE_EQUIPO_LEN,
 )
 from backend.schemas import build_response
 from backend.services.admin import (
@@ -450,6 +451,7 @@ def api_admin_crear_equipo():
     equipos = payload.get("equipos")
     vp_de = payload.get("vp_de") or []
     cargo = str(payload.get("cargo", "") or "")
+    nombre = limpiar_texto(str(payload.get("nombre", "") or ""))
 
     # No exigimos que sea correo UPM (puede ser gente externa colaborando en un
     # equipo): solo que tenga forma de email.
@@ -479,7 +481,10 @@ def api_admin_crear_equipo():
     if cargo and cargo not in CARGOS_VALIDOS:
         return jsonify(build_response(False, "Cargo no válido.")), 400
 
-    acceso = crear_equipo_acceso(email, password, equipos, vp_de=vp_de, cargo=cargo)
+    if len(nombre) > MAX_NOMBRE_EQUIPO_LEN:
+        return jsonify(build_response(False, "El nombre supera la longitud permitida.")), 400
+
+    acceso = crear_equipo_acceso(email, password, equipos, vp_de=vp_de, cargo=cargo, nombre=nombre)
     if acceso is None:
         return jsonify(build_response(False, "Ese email ya tiene acceso de equipo.")), 409
 
@@ -498,6 +503,7 @@ def api_admin_actualizar_equipo(acceso_id: int):
     cargo = payload.get("cargo")
     activo = payload.get("activo")
     password = str(payload.get("password", "")) or None
+    nombre = payload.get("nombre")
 
     # La combinación equipos/vp_de/cargo la valida el servicio contra la fila ya
     # guardada (aquí solo se ven los campos que llegan en la petición).
@@ -518,8 +524,19 @@ def api_admin_actualizar_equipo(acceso_id: int):
     if password is not None and len(password) < 8:
         return jsonify(build_response(False, "La contraseña debe tener al menos 8 caracteres.")), 400
 
+    if nombre is not None:
+        nombre = limpiar_texto(str(nombre))
+        if len(nombre) > MAX_NOMBRE_EQUIPO_LEN:
+            return jsonify(build_response(False, "El nombre supera la longitud permitida.")), 400
+
     if actualizar_equipo_acceso(
-        acceso_id, equipos=equipos, vp_de=vp_de, cargo=cargo, activo=activo, password=password
+        acceso_id,
+        equipos=equipos,
+        vp_de=vp_de,
+        cargo=cargo,
+        activo=activo,
+        password=password,
+        nombre=nombre,
     ):
         logger.info("admin actualiza acceso equipo id=%s", acceso_id)
         return jsonify(build_response(True, "Acceso actualizado.")), 200

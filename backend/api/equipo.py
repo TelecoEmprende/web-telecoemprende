@@ -117,7 +117,7 @@ def api_equipo_session():
     info = (
         equipo_session_info()
         if authenticated
-        else {"teams": [], "vp_de": [], "cargo": "", "email": ""}
+        else {"teams": [], "vp_de": [], "cargo": "", "email": "", "nombre": ""}
     )
     return jsonify({"ok": True, "authenticated": authenticated, **info}), 200
 
