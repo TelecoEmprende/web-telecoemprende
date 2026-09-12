@@ -885,6 +885,28 @@
   color: #fff;
 }
 
+/* Los chips de departamento activos deben pintarse de SU color, no del
+   naranja genérico de "filtro activo" -- si no, los tres se ven iguales y
+   el filtro por color deja de significar nada. El punto de la leyenda pasa
+   a blanco en ese estado: sobre una pastilla ya coloreada, un punto del
+   mismo color que el fondo es invisible (le pasaba a Marketing, cuyo color
+   es justo ese naranja genérico). */
+.mkt-filtros-react .mkt-agenda-marketing-react[aria-pressed="true"] {
+  background: var(--color-depto-marketing);
+  border-color: var(--color-depto-marketing);
+}
+.mkt-filtros-react .mkt-agenda-eventos-react[aria-pressed="true"] {
+  background: var(--color-depto-eventos);
+  border-color: var(--color-depto-eventos);
+}
+.mkt-filtros-react .mkt-agenda-ingenieria-react[aria-pressed="true"] {
+  background: var(--color-depto-tech);
+  border-color: var(--color-depto-tech);
+}
+.mkt-filtros-react .mkt-agenda-leyenda-punto-react[aria-pressed="true"]::before {
+  background: #fff;
+}
+
 /* ---------- Ficha de miembro ---------- */
 
 /* Sin el padding/gap por defecto de <DialogContent> (Tailwind `p-4 gap-4`):
