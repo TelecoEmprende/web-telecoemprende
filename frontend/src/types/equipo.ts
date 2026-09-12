@@ -16,6 +16,17 @@ export type EquipoSessionResponse = {
   nombre: string;
 };
 
+/** Fila del directorio del club entero ("Quién es quién") -- solo lo básico,
+ *  visible a cualquier miembro. Nada de notas/onboarding, que son privados
+ *  (ver `EquipoAcceso`, la versión completa que solo ve /admin). */
+export type MiembroDirectorio = {
+  email: string;
+  equipos: Team[];
+  vp_de: Team[];
+  cargo: Cargo;
+  nombre: string;
+};
+
 export type EquipoAcceso = {
   id: number;
   email: string;

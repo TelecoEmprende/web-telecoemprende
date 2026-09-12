@@ -676,6 +676,22 @@ class ApiTestCase(unittest.TestCase):
         self.assertEqual(yo["abiertas"], 1)
         self.assertIn("marketing", metricas["por_departamento"])
 
+    def test_directorio_requiere_sesion(self):
+        self.assertEqual(self.client.get("/api/equipo/directorio").status_code, 401)
+
+    def test_directorio_lo_ve_cualquier_miembro_y_omite_privados(self):
+        """"Quién es quién" no es board/VP-only como /metricas: cualquiera con
+        sesión de equipo lo ve, y solo trae lo básico (nada de notas)."""
+        self.seed_equipo()
+        self.seed_equipo(email="otra@example.com", equipos=["eventos"], cargo="boardmember")
+        self.equipo_login()
+
+        respuesta = self.client.get("/api/equipo/directorio")
+        self.assertEqual(respuesta.status_code, 200)
+        miembros = respuesta.get_json()["miembros"]
+        self.assertEqual({m["email"] for m in miembros}, {"marketing@example.com", "otra@example.com"})
+        self.assertNotIn("notas", miembros[0])
+
     def test_admin_equipo_endpoints_require_auth(self):
         self.assertEqual(self.client.get("/api/admin/equipo").status_code, 401)
         self.assertEqual(self.client.post("/api/admin/equipo", json={}).status_code, 401)

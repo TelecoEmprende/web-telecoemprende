@@ -93,6 +93,26 @@ def _crear_tablas_equipo():
         conn.commit()
 
 
+def listar_directorio_club() -> list[dict]:
+    """Quién es quién del club entero, para el widget de "Mi semana" -- solo
+    lo básico (nombre, equipos, cargo). Nada de notas ni onboarding, que son
+    privados (ver `listar_equipo_accesos`, la versión completa de /admin)."""
+    with _get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT email, equipos, vp_de, cargo, nombre
+                FROM equipo_accesos WHERE activo = TRUE ORDER BY nombre, email
+                """
+            )
+            filas = cur.fetchall()
+
+    return [
+        {"email": f[0], "equipos": f[1], "vp_de": f[2], "cargo": f[3], "nombre": f[4]}
+        for f in filas
+    ]
+
+
 def _tiene_permisos_admin(equipos: list[str], cargo: str) -> bool:
     return EQUIPO_CON_PERMISOS_ADMIN in equipos or cargo in CARGOS_VALIDOS
 
