@@ -105,16 +105,10 @@
   color: var(--color-text-muted);
 }
 
-/* Item activo: pastilla Noche sólida, como el wireframe -- no el velo azul
-   de --sidebar-accent, que sigue sirviendo tal cual para el hover de los
-   items sin seleccionar. Más específica que la utilidad de Tailwind
-   (`data-[active=true]:bg-sidebar-accent`), así gana en la cascada sin
-   `!important`. */
-.workspace-react [data-slot="sidebar-menu-button"][data-active="true"],
-.workspace-react [data-slot="sidebar-menu-button"][data-active="true"]:hover {
-  background: var(--color-noche);
-  color: #fff;
-}
+/* Item activo: el propio mecanismo de shadcn (`data-[active=true]:bg-sidebar-accent`
+   + `--sidebar-accent`/`--sidebar-accent-foreground`, ya en Azul TE arriba),
+   sin pisarlo con una regla más específica -- así conserva el mismo
+   comportamiento/transición que trae el componente de fábrica. */
 
 /* ---------- Marca en la cabecera del sidebar ---------- */
 
