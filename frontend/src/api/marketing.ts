@@ -7,6 +7,7 @@ import type {
   CampaignResumen,
   Content,
   Miembro,
+  SaludEquipo,
   Task,
   TaskComment,
 } from "../types/marketing";
@@ -96,8 +97,12 @@ export function apiDepto(depto: Team) {
         `${BASE}/miembros/ficha?email=${encodeURIComponent(email)}`,
       ),
 
-    updateFichaMiembro: (email: string, datos: { tags?: string[]; notas?: string }) =>
-      put<ApiResult>("/miembros/ficha", { email, ...datos }),
+    updateFichaMiembro: (
+      email: string,
+      datos: { tags?: string[]; notas?: string; onboarding?: Record<string, boolean> },
+    ) => put<ApiResult>("/miembros/ficha", { email, ...datos }),
+
+    getSalud: () => apiRequest<{ ok: true; salud: SaludEquipo }>(`${BASE}/miembros/salud`),
 
     // --- Registros (recursos, presupuesto, anuncios, reuniones, alumni) ---
     // Un solo juego de métodos para las cinco: el backend las sirve con el

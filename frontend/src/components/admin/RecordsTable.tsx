@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Check, Pencil, Trash2 } from "lucide-react";
+import { Link } from "react-router-dom";
+import { Check, Pencil, Trash2, UserPlus } from "lucide-react";
 
 import { deleteRegistration, updateRegistrationEstado } from "../../api/admin";
 import type { Estado, Registro } from "../../types/admin";
@@ -209,6 +210,18 @@ export function RecordsTable({ registros, onUpdate, onDelete, onEstadoChange }: 
                     Waitlist
                   </Button>
                 </span>
+                {registro.estado === "aceptado" ? (
+                  <Button asChild variant="ghost" size="icon" className="text-[var(--color-impulso)]">
+                    <Link
+                      to={`/admin/equipo?nombre=${encodeURIComponent(
+                        `${registro.nombre} ${registro.apellidos}`.trim(),
+                      )}&email=${encodeURIComponent(registro.email)}`}
+                      title="Crear acceso de equipo"
+                    >
+                      <UserPlus size={15} strokeWidth={1.75} />
+                    </Link>
+                  </Button>
+                ) : null}
                 <Button
                   variant="ghost"
                   size="icon"

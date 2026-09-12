@@ -3,7 +3,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useApi, useDirectorio } from "../DeptoApi";
 import { AlertBanner } from "../../feedback/AlertBanner";
 import { Esqueleto } from "../../feedback/Esqueleto";
-import { AvataresDeResponsables } from "./Avatares";
+import { AvatarResponsable, AvataresDeResponsables, etiquetaDe } from "./Avatares";
+import { MemberDialog } from "./MemberDialog";
 import { TaskDialog } from "./TaskDialog";
 import { Badge } from "@/components/ui/badge";
 import type { ApiFailure } from "../../../types/api";
@@ -14,6 +15,7 @@ import {
   formatearFecha,
   type CalendarioItem,
   type CampaignResumen,
+  type SaludEquipo,
   type Task,
 } from "../../../types/marketing";
 
@@ -115,32 +117,36 @@ function Hito({ pub, pendientes }: { pub: CalendarioItem; pendientes: number }) 
 const HORIZONTE_DIAS = 30;
 
 export function WeekPanel() {
-  const { getCalendario, getCampaigns, getTasks, updateTask } = useApi();
+  const { getCalendario, getCampaigns, getSalud, getTasks, updateTask } = useApi();
   const directorio = useDirectorio();
 
   const [tasks, setTasks] = useState<Task[]>([]);
   const [publicaciones, setPublicaciones] = useState<CalendarioItem[]>([]);
   const [campaigns, setCampaigns] = useState<CampaignResumen[]>([]);
+  const [salud, setSalud] = useState<SaludEquipo | null>(null);
   const [usuario, setUsuario] = useState("");
   const [soloMias, setSoloMias] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [abierta, setAbierta] = useState<Task | null>(null);
+  const [fichaAbierta, setFichaAbierta] = useState<string | null>(null);
 
   const cargar = useCallback(async () => {
     const hoy = new Date();
     const dentroDeUnMes = new Date(hoy.getFullYear(), hoy.getMonth() + 1, hoy.getDate());
 
     try {
-      const [respuestaTasks, respuestaCal, respuestaCampaigns] = await Promise.all([
+      const [respuestaTasks, respuestaCal, respuestaCampaigns, respuestaSalud] = await Promise.all([
         getTasks(),
         getCalendario(iso(hoy), iso(dentroDeUnMes)),
         getCampaigns(),
+        getSalud(),
       ]);
       setTasks(respuestaTasks.tasks);
       setUsuario(respuestaTasks.usuario);
       setPublicaciones(respuestaCal.items.filter((i) => i.origen === "content"));
       setCampaigns(respuestaCampaigns.campaigns);
+      setSalud(respuestaSalud.salud);
       setError(null);
     } catch (err) {
       setError((err as ApiFailure)?.message || "No se pudo cargar el resumen.");
@@ -225,6 +231,14 @@ export function WeekPanel() {
   const dias = [...porDia.values()].sort((a, b) => a.dias - b.dias);
 
   const vacio = vencidas.length === 0 && dias.length === 0 && sinFecha.length === 0;
+
+  // Rojo por sobrecarga y rojo por inactividad son la misma etiqueta pero
+  // piden acciones distintas -- aquí solo interesa a quién reenganchar, no a
+  // quién descargar de tareas (eso ya lo cuenta el tile de sobrecargados).
+  const paraReenganchar = (salud?.miembros ?? [])
+    .filter((m) => m.nivel === "rojo" && m.dias_inactivo !== null)
+    .sort((a, b) => (b.dias_inactivo ?? 0) - (a.dias_inactivo ?? 0))
+    .slice(0, 5);
 
   return (
     <section className="mkt-panel-react">
@@ -365,6 +379,62 @@ export function WeekPanel() {
         </div>
       ) : null}
 
+      {salud ? (
+        <div className="mkt-grupo-react">
+          <h4 className="mkt-grupo-titulo-react">Salud del equipo</h4>
+
+          <div className="mkt-tiles-react">
+            <div className="mkt-tile-react">
+              <span className="mkt-tile-numero-react">{salud.total}</span>
+              <span className="mkt-tile-label-react">Miembros activos</span>
+            </div>
+            <div className={`mkt-tile-react${salud.sobrecargados > 0 ? " mkt-tile-alerta-react" : ""}`}>
+              <span className="mkt-tile-numero-react">{salud.sobrecargados}</span>
+              <span className="mkt-tile-label-react">Sobrecargados</span>
+            </div>
+            <div className={`mkt-tile-react${salud.inactivos > 0 ? " mkt-tile-alerta-react" : ""}`}>
+              <span className="mkt-tile-numero-react">{salud.inactivos}</span>
+              <span className="mkt-tile-label-react">Sin tarea hace +15 días</span>
+            </div>
+            <div className="mkt-tile-react">
+              <span className="mkt-tile-numero-react">
+                {salud.pct_a_tiempo === null ? "—" : `${salud.pct_a_tiempo}%`}
+              </span>
+              <span className="mkt-tile-label-react">
+                {salud.pct_a_tiempo === null ? "Sin datos suficientes" : "Tareas a tiempo"}
+              </span>
+            </div>
+          </div>
+
+          {paraReenganchar.length > 0 ? (
+            <>
+              <h4 className="mkt-grupo-titulo-react">Para reenganchar</h4>
+              <ul className="mkt-miembros-react">
+                {paraReenganchar.map((m) => (
+                  <li key={m.email}>
+                    <button
+                      type="button"
+                      className="mkt-miembro-react"
+                      onClick={() => setFichaAbierta(m.email)}
+                    >
+                      <AvatarResponsable email={m.email} nombre={directorio[m.email]} />
+                      <span className="mkt-miembro-datos-react">
+                        <span className="mkt-miembro-nombre-react">
+                          {etiquetaDe(m.email, directorio[m.email])}
+                        </span>
+                        <span className="mkt-meta-react">
+                          Hace {m.dias_inactivo} días sin actividad
+                        </span>
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </>
+          ) : null}
+        </div>
+      ) : null}
+
       {abierta ? (
         <TaskDialog
           task={abierta}
@@ -374,6 +444,14 @@ export function WeekPanel() {
             setAbierta(null);
             void cargar();
           }}
+        />
+      ) : null}
+
+      {fichaAbierta !== null ? (
+        <MemberDialog
+          email={fichaAbierta}
+          onCerrar={() => setFichaAbierta(null)}
+          onGuardado={() => void cargar()}
         />
       ) : null}
     </section>
