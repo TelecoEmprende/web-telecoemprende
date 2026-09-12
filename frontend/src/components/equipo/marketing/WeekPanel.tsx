@@ -116,7 +116,15 @@ function Hito({ pub, pendientes }: { pub: CalendarioItem; pendientes: number }) 
  *  entrar en Calendario que desplazar la vista de entrada sin fin. */
 const HORIZONTE_DIAS = 30;
 
-export function WeekPanel() {
+type Props = {
+  /** Board del club o VP de este departamento: solo ellos ven "Salud del
+   *  equipo" (ver `DeptoDashboard`). Sin esto ni se pide `getSalud()` -- el
+   *  backend ya la rechaza con 403 para cualquier otra persona, y meterla en
+   *  el mismo `Promise.all` tumbaría también tareas/calendario/campañas. */
+  puedeVerSalud: boolean;
+};
+
+export function WeekPanel({ puedeVerSalud }: Props) {
   const { getCalendario, getCampaigns, getSalud, getTasks, updateTask } = useApi();
   const directorio = useDirectorio();
 
@@ -140,20 +148,20 @@ export function WeekPanel() {
         getTasks(),
         getCalendario(iso(hoy), iso(dentroDeUnMes)),
         getCampaigns(),
-        getSalud(),
+        puedeVerSalud ? getSalud() : Promise.resolve(null),
       ]);
       setTasks(respuestaTasks.tasks);
       setUsuario(respuestaTasks.usuario);
       setPublicaciones(respuestaCal.items.filter((i) => i.origen === "content"));
       setCampaigns(respuestaCampaigns.campaigns);
-      setSalud(respuestaSalud.salud);
+      setSalud(respuestaSalud?.salud ?? null);
       setError(null);
     } catch (err) {
       setError((err as ApiFailure)?.message || "No se pudo cargar el resumen.");
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [puedeVerSalud]);
 
   useEffect(() => {
     void cargar();

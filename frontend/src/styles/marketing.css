@@ -411,6 +411,13 @@
   transition: transform var(--dur-menu) var(--ease-out);
 }
 
+/* Métricas (`MetricasPanel.tsx`) reutiliza esta misma barra pero en Azul TE,
+   no en el naranja de "% de la campaña" -- son lecturas distintas (actividad
+   del club, no avance de una pieza) y aquí es el color el que lo separa. */
+.mkt-progreso-azul-react .mkt-progreso-barra-react span {
+  background: var(--color-azul);
+}
+
 .mkt-progreso-texto-react {
   color: var(--color-text-muted);
   font-size: 0.85rem;

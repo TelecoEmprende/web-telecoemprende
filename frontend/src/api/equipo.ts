@@ -6,7 +6,7 @@ import type {
   EventoCalendario,
   Team,
 } from "../types/equipo";
-import type { CalendarioItem, Task } from "../types/marketing";
+import type { CalendarioItem, MetricasClub, Task } from "../types/marketing";
 
 export function loginEquipo(email: string, password: string) {
   return apiRequest<EquipoLoginResponse>("/api/equipo/login", {
@@ -62,4 +62,12 @@ export function getCalendarioEquipo(desde: string, hasta: string, departamentos?
 
 export function getMisTareas() {
   return apiRequest<ApiResult & { tareas: Task[] }>("/api/equipo/mis-tareas");
+}
+
+/** Solo board/VP (ver `_es_board_o_vp` en el backend) -- 403 para cualquier
+ *  otra persona. `MetricasPanel` no la llama si la sesión no cumple. */
+export function getMetricas(diasPeriodo = 30) {
+  return apiRequest<ApiResult & { metricas: MetricasClub }>(
+    `/api/equipo/metricas?dias=${diasPeriodo}`,
+  );
 }
