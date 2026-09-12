@@ -977,6 +977,52 @@ class SaludEquipoTestCase(MarketingTestCase):
         # ayer, acabada hoy): 50%.
         self.assertEqual(marketing_service.salud_equipo("marketing")["pct_a_tiempo"], 50)
 
+    def test_editar_una_tarea_ya_acabada_no_cambia_si_fue_a_tiempo(self):
+        """`updated_at` se mueve con cualquier edición posterior a que la
+        tarea se completara (retocar la checklist, el título...). Antes era
+        lo único que usaba `pct_a_tiempo`, así que una tarea a tiempo podía
+        pasar a contar como tardía por una edición sin relación con el plazo."""
+        self.login()
+        hoy = date.today().isoformat()
+
+        task_id = self.client.post(
+            "/api/marketing/tasks", json={"titulo": "Reel", "deadline": hoy}
+        ).get_json()["task"]["id"]
+        self.client.put(f"/api/marketing/tasks/{task_id}", json={"estado": "acabado"})
+
+        # Una edición posterior (título, checklist...) que no toca el estado
+        # -- simulada tocando `updated_at` directamente, ya que en el test
+        # ocurre en el mismo instante real que la línea de arriba.
+        conn = marketing_service._get_connection()
+        with conn.cursor() as cur:
+            cur.execute(
+                "UPDATE tasks SET updated_at = NOW() + interval '5 days' WHERE id = %s",
+                (task_id,),
+            )
+        conn.commit()
+        conn.close()
+
+        self.assertEqual(marketing_service.salud_equipo("marketing")["pct_a_tiempo"], 100)
+
+    def test_reenviar_el_mismo_estado_no_reinicia_completado_en(self):
+        """El diálogo de edición reenvía `estado` sin cambios en cada
+        guardado (ver TaskDialog.tsx) -- eso no debe correr la fecha de
+        cierre real cada vez que se retoca otra cosa de una tarea acabada."""
+        self.login()
+        task_id = self.client.post(
+            "/api/marketing/tasks", json={"titulo": "Reel"}
+        ).get_json()["task"]["id"]
+
+        marketing_service.actualizar_task(task_id, "marketing", estado="acabado")
+        primero = marketing_service.obtener_task(task_id, "marketing")["completado_en"]
+
+        marketing_service.actualizar_task(
+            task_id, "marketing", estado="acabado", titulo="Reel editado"
+        )
+        segundo = marketing_service.obtener_task(task_id, "marketing")["completado_en"]
+
+        self.assertEqual(primero, segundo)
+
     def test_ruta_salud_devuelve_total_del_departamento(self):
         self.login()
         self.seed_acceso("otro@telecoemprende.es", "x", ["marketing"])

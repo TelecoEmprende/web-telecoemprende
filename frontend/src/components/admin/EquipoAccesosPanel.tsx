@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 
 import {
@@ -127,6 +127,15 @@ export function EquipoAccesosPanel() {
   const [nuevosEquipos, setNuevosEquipos] = useState<Team[]>([]);
   const [nuevoVpDe, setNuevoVpDe] = useState<Team[]>([]);
   const [nuevoCargo, setNuevoCargo] = useState<Cargo>("");
+
+  // El prellenado desde una candidatura aceptada (ver comentario arriba)
+  // puede apuntar a un email que ya tiene acceso -- sin este aviso, "Crear
+  // acceso" lo intenta igual y el único feedback es el 400 genérico del
+  // backend en vez de decir dónde está ya la persona.
+  const accesoExistente = useMemo(
+    () => accesos.find((a) => a.email.trim().toLowerCase() === nuevoEmail.trim().toLowerCase()),
+    [accesos, nuevoEmail],
+  );
 
   async function cargar() {
     setIsLoading(true);
@@ -403,6 +412,12 @@ export function EquipoAccesosPanel() {
               onChange={(event) => setNuevoEmail(event.target.value)}
               required
             />
+            {accesoExistente ? (
+              <p className="text-sm text-[var(--color-error-text)]">
+                Ya hay un acceso con ese email{accesoExistente.nombre ? ` (${accesoExistente.nombre})` : ""}
+                . Edítalo en la tabla de arriba en vez de crear uno nuevo.
+              </p>
+            ) : null}
           </div>
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="nuevo-equipo-password">Contraseña</Label>
@@ -451,7 +466,11 @@ export function EquipoAccesosPanel() {
           </Select>
         </div>
 
-        <Button type="submit" disabled={isSaving || nuevosEquipos.length === 0} className="sm:w-fit">
+        <Button
+          type="submit"
+          disabled={isSaving || nuevosEquipos.length === 0 || !!accesoExistente}
+          className="sm:w-fit"
+        >
           {isSaving ? "Creando..." : "Crear acceso"}
         </Button>
       </form>

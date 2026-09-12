@@ -136,7 +136,11 @@ export function MembersPanel() {
         <p className="mkt-vacio-react">
           {miembros.length === 0
             ? "No hay nadie con acceso a este departamento todavía. Los accesos se dan de alta desde el panel de administración."
-            : "Nadie tiene esa habilidad apuntada todavía."}
+            : filtro !== null && filtroCarga !== ""
+              ? "Nadie tiene esa habilidad con esa carga."
+              : filtro !== null
+                ? "Nadie tiene esa habilidad apuntada todavía."
+                : "Nadie tiene esa carga ahora mismo."}
         </p>
       ) : (
         <ul className="mkt-miembros-react">
