@@ -76,15 +76,18 @@ const CLUB: Item[] = [
 ];
 
 /** Qué paneles tiene cada departamento. Los cinco de siempre los tienen todos;
- *  Presupuesto es de quien mueve dinero (Eventos) y Alumni de Ingeniería. */
+ *  Presupuesto es de quien mueve dinero (Eventos) y Alumni de Ingeniería.
+ *  El calendario no está aquí: ahora que se puede ver y filtrar por
+ *  departamento desde un único sitio, no tiene sentido repetir la misma
+ *  entrada en cada departamento -- vive una sola vez, en `clubDe`. */
 const PANELES_POR_EQUIPO: Record<Team, Panel[]> = {
-  marketing: ["home", "campanas", "tareas", "calendario", "recursos", "miembros"],
+  marketing: ["home", "campanas", "tareas", "recursos", "miembros"],
   eventos: [
-    "home", "campanas", "tareas", "calendario",
+    "home", "campanas", "tareas",
     "recursos", "presupuesto", "reuniones", "miembros",
   ],
   ingenieria: [
-    "home", "tareas", "calendario", "alumni", "reuniones", "recursos", "miembros",
+    "home", "tareas", "alumni", "reuniones", "recursos", "miembros",
   ],
 };
 
@@ -168,13 +171,19 @@ export function seccionesDe(teams: Team[]): Item[] {
   return [...clubDe(teams), ...teams.flatMap((team) => POR_EQUIPO[team] ?? [])];
 }
 
-/** El grupo "Club": el inicio, y los anuncios si la persona está en algún
- *  departamento (la ruta de anuncios cuelga de uno, aunque el contenido sea
- *  del club entero). */
+/** El grupo "Club": el inicio, el calendario y los anuncios, si la persona
+ *  está en algún departamento (sus rutas cuelgan de uno aunque el contenido
+ *  sea del club entero -- ver el calendario cruzado con filtro, y los
+ *  anuncios, que el backend no acota por departamento). */
 export function clubDe(teams: Team[]): Item[] {
   if (teams.length === 0) return CLUB;
   return [
     ...CLUB,
+    {
+      id: `${PREFIJO[teams[0]]}-calendario` as Seccion,
+      label: "Calendario",
+      icono: CalendarDays,
+    },
     {
       id: `${PREFIJO[teams[0]]}-anuncios` as Seccion,
       label: "Anuncios",
@@ -185,7 +194,9 @@ export function clubDe(teams: Team[]): Item[] {
 
 /** El rótulo de la barra: el departamento, o "Club" para lo que es de todos. */
 export function deptoDe(seccion: Seccion): string {
-  if (seccion === "club" || seccion.endsWith("-anuncios")) return "Club";
+  if (seccion === "club" || seccion.endsWith("-anuncios") || seccion.endsWith("-calendario")) {
+    return "Club";
+  }
   const team = teamDe(seccion);
   return team ? TEAM_LABEL[team] : "Club";
 }

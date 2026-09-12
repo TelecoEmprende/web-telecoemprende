@@ -174,6 +174,7 @@ export function EquipoPage() {
               <DeptoDashboard
                 key={deptoActual}
                 depto={deptoActual}
+                teams={teams}
                 seccion={seccion}
                 onSeccion={setSeccion}
               />

@@ -885,6 +885,28 @@
   color: #fff;
 }
 
+/* Los chips de departamento activos deben pintarse de SU color, no del
+   naranja genérico de "filtro activo" -- si no, los tres se ven iguales y
+   el filtro por color deja de significar nada. El punto de la leyenda pasa
+   a blanco en ese estado: sobre una pastilla ya coloreada, un punto del
+   mismo color que el fondo es invisible (le pasaba a Marketing, cuyo color
+   es justo ese naranja genérico). */
+.mkt-filtros-react .mkt-agenda-marketing-react[aria-pressed="true"] {
+  background: var(--color-depto-marketing);
+  border-color: var(--color-depto-marketing);
+}
+.mkt-filtros-react .mkt-agenda-eventos-react[aria-pressed="true"] {
+  background: var(--color-depto-eventos);
+  border-color: var(--color-depto-eventos);
+}
+.mkt-filtros-react .mkt-agenda-ingenieria-react[aria-pressed="true"] {
+  background: var(--color-depto-tech);
+  border-color: var(--color-depto-tech);
+}
+.mkt-filtros-react .mkt-agenda-leyenda-punto-react[aria-pressed="true"]::before {
+  background: #fff;
+}
+
 /* ---------- Ficha de miembro ---------- */
 
 /* Sin el padding/gap por defecto de <DialogContent> (Tailwind `p-4 gap-4`):
@@ -1490,8 +1512,18 @@
    Calendario accionable
    ========================================================================== */
 
-.mkt-leyenda-nota-react {
+/* Las dos notas van juntas en un solo bloque empujado a la derecha -- si
+   cada nota lleva su propio margin-left:auto (como antes), dos elementos
+   compiten por el mismo hueco y el resultado es impredecible según cuántas
+   notas haya y cuánto quepa en la fila. */
+.mkt-leyenda-notas-react {
   margin-left: auto;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+}
+
+.mkt-leyenda-nota-react {
   color: var(--color-text-muted);
   font-size: 0.82rem;
 }
@@ -1821,7 +1853,7 @@ button.mkt-evento-react:hover {
     align-items: stretch;
   }
 
-  .mkt-leyenda-nota-react {
+  .mkt-leyenda-notas-react {
     margin-left: 0;
     width: 100%;
   }
