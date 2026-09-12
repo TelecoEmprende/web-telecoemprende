@@ -1512,8 +1512,18 @@
    Calendario accionable
    ========================================================================== */
 
-.mkt-leyenda-nota-react {
+/* Las dos notas van juntas en un solo bloque empujado a la derecha -- si
+   cada nota lleva su propio margin-left:auto (como antes), dos elementos
+   compiten por el mismo hueco y el resultado es impredecible según cuántas
+   notas haya y cuánto quepa en la fila. */
+.mkt-leyenda-notas-react {
   margin-left: auto;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+}
+
+.mkt-leyenda-nota-react {
   color: var(--color-text-muted);
   font-size: 0.82rem;
 }
@@ -1843,7 +1853,7 @@ button.mkt-evento-react:hover {
     align-items: stretch;
   }
 
-  .mkt-leyenda-nota-react {
+  .mkt-leyenda-notas-react {
     margin-left: 0;
     width: 100%;
   }

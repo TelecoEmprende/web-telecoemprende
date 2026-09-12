@@ -470,13 +470,15 @@ export function CalendarPanel({ onAbrirCampaign }: Props) {
         <span className="mkt-evento-react mkt-evento-task-react">Tarea</span>
         <span className="mkt-evento-react mkt-evento-reunion-react">Reunión</span>
         <span className="mkt-evento-react mkt-evento-alta-react">Tarea urgente</span>
-        {todosDepartamentos ? (
+        <span className="mkt-leyenda-notas-react">
+          {todosDepartamentos ? (
+            <span className="mkt-leyenda-nota-react">
+              El color del borde izquierdo dice de qué departamento es.
+            </span>
+          ) : null}
           <span className="mkt-leyenda-nota-react">
-            El color del borde izquierdo dice de qué departamento es.
+            Toca un día para añadir una tarea.
           </span>
-        ) : null}
-        <span className="mkt-leyenda-nota-react">
-          Toca un día para añadir una tarea.
         </span>
       </div>
 
