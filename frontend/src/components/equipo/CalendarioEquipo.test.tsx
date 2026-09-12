@@ -19,23 +19,27 @@ describe("CalendarioEquipo — tu agenda", () => {
     getMisTareas.mockReset().mockResolvedValue({ ok: true, tareas: [] });
   });
 
-  it("no pide ni muestra la agenda con un solo departamento", async () => {
+  it("saluda y pide la agenda también con un solo departamento", async () => {
     getEquipoSession.mockResolvedValue({
       ok: true, authenticated: true, teams: ["marketing"], vp_de: [], cargo: "",
-      email: "abril@example.com",
+      email: "abril@example.com", nombre: "Abril",
+    });
+    getMisTareas.mockResolvedValue({
+      ok: true,
+      tareas: [{ id: 1, departamento: "marketing", titulo: "Escribir guion", deadline: null }],
     });
 
     render(<CalendarioEquipo />);
 
-    await screen.findByText("Hoy");
-    expect(screen.queryByText(/^Hola,/)).not.toBeInTheDocument();
-    expect(getMisTareas).not.toHaveBeenCalled();
+    expect(await screen.findByText("Hola, Abril 👋")).toBeInTheDocument();
+    expect(await screen.findByText("Escribir guion")).toBeInTheDocument();
+    expect(getMisTareas).toHaveBeenCalled();
   });
 
   it("con varios departamentos, saluda y junta sus tareas por departamento", async () => {
     getEquipoSession.mockResolvedValue({
       ok: true, authenticated: true, teams: ["marketing", "eventos"], vp_de: [], cargo: "",
-      email: "abril@example.com",
+      email: "abril@example.com", nombre: "Abril",
     });
     getMisTareas.mockResolvedValue({
       ok: true,
@@ -59,7 +63,7 @@ describe("CalendarioEquipo — tu agenda", () => {
   it("marca como vencida una tarea con deadline pasado", async () => {
     getEquipoSession.mockResolvedValue({
       ok: true, authenticated: true, teams: ["marketing", "eventos"], vp_de: [], cargo: "",
-      email: "abril@example.com",
+      email: "abril@example.com", nombre: "Abril",
     });
     getMisTareas.mockResolvedValue({
       ok: true,

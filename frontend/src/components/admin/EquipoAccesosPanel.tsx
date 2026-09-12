@@ -116,6 +116,7 @@ export function EquipoAccesosPanel() {
   const [messageVariant, setMessageVariant] = useState<"success" | "error">("success");
 
   const [nuevoEmail, setNuevoEmail] = useState("");
+  const [nuevoNombre, setNuevoNombre] = useState("");
   const [nuevaPassword, setNuevaPassword] = useState("");
   const [nuevosEquipos, setNuevosEquipos] = useState<Team[]>([]);
   const [nuevoVpDe, setNuevoVpDe] = useState<Team[]>([]);
@@ -153,11 +154,13 @@ export function EquipoAccesosPanel() {
         nuevosEquipos,
         nuevoVpDe,
         nuevoCargo,
+        nuevoNombre,
       );
       if (response.ok) {
         setMessageVariant("success");
         setMessage("Acceso creado.");
         setNuevoEmail("");
+        setNuevoNombre("");
         setNuevaPassword("");
         setNuevosEquipos([]);
         setNuevoVpDe([]);
@@ -217,6 +220,20 @@ export function EquipoAccesosPanel() {
     }
   }
 
+  async function handleNombreChange(acceso: EquipoAcceso, nombre: string) {
+    if (nombre === acceso.nombre) return;
+    try {
+      const response = await updateEquipoAcceso(acceso.id, { nombre });
+      if (response.ok) {
+        setAccesos((prev) => prev.map((a) => (a.id === acceso.id ? { ...a, nombre } : a)));
+      }
+    } catch (error) {
+      const apiError = error as ApiFailure;
+      setMessageVariant("error");
+      setMessage(apiError.message || "No se pudo actualizar el acceso.");
+    }
+  }
+
   async function handleToggleActivo(acceso: EquipoAcceso) {
     try {
       const response = await updateEquipoAcceso(acceso.id, { activo: !acceso.activo });
@@ -262,6 +279,7 @@ export function EquipoAccesosPanel() {
           <table className="w-full min-w-[720px] border-separate border-spacing-y-2 text-sm">
             <thead>
               <tr className="text-left text-muted-foreground">
+                <th className="px-2 font-medium">Nombre</th>
                 <th className="px-2 font-medium">Email</th>
                 <th className="px-2 font-medium">Equipos</th>
                 <th className="px-2 font-medium">VP de</th>
@@ -273,6 +291,14 @@ export function EquipoAccesosPanel() {
             <tbody>
               {accesos.map((acceso) => (
                 <tr key={acceso.id} className="rounded-lg bg-card align-top ring-1 ring-foreground/10">
+                  <td className="p-2">
+                    <Input
+                      defaultValue={acceso.nombre}
+                      placeholder="Sin rellenar"
+                      className="h-8 w-36"
+                      onBlur={(event) => void handleNombreChange(acceso, event.target.value.trim())}
+                    />
+                  </td>
                   <td className="p-2 font-medium">
                     {acceso.email}
                     {acceso.cargo ? (
@@ -339,7 +365,7 @@ export function EquipoAccesosPanel() {
               ))}
               {accesos.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="p-2 text-muted-foreground">
+                  <td colSpan={7} className="p-2 text-muted-foreground">
                     Todavía no hay accesos de equipo dados de alta.
                   </td>
                 </tr>
@@ -352,6 +378,16 @@ export function EquipoAccesosPanel() {
       <form className="mt-6 flex flex-col gap-4" onSubmit={handleCrear}>
         <h3>Añadir nueva persona</h3>
         <div className="grid gap-4 sm:grid-cols-2">
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="nuevo-equipo-nombre">Nombre</Label>
+            <Input
+              type="text"
+              id="nuevo-equipo-nombre"
+              value={nuevoNombre}
+              maxLength={80}
+              onChange={(event) => setNuevoNombre(event.target.value)}
+            />
+          </div>
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="nuevo-equipo-email">Email</Label>
             <Input

@@ -78,16 +78,24 @@ export function createEquipoAcceso(
   equipos: Team[],
   vp_de: Team[] = [],
   cargo: Cargo = "",
+  nombre: string = "",
 ) {
   return apiRequest<ApiResult & { acceso: EquipoAcceso }>("/api/admin/equipo", {
     method: "POST",
-    body: JSON.stringify({ email, password, equipos, vp_de, cargo }),
+    body: JSON.stringify({ email, password, equipos, vp_de, cargo, nombre }),
   });
 }
 
 export function updateEquipoAcceso(
   id: number,
-  data: { equipos?: Team[]; vp_de?: Team[]; cargo?: Cargo; activo?: boolean; password?: string },
+  data: {
+    equipos?: Team[];
+    vp_de?: Team[];
+    cargo?: Cargo;
+    activo?: boolean;
+    password?: string;
+    nombre?: string;
+  },
 ) {
   return apiRequest<ApiResult>(`/api/admin/equipo/${id}`, {
     method: "PUT",

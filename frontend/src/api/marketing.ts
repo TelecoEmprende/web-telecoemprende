@@ -8,6 +8,7 @@ import type {
   Content,
   Miembro,
   Task,
+  TaskComment,
 } from "../types/marketing";
 import type { Team } from "../types/equipo";
 import type { Recurso, Registro, ResumenPresupuesto } from "../types/registros";
@@ -74,6 +75,13 @@ export function apiDepto(depto: Team) {
     updateTask: (id: number, datos: Partial<Task>) => put<ApiResult>(`/tasks/${id}`, datos),
 
     deleteTask: (id: number) => del(`/tasks/${id}`),
+
+    // --- Comentarios de una tarea ---
+    getTaskComments: (taskId: number) =>
+      apiRequest<{ ok: true; comments: TaskComment[] }>(`${BASE}/tasks/${taskId}/comments`),
+
+    createTaskComment: (taskId: number, texto: string) =>
+      post<{ ok: true; comment: TaskComment }>(`/tasks/${taskId}/comments`, { texto }),
 
     // --- Calendario y miembros ---
     getCalendario: (desde: string, hasta: string) =>

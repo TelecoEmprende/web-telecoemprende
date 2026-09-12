@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 
-import { DeptoProvider } from "./DeptoApi";
+import { DeptoProvider, DirectorioProvider } from "./DeptoApi";
 import { prefijoDe, type Seccion } from "./EquipoSidebar";
 import { CalendarPanel } from "./marketing/CalendarPanel";
 import { CampaignsPanel } from "./marketing/CampaignsPanel";
@@ -73,23 +73,25 @@ export function DeptoDashboard({ depto, seccion, onSeccion }: Props) {
 
   return (
     <DeptoProvider value={depto}>
-      {seccion === `${p}-home` ? <WeekPanel /> : null}
-      {seccion === `${p}-campanas` ? (
-        <CampaignsPanel
-          campaignInicial={campaignInicial}
-          onCampaignAbierta={() => setCampaignInicial(null)}
-        />
-      ) : null}
-      {seccion === `${p}-tareas` ? <TasksPanel /> : null}
-      {seccion === `${p}-calendario` ? (
-        <CalendarPanel onAbrirCampaign={abrirCampaign} />
-      ) : null}
-      {seccion === `${p}-miembros` ? <MembersPanel /> : null}
-      {seccion === `${p}-recursos` ? <RecursosPanel /> : null}
-      {seccion === `${p}-presupuesto` ? <PresupuestoPanel /> : null}
-      {seccion === `${p}-anuncios` ? <AnunciosPanel /> : null}
-      {seccion === `${p}-reuniones` ? <ReunionesPanel /> : null}
-      {seccion === `${p}-alumni` ? <AlumniPanel /> : null}
+      <DirectorioProvider>
+        {seccion === `${p}-home` ? <WeekPanel /> : null}
+        {seccion === `${p}-campanas` ? (
+          <CampaignsPanel
+            campaignInicial={campaignInicial}
+            onCampaignAbierta={() => setCampaignInicial(null)}
+          />
+        ) : null}
+        {seccion === `${p}-tareas` ? <TasksPanel /> : null}
+        {seccion === `${p}-calendario` ? (
+          <CalendarPanel onAbrirCampaign={abrirCampaign} />
+        ) : null}
+        {seccion === `${p}-miembros` ? <MembersPanel /> : null}
+        {seccion === `${p}-recursos` ? <RecursosPanel /> : null}
+        {seccion === `${p}-presupuesto` ? <PresupuestoPanel /> : null}
+        {seccion === `${p}-anuncios` ? <AnunciosPanel /> : null}
+        {seccion === `${p}-reuniones` ? <ReunionesPanel /> : null}
+        {seccion === `${p}-alumni` ? <AlumniPanel /> : null}
+      </DirectorioProvider>
     </DeptoProvider>
   );
 }

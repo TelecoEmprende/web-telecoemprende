@@ -20,6 +20,7 @@ from flask import Blueprint, jsonify, request
 
 from backend.config import (
     CONTENT_ESTADOS,
+    MAX_COMENTARIO_LEN,
     MAX_ENLACES,
     MAX_RESPONSABLES,
     MAX_TEXTO_LARGO_LEN,
@@ -34,6 +35,7 @@ from backend.services.slack import tarea_cambia_estado, tarea_creada
 from backend.services.marketing import (
     actualizar_campaign,
     carga_por_miembro,
+    crear_task_comment,
     ficha_miembro,
     actualizar_content,
     actualizar_task,
@@ -47,6 +49,7 @@ from backend.services.marketing import (
     eliminar_task,
     init_marketing_db,
     listar_campaigns,
+    listar_task_comments,
     listar_tasks,
     obtener_campaign,
     obtener_content,
@@ -119,6 +122,16 @@ def requiere_equipo(func):
             return jsonify(build_response(False, "No autorizado.")), 401
 
         init_marketing_db()
+        # `calendario()` hace JOIN contra `reuniones`, que solo creaba
+        # `init_registros_db()` -- y esa función solo se llamaba desde las
+        # rutas de api/registros.py. Un departamento que nunca hubiera abierto
+        # Recursos/Reuniones antes de mirar su Calendario se encontraba con un
+        # 500 (relation "reuniones" does not exist). Se inicializa aquí, en la
+        # puerta común de todas las rutas de este blueprint, para que no
+        # dependa de qué ruta se visitó primero.
+        from backend.services.registros import init_registros_db
+
+        init_registros_db()
         try:
             return func(*args, **kwargs)
         except DatosInvalidos as error:
@@ -257,6 +270,8 @@ def api_actualizar_campaign(campaign_id: int):
         campos["audiencia"] = _texto(datos, "audiencia", maximo=MAX_TEXTO_LARGO_LEN)
     if "fecha" in datos:
         campos["fecha"] = _fecha(datos, "fecha")
+    if "archivado" in datos:
+        campos["archivado"] = bool(datos["archivado"])
 
     if not actualizar_campaign(campaign_id, departamento_actual(), **campos):
         return jsonify(build_response(False, "Campaña no encontrada o sin cambios.")), 404
@@ -474,6 +489,33 @@ def api_eliminar_task(task_id: int):
 
 
 # --------------------------------------------------------------------------
+# Comentarios de una tarea
+# --------------------------------------------------------------------------
+
+@marketing_api.route("/tasks/<int:task_id>/comments", methods=["GET"])
+@requiere_equipo
+def api_listar_task_comments(task_id: int):
+    if obtener_task(task_id, departamento_actual()) is None:
+        return jsonify(build_response(False, "Tarea no encontrada.")), 404
+    return jsonify({"ok": True, "comments": listar_task_comments(task_id)}), 200
+
+
+@marketing_api.route("/tasks/<int:task_id>/comments", methods=["POST"])
+@requiere_equipo
+def api_crear_task_comment(task_id: int):
+    if obtener_task(task_id, departamento_actual()) is None:
+        return jsonify(build_response(False, "Tarea no encontrada.")), 404
+
+    datos = _payload()
+    texto = _texto(
+        datos, "texto", obligatorio=True, maximo=MAX_COMENTARIO_LEN, multilinea=True
+    )
+    comentario = crear_task_comment(task_id, _autor(), texto)
+    logger.info("marketing crea comentario task_id=%s", task_id)
+    return jsonify(build_response(True, "Comentario añadido.", comment=comentario)), 201
+
+
+# --------------------------------------------------------------------------
 # Calendario
 # --------------------------------------------------------------------------
 
@@ -523,6 +565,7 @@ def api_miembros():
             "equipos": a["equipos"],
             "activo": a["activo"],
             "tags": a["tags"],
+            "nombre": a["nombre"],
             "abiertas": carga.get(a["email"], 0),
         }
         for a in listar_equipo_accesos()
@@ -565,6 +608,7 @@ def api_ficha_miembro():
         cargo=acceso["cargo"],
         tags=acceso["tags"],
         notas=acceso["notas"],
+        nombre=acceso["nombre"],
         desde=acceso["created_at"],
     )
     return jsonify({"ok": True, "ficha": ficha}), 200
