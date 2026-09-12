@@ -725,7 +725,7 @@
 .mkt-dia-react {
   min-height: 88px;
   padding: 6px;
-  border: 1px solid var(--color-border);
+  border: 1px dashed var(--color-border);
   border-radius: 10px;
   background: var(--color-surface);
 }
@@ -779,6 +779,60 @@
 .mkt-leyenda-react .mkt-evento-react {
   display: inline-block;
   margin: 0;
+}
+
+/* ---------- Ficha de evento ---------- */
+
+/* Se abre al tocar un evento del calendario, en vez de saltar directo a la
+   campaña -- mismo trazo discontinuo que la rejilla del mes, así se lee
+   como parte del mismo calendario y no como un cuadro de diálogo aparte. */
+.mkt-ficha-evento-react {
+  margin-top: 16px;
+  padding: 16px;
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+}
+
+.mkt-ficha-evento-header-react {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.mkt-ficha-evento-header-react h4 {
+  margin: 2px 0 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--color-navy);
+}
+
+.mkt-ficha-evento-datos-react {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px 28px;
+  margin: 14px 0 0;
+}
+
+.mkt-ficha-evento-datos-react dt {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-label);
+  color: var(--color-text-muted);
+}
+
+.mkt-ficha-evento-datos-react dd {
+  margin: 2px 0 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--color-navy);
+  text-transform: capitalize;
+}
+
+.mkt-ficha-evento-react .mkt-btn-mini-react {
+  margin-top: 14px;
 }
 
 /* ---------- Miembros ---------- */
