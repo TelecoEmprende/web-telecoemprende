@@ -91,3 +91,14 @@ def aviso_deadlines_manana(tareas: list[dict]) -> bool:
         lineas.append(linea)
 
     return enviar("\n".join(lineas))
+
+
+def resumen_salud_equipo(salud: dict, departamento: str) -> bool:
+    """Resumen semanal (cron de los lunes, ver `api/cron.py`), no una acción
+    de alguien -- por eso no lleva firma de autor como el resto de avisos."""
+    pct = salud.get("pct_a_tiempo")
+    a_tiempo = f"{pct}% de las tareas acabadas a tiempo" if pct is not None else "sin tareas acabadas con plazo"
+    return enviar(
+        f":bar_chart: *Salud de {departamento}*: {salud['sobrecargados']} sobrecargado(s), "
+        f"{salud['inactivos']} inactivo(s) +15 días, {a_tiempo}"
+    )

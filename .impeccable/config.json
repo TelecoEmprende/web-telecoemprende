@@ -29,6 +29,15 @@
         ],
         "createdAt": "2026-09-06T13:31:31.369Z",
         "reason": "Pre-existing .papel role-card accent border in demo/, not touched or introduced by this session's changes (only App.tsx/contenido.ts edited for the juego button); has an explicit design rationale in the surrounding comment, not default AI styling"
+      },
+      {
+        "rule": "side-tab",
+        "value": "*",
+        "files": [
+          "frontend/src/styles/marketing.css"
+        ],
+        "createdAt": "2026-09-12T16:49:12.397Z",
+        "reason": "pre-existing 'Tu agenda' department color-coding (.mkt-agenda-item-react), shipped before this session, not part of this task's diff — functional dept-color strip, not decorative"
       }
     ]
   }

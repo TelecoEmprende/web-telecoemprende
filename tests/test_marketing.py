@@ -1,5 +1,6 @@
 import os
 import unittest
+from datetime import date, timedelta
 
 os.environ["ADMIN_PASSWORD"] = "test-admin"
 os.environ["DATABASE_URL"] = os.environ.get(
@@ -889,3 +890,150 @@ class FichaMiembroTestCase(MarketingTestCase):
             json={"email": "solo-eventos@example.com", "notas": "colada"},
         )
         self.assertEqual(escribir.status_code, 404)
+
+
+class SaludEquipoTestCase(MarketingTestCase):
+    """El semáforo del VP (`salud_equipo`): carga, inactividad y plazos."""
+
+    def _fijar_updated_at(self, titulo, hace_dias):
+        conn = marketing_service._get_connection()
+        with conn.cursor() as cur:
+            cur.execute(
+                "UPDATE tasks SET updated_at = NOW() - %s::interval WHERE titulo = %s",
+                (f"{hace_dias} days", titulo),
+            )
+        conn.commit()
+        conn.close()
+
+    def test_miembro_sin_tareas_no_cuenta_como_inactivo(self):
+        self.login()
+        self.seed_acceso("libre@telecoemprende.es", "x", ["marketing"])
+
+        salud = marketing_service.salud_equipo("marketing")
+        libre = next(m for m in salud["miembros"] if m["email"] == "libre@telecoemprende.es")
+
+        # "Nunca tuvo ninguna tarea" no es lo mismo que "inactivo": no hay
+        # fecha de la que contar los días.
+        self.assertIsNone(libre["dias_inactivo"])
+        self.assertEqual(libre["nivel"], "verde")
+        self.assertEqual(salud["inactivos"], 0)
+
+    def test_miembro_sobrecargado_sale_en_rojo(self):
+        self.login()
+        self.seed_acceso("cargado@telecoemprende.es", "x", ["marketing"])
+        for i in range(4):
+            self.client.post(
+                "/api/marketing/tasks",
+                json={"titulo": f"Tarea {i}", "responsables": ["cargado@telecoemprende.es"]},
+            )
+
+        salud = marketing_service.salud_equipo("marketing")
+        cargado = next(m for m in salud["miembros"] if m["email"] == "cargado@telecoemprende.es")
+
+        # Mismo umbral que `Carga` en el frontend: 4+ abiertas es rojo.
+        self.assertEqual(cargado["abiertas"], 4)
+        self.assertEqual(cargado["nivel"], "rojo")
+        self.assertEqual(salud["sobrecargados"], 1)
+        self.assertEqual(salud["inactivos"], 0)
+
+    def test_miembro_inactivo_quince_dias_sale_en_rojo(self):
+        self.login()
+        self.seed_acceso("dormido@telecoemprende.es", "x", ["marketing"])
+        self.client.post(
+            "/api/marketing/tasks",
+            json={"titulo": "Tarea vieja", "responsables": ["dormido@telecoemprende.es"]},
+        )
+        self._fijar_updated_at("Tarea vieja", 20)
+
+        salud = marketing_service.salud_equipo("marketing")
+        dormido = next(m for m in salud["miembros"] if m["email"] == "dormido@telecoemprende.es")
+
+        self.assertGreaterEqual(dormido["dias_inactivo"], 15)
+        self.assertEqual(dormido["nivel"], "rojo")
+        self.assertEqual(salud["inactivos"], 1)
+        self.assertEqual(salud["sobrecargados"], 0)
+
+    def test_pct_a_tiempo_sin_tareas_acabadas_con_plazo_es_null(self):
+        self.login()
+        # Sin datos, no se inventa un 0% ni un 100%.
+        self.assertIsNone(marketing_service.salud_equipo("marketing")["pct_a_tiempo"])
+
+    def test_pct_a_tiempo_con_datos(self):
+        self.login()
+        hoy = date.today().isoformat()
+        ayer = (date.today() - timedelta(days=1)).isoformat()
+
+        a_tiempo_id = self.client.post(
+            "/api/marketing/tasks", json={"titulo": "A tiempo", "deadline": hoy}
+        ).get_json()["task"]["id"]
+        self.client.put(f"/api/marketing/tasks/{a_tiempo_id}", json={"estado": "acabado"})
+
+        tarde_id = self.client.post(
+            "/api/marketing/tasks", json={"titulo": "Tarde", "deadline": ayer}
+        ).get_json()["task"]["id"]
+        self.client.put(f"/api/marketing/tasks/{tarde_id}", json={"estado": "acabado"})
+
+        # Una a tiempo (deadline hoy, acabada hoy) y una tarde (deadline
+        # ayer, acabada hoy): 50%.
+        self.assertEqual(marketing_service.salud_equipo("marketing")["pct_a_tiempo"], 50)
+
+    def test_ruta_salud_devuelve_total_del_departamento(self):
+        self.login()
+        self.seed_acceso("otro@telecoemprende.es", "x", ["marketing"])
+        respuesta = self.client.get("/api/marketing/miembros/salud")
+        self.assertEqual(respuesta.status_code, 200)
+        self.assertEqual(respuesta.get_json()["salud"]["total"], 2)
+
+
+class OnboardingTestCase(MarketingTestCase):
+    """Checklist de onboarding: el backend guarda el objeto, no lo interpreta."""
+
+    def test_se_guarda_y_se_lee_en_la_ficha(self):
+        self.login()
+        self.seed_acceso("nuevo@telecoemprende.es", "x", ["marketing"])
+
+        guardar = self.client.put(
+            "/api/marketing/miembros/ficha",
+            json={
+                "email": "nuevo@telecoemprende.es",
+                "onboarding": {"acceso_drive": True, "bienvenida": False},
+            },
+        )
+        self.assertEqual(guardar.status_code, 200)
+
+        ficha = self.client.get(
+            "/api/marketing/miembros/ficha?email=nuevo@telecoemprende.es"
+        ).get_json()["ficha"]
+        self.assertEqual(
+            ficha["onboarding"], {"acceso_drive": True, "bienvenida": False}
+        )
+
+    def test_valores_no_booleanos_se_convierten_a_booleano(self):
+        self.login()
+        self.seed_acceso("nuevo@telecoemprende.es", "x", ["marketing"])
+
+        self.client.put(
+            "/api/marketing/miembros/ficha",
+            json={"email": "nuevo@telecoemprende.es", "onboarding": {"paso": "si"}},
+        )
+
+        ficha = self.client.get(
+            "/api/marketing/miembros/ficha?email=nuevo@telecoemprende.es"
+        ).get_json()["ficha"]
+        self.assertEqual(ficha["onboarding"], {"paso": True})
+
+    def test_rechaza_entradas_invalidas(self):
+        self.login()
+        self.seed_acceso("nuevo@telecoemprende.es", "x", ["marketing"])
+
+        casos = {
+            "no es un objeto": ["si"],
+            "mas de veinte claves": {f"paso{i}": True for i in range(21)},
+        }
+        for motivo, onboarding in casos.items():
+            with self.subTest(motivo=motivo):
+                respuesta = self.client.put(
+                    "/api/marketing/miembros/ficha",
+                    json={"email": "nuevo@telecoemprende.es", "onboarding": onboarding},
+                )
+                self.assertEqual(respuesta.status_code, 400)

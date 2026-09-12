@@ -1,5 +1,6 @@
 import psycopg2
 from flask import session
+from psycopg2.extras import Json
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from backend.config import (
@@ -71,6 +72,13 @@ def _crear_tablas_equipo():
             cur.execute("""
                 ALTER TABLE equipo_accesos
                 ADD COLUMN IF NOT EXISTS nombre VARCHAR(80) NOT NULL DEFAULT ''
+            """)
+            # Checklist de onboarding, `{"clave": true/false}`. El backend no
+            # conoce las claves -- son copy de UI, viven en el frontend -- así
+            # que se guarda tal cual llega, sin validar su forma interna.
+            cur.execute("""
+                ALTER TABLE equipo_accesos
+                ADD COLUMN IF NOT EXISTS onboarding JSONB NOT NULL DEFAULT '{}'::jsonb
             """)
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS calendario_eventos (
@@ -155,7 +163,7 @@ def listar_equipo_accesos() -> list[dict]:
             cur.execute(
                 """
                 SELECT id, email, equipos, vp_de, cargo, activo, created_at,
-                       tags, notas, nombre
+                       tags, notas, nombre, onboarding
                 FROM equipo_accesos ORDER BY email
                 """
             )
@@ -173,9 +181,17 @@ def listar_equipo_accesos() -> list[dict]:
             "tags": f[7],
             "notas": f[8],
             "nombre": f[9],
+            "onboarding": f[10],
         }
         for f in filas
     ]
+
+
+def miembros_activos(equipo: str) -> list[dict]:
+    """Los accesos activos de un departamento -- filtro que reutilizan el
+    directorio de marketing (`api_miembros`) y `salud_equipo`, para no tener
+    la misma condición escrita dos veces."""
+    return [a for a in listar_equipo_accesos() if equipo in a["equipos"] and a["activo"]]
 
 
 def _acceso_valido(equipos: list[str], vp_de: list[str], cargo: str) -> bool:
@@ -445,8 +461,13 @@ def eliminar_evento_calendario(evento_id: int) -> bool:
     return eliminado
 
 
-def actualizar_perfil(email: str, tags: list[str] | None = None, notas: str | None = None) -> bool:
-    """Etiquetas de habilidad y nota del equipo de una persona.
+def actualizar_perfil(
+    email: str,
+    tags: list[str] | None = None,
+    notas: str | None = None,
+    onboarding: dict | None = None,
+) -> bool:
+    """Etiquetas de habilidad, nota y checklist de onboarding de una persona.
 
     Separado de `actualizar_equipo_acceso` a propósito: eso son permisos y solo
     lo toca quien administra; esto es contexto de trabajo y lo edita cualquiera
@@ -461,6 +482,11 @@ def actualizar_perfil(email: str, tags: list[str] | None = None, notas: str | No
     if notas is not None:
         campos.append("notas = %s")
         valores.append(notas.strip())
+    if onboarding is not None:
+        # Reemplazo completo, igual que tags/notas: el frontend siempre manda
+        # el objeto entero, no un parche.
+        campos.append("onboarding = %s")
+        valores.append(Json(onboarding))
 
     if not campos:
         return False
