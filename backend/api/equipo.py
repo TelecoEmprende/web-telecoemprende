@@ -18,6 +18,7 @@ from backend.services.equipo import (
     equipo_session_info,
     init_equipo_db,
     is_equipo_authenticated,
+    listar_directorio_club,
     listar_eventos_calendario,
     login_equipo,
     logout_equipo,
@@ -153,6 +154,16 @@ def api_equipo_session():
         else {"teams": [], "vp_de": [], "cargo": "", "email": "", "nombre": ""}
     )
     return jsonify({"ok": True, "authenticated": authenticated, **info}), 200
+
+
+@equipo_api.route("/directorio", methods=["GET"])
+def api_equipo_directorio():
+    """Quién es quién del club entero -- para el widget de "Mi semana".
+    Cualquiera con sesión de equipo, no solo board/VP: es un directorio, no
+    datos de rendimiento (eso es `/metricas` y `/miembros/salud`)."""
+    if not is_equipo_authenticated() and not is_admin_authenticated():
+        return jsonify(build_response(False, "No autorizado.")), 401
+    return jsonify({"ok": True, "miembros": listar_directorio_club()}), 200
 
 
 @equipo_api.route("/calendario", methods=["GET"])
