@@ -59,26 +59,32 @@
   --radius-md: 14px;
   --radius-xl: 28px;
 
-  /* Sidebar en Azul TE — el color de marca es la base también aquí. Texto en
-     blanco; el item activo se aclara con un velo blanco y lleva una barra
-     Impulso a la izquierda (ver más abajo), no un relleno naranja que a este
-     tamaño no contrastaría. */
-  --sidebar: var(--color-azul);
-  --sidebar-foreground: #ffffff;
-  --sidebar-primary: var(--color-impulso);
+  /* Propuesta "blanco y azul": Azul TE pasa de fondo de marca a color de
+     acento — botones y estado activo, no losas de color. */
+  --primary: var(--color-azul);
+  --primary-foreground: #ffffff;
+  --ring: var(--color-azul);
+
+  /* Sidebar blanco, a juego con el área de trabajo. El item activo se marca
+     con un velo Azul TE y la barra de acento (ver más abajo) también pasa a
+     azul: ya no hay una losa de color separando sidebar y contenido. */
+  --sidebar: var(--color-surface);
+  --sidebar-foreground: var(--color-navy);
+  --sidebar-primary: var(--color-azul);
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: rgba(255, 255, 255, 0.14);
-  --sidebar-accent-foreground: #ffffff;
-  --sidebar-border: rgba(255, 255, 255, 0.16);
-  --sidebar-ring: var(--color-chispa);
+  --sidebar-accent: rgba(var(--color-azul-rgb), 0.08);
+  --sidebar-accent-foreground: var(--color-azul-profundo);
+  --sidebar-border: var(--color-paper-line);
+  --sidebar-ring: var(--color-azul);
 
   min-height: 100vh;
   background: var(--color-background);
 }
 
-/* El disparador que pliega el sidebar hereda `color` de `.shadcn-scope.dark`,
-   que es crema: invisible sobre la barra blanca. Es el único control para
-   llegar a la navegación en móvil, no puede depender de una herencia. */
+/* El disparador que pliega el sidebar hereda `color` del texto por defecto,
+   que ya es Noche sobre el sidebar blanco: sigue haciendo falta fijarlo, no
+   depender de la herencia, porque es el único control para llegar a la
+   navegación en móvil. */
 .workspace-react [data-slot="sidebar-trigger"] {
   color: var(--color-navy);
 }
@@ -89,30 +95,25 @@
   font-size: 0.95rem;
 }
 
-/* Etiqueta de grupo: rótulo Inter en mayúsculas sobre el azul del sidebar. */
+/* Etiqueta de grupo: rótulo Inter en mayúsculas, gris tenue sobre el sidebar
+   blanco (antes era Azul claro, pensado para leerse sobre azul). */
 .workspace-react [data-slot="sidebar-group-label"] {
   font-size: 0.72rem;
   font-weight: 500;
   letter-spacing: var(--tracking-label);
   text-transform: uppercase;
-  color: var(--color-azul-claro);
+  color: var(--color-text-muted);
 }
 
-/* Item activo: además del velo blanco de --sidebar-accent, una barra Impulso
-   pegada al borde izquierdo — el color de acción marcando dónde estás. */
-.workspace-react [data-slot="sidebar-menu-button"] {
-  position: relative;
-}
-
-.workspace-react [data-slot="sidebar-menu-button"][data-active="true"]::before {
-  content: "";
-  position: absolute;
-  left: 0;
-  top: 6px;
-  bottom: 6px;
-  width: 3px;
-  border-radius: 0 2px 2px 0;
-  background: var(--color-impulso);
+/* Item activo: pastilla Noche sólida, como el wireframe -- no el velo azul
+   de --sidebar-accent, que sigue sirviendo tal cual para el hover de los
+   items sin seleccionar. Más específica que la utilidad de Tailwind
+   (`data-[active=true]:bg-sidebar-accent`), así gana en la cascada sin
+   `!important`. */
+.workspace-react [data-slot="sidebar-menu-button"][data-active="true"],
+.workspace-react [data-slot="sidebar-menu-button"][data-active="true"]:hover {
+  background: var(--color-noche);
+  color: #fff;
 }
 
 /* ---------- Marca en la cabecera del sidebar ---------- */
@@ -157,7 +158,7 @@
   font-weight: 500;
   letter-spacing: var(--tracking-label);
   text-transform: uppercase;
-  color: var(--color-azul-claro);
+  color: var(--color-text-muted);
   white-space: nowrap;
   margin-top: 3px;
 }
