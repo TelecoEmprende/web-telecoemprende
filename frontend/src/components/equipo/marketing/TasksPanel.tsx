@@ -155,6 +155,8 @@ export function TasksPanel() {
 
   if (isLoading) return <Esqueleto filas={5} alto={78} />;
 
+  const etiquetasExistentes = [...new Set(tasks.flatMap((t) => t.tags))].sort();
+
   const filtroTexto = busqueda.trim().toLowerCase();
   const visibles = tasks
     .filter((t) => !soloMias || t.responsables.includes(usuario))
@@ -394,6 +396,7 @@ export function TasksPanel() {
       {abierta ? (
         <TaskDialog
           task={abierta}
+          etiquetasExistentes={etiquetasExistentes}
           onCerrar={() => setAbierta(null)}
           onGuardado={() => {
             setAbierta(null);

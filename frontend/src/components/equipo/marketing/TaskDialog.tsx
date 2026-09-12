@@ -326,10 +326,18 @@ export function TaskDialog({ task, onCerrar, onGuardado, etiquetasExistentes = [
             <input
               id="td-tags"
               type="text"
+              list="td-tags-list"
               value={tags}
               placeholder="urgente, diseño"
               onChange={(event) => setTags(event.target.value)}
             />
+            {etiquetasExistentes.length > 0 ? (
+              <datalist id="td-tags-list">
+                {etiquetasExistentes.map((tag) => (
+                  <option key={tag} value={tag} />
+                ))}
+              </datalist>
+            ) : null}
           </div>
 
           <div className="field-group-react">
