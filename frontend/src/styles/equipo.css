@@ -331,6 +331,40 @@ span.mkt-dia-numero-react:hover {
   color: var(--color-noche);
 }
 
+/* Aviso del board en "Mi semana": reutiliza el chip ámbar de habilidad
+   (`.mkt-tag-react`) para la etiqueta y el mismo trazo discontinuo que la
+   ficha de evento del calendario -- es la misma familia de "tarjeta suelta
+   con contexto", no un componente nuevo. */
+.equipo-aviso-board-react {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+  margin: 16px 0;
+  padding: 14px 18px;
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+}
+
+.equipo-aviso-board-cuerpo-react {
+  flex: 1;
+  min-width: 200px;
+}
+
+.equipo-aviso-board-cuerpo-react strong {
+  display: block;
+  color: var(--color-navy);
+  font-size: 0.98rem;
+}
+
+.equipo-aviso-board-cuerpo-react p {
+  margin: 4px 0;
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
 .equipo-proximos-react {
   margin-top: 28px;
 }

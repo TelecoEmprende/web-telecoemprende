@@ -6,17 +6,29 @@ import { CalendarioEquipo } from "./CalendarioEquipo";
 const getEquipoCalendario = vi.fn();
 const getEquipoSession = vi.fn();
 const getMisTareas = vi.fn();
+const getDirectorioClub = vi.fn();
 
 vi.mock("../../api/equipo", () => ({
   getEquipoCalendario: () => getEquipoCalendario(),
   getEquipoSession: () => getEquipoSession(),
   getMisTareas: () => getMisTareas(),
+  getDirectorioClub: () => getDirectorioClub(),
+}));
+
+// El aviso del board sale de los anuncios (`apiDepto(...).listarRegistros`),
+// igual que el resto de "registros" del workspace -- sin mock aquí la
+// llamada sería de verdad contra jsdom.
+vi.mock("../../api/marketing", () => ({
+  apiDepto: () => ({
+    listarRegistros: () => Promise.resolve({ ok: true, anuncios: [] }),
+  }),
 }));
 
 describe("CalendarioEquipo — tu agenda", () => {
   beforeEach(() => {
     getEquipoCalendario.mockReset().mockResolvedValue({ ok: true, eventos: [] });
     getMisTareas.mockReset().mockResolvedValue({ ok: true, tareas: [] });
+    getDirectorioClub.mockReset().mockResolvedValue({ ok: true, miembros: [] });
   });
 
   it("saluda y pide la agenda también con un solo departamento", async () => {

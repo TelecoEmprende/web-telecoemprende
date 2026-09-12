@@ -4,6 +4,7 @@ import type {
   EquipoLoginResponse,
   EquipoSessionResponse,
   EventoCalendario,
+  MiembroDirectorio,
   Team,
 } from "../types/equipo";
 import type { CalendarioItem, MetricasClub, Task } from "../types/marketing";
@@ -31,6 +32,12 @@ export function logoutEquipo() {
 
 export function getEquipoSession() {
   return apiRequest<EquipoSessionResponse>("/api/equipo/session");
+}
+
+/** "Quién es quién": el club entero, no solo el departamento desde el que se
+ *  mira. Cualquiera con sesión de equipo puede pedirlo (ver el backend). */
+export function getDirectorioClub() {
+  return apiRequest<ApiResult & { miembros: MiembroDirectorio[] }>("/api/equipo/directorio");
 }
 
 export function getEquipoCalendario() {
