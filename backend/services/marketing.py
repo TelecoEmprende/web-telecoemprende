@@ -12,7 +12,7 @@ desaparece de una tarea histórica si se le da de baja el acceso.
 """
 
 import json
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 
 import psycopg2
 from psycopg2.extras import RealDictCursor
@@ -993,4 +993,185 @@ def salud_equipo(departamento: str) -> dict:
         "inactivos": inactivos,
         "pct_a_tiempo": pct_a_tiempo,
         "miembros": miembros,
+    }
+
+
+def metricas_club(dias_periodo: int = 30) -> dict:
+    """Salud del club para el board: el mismo semáforo que `salud_equipo`,
+    cruzando los tres departamentos, más productividad por persona.
+
+    Productividad = lo que ya hay en `tasks`, nada nuevo que mantener:
+    tareas cerradas en el periodo, % de esas a tiempo, abiertas y vencidas
+    ahora mismo. Sin tabla de puntos -- un número inventado no es más fácil
+    de entender que cuatro reales, y estos se pueden auditar volviendo a la
+    tarea que los generó. Por lo mismo no hay aquí "asistencia" ni "altas del
+    curso": no hay check-in de eventos ni flujo de solicitud todavía (ver
+    docs/CLAUDE.md), y un 0 fingido sería peor que no enseñar la tarjeta.
+    """
+    from backend.config import EQUIPOS_VALIDOS
+    from backend.services.equipo import init_equipo_db, listar_equipo_accesos
+
+    init_equipo_db()
+    activos = [a for a in listar_equipo_accesos() if a["activo"]]
+
+    hoy = date.today()
+    desde_periodo = hoy - timedelta(days=dias_periodo)
+
+    with _get_connection() as conn:
+        with conn.cursor() as cur:
+            # Última actividad por persona, en cualquier departamento (no
+            # solo uno, a diferencia de `salud_equipo`).
+            cur.execute(
+                """
+                SELECT responsable, MAX(updated_at)
+                FROM tasks, unnest(responsables) AS responsable
+                GROUP BY responsable
+                """
+            )
+            ultima_actividad = dict(cur.fetchall())
+
+            # Carga actual: abiertas y, de esas, vencidas.
+            cur.execute(
+                """
+                SELECT responsable,
+                       COUNT(*) FILTER (WHERE estado <> 'acabado') AS abiertas,
+                       COUNT(*) FILTER (
+                           WHERE estado <> 'acabado' AND deadline IS NOT NULL AND deadline < %s
+                       ) AS vencidas
+                FROM tasks, unnest(responsables) AS responsable
+                GROUP BY responsable
+                """,
+                (hoy,),
+            )
+            carga = {fila[0]: {"abiertas": fila[1], "vencidas": fila[2]} for fila in cur.fetchall()}
+
+            # Cerradas en el periodo y qué fracción a tiempo.
+            cur.execute(
+                """
+                SELECT responsable,
+                       COUNT(*) AS completadas,
+                       COUNT(*) FILTER (
+                           WHERE deadline IS NOT NULL
+                             AND COALESCE(completado_en, updated_at)::date <= deadline
+                       ) AS a_tiempo,
+                       COUNT(*) FILTER (WHERE deadline IS NOT NULL) AS con_deadline
+                FROM tasks, unnest(responsables) AS responsable
+                WHERE estado = 'acabado' AND COALESCE(completado_en, updated_at) >= %s
+                GROUP BY responsable
+                """,
+                (desde_periodo,),
+            )
+            productividad = {
+                fila[0]: {
+                    "completadas": fila[1],
+                    "pct_a_tiempo": round(100 * fila[2] / fila[3]) if fila[3] else None,
+                }
+                for fila in cur.fetchall()
+            }
+
+            # Club entero: cuántas cerradas a tiempo del total con plazo, en
+            # el periodo -- el mismo cálculo que `pct_a_tiempo` de arriba
+            # pero sin agrupar por persona.
+            cur.execute(
+                """
+                SELECT
+                    COUNT(*) FILTER (
+                        WHERE COALESCE(completado_en, updated_at)::date <= deadline
+                    ),
+                    COUNT(*)
+                FROM tasks
+                WHERE estado = 'acabado' AND deadline IS NOT NULL
+                      AND COALESCE(completado_en, updated_at) >= %s
+                """,
+                (desde_periodo,),
+            )
+            a_tiempo_club, con_deadline_club = cur.fetchone()
+
+            # Participación semana a semana: tareas cerradas por semana, ocho
+            # semanas atrás. Es un dato real (nadie lo teclea) y de un vistazo
+            # se ve si el club está parado o en marcha.
+            cur.execute(
+                """
+                SELECT date_trunc('week', COALESCE(completado_en, updated_at))::date AS semana, COUNT(*)
+                FROM tasks
+                WHERE estado = 'acabado' AND COALESCE(completado_en, updated_at) >= %s
+                GROUP BY semana ORDER BY semana
+                """,
+                (hoy - timedelta(weeks=8),),
+            )
+            participacion_semanal = [
+                {"semana": fila[0].isoformat(), "cerradas": fila[1]} for fila in cur.fetchall()
+            ]
+
+            # Último cierre por departamento, para la alerta de "lleva N días
+            # sin cerrar nada".
+            cur.execute(
+                """
+                SELECT departamento, MAX(COALESCE(completado_en, updated_at))
+                FROM tasks WHERE estado = 'acabado'
+                GROUP BY departamento
+                """
+            )
+            ultimo_cierre_depto = dict(cur.fetchall())
+
+    miembros = []
+    for acceso in activos:
+        email = acceso["email"]
+        ultima = ultima_actividad.get(email)
+        dias_inactivo = (hoy - ultima.date()).days if ultima is not None else None
+        abiertas = carga.get(email, {}).get("abiertas", 0)
+        vencidas = carga.get(email, {}).get("vencidas", 0)
+        prod = productividad.get(email, {"completadas": 0, "pct_a_tiempo": None})
+
+        # Mismo umbral que `salud_equipo`: no se inventa uno nuevo para el
+        # club entero.
+        rojo = abiertas >= 4 or (dias_inactivo is not None and dias_inactivo >= 15)
+        nivel = "rojo" if rojo else ("amarillo" if abiertas >= 2 else "verde")
+
+        miembros.append({
+            "email": email,
+            "nombre": acceso["nombre"],
+            "equipos": acceso["equipos"],
+            "cargo": acceso["cargo"],
+            "abiertas": abiertas,
+            "vencidas": vencidas,
+            "completadas_periodo": prod["completadas"],
+            "pct_a_tiempo_periodo": prod["pct_a_tiempo"],
+            "dias_inactivo": dias_inactivo,
+            "nivel": nivel,
+        })
+
+    # Quien más ha cerrado primero dentro de cada semáforo: la tabla se lee
+    # de arriba abajo como "a quién mirar primero", no alfabética.
+    orden_nivel = {"rojo": 0, "amarillo": 1, "verde": 2}
+    miembros.sort(key=lambda m: (orden_nivel[m["nivel"]], -m["completadas_periodo"]))
+
+    por_departamento = {depto: salud_equipo(depto) for depto in sorted(EQUIPOS_VALIDOS)}
+
+    alertas_inactividad = sorted(
+        (m for m in miembros if m["nivel"] == "rojo"),
+        key=lambda m: -(m["dias_inactivo"] or 0),
+    )[:10]
+
+    alertas_departamento = [
+        {"departamento": depto, "dias_sin_cerrar": dias}
+        for depto in sorted(EQUIPOS_VALIDOS)
+        for ultimo in [ultimo_cierre_depto.get(depto)]
+        for dias in [(hoy - ultimo.date()).days if ultimo is not None else None]
+        if dias is None or dias >= 10
+    ]
+
+    return {
+        "dias_periodo": dias_periodo,
+        "total_activos": len(activos),
+        "sobrecargados": sum(1 for m in miembros if m["abiertas"] >= 4),
+        "inactivos": sum(1 for m in miembros if m["dias_inactivo"] is not None and m["dias_inactivo"] >= 15),
+        "pct_a_tiempo_club": (
+            round(100 * a_tiempo_club / con_deadline_club) if con_deadline_club else None
+        ),
+        "participacion_semanal": participacion_semanal,
+        "por_departamento": por_departamento,
+        "miembros": miembros,
+        "alertas_inactividad": alertas_inactividad,
+        "alertas_departamento": alertas_departamento,
     }

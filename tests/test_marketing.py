@@ -45,20 +45,26 @@ class MarketingTestCase(unittest.TestCase):
         self.client = app.app.test_client()
 
     def seed_acceso(self, email="marketing@example.com", password="test-equipo",
-                    equipos=None):
+                    equipos=None, vp_de=None, cargo=""):
         conn = equipo_service._get_connection()
         with conn.cursor() as cur:
             cur.execute(
-                "INSERT INTO equipo_accesos (email, password_hash, equipos)"
-                " VALUES (%s, %s, %s)",
-                (email, generate_password_hash(password), equipos or ["marketing"]),
+                "INSERT INTO equipo_accesos (email, password_hash, equipos, vp_de, cargo)"
+                " VALUES (%s, %s, %s, %s, %s)",
+                (
+                    email,
+                    generate_password_hash(password),
+                    equipos or ["marketing"],
+                    vp_de or [],
+                    cargo,
+                ),
             )
         conn.commit()
         conn.close()
 
     def login(self, email="marketing@example.com", password="test-equipo",
-              equipos=None):
-        self.seed_acceso(email, password, equipos)
+              equipos=None, vp_de=None, cargo=""):
+        self.seed_acceso(email, password, equipos, vp_de, cargo)
         respuesta = self.client.post(
             "/api/equipo/login", json={"email": email, "password": password}
         )
@@ -1024,11 +1030,24 @@ class SaludEquipoTestCase(MarketingTestCase):
         self.assertEqual(primero, segundo)
 
     def test_ruta_salud_devuelve_total_del_departamento(self):
-        self.login()
+        self.login(vp_de=["marketing"])
         self.seed_acceso("otro@telecoemprende.es", "x", ["marketing"])
         respuesta = self.client.get("/api/marketing/miembros/salud")
         self.assertEqual(respuesta.status_code, 200)
         self.assertEqual(respuesta.get_json()["salud"]["total"], 2)
+
+    def test_ruta_salud_rechaza_a_quien_no_es_board_ni_vp(self):
+        """La puntuación de participación no se le enseña al miembro raso: solo
+        VP del departamento, board o admin (evita competición entre
+        compañeros, ver `metricas_club`)."""
+        self.login()
+        respuesta = self.client.get("/api/marketing/miembros/salud")
+        self.assertEqual(respuesta.status_code, 403)
+
+    def test_ruta_salud_acepta_a_board(self):
+        self.login(cargo="boardmember")
+        respuesta = self.client.get("/api/marketing/miembros/salud")
+        self.assertEqual(respuesta.status_code, 200)
 
 
 class OnboardingTestCase(MarketingTestCase):

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
+import { X } from "lucide-react";
 
 import { useDirectorio } from "../DeptoApi";
 import { apiDepto } from "../../../api/marketing";
@@ -7,7 +8,7 @@ import { AlertBanner } from "../../feedback/AlertBanner";
 import { Esqueleto } from "../../feedback/Esqueleto";
 import { AvataresDeResponsables } from "./Avatares";
 import type { ApiFailure } from "../../../types/api";
-import type { CalendarioItem } from "../../../types/marketing";
+import { formatearFecha, type CalendarioItem } from "../../../types/marketing";
 import type { Team } from "../../../types/equipo";
 
 const TODOS_LOS_DEPARTAMENTOS: Team[] = ["marketing", "eventos", "ingenieria"];
@@ -22,6 +23,23 @@ const DEPTO_CLASE: Record<string, string> = {
   marketing: "mkt-agenda-marketing-react",
   eventos: "mkt-agenda-eventos-react",
   ingenieria: "mkt-agenda-ingenieria-react",
+};
+
+const ORIGEN_LABEL: Record<CalendarioItem["origen"], string> = {
+  content: "Publicación",
+  task: "Tarea",
+  reunion: "Reunión",
+};
+
+/** `detalle` no es una descripción libre: el backend reutiliza esa columna
+ *  con un valor distinto según el origen (`services/marketing.py`) --
+ *  plataforma para publicaciones, prioridad para tareas, objetivo para
+ *  reuniones. Sin la etiqueta correcta se lee como texto suelto sin sentido
+ *  (p.ej. "media" solo). */
+const DETALLE_LABEL: Record<CalendarioItem["origen"], string> = {
+  content: "Plataforma",
+  task: "Prioridad",
+  reunion: "Objetivo",
 };
 
 const DIAS = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
@@ -200,6 +218,7 @@ export function CalendarPanel({ teams, onAbrirCampaign }: Props) {
   const [todosDepartamentos, setTodosDepartamentos] = useState(true);
   const [deptosFiltro, setDeptosFiltro] = useState<Team[]>(TODOS_LOS_DEPARTAMENTOS);
   const [diaAbierto, setDiaAbierto] = useState<string | null>(null);
+  const [seleccionado, setSeleccionado] = useState<CalendarioItem | null>(null);
   const [tituloNuevo, setTituloNuevo] = useState("");
   // Se busca un mes con datos una sola vez, en el primer montaje. Después el
   // usuario manda: si navega a un mes vacío, se queda ahí.
@@ -299,6 +318,7 @@ export function CalendarPanel({ teams, onAbrirCampaign }: Props) {
 
   function mover(pasos: number) {
     setDiaAbierto(null);
+    setSeleccionado(null);
     setCursor((actual) => {
       if (vista === "semana") {
         const siguiente = new Date(actual);
@@ -326,6 +346,7 @@ export function CalendarPanel({ teams, onAbrirCampaign }: Props) {
   function irAHoy() {
     const ahora = new Date();
     setDiaAbierto(null);
+    setSeleccionado(null);
     setCursor(new Date(ahora.getFullYear(), ahora.getMonth(), 1));
   }
 
@@ -349,13 +370,6 @@ export function CalendarPanel({ teams, onAbrirCampaign }: Props) {
   ) {
     const claseDepto = item.departamento ? ` ${DEPTO_CLASE[item.departamento] ?? ""}` : "";
     const etiquetaDepto = item.departamento ? DEPTO_LABEL[item.departamento as Team] : null;
-    // Abrir la campaña solo tiene sentido si es de un departamento PROPIO --
-    // una del departamento de otra persona no se encontraría en su panel de
-    // Campañas (sin acceso), así que un ítem así se ve pero no navega a
-    // ningún sitio. "Propio" ya no es "el departamento activo": el
-    // calendario es uno solo y puede enseñar cualquiera de los departamentos
-    // de la persona, no solo aquel por el que se entró.
-    const esDeUnDeptoPropio = !item.departamento || teams.includes(item.departamento as Team);
 
     return (
       <button
@@ -366,11 +380,7 @@ export function CalendarPanel({ teams, onAbrirCampaign }: Props) {
         }${claseDepto}${extra?.className ? ` ${extra.className}` : ""}`}
         style={extra?.style}
         title={`${item.hora ? `${item.hora} — ` : ""}${etiquetaDepto ? `${etiquetaDepto} — ` : ""}${item.padre ? `${item.padre} — ` : ""}${item.titulo}`}
-        onClick={() =>
-          esDeUnDeptoPropio &&
-          item.campaign_id !== null &&
-          onAbrirCampaign(item.campaign_id, item.departamento as Team)
-        }
+        onClick={() => setSeleccionado(item)}
       >
         {item.hora ? <span className="mkt-evento-hora-react">{item.hora}</span> : null}
         <span className="mkt-evento-texto-react">{item.titulo}</span>
@@ -669,6 +679,75 @@ export function CalendarPanel({ teams, onAbrirCampaign }: Props) {
               })}
             </div>
           </div>
+        </div>
+      ) : null}
+
+      {seleccionado ? (
+        <div className="mkt-ficha-evento-react">
+          <header className="mkt-ficha-evento-header-react">
+            <div>
+              <span className="mkt-meta-react">{ORIGEN_LABEL[seleccionado.origen]}</span>
+              <h4>{seleccionado.titulo}</h4>
+            </div>
+            <button
+              type="button"
+              className="mkt-icon-btn-react"
+              title="Cerrar ficha"
+              onClick={() => setSeleccionado(null)}
+            >
+              <X size={14} strokeWidth={1.75} aria-hidden="true" />
+              <span className="sr-only">Cerrar ficha</span>
+            </button>
+          </header>
+
+          <dl className="mkt-ficha-evento-datos-react">
+            <div>
+              <dt>Cuándo</dt>
+              <dd>
+                {formatearFecha(seleccionado.fecha, true)}
+                {seleccionado.hora ? ` · ${seleccionado.hora}` : ""}
+              </dd>
+            </div>
+            {seleccionado.departamento ? (
+              <div>
+                <dt>Departamento</dt>
+                <dd>{DEPTO_LABEL[seleccionado.departamento as Team] ?? seleccionado.departamento}</dd>
+              </div>
+            ) : null}
+            {seleccionado.padre ? (
+              <div>
+                <dt>De</dt>
+                <dd>{seleccionado.padre}</dd>
+              </div>
+            ) : null}
+            <div>
+              <dt>Estado</dt>
+              <dd>{seleccionado.estado.replace(/_/g, " ")}</dd>
+            </div>
+            {seleccionado.detalle ? (
+              <div>
+                <dt>{DETALLE_LABEL[seleccionado.origen]}</dt>
+                <dd>{seleccionado.detalle}</dd>
+              </div>
+            ) : null}
+          </dl>
+
+          {/* Abrir la campaña solo tiene sentido si es de un departamento PROPIO
+              -- una del departamento de otra persona no se encontraría en su
+              panel de Campañas (sin acceso), así que la ficha se ve pero sin
+              ese botón. */}
+          {seleccionado.campaign_id !== null &&
+          (!seleccionado.departamento || teams.includes(seleccionado.departamento as Team)) ? (
+            <button
+              type="button"
+              className="mkt-btn-mini-react"
+              onClick={() =>
+                onAbrirCampaign(seleccionado.campaign_id as number, seleccionado.departamento as Team)
+              }
+            >
+              Ver campaña →
+            </button>
+          ) : null}
         </div>
       ) : null}
     </section>
