@@ -19,6 +19,7 @@ from functools import wraps
 from flask import Blueprint, jsonify, request
 
 from backend.config import (
+    CARGOS_VALIDOS,
     CONTENT_ESTADOS,
     MAX_COMENTARIO_LEN,
     MAX_ENLACES,
@@ -577,8 +578,18 @@ def api_miembros():
 @marketing_api.route("/miembros/salud", methods=["GET"])
 @requiere_equipo
 def api_miembros_salud():
-    """Semáforo de carga/inactividad/plazos del departamento -- para el panel
-    de salud del VP, no para el directorio general (ver `/miembros`)."""
+    """Semáforo de carga/inactividad/plazos del departamento -- para VP y
+    board, no para el miembro raso: la puntuación de participación no se le
+    enseña, para no meter competición entre compañeros (mismo criterio que
+    `/api/equipo/metricas`). No es tampoco el directorio general (`/miembros`)."""
+    sesion = equipo_session_info()
+    autorizado = (
+        is_admin_authenticated()
+        or sesion["cargo"] in CARGOS_VALIDOS
+        or departamento_actual() in sesion["vp_de"]
+    )
+    if not autorizado:
+        return jsonify(build_response(False, "No autorizado.")), 403
     return jsonify({"ok": True, "salud": salud_equipo(departamento_actual())}), 200
 
 

@@ -14,6 +14,7 @@ os.environ["CRON_SECRET"] = "test-cron-secret"
 import app  # noqa: E402
 import backend.services.admin as admin_service  # noqa: E402
 import backend.services.equipo as equipo_service  # noqa: E402
+import backend.services.marketing as marketing_service  # noqa: E402
 import backend.services.registrations as registration_service  # noqa: E402
 import backend.services.security as security_service  # noqa: E402
 from backend.config import MAX_LOGIN_ATTEMPTS_PER_WINDOW  # noqa: E402
@@ -29,11 +30,20 @@ class ApiTestCase(unittest.TestCase):
         registration_service.init_db()
         equipo_service.init_equipo_db()
 
+        marketing_service.init_marketing_db()
+
         conn = registration_service._get_connection()
         with conn.cursor() as cur:
             cur.execute("DELETE FROM registrations")
             cur.execute("DELETE FROM equipo_accesos")
             cur.execute("DELETE FROM calendario_eventos")
+            # `tasks` arrastra `contents`/`campaigns` por cascada: sin esto,
+            # una tarea creada por un test de /api/marketing/tasks o
+            # /api/equipo/mis-tareas (metricas, mis-tareas...) sobrevive al
+            # siguiente test de esta clase -- no hay transacción por test.
+            cur.execute("DELETE FROM tasks")
+            cur.execute("DELETE FROM contents")
+            cur.execute("DELETE FROM campaigns")
         conn.commit()
         conn.close()
 
@@ -629,6 +639,42 @@ class ApiTestCase(unittest.TestCase):
         self.assertEqual(respuesta.status_code, 200)
         titulos = {t["titulo"] for t in respuesta.get_json()["tareas"]}
         self.assertEqual(titulos, {"Guion", "Reservar sala"})
+
+    def test_metricas_requiere_sesion(self):
+        self.assertEqual(self.client.get("/api/equipo/metricas").status_code, 401)
+
+    def test_metricas_rechaza_a_quien_no_es_board_ni_vp(self):
+        self.seed_equipo()
+        self.equipo_login()
+        self.assertEqual(self.client.get("/api/equipo/metricas").status_code, 403)
+
+    def test_metricas_cuenta_tareas_completadas_por_persona(self):
+        """La productividad sale de `tasks` real, no de un número inventado:
+        una tarea cerrada por alguien cuenta en su fila."""
+        self.seed_equipo(vp_de=["marketing"])
+        self.equipo_login()
+
+        creada = self.client.post(
+            "/api/marketing/tasks",
+            json={"titulo": "Guion", "responsables": ["marketing@example.com"]},
+        ).get_json()["task"]
+        self.client.put(
+            f"/api/marketing/tasks/{creada['id']}", json={"estado": "acabado"}
+        )
+        self.client.post(
+            "/api/marketing/tasks",
+            json={"titulo": "Aún abierta", "responsables": ["marketing@example.com"]},
+        )
+
+        respuesta = self.client.get("/api/equipo/metricas")
+        self.assertEqual(respuesta.status_code, 200)
+        metricas = respuesta.get_json()["metricas"]
+        self.assertEqual(metricas["total_activos"], 1)
+
+        yo = next(m for m in metricas["miembros"] if m["email"] == "marketing@example.com")
+        self.assertEqual(yo["completadas_periodo"], 1)
+        self.assertEqual(yo["abiertas"], 1)
+        self.assertIn("marketing", metricas["por_departamento"])
 
     def test_admin_equipo_endpoints_require_auth(self):
         self.assertEqual(self.client.get("/api/admin/equipo").status_code, 401)

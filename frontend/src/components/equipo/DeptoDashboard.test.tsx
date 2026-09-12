@@ -734,6 +734,7 @@ describe("/equipo — panel de Marketing", () => {
     await userEvent.click(screen.getByRole("button", { name: "Calendario" }));
 
     await userEvent.click(await screen.findByRole("button", { name: /Reservar la sala/ }));
+    await userEvent.click(await screen.findByRole("button", { name: "Ver campaña →" }));
 
     expect(
       await screen.findByRole("heading", { name: "Semana de bienvenida" }),

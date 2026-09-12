@@ -411,6 +411,13 @@
   transition: transform var(--dur-menu) var(--ease-out);
 }
 
+/* Métricas (`MetricasPanel.tsx`) reutiliza esta misma barra pero en Azul TE,
+   no en el naranja de "% de la campaña" -- son lecturas distintas (actividad
+   del club, no avance de una pieza) y aquí es el color el que lo separa. */
+.mkt-progreso-azul-react .mkt-progreso-barra-react span {
+  background: var(--color-azul);
+}
+
 .mkt-progreso-texto-react {
   color: var(--color-text-muted);
   font-size: 0.85rem;
@@ -718,7 +725,7 @@
 .mkt-dia-react {
   min-height: 88px;
   padding: 6px;
-  border: 1px solid var(--color-border);
+  border: 1px dashed var(--color-border);
   border-radius: 10px;
   background: var(--color-surface);
 }
@@ -772,6 +779,60 @@
 .mkt-leyenda-react .mkt-evento-react {
   display: inline-block;
   margin: 0;
+}
+
+/* ---------- Ficha de evento ---------- */
+
+/* Se abre al tocar un evento del calendario, en vez de saltar directo a la
+   campaña -- mismo trazo discontinuo que la rejilla del mes, así se lee
+   como parte del mismo calendario y no como un cuadro de diálogo aparte. */
+.mkt-ficha-evento-react {
+  margin-top: 16px;
+  padding: 16px;
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+}
+
+.mkt-ficha-evento-header-react {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.mkt-ficha-evento-header-react h4 {
+  margin: 2px 0 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--color-navy);
+}
+
+.mkt-ficha-evento-datos-react {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px 28px;
+  margin: 14px 0 0;
+}
+
+.mkt-ficha-evento-datos-react dt {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-label);
+  color: var(--color-text-muted);
+}
+
+.mkt-ficha-evento-datos-react dd {
+  margin: 2px 0 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--color-navy);
+  text-transform: capitalize;
+}
+
+.mkt-ficha-evento-react .mkt-btn-mini-react {
+  margin-top: 14px;
 }
 
 /* ---------- Miembros ---------- */
@@ -946,6 +1007,76 @@
 }
 .mkt-filtros-react .mkt-agenda-leyenda-punto-react[aria-pressed="true"]::before {
   background: #fff;
+}
+
+/* ---------- Directorio de miembros: variante tabla ---------- */
+
+/* Mismas piezas que las tarjetas de "Productividad por persona" en Métricas
+   (`.mkt-miembros-react`/`.mkt-miembro-react`, sin tocarlas), pero en fila
+   con columnas fijas -- el directorio se lee mejor como tabla: miembro,
+   departamentos, habilidades y carga, alineados con una cabecera. */
+.mkt-directorio-react.mkt-miembros-react {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.mkt-directorio-cabecera-react {
+  display: grid;
+  grid-template-columns: minmax(180px, 1.6fr) minmax(130px, 1fr) minmax(160px, 1.4fr) minmax(110px, 0.8fr);
+  gap: 14px;
+  padding: 0 16px 2px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-label);
+  color: var(--color-text-muted);
+}
+
+.mkt-directorio-react .mkt-miembro-react {
+  display: grid;
+  grid-template-columns: minmax(180px, 1.6fr) minmax(130px, 1fr) minmax(160px, 1.4fr) minmax(110px, 0.8fr);
+  gap: 14px;
+  align-items: center;
+}
+
+.mkt-miembro-col-miembro-react {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.mkt-deptos-react {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+/* Contorno del color del departamento, no relleno -- ya usamos relleno para
+   la habilidad (ámbar) y la carga (verde/ámbar/rojo); un cuarto color sólido
+   en la misma fila sería ruido. */
+.mkt-depto-chip-react {
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid currentColor;
+}
+
+.mkt-depto-chip-react.mkt-agenda-marketing-react { color: var(--color-depto-marketing); }
+.mkt-depto-chip-react.mkt-agenda-eventos-react { color: var(--color-depto-eventos); }
+.mkt-depto-chip-react.mkt-agenda-ingenieria-react { color: var(--color-depto-tech); }
+
+@media (max-width: 720px) {
+  .mkt-directorio-cabecera-react {
+    display: none;
+  }
+
+  .mkt-directorio-react .mkt-miembro-react {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
 }
 
 /* ---------- Ficha de miembro ---------- */

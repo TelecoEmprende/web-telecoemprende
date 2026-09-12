@@ -13,6 +13,7 @@ import {
 } from "../components/equipo/EquipoSidebar";
 import { EquipoLoginForm, type ModoAcceso } from "../components/equipo/EquipoLoginForm";
 import { DeptoDashboard } from "../components/equipo/DeptoDashboard";
+import { MetricasPanel } from "../components/equipo/MetricasPanel";
 import type { ApiFailure } from "../types/api";
 import type { Cargo, Team } from "../types/equipo";
 
@@ -115,8 +116,8 @@ export function EquipoPage() {
   // El equipo de ingeniería (y presidencia/board) no tiene secciones propias
   // aquí: su acceso ya incluye sesión de /admin (ver login_equipo en el
   // backend), así que el sidebar solo les ofrece el enlace a ese panel.
-  const tieneAccesoAdmin =
-    teams.includes("ingenieria") || cargo === "presidente" || cargo === "boardmember";
+  const esBoard = cargo === "presidente" || cargo === "boardmember";
+  const tieneAccesoAdmin = teams.includes("ingenieria") || esBoard;
 
   if (!isAuthenticated) {
     return (
@@ -139,13 +140,14 @@ export function EquipoPage() {
     );
   }
 
-  const titulo = seccionesDe(teams).find((s) => s.id === seccion)?.label ?? "";
+  const esBoardOVp = esBoard || vpDe.length > 0;
+  const titulo = seccionesDe(teams, esBoardOVp).find((s) => s.id === seccion)?.label ?? "";
   const deptoActual = teamDe(seccion);
 
   return (
     // El workspace se lleva la pantalla entera: no hay cabecera del sitio, la
     // navegación (y la salida) están en el sidebar.
-    <div className="shadcn-scope dark workspace-react font-sans">
+    <div className="shadcn-scope workspace-react font-sans">
       <SidebarProvider>
         <EquipoSidebar
           seccion={seccion}
@@ -167,6 +169,7 @@ export function EquipoPage() {
 
           <div className="workspace-contenido-react">
             {seccion === "club" ? <CalendarioEquipo /> : null}
+            {seccion === "metricas" ? <MetricasPanel /> : null}
             {deptoActual ? (
               // `key` para que cambiar de departamento remonte los paneles: si
               // no, Marketing y Eventos comparten estado y el tablero enseña un
@@ -177,6 +180,7 @@ export function EquipoPage() {
                 teams={teams}
                 seccion={seccion}
                 onSeccion={setSeccion}
+                puedeVerSalud={esBoard || vpDe.includes(deptoActual)}
               />
             ) : null}
           </div>
