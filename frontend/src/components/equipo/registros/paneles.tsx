@@ -1,7 +1,7 @@
 import { ExternalLink, Pin } from "lucide-react";
 import { useEffect, useState } from "react";
 
-import { useApi } from "../DeptoApi";
+import { useApi, useDirectorio } from "../DeptoApi";
 import { RegistrosPanel } from "./RegistrosPanel";
 import { AvataresDeResponsables } from "../marketing/Avatares";
 import { formatearFecha, haceCuanto } from "../../../types/marketing";
@@ -256,6 +256,7 @@ const CAMPOS_REUNIONES: readonly CampoSpec[] = [
 ];
 
 export function ReunionesPanel() {
+  const directorio = useDirectorio();
   return (
     <RegistrosPanel
       recurso="reuniones"
@@ -276,7 +277,7 @@ export function ReunionesPanel() {
             .join(" · "),
           derecha:
             asistentes.length > 0 ? (
-              <AvataresDeResponsables responsables={asistentes} />
+              <AvataresDeResponsables responsables={asistentes} directorio={directorio} />
             ) : null,
           cuerpo: (
             <>

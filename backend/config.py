@@ -77,3 +77,6 @@ MAX_TITULO_LEN = 160
 MAX_TEXTO_LARGO_LEN = 5000
 MAX_RESPONSABLES = 20
 MAX_ENLACES = 20
+# Nombre para mostrar de una persona del equipo (ver services/equipo.py).
+MAX_NOMBRE_EQUIPO_LEN = 80
+MAX_COMENTARIO_LEN = 2000

@@ -17,6 +17,9 @@ const getFichaMiembro = vi.fn();
 const listarRegistros = vi.fn();
 const updateFichaMiembro = vi.fn();
 const duplicateCampaign = vi.fn();
+const getTaskComments = vi.fn();
+const createTaskComment = vi.fn();
+const getCalendarioEquipo = vi.fn();
 
 // El módulo ya no exporta funciones sueltas sino una factoría por
 // departamento (Marketing y Eventos comparten paneles). `apiDepto` guarda el
@@ -43,6 +46,8 @@ vi.mock("../../api/marketing", () => ({
       deleteTask: vi.fn(),
       updateCampaign: vi.fn(),
       updateContent: vi.fn(),
+      getTaskComments: (...args: unknown[]) => getTaskComments(...args),
+      createTaskComment: (...args: unknown[]) => createTaskComment(...args),
       getFichaMiembro: (...args: unknown[]) => getFichaMiembro(...args),
       listarRegistros: (...args: unknown[]) => listarRegistros(...args),
       crearRegistro: vi.fn(),
@@ -68,8 +73,12 @@ vi.mock("../../api/equipo", () => ({
       teams: teamsDeSesion,
       vp_de: [],
       cargo: "",
+      nombre: "",
     }),
   getEquipoCalendario: () => Promise.resolve({ ok: true, eventos: [] }),
+  getCalendarioEquipo: (...args: unknown[]) => getCalendarioEquipo(...args),
+  createEquipoCalendarioEvento: vi.fn(),
+  getMisTareas: () => Promise.resolve({ ok: true, tareas: [] }),
   logoutEquipo: () => Promise.resolve({ ok: true }),
   loginEquipo: vi.fn(),
 }));
@@ -141,6 +150,11 @@ describe("/equipo — panel de Marketing", () => {
     duplicateCampaign.mockReset();
     updateTask.mockReset().mockResolvedValue({ ok: true });
     createTask.mockReset().mockResolvedValue({ ok: true, task: TAREA });
+    getTaskComments.mockReset().mockResolvedValue({ ok: true, comments: [] });
+    createTaskComment.mockReset();
+    getCalendarioEquipo
+      .mockReset()
+      .mockResolvedValue({ ok: true, desde: "", hasta: "", items: [] });
   });
 
   it("abre en el resumen, no en el listado de miembros", async () => {
@@ -150,9 +164,12 @@ describe("/equipo — panel de Marketing", () => {
 
     // La pregunta con la que entra el usuario, no la estructura de los datos.
     expect(await screen.findByText(/cosa pendiente|cosas pendientes/)).toBeInTheDocument();
-    // El resumen de campañas en marcha sí es parte de Home; Miembros no.
+    // El resumen de campañas en marcha sí es parte de Home. Miembros (el
+    // directorio de nombres reales, ver `DirectorioProvider`) se pide una vez
+    // por departamento para toda la sesión, no solo al entrar al panel de
+    // Miembros -- por eso sí se ha llamado, aunque no se vea la lista.
     expect(getCampaigns).toHaveBeenCalled();
-    expect(getMiembros).not.toHaveBeenCalled();
+    expect(getMiembros).toHaveBeenCalled();
   });
 
   it("separa lo vencido y ordena lo demás por día en el timeline", async () => {
@@ -398,11 +415,14 @@ describe("/equipo — panel de Marketing", () => {
     await userEvent.click(screen.getByRole("button", { name: "Calendario" }));
     await screen.findByRole("button", { name: /^Añadir tarea el 15 de/ });
 
-    getCalendario.mockClear();
+    // Lectura cruzada entre departamentos por defecto (ver "Todos los
+    // departamentos" en `CalendarPanel`): el rango de fechas se pide con
+    // `getCalendarioEquipo`, no con el `getCalendario` de un solo departamento.
+    getCalendarioEquipo.mockClear();
     await userEvent.click(screen.getByRole("button", { name: "Semana" }));
 
-    await waitFor(() => expect(getCalendario).toHaveBeenCalled());
-    const [desde, hasta] = getCalendario.mock.calls.at(-1) as [string, string];
+    await waitFor(() => expect(getCalendarioEquipo).toHaveBeenCalled());
+    const [desde, hasta] = getCalendarioEquipo.mock.calls.at(-1) as [string, string];
     const dias = (new Date(hasta).getTime() - new Date(desde).getTime()) / 86_400_000;
     expect(dias).toBe(6);
 
@@ -641,6 +661,11 @@ describe("/equipo — panel de Eventos", () => {
     duplicateCampaign.mockReset();
     updateTask.mockReset().mockResolvedValue({ ok: true });
     createTask.mockReset().mockResolvedValue({ ok: true, task: TAREA });
+    getTaskComments.mockReset().mockResolvedValue({ ok: true, comments: [] });
+    createTaskComment.mockReset();
+    getCalendarioEquipo
+      .mockReset()
+      .mockResolvedValue({ ok: true, desde: "", hasta: "", items: [] });
   });
 
   async function renderEventos() {

@@ -30,6 +30,20 @@ def _get_connection():
 
 
 def init_marketing_db():
+    # Se llama en cada petición a marketing_api (ver `requiere_equipo`), así
+    # que puede correr en paralelo con ella misma sobre una base de datos
+    # recién estrenada -- el primer `Promise.all` de un departamento nuevo
+    # dispara varias a la vez. `CREATE TABLE IF NOT EXISTS` no es atómico
+    # entre transacciones: si dos llegan a crearla a la vez, la segunda
+    # revienta contra el catálogo de Postgres (UniqueViolation en pg_type) en
+    # vez de encontrarla ya creada. Si pasa, es que la otra ya la ha creado.
+    try:
+        _crear_tablas_marketing()
+    except psycopg2.errors.UniqueViolation:
+        pass
+
+
+def _crear_tablas_marketing():
     with _get_connection() as conn:
         with conn.cursor() as cur:
             cur.execute("""
@@ -105,6 +119,12 @@ def init_marketing_db():
                 ALTER TABLE tasks
                 ADD COLUMN IF NOT EXISTS hora VARCHAR(5) NOT NULL DEFAULT ''
             """)
+            # Archivar en vez de borrar: una campaña vieja deja de estorbar en
+            # el listado sin perder su historial (contenidos, tareas, enlaces).
+            cur.execute("""
+                ALTER TABLE campaigns
+                ADD COLUMN IF NOT EXISTS archivado BOOLEAN NOT NULL DEFAULT FALSE
+            """)
             cur.execute(
                 "CREATE INDEX IF NOT EXISTS contents_campaign_idx ON contents (campaign_id)"
             )
@@ -113,6 +133,20 @@ def init_marketing_db():
             )
             cur.execute(
                 "CREATE INDEX IF NOT EXISTS tasks_campaign_idx ON tasks (campaign_id)"
+            )
+            # Conversación de una tarea. `ON DELETE CASCADE`: sin la tarea, sus
+            # comentarios no significan nada (mismo criterio que `contents`).
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS task_comments (
+                    id SERIAL PRIMARY KEY,
+                    task_id INTEGER NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+                    autor VARCHAR(120) NOT NULL DEFAULT '',
+                    texto TEXT NOT NULL,
+                    created_at TIMESTAMP NOT NULL DEFAULT NOW()
+                )
+            """)
+            cur.execute(
+                "CREATE INDEX IF NOT EXISTS task_comments_task_idx ON task_comments (task_id)"
             )
         conn.commit()
 
@@ -213,7 +247,7 @@ def crear_campaign(
 
 
 def actualizar_campaign(campaign_id: int, departamento: str, **campos) -> bool:
-    permitidos = ("nombre", "objetivo", "audiencia", "fecha")
+    permitidos = ("nombre", "objetivo", "audiencia", "fecha", "archivado")
     return _actualizar("campaigns", campaign_id, permitidos, campos, departamento)
 
 
@@ -555,6 +589,36 @@ def eliminar_task(task_id: int, departamento: str) -> bool:
 
 
 # --------------------------------------------------------------------------
+# Comentarios de una tarea
+# --------------------------------------------------------------------------
+
+def listar_task_comments(task_id: int) -> list[dict]:
+    with _get_connection() as conn:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(
+                "SELECT * FROM task_comments WHERE task_id = %s ORDER BY id",
+                (task_id,),
+            )
+            return [_serializar(f) for f in cur.fetchall()]
+
+
+def crear_task_comment(task_id: int, autor: str, texto: str) -> dict:
+    with _get_connection() as conn:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(
+                """
+                INSERT INTO task_comments (task_id, autor, texto)
+                VALUES (%s, %s, %s)
+                RETURNING *
+                """,
+                (task_id, autor, texto),
+            )
+            fila = cur.fetchone()
+        conn.commit()
+    return _serializar(fila)
+
+
+# --------------------------------------------------------------------------
 # Calendario
 # --------------------------------------------------------------------------
 
@@ -618,6 +682,62 @@ def calendario(desde: date, hasta: date, departamento: str) -> list[dict]:
                          titulo
                 """,
                 {"desde": desde, "hasta": hasta, "departamento": departamento},
+            )
+            return [_serializar(f) for f in cur.fetchall()]
+
+
+def calendario_equipo(desde: date, hasta: date, departamentos: list[str]) -> list[dict]:
+    """Como `calendario()`, pero de varios departamentos a la vez y con
+    `departamento` en cada fila -- para la lectura cruzada de `/equipo`
+    (ver `GET /api/equipo/calendario-equipo`), que no está atada a un solo
+    blueprint y por tanto no tiene un `departamento_actual()` que usar."""
+    with _get_connection() as conn:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(
+                """
+                SELECT * FROM (
+                    SELECT 'content' AS origen, co.id, co.titulo,
+                           co.fecha_publicacion AS fecha, co.estado,
+                           co.campaign_id, co.plataforma AS detalle,
+                           NULL AS prioridad, c.nombre AS padre,
+                           co.responsables, NULL::varchar AS hora,
+                           c.departamento
+                    FROM contents co
+                    JOIN campaigns c ON c.id = co.campaign_id
+                    WHERE co.fecha_publicacion BETWEEN %(desde)s AND %(hasta)s
+                      AND c.departamento = ANY(%(departamentos)s)
+                    UNION ALL
+                    SELECT 'task' AS origen, t.id, t.titulo,
+                           t.deadline AS fecha, t.estado,
+                           t.campaign_id, t.prioridad AS detalle,
+                           t.prioridad, COALESCE(co.titulo, c.nombre) AS padre,
+                           t.responsables, NULLIF(t.hora, '') AS hora,
+                           t.departamento
+                    FROM tasks t
+                    LEFT JOIN contents co ON co.id = t.content_id
+                    LEFT JOIN campaigns c ON c.id = t.campaign_id
+                    WHERE t.deadline BETWEEN %(desde)s AND %(hasta)s
+                      AND t.departamento = ANY(%(departamentos)s)
+                    UNION ALL
+                    SELECT 'reunion' AS origen, r.id, r.titulo,
+                           r.fecha AS fecha, '' AS estado,
+                           NULL::integer AS campaign_id, r.objetivo AS detalle,
+                           NULL AS prioridad, NULL AS padre,
+                           r.asistentes AS responsables, NULLIF(r.hora, '') AS hora,
+                           r.departamento
+                    FROM reuniones r
+                    WHERE r.fecha BETWEEN %(desde)s AND %(hasta)s
+                      AND r.departamento = ANY(%(departamentos)s)
+                ) x
+                ORDER BY fecha,
+                         CASE prioridad
+                             WHEN 'alta' THEN 1 WHEN 'media' THEN 2
+                             WHEN 'baja' THEN 3 ELSE 0
+                         END,
+                         hora NULLS LAST,
+                         titulo
+                """,
+                {"desde": desde, "hasta": hasta, "departamentos": departamentos},
             )
             return [_serializar(f) for f in cur.fetchall()]
 

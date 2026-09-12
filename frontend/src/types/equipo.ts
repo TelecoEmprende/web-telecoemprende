@@ -3,7 +3,7 @@ export type Team = "marketing" | "eventos" | "ingenieria";
 export type Cargo = "presidente" | "boardmember" | "";
 
 export type EquipoLoginResponse =
-  | { ok: true; message?: string; teams: Team[]; vp_de: Team[]; cargo: Cargo }
+  | { ok: true; message?: string; teams: Team[]; vp_de: Team[]; cargo: Cargo; nombre: string }
   | { ok: false; message: string };
 
 export type EquipoSessionResponse = {
@@ -13,6 +13,7 @@ export type EquipoSessionResponse = {
   vp_de: Team[];
   cargo: Cargo;
   email: string;
+  nombre: string;
 };
 
 export type EquipoAcceso = {
@@ -23,6 +24,7 @@ export type EquipoAcceso = {
   cargo: Cargo;
   activo: boolean;
   created_at: string;
+  nombre: string;
 };
 
 export type EventoCalendario = {

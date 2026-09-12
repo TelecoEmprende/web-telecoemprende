@@ -1,8 +1,15 @@
-import { useMemo, useState, useEffect } from "react";
+import { FormEvent, useMemo, useState, useEffect } from "react";
 
-import { getEquipoCalendario, getEquipoSession, getMisTareas } from "../../api/equipo";
-import { etiquetaDe } from "./marketing/Avatares";
-import type { EventoCalendario } from "../../types/equipo";
+import {
+  createEquipoCalendarioEvento,
+  getEquipoCalendario,
+  getEquipoSession,
+  getMisTareas,
+} from "../../api/equipo";
+import { DeptoProvider } from "./DeptoApi";
+import { TaskDialog } from "./marketing/TaskDialog";
+import type { ApiFailure } from "../../types/api";
+import type { EventoCalendario, Team } from "../../types/equipo";
 import { diasHasta, formatearFecha as formatearFechaCorta, type Task } from "../../types/marketing";
 
 const DEPTO_LABEL: Record<string, string> = {
@@ -116,40 +123,47 @@ export function CalendarioEquipo() {
     return new Date(hoy.getFullYear(), hoy.getMonth(), 1);
   });
   const [tareas, setTareas] = useState<Task[]>([]);
-  const [email, setEmail] = useState("");
+  const [nombre, setNombre] = useState("");
   const [teams, setTeams] = useState<string[]>([]);
-  const multiEquipo = teams.length > 1;
+  const [vpDe, setVpDe] = useState<string[]>([]);
+  const [tareaAbierta, setTareaAbierta] = useState<Task | null>(null);
+  const [mostrarFormularioEvento, setMostrarFormularioEvento] = useState(false);
+  const [eventoForm, setEventoForm] = useState({ titulo: "", descripcion: "", fecha: "", hora: "" });
+  const [creandoEvento, setCreandoEvento] = useState(false);
+  const [errorEvento, setErrorEvento] = useState<string | null>(null);
+  const puedeAnadirEvento = vpDe.length > 0;
+
+  async function cargarCalendario() {
+    try {
+      const response = await getEquipoCalendario();
+      if (response.ok) setEventos(response.eventos);
+    } catch {
+      // Sin calendario disponible: la sección se queda con su estado vacío.
+    }
+  }
 
   useEffect(() => {
     let active = true;
 
-    getEquipoCalendario()
-      .then((response) => {
-        if (active && response.ok) {
-          setEventos(response.eventos);
-        }
-      })
-      .catch(() => {
-        // Sin calendario disponible: la sección se queda con su estado vacío.
-      });
+    void cargarCalendario();
 
-    // "Tu agenda" solo aporta si hay más de un departamento que juntar: con
-    // uno solo, el resumen de ese departamento ya lo cuenta todo, y
-    // duplicarlo aquí sería la misma lista dos veces.
     getEquipoSession()
       .then((sesion) => {
         if (!active) return;
-        setEmail(sesion.email);
+        setNombre(sesion.nombre);
         setTeams(sesion.teams);
-        if (sesion.teams.length > 1) {
-          getMisTareas()
-            .then((respuesta) => {
-              if (active) setTareas(respuesta.tareas);
-            })
-            .catch(() => {
-              // Sin agenda disponible: la sección no aparece, sin más.
-            });
-        }
+        setVpDe(sesion.vp_de);
+        // Tareas abiertas de cualquier departamento al que pertenezca -- con
+        // uno solo es lo mismo que ve en el resumen de ese departamento, pero
+        // repetirlo aquí es gratis y evita el salto raro de "aparece según
+        // cuántos equipos tengas".
+        getMisTareas()
+          .then((respuesta) => {
+            if (active) setTareas(respuesta.tareas);
+          })
+          .catch(() => {
+            // Sin agenda disponible: la sección no aparece, sin más.
+          });
       })
       .catch(() => {
         // Sin sesión legible no hay nombre que saludar ni agenda que pedir.
@@ -159,6 +173,22 @@ export function CalendarioEquipo() {
       active = false;
     };
   }, []);
+
+  async function crearEvento(event: FormEvent) {
+    event.preventDefault();
+    setCreandoEvento(true);
+    setErrorEvento(null);
+    try {
+      await createEquipoCalendarioEvento(eventoForm);
+      setEventoForm({ titulo: "", descripcion: "", fecha: "", hora: "" });
+      setMostrarFormularioEvento(false);
+      await cargarCalendario();
+    } catch (err) {
+      setErrorEvento((err as ApiFailure)?.message || "No se pudo crear el evento.");
+    } finally {
+      setCreandoEvento(false);
+    }
+  }
 
   const porDia = useMemo(
     () =>
@@ -275,11 +305,74 @@ export function CalendarioEquipo() {
     <section className="equipo-proximos-react">
       <header className="equipo-panel-header-react">
         <h3>Próximos eventos</h3>
+        {puedeAnadirEvento ? (
+          <button
+            type="button"
+            className="mkt-btn-mini-react"
+            onClick={() => setMostrarFormularioEvento((abierto) => !abierto)}
+          >
+            {mostrarFormularioEvento ? "Cancelar" : "+ Evento"}
+          </button>
+        ) : null}
       </header>
+
+      {mostrarFormularioEvento ? (
+        <form className="mkt-form-react" onSubmit={(e) => void crearEvento(e)}>
+          {errorEvento ? <p className="mkt-resumen-alerta-react">{errorEvento}</p> : null}
+          <div className="field-group-react">
+            <label htmlFor="ce-titulo">Título</label>
+            <input
+              id="ce-titulo"
+              type="text"
+              required
+              maxLength={150}
+              value={eventoForm.titulo}
+              onChange={(e) => setEventoForm((f) => ({ ...f, titulo: e.target.value }))}
+            />
+          </div>
+          <div className="field-group-react">
+            <label htmlFor="ce-descripcion">Descripción (opcional)</label>
+            <input
+              id="ce-descripcion"
+              type="text"
+              maxLength={500}
+              value={eventoForm.descripcion}
+              onChange={(e) => setEventoForm((f) => ({ ...f, descripcion: e.target.value }))}
+            />
+          </div>
+          <div className="mkt-form-fila-react">
+            <div className="field-group-react">
+              <label htmlFor="ce-fecha">Fecha</label>
+              <input
+                id="ce-fecha"
+                type="date"
+                required
+                value={eventoForm.fecha}
+                onChange={(e) => setEventoForm((f) => ({ ...f, fecha: e.target.value }))}
+              />
+            </div>
+            <div className="field-group-react">
+              <label htmlFor="ce-hora">Hora (opcional)</label>
+              <input
+                id="ce-hora"
+                type="time"
+                value={eventoForm.hora}
+                onChange={(e) => setEventoForm((f) => ({ ...f, hora: e.target.value }))}
+              />
+            </div>
+          </div>
+          <button type="submit" className="mkt-btn-react" disabled={creandoEvento}>
+            {creandoEvento ? "Creando..." : "Crear evento"}
+          </button>
+        </form>
+      ) : null}
+
       {proximos.length === 0 ? (
         <p className="equipo-vacio-react">
-          No hay nada apuntado. Los eventos del club se añaden desde el panel
-          de administración.
+          No hay nada apuntado.{" "}
+          {puedeAnadirEvento
+            ? "Añade el primero con el botón de arriba."
+            : "Los eventos del club se añaden desde el panel de administración."}
         </p>
       ) : (
         <ul className="equipo-eventos-lista-react">
@@ -300,19 +393,10 @@ export function CalendarioEquipo() {
     </section>
   );
 
-  if (!multiEquipo) {
-    return (
-      <>
-        {calendario}
-        {proximosEventos}
-      </>
-    );
-  }
-
   return (
     <>
       <header className="mkt-saludo-react">
-        <h3>Hola{email ? `, ${etiquetaDe(email)}` : ""} 👋</h3>
+        <h3>Hola{nombre ? `, ${nombre}` : ""} 👋</h3>
         <p className="mkt-meta-react">
           {tituloDeHoy()} —{" "}
           {cosasPorDelante === 0
@@ -367,15 +451,21 @@ export function CalendarioEquipo() {
                     key={`${tarea.departamento}-${tarea.id}`}
                     className={`mkt-agenda-item-react ${DEPTO_CLASE[tarea.departamento] ?? ""}`}
                   >
-                    <span
-                      className={`mkt-agenda-cuando-react${vencida ? " mkt-agenda-vencida-react" : ""}`}
+                    <button
+                      type="button"
+                      className="mkt-agenda-abrir-react"
+                      onClick={() => setTareaAbierta(tarea)}
                     >
-                      {cuandoTarea(tarea.deadline)}
-                    </span>
-                    <span className="mkt-agenda-titulo-react">{tarea.titulo}</span>
-                    <span className="mkt-meta-react">
-                      {DEPTO_LABEL[tarea.departamento] ?? tarea.departamento}
-                    </span>
+                      <span
+                        className={`mkt-agenda-cuando-react${vencida ? " mkt-agenda-vencida-react" : ""}`}
+                      >
+                        {cuandoTarea(tarea.deadline)}
+                      </span>
+                      <span className="mkt-agenda-titulo-react">{tarea.titulo}</span>
+                      <span className="mkt-meta-react">
+                        {DEPTO_LABEL[tarea.departamento] ?? tarea.departamento}
+                      </span>
+                    </button>
                   </li>
                 );
               })}
@@ -401,6 +491,20 @@ export function CalendarioEquipo() {
           {proximosEventos}
         </div>
       </div>
+
+      {tareaAbierta ? (
+        <DeptoProvider value={tareaAbierta.departamento as Team}>
+          <TaskDialog
+            task={tareaAbierta}
+            onCerrar={() => setTareaAbierta(null)}
+            onGuardado={async () => {
+              setTareaAbierta(null);
+              const respuesta = await getMisTareas();
+              setTareas(respuesta.tareas);
+            }}
+          />
+        </DeptoProvider>
+      ) : null}
     </>
   );
 }

@@ -83,6 +83,23 @@ ALUMNI_ESTADOS = ("pendiente", "contactado", "en_conversacion", "colabora", "des
 
 
 def init_registros_db():
+    # Ahora la llama la puerta común de todas las rutas de marketing_api
+    # (`requiere_equipo`), así que puede correr en paralelo con ella misma
+    # -- varias peticiones a la vez sobre una base de datos que todavía no
+    # tiene estas tablas (el primer `Promise.all` de un departamento nuevo).
+    # `CREATE TABLE IF NOT EXISTS` no es atómico entre transacciones: dos
+    # peticiones pueden comprobar a la vez que la tabla no existe y las dos
+    # intentar crearla, y la segunda revienta contra el catálogo de Postgres
+    # (UniqueViolation en pg_type) en vez de contra un "ya existe" limpio. Si
+    # eso pasa, es porque la otra petición ya la ha creado -- no hay nada que
+    # arreglar, solo devolver como si hubiera ido bien.
+    try:
+        _crear_tablas_registros()
+    except psycopg2.errors.UniqueViolation:
+        pass
+
+
+def _crear_tablas_registros():
     with _get_connection() as conn:
         with conn.cursor() as cur:
             cur.execute("""

@@ -119,10 +119,10 @@ export function MembersPanel() {
                 className="mkt-miembro-react"
                 onClick={() => setAbierto(miembro.email)}
               >
-                <AvatarResponsable email={miembro.email} />
+                <AvatarResponsable email={miembro.email} nombre={miembro.nombre} />
                 <span className="mkt-miembro-datos-react">
                   <span className="mkt-miembro-nombre-react">
-                    {etiquetaDe(miembro.email)}
+                    {etiquetaDe(miembro.email, miembro.nombre)}
                   </span>
                   {miembro.tags.length > 0 ? (
                     <span className="mkt-tags-react">

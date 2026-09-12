@@ -178,6 +178,8 @@ export function CampaignsPanel({ campaignInicial, onCampaignAbierta }: Props) {
   const [enlaceCopiado, setEnlaceCopiado] = useState<number | null>(null);
   const [confirmandoContent, setConfirmandoContent] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [mostrarArchivadas, setMostrarArchivadas] = useState(false);
+  const [archivando, setArchivando] = useState(false);
 
   const [nombre, setNombre] = useState("");
   const [objetivo, setObjetivo] = useState("");
@@ -286,6 +288,19 @@ export function CampaignsPanel({ campaignInicial, onCampaignAbierta }: Props) {
       window.setTimeout(() => setEnlaceCopiado(null), 2000);
     } catch {
       setError("No se pudo copiar el enlace. Cópialo a mano: " + url);
+    }
+  }
+
+  async function alternarArchivado(campaign: CampaignDetalle) {
+    setArchivando(true);
+    try {
+      await updateCampaign(campaign.id, { archivado: !campaign.archivado });
+      await abrir(campaign.id);
+      await cargarCampaigns();
+    } catch (err) {
+      setError(mensajeDeError(err, "No se pudo archivar la campaña."));
+    } finally {
+      setArchivando(false);
     }
   }
 
@@ -459,7 +474,14 @@ export function CampaignsPanel({ campaignInicial, onCampaignAbierta }: Props) {
         ) : (
           <header className="mkt-detalle-header-react">
             <div>
-              <h3>{detalle.nombre}</h3>
+              <h3>
+                {detalle.nombre}
+                {detalle.archivado ? (
+                  <Badge variant="secondary" className="mkt-archivada-badge-react">
+                    Archivada
+                  </Badge>
+                ) : null}
+              </h3>
               {detalle.objetivo ? <p>{detalle.objetivo}</p> : null}
               <p className="mkt-meta-react">
                 {detalle.audiencia ? `Para: ${detalle.audiencia}` : null}
@@ -489,6 +511,14 @@ export function CampaignsPanel({ campaignInicial, onCampaignAbierta }: Props) {
                 onClick={() => void copiarEnlace(detalle)}
               >
                 {enlaceCopiado === detalle.id ? "Enlace copiado" : "Copiar enlace"}
+              </button>
+              <button
+                type="button"
+                className="mkt-btn-mini-react"
+                disabled={archivando}
+                onClick={() => void alternarArchivado(detalle)}
+              >
+                {archivando ? "Guardando..." : detalle.archivado ? "Desarchivar" : "Archivar"}
               </button>
               <button
                 type="button"
@@ -661,16 +691,29 @@ export function CampaignsPanel({ campaignInicial, onCampaignAbierta }: Props) {
   }
 
   // --- Listado ---
+  const visibles = campaigns.filter((c) => mostrarArchivadas || !c.archivado);
+  const archivadasCount = campaigns.filter((c) => c.archivado).length;
+
   return (
     <section className="mkt-panel-react">
       {error ? <AlertBanner variant="error" message={error} /> : null}
 
       <header className="mkt-panel-header-react">
         <p className="mkt-resumen-react">
-          {campaigns.length === 0
+          {visibles.length === 0
             ? "Sin campañas"
-            : `${campaigns.length} ${campaigns.length === 1 ? "campaña" : "campañas"}`}
+            : `${visibles.length} ${visibles.length === 1 ? "campaña" : "campañas"}`}
         </p>
+        {archivadasCount > 0 ? (
+          <label className="mkt-toggle-react">
+            <input
+              type="checkbox"
+              checked={mostrarArchivadas}
+              onChange={(event) => setMostrarArchivadas(event.target.checked)}
+            />
+            Mostrar archivadas ({archivadasCount})
+          </label>
+        ) : null}
         <button
           type="button"
           className="mkt-btn-react"
@@ -732,21 +775,29 @@ export function CampaignsPanel({ campaignInicial, onCampaignAbierta }: Props) {
         </form>
       ) : null}
 
-      {campaigns.length === 0 ? (
+      {visibles.length === 0 ? (
         <p className="mkt-vacio-react">
-          Aún no hay campañas. Una campaña agrupa todo lo que se publica alrededor
-          de una idea o un evento.
+          {campaigns.length === 0
+            ? "Aún no hay campañas. Una campaña agrupa todo lo que se publica alrededor de una idea o un evento."
+            : "Todas las campañas están archivadas."}
         </p>
       ) : (
         <ul className="mkt-campaigns-react">
-          {campaigns.map((campaign) => (
+          {visibles.map((campaign) => (
             <li key={campaign.id}>
               <button
                 type="button"
                 className="mkt-campaign-card-react"
                 onClick={() => void abrir(campaign.id)}
               >
-                <span className="mkt-campaign-nombre-react">{campaign.nombre}</span>
+                <span className="mkt-campaign-nombre-react">
+                  {campaign.nombre}
+                  {campaign.archivado ? (
+                    <Badge variant="secondary" className="mkt-archivada-badge-react">
+                      Archivada
+                    </Badge>
+                  ) : null}
+                </span>
                 {campaign.objetivo ? (
                   <span className="mkt-campaign-objetivo-react">{campaign.objetivo}</span>
                 ) : null}

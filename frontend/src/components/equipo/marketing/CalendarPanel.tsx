@@ -1,11 +1,27 @@
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
 
-import { useApi } from "../DeptoApi";
+import { useApi, useDepto, useDirectorio } from "../DeptoApi";
+import { getCalendarioEquipo } from "../../../api/equipo";
 import { AlertBanner } from "../../feedback/AlertBanner";
 import { Esqueleto } from "../../feedback/Esqueleto";
 import { AvataresDeResponsables } from "./Avatares";
 import type { ApiFailure } from "../../../types/api";
 import type { CalendarioItem } from "../../../types/marketing";
+import type { Team } from "../../../types/equipo";
+
+const TODOS_LOS_DEPARTAMENTOS: Team[] = ["marketing", "eventos", "ingenieria"];
+const DEPTO_LABEL: Record<Team, string> = {
+  marketing: "Marketing",
+  eventos: "Eventos",
+  ingenieria: "Ingeniería",
+};
+/** Mismas clases que usa el color por departamento en `CalendarioEquipo.tsx`
+ *  (`marketing.css`), reutilizadas aquí para el acento del evento. */
+const DEPTO_CLASE: Record<string, string> = {
+  marketing: "mkt-agenda-marketing-react",
+  eventos: "mkt-agenda-eventos-react",
+  ingenieria: "mkt-agenda-ingenieria-react",
+};
 
 const DIAS = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
 const MESES = [
@@ -158,6 +174,8 @@ type Props = {
 
 export function CalendarPanel({ onAbrirCampaign }: Props) {
   const { createTask, getCalendario } = useApi();
+  const depto = useDepto();
+  const directorio = useDirectorio();
 
   const [cursor, setCursor] = useState(() => {
     const hoy = new Date();
@@ -167,6 +185,11 @@ export function CalendarPanel({ onAbrirCampaign }: Props) {
   const [items, setItems] = useState<CalendarioItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // Lectura cruzada por defecto: se ve lo de los tres departamentos, con un
+  // filtro encima para acotar a los que interesen (ver respuesta del equipo
+  // a "¿abro visibilidad entre departamentos?").
+  const [todosDepartamentos, setTodosDepartamentos] = useState(true);
+  const [deptosFiltro, setDeptosFiltro] = useState<Team[]>(TODOS_LOS_DEPARTAMENTOS);
   const [diaAbierto, setDiaAbierto] = useState<string | null>(null);
   const [tituloNuevo, setTituloNuevo] = useState("");
   // Se busca un mes con datos una sola vez, en el primer montaje. Después el
@@ -188,7 +211,9 @@ export function CalendarPanel({ onAbrirCampaign }: Props) {
     const { desde, hasta } = rangoDeVista(referencia, vista);
 
     try {
-      const respuesta = await getCalendario(iso(desde), iso(hasta));
+      const respuesta = todosDepartamentos
+        ? await getCalendarioEquipo(iso(desde), iso(hasta), deptosFiltro)
+        : await getCalendario(iso(desde), iso(hasta));
       setItems(respuesta.items);
       setError(null);
       return respuesta.items;
@@ -198,7 +223,7 @@ export function CalendarPanel({ onAbrirCampaign }: Props) {
     } finally {
       setIsLoading(false);
     }
-  }, [vista]);
+  }, [vista, todosDepartamentos, deptosFiltro]);
 
   useEffect(() => {
     let activo = true;
@@ -211,7 +236,9 @@ export function CalendarPanel({ onAbrirCampaign }: Props) {
       const hasta = new Date(cursor.getFullYear(), cursor.getMonth() + 3, 0);
 
       try {
-        const respuesta = await getCalendario(iso(desde), iso(hasta));
+        const respuesta = todosDepartamentos
+          ? await getCalendarioEquipo(iso(desde), iso(hasta), deptosFiltro)
+          : await getCalendario(iso(desde), iso(hasta));
         if (!activo) return;
 
         const primero = respuesta.items[0];
@@ -308,22 +335,32 @@ export function CalendarPanel({ onAbrirCampaign }: Props) {
     item: CalendarioItem,
     extra?: { style?: CSSProperties; className?: string },
   ) {
+    const claseDepto = item.departamento ? ` ${DEPTO_CLASE[item.departamento] ?? ""}` : "";
+    const etiquetaDepto = item.departamento ? DEPTO_LABEL[item.departamento as Team] : null;
+    // Abrir la campaña solo tiene sentido si es de ESTE departamento -- una
+    // de otro no se encontraría en su panel de Campañas (mismo id, tablero
+    // equivocado), así que un ítem cruzado se ve pero no navega a ningún sitio.
+    const esDeEsteDepto = !item.departamento || item.departamento === depto;
+
     return (
       <button
         key={`${item.origen}-${item.id}`}
         type="button"
         className={`mkt-evento-react mkt-evento-${item.origen}-react${
           item.prioridad === "alta" ? " mkt-evento-alta-react" : ""
-        }${extra?.className ? ` ${extra.className}` : ""}`}
+        }${claseDepto}${extra?.className ? ` ${extra.className}` : ""}`}
         style={extra?.style}
-        title={`${item.hora ? `${item.hora} — ` : ""}${item.padre ? `${item.padre} — ` : ""}${item.titulo}`}
-        onClick={() => item.campaign_id !== null && onAbrirCampaign(item.campaign_id)}
+        title={`${item.hora ? `${item.hora} — ` : ""}${etiquetaDepto ? `${etiquetaDepto} — ` : ""}${item.padre ? `${item.padre} — ` : ""}${item.titulo}`}
+        onClick={() =>
+          esDeEsteDepto && item.campaign_id !== null && onAbrirCampaign(item.campaign_id)
+        }
       >
         {item.hora ? <span className="mkt-evento-hora-react">{item.hora}</span> : null}
         <span className="mkt-evento-texto-react">{item.titulo}</span>
         {item.responsables.length > 0 ? (
           <AvataresDeResponsables
             responsables={item.responsables}
+            directorio={directorio}
             maximo={2}
             className="mkt-evento-avatares-react"
           />
@@ -396,6 +433,36 @@ export function CalendarPanel({ onAbrirCampaign }: Props) {
         </div>
       </header>
 
+      <div className="mkt-filtros-react" role="group" aria-label="Departamentos visibles">
+        <label className="mkt-toggle-react">
+          <input
+            type="checkbox"
+            checked={todosDepartamentos}
+            onChange={(event) => setTodosDepartamentos(event.target.checked)}
+          />
+          Todos los departamentos
+        </label>
+        {todosDepartamentos
+          ? TODOS_LOS_DEPARTAMENTOS.map((depto) => (
+              <button
+                key={depto}
+                type="button"
+                className={`mkt-btn-mini-react mkt-agenda-leyenda-punto-react ${DEPTO_CLASE[depto]}`}
+                aria-pressed={deptosFiltro.includes(depto)}
+                onClick={() =>
+                  setDeptosFiltro((actuales) =>
+                    actuales.includes(depto)
+                      ? actuales.filter((d) => d !== depto)
+                      : [...actuales, depto],
+                  )
+                }
+              >
+                {DEPTO_LABEL[depto]}
+              </button>
+            ))
+          : null}
+      </div>
+
       {/* La leyenda va antes de la rejilla: leerla después de haber necesitado
           el código de color no sirve de nada. */}
       <div className="mkt-leyenda-react">
@@ -403,6 +470,11 @@ export function CalendarPanel({ onAbrirCampaign }: Props) {
         <span className="mkt-evento-react mkt-evento-task-react">Tarea</span>
         <span className="mkt-evento-react mkt-evento-reunion-react">Reunión</span>
         <span className="mkt-evento-react mkt-evento-alta-react">Tarea urgente</span>
+        {todosDepartamentos ? (
+          <span className="mkt-leyenda-nota-react">
+            El color del borde izquierdo dice de qué departamento es.
+          </span>
+        ) : null}
         <span className="mkt-leyenda-nota-react">
           Toca un día para añadir una tarea.
         </span>
