@@ -955,6 +955,76 @@
   background: #fff;
 }
 
+/* ---------- Directorio de miembros: variante tabla ---------- */
+
+/* Mismas piezas que las tarjetas de "Productividad por persona" en Métricas
+   (`.mkt-miembros-react`/`.mkt-miembro-react`, sin tocarlas), pero en fila
+   con columnas fijas -- el directorio se lee mejor como tabla: miembro,
+   departamentos, habilidades y carga, alineados con una cabecera. */
+.mkt-directorio-react.mkt-miembros-react {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.mkt-directorio-cabecera-react {
+  display: grid;
+  grid-template-columns: minmax(180px, 1.6fr) minmax(130px, 1fr) minmax(160px, 1.4fr) minmax(110px, 0.8fr);
+  gap: 14px;
+  padding: 0 16px 2px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-label);
+  color: var(--color-text-muted);
+}
+
+.mkt-directorio-react .mkt-miembro-react {
+  display: grid;
+  grid-template-columns: minmax(180px, 1.6fr) minmax(130px, 1fr) minmax(160px, 1.4fr) minmax(110px, 0.8fr);
+  gap: 14px;
+  align-items: center;
+}
+
+.mkt-miembro-col-miembro-react {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.mkt-deptos-react {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+/* Contorno del color del departamento, no relleno -- ya usamos relleno para
+   la habilidad (ámbar) y la carga (verde/ámbar/rojo); un cuarto color sólido
+   en la misma fila sería ruido. */
+.mkt-depto-chip-react {
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid currentColor;
+}
+
+.mkt-depto-chip-react.mkt-agenda-marketing-react { color: var(--color-depto-marketing); }
+.mkt-depto-chip-react.mkt-agenda-eventos-react { color: var(--color-depto-eventos); }
+.mkt-depto-chip-react.mkt-agenda-ingenieria-react { color: var(--color-depto-tech); }
+
+@media (max-width: 720px) {
+  .mkt-directorio-cabecera-react {
+    display: none;
+  }
+
+  .mkt-directorio-react .mkt-miembro-react {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+}
+
 /* ---------- Ficha de miembro ---------- */
 
 /* Sin el padding/gap por defecto de <DialogContent> (Tailwind `p-4 gap-4`):

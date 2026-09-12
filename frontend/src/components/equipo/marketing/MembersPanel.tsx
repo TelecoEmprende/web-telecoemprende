@@ -15,6 +15,15 @@ const TEAM_LABEL: Record<string, string> = {
   ingenieria: "Ingeniería",
 };
 
+/** Color por departamento para el chip de la columna "Departamentos": mismo
+ *  criterio que la agenda del club (`CalendarioEquipo`) -- naranja Marketing,
+ *  noche Eventos, azul Ingeniería/Tech. */
+const DEPTO_CLASE: Record<string, string> = {
+  marketing: "mkt-agenda-marketing-react",
+  eventos: "mkt-agenda-eventos-react",
+  ingenieria: "mkt-agenda-ingenieria-react",
+};
+
 /** El chip de carga: lo que hace útil el directorio para repartir trabajo. */
 function Carga({ abiertas }: { abiertas: number }) {
   const nivel = nivelCarga(abiertas);
@@ -143,7 +152,14 @@ export function MembersPanel() {
                 : "Nadie tiene esa carga ahora mismo."}
         </p>
       ) : (
-        <ul className="mkt-miembros-react">
+        <>
+          <div className="mkt-directorio-cabecera-react" aria-hidden="true">
+            <span>Miembro</span>
+            <span>Departamentos</span>
+            <span>Rol y habilidades</span>
+            <span>Actividad</span>
+          </div>
+          <ul className="mkt-miembros-react mkt-directorio-react">
           {visibles.map((miembro) => (
             <li key={miembro.email} className="mkt-miembro-fila-react">
               <button
@@ -151,23 +167,33 @@ export function MembersPanel() {
                 className="mkt-miembro-react"
                 onClick={() => setAbierto(miembro.email)}
               >
-                <AvatarResponsable email={miembro.email} nombre={miembro.nombre} />
-                <span className="mkt-miembro-datos-react">
+                <span className="mkt-miembro-col-miembro-react">
+                  <AvatarResponsable email={miembro.email} nombre={miembro.nombre} />
                   <span className="mkt-miembro-nombre-react">
                     {etiquetaDe(miembro.email, miembro.nombre)}
                   </span>
-                  {miembro.tags.length > 0 ? (
-                    <span className="mkt-tags-react">
-                      {miembro.tags.map((tag) => (
-                        <span key={tag} className="mkt-tag-react">
-                          {tag}
-                        </span>
-                      ))}
-                    </span>
-                  ) : (
-                    <span className="mkt-meta-react">Sin habilidades apuntadas</span>
-                  )}
                 </span>
+                <span className="mkt-deptos-react">
+                  {miembro.equipos.map((equipo) => (
+                    <span
+                      key={equipo}
+                      className={`mkt-depto-chip-react ${DEPTO_CLASE[equipo] ?? ""}`}
+                    >
+                      {TEAM_LABEL[equipo] ?? equipo}
+                    </span>
+                  ))}
+                </span>
+                {miembro.tags.length > 0 ? (
+                  <span className="mkt-tags-react">
+                    {miembro.tags.map((tag) => (
+                      <span key={tag} className="mkt-tag-react">
+                        {tag}
+                      </span>
+                    ))}
+                  </span>
+                ) : (
+                  <span className="mkt-meta-react">Sin habilidades apuntadas</span>
+                )}
                 <Carga abiertas={miembro.abiertas} />
               </button>
               {/* Acciones rápidas sin entrar a la ficha -- no hay teléfono en
@@ -193,7 +219,8 @@ export function MembersPanel() {
               </span>
             </li>
           ))}
-        </ul>
+          </ul>
+        </>
       )}
 
       {abierto !== null ? (
