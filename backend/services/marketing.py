@@ -12,7 +12,7 @@ desaparece de una tarea histórica si se le da de baja el acceso.
 """
 
 import json
-from datetime import date
+from datetime import date, datetime
 
 import psycopg2
 from psycopg2.extras import RealDictCursor
@@ -118,6 +118,15 @@ def _crear_tablas_marketing():
             cur.execute("""
                 ALTER TABLE tasks
                 ADD COLUMN IF NOT EXISTS hora VARCHAR(5) NOT NULL DEFAULT ''
+            """)
+            # Cuándo se completó de verdad, no cuándo se tocó por última vez:
+            # `updated_at` se mueve con cualquier edición posterior (retocar el
+            # título, tildar la checklist...), así que no sirve para saber si
+            # una tarea acabó a tiempo (ver `salud_equipo`). Se rellena solo al
+            # entrar en 'acabado' -- ver `actualizar_task`.
+            cur.execute("""
+                ALTER TABLE tasks
+                ADD COLUMN IF NOT EXISTS completado_en TIMESTAMP
             """)
             # Archivar en vez de borrar: una campaña vieja deja de estorbar en
             # el listado sin perder su historial (contenidos, tareas, enlaces).
@@ -577,10 +586,21 @@ def crear_task(**campos) -> dict | None:
 def actualizar_task(task_id: int, departamento: str, **campos) -> bool:
     permitidos = (
         "titulo", "descripcion", "estado", "prioridad", "deadline", "hora",
-        "responsables", "tags", "checklist", "enlaces",
+        "responsables", "tags", "checklist", "enlaces", "completado_en",
     )
     if "checklist" in campos:
         campos = dict(campos, checklist=json.dumps(campos["checklist"]))
+    if "estado" in campos:
+        # El diálogo de edición reenvía el estado tal cual en cada guardado,
+        # aunque no haya cambiado (ver TaskDialog.tsx) -- solo se toca
+        # `completado_en` cuando de verdad se entra o se sale de 'acabado',
+        # nunca en un guardado que la deja igual.
+        anterior = obtener_task(task_id, departamento)
+        ya_acabada = anterior is not None and anterior["estado"] == "acabado"
+        if campos["estado"] == "acabado" and not ya_acabada:
+            campos = dict(campos, completado_en=datetime.now())
+        elif campos["estado"] != "acabado" and ya_acabada:
+            campos = dict(campos, completado_en=None)
     return _actualizar("tasks", task_id, permitidos, campos, departamento)
 
 
@@ -925,7 +945,9 @@ def salud_equipo(departamento: str) -> dict:
 
             cur.execute(
                 """
-                SELECT COUNT(*) FILTER (WHERE updated_at::date <= deadline), COUNT(*)
+                SELECT COUNT(*) FILTER (
+                           WHERE COALESCE(completado_en, updated_at)::date <= deadline
+                       ), COUNT(*)
                 FROM tasks
                 WHERE departamento = %s AND estado = 'acabado' AND deadline IS NOT NULL
                 """,

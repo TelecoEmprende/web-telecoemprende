@@ -148,6 +148,10 @@ export function MemberDialog({ email, habilidadesConocidas = [], onCerrar, onGua
 
     try {
       await updateFichaMiembro(email, { tags, notas, onboarding });
+      // Sin esto, "Cancelar" tras un guardado anterior volvía a lo que había
+      // ANTES de esa primera vez que se guardó -- `ficha` se queda como la
+      // primera carga si nunca se actualiza con lo último guardado.
+      setFicha((actual) => (actual ? { ...actual, tags, notas, onboarding } : actual));
       setGuardado(true);
       setEditandoPerfil(false);
       onGuardado();
