@@ -2259,6 +2259,40 @@ button.mkt-evento-react {
   background: transparent;
 }
 
+.mkt-comentarios-react {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 8px 0 12px;
+}
+
+.mkt-comentario-react {
+  padding: 8px 10px;
+  border-radius: var(--radius-sm, 6px);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+}
+
+.mkt-comentario-cabecera-react {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 0.82rem;
+}
+
+.mkt-comentario-texto-react {
+  margin: 4px 0 0;
+  font-size: 0.88rem;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.mkt-archivada-badge-react {
+  margin-left: 8px;
+  vertical-align: middle;
+}
+
 .mkt-checklist-react {
   margin: 6px 0 16px;
   padding: 14px;

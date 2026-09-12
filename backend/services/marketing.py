@@ -114,6 +114,20 @@ def init_marketing_db():
             cur.execute(
                 "CREATE INDEX IF NOT EXISTS tasks_campaign_idx ON tasks (campaign_id)"
             )
+            # Conversación de una tarea. `ON DELETE CASCADE`: sin la tarea, sus
+            # comentarios no significan nada (mismo criterio que `contents`).
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS task_comments (
+                    id SERIAL PRIMARY KEY,
+                    task_id INTEGER NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+                    autor VARCHAR(120) NOT NULL DEFAULT '',
+                    texto TEXT NOT NULL,
+                    created_at TIMESTAMP NOT NULL DEFAULT NOW()
+                )
+            """)
+            cur.execute(
+                "CREATE INDEX IF NOT EXISTS task_comments_task_idx ON task_comments (task_id)"
+            )
         conn.commit()
 
 
@@ -552,6 +566,36 @@ def actualizar_task(task_id: int, departamento: str, **campos) -> bool:
 
 def eliminar_task(task_id: int, departamento: str) -> bool:
     return _eliminar("tasks", task_id, departamento)
+
+
+# --------------------------------------------------------------------------
+# Comentarios de una tarea
+# --------------------------------------------------------------------------
+
+def listar_task_comments(task_id: int) -> list[dict]:
+    with _get_connection() as conn:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(
+                "SELECT * FROM task_comments WHERE task_id = %s ORDER BY id",
+                (task_id,),
+            )
+            return [_serializar(f) for f in cur.fetchall()]
+
+
+def crear_task_comment(task_id: int, autor: str, texto: str) -> dict:
+    with _get_connection() as conn:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(
+                """
+                INSERT INTO task_comments (task_id, autor, texto)
+                VALUES (%s, %s, %s)
+                RETURNING *
+                """,
+                (task_id, autor, texto),
+            )
+            fila = cur.fetchone()
+        conn.commit()
+    return _serializar(fila)
 
 
 # --------------------------------------------------------------------------

@@ -20,6 +20,7 @@ from flask import Blueprint, jsonify, request
 
 from backend.config import (
     CONTENT_ESTADOS,
+    MAX_COMENTARIO_LEN,
     MAX_ENLACES,
     MAX_RESPONSABLES,
     MAX_TEXTO_LARGO_LEN,
@@ -34,6 +35,7 @@ from backend.services.slack import tarea_cambia_estado, tarea_creada
 from backend.services.marketing import (
     actualizar_campaign,
     carga_por_miembro,
+    crear_task_comment,
     ficha_miembro,
     actualizar_content,
     actualizar_task,
@@ -47,6 +49,7 @@ from backend.services.marketing import (
     eliminar_task,
     init_marketing_db,
     listar_campaigns,
+    listar_task_comments,
     listar_tasks,
     obtener_campaign,
     obtener_content,
@@ -471,6 +474,33 @@ def api_eliminar_task(task_id: int):
         return jsonify(build_response(False, "Tarea no encontrada.")), 404
     logger.info("marketing elimina task id=%s", task_id)
     return jsonify(build_response(True, "Tarea eliminada.")), 200
+
+
+# --------------------------------------------------------------------------
+# Comentarios de una tarea
+# --------------------------------------------------------------------------
+
+@marketing_api.route("/tasks/<int:task_id>/comments", methods=["GET"])
+@requiere_equipo
+def api_listar_task_comments(task_id: int):
+    if obtener_task(task_id, departamento_actual()) is None:
+        return jsonify(build_response(False, "Tarea no encontrada.")), 404
+    return jsonify({"ok": True, "comments": listar_task_comments(task_id)}), 200
+
+
+@marketing_api.route("/tasks/<int:task_id>/comments", methods=["POST"])
+@requiere_equipo
+def api_crear_task_comment(task_id: int):
+    if obtener_task(task_id, departamento_actual()) is None:
+        return jsonify(build_response(False, "Tarea no encontrada.")), 404
+
+    datos = _payload()
+    texto = _texto(
+        datos, "texto", obligatorio=True, maximo=MAX_COMENTARIO_LEN, multilinea=True
+    )
+    comentario = crear_task_comment(task_id, _autor(), texto)
+    logger.info("marketing crea comentario task_id=%s", task_id)
+    return jsonify(build_response(True, "Comentario añadido.", comment=comentario)), 201
 
 
 # --------------------------------------------------------------------------

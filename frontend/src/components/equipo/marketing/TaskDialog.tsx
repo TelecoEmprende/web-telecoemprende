@@ -1,11 +1,12 @@
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
 
-import { useApi } from "../DeptoApi";
+import { useApi, useDirectorio } from "../DeptoApi";
 import { AlertBanner } from "../../feedback/AlertBanner";
 import { ContadorCaracteres } from "../../feedback/ContadorCaracteres";
 import { AdjuntosDeContent } from "./AdjuntosDeContent";
 import { SelectorMiembros } from "./SelectorMiembros";
+import { etiquetaDe } from "./Avatares";
 import {
   Dialog,
   DialogContent,
@@ -24,6 +25,7 @@ import {
   type ChecklistItem,
   type Prioridad,
   type Task,
+  type TaskComment,
   type TaskEstado,
 } from "../../../types/marketing";
 
@@ -31,6 +33,9 @@ type Props = {
   task: Task;
   onCerrar: () => void;
   onGuardado: () => void;
+  /** Para el autocompletado del campo de etiquetas -- las que ya se usan en
+   *  el departamento, no una lista fija (ver `TasksPanel`/`WeekPanel`). */
+  etiquetasExistentes?: string[];
 };
 
 function comoLineas(valores: string[]) {
@@ -51,8 +56,9 @@ function desdeLineas(texto: string) {
  * checklist, tags y enlaces se guardaban en base de datos pero no había forma
  * de tocarlos desde la interfaz. Aquí es donde se editan.
  */
-export function TaskDialog({ task, onCerrar, onGuardado }: Props) {
-  const { deleteTask, updateTask } = useApi();
+export function TaskDialog({ task, onCerrar, onGuardado, etiquetasExistentes = [] }: Props) {
+  const { deleteTask, getTaskComments, createTaskComment, updateTask } = useApi();
+  const directorio = useDirectorio();
 
   const [titulo, setTitulo] = useState(task.titulo);
   const [descripcion, setDescripcion] = useState(task.descripcion);
@@ -69,6 +75,39 @@ export function TaskDialog({ task, onCerrar, onGuardado }: Props) {
   const [isSaving, setIsSaving] = useState(false);
   const [confirmando, setConfirmando] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const [comentarios, setComentarios] = useState<TaskComment[]>([]);
+  const [nuevoComentario, setNuevoComentario] = useState("");
+  const [enviandoComentario, setEnviandoComentario] = useState(false);
+
+  useEffect(() => {
+    let activo = true;
+    void getTaskComments(task.id)
+      .then((r) => activo && setComentarios(r.comments))
+      .catch(() => {
+        // Sin comentarios cargados, la sección se queda vacía en vez de rota.
+      });
+    return () => {
+      activo = false;
+    };
+  }, [task.id, getTaskComments]);
+
+  async function enviarComentario(event: FormEvent) {
+    event.preventDefault();
+    const texto = nuevoComentario.trim();
+    if (!texto) return;
+
+    setEnviandoComentario(true);
+    try {
+      const respuesta = await createTaskComment(task.id, texto);
+      setComentarios((actuales) => [...actuales, respuesta.comment]);
+      setNuevoComentario("");
+    } catch (err) {
+      setError((err as ApiFailure)?.message || "No se pudo enviar el comentario.");
+    } finally {
+      setEnviandoComentario(false);
+    }
+  }
 
   const hechos = checklist.filter((i) => i.hecho).length;
 
@@ -305,6 +344,50 @@ export function TaskDialog({ task, onCerrar, onGuardado }: Props) {
           </div>
 
           <AdjuntosDeContent enlaces={desdeLineas(enlaces)} />
+
+          <div className="mkt-checklist-react">
+            <p className="mkt-adjuntos-titulo-react">
+              Comentarios{comentarios.length > 0 ? ` · ${comentarios.length}` : ""}
+            </p>
+
+            {comentarios.length === 0 ? (
+              <p className="mkt-vacio-inline-react">Sin comentarios todavía.</p>
+            ) : (
+              <ul className="mkt-comentarios-react">
+                {comentarios.map((c) => (
+                  <li key={c.id} className="mkt-comentario-react">
+                    <span className="mkt-comentario-cabecera-react">
+                      <b>{etiquetaDe(c.autor, directorio[c.autor])}</b>
+                      <span className="mkt-meta-react">{c.created_at.slice(0, 16).replace("T", " ")}</span>
+                    </span>
+                    <p className="mkt-comentario-texto-react">{c.texto}</p>
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            <div className="mkt-tarea-nueva-react">
+              <input
+                type="text"
+                value={nuevoComentario}
+                placeholder="Escribe un comentario..."
+                aria-label="Nuevo comentario"
+                onChange={(event) => setNuevoComentario(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") enviarComentario(event);
+                }}
+              />
+              <button
+                type="button"
+                className="mkt-btn-mini-react"
+                aria-label="Añadir comentario"
+                disabled={!nuevoComentario.trim() || enviandoComentario}
+                onClick={enviarComentario}
+              >
+                <Plus size={15} />
+              </button>
+            </div>
+          </div>
 
           <div className="mkt-modal-acciones-react">
             <button type="submit" className="mkt-btn-react" disabled={isSaving}>
