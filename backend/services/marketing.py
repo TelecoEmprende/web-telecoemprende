@@ -105,6 +105,12 @@ def init_marketing_db():
                 ALTER TABLE tasks
                 ADD COLUMN IF NOT EXISTS hora VARCHAR(5) NOT NULL DEFAULT ''
             """)
+            # Archivar en vez de borrar: una campaña vieja deja de estorbar en
+            # el listado sin perder su historial (contenidos, tareas, enlaces).
+            cur.execute("""
+                ALTER TABLE campaigns
+                ADD COLUMN IF NOT EXISTS archivado BOOLEAN NOT NULL DEFAULT FALSE
+            """)
             cur.execute(
                 "CREATE INDEX IF NOT EXISTS contents_campaign_idx ON contents (campaign_id)"
             )
@@ -227,7 +233,7 @@ def crear_campaign(
 
 
 def actualizar_campaign(campaign_id: int, departamento: str, **campos) -> bool:
-    permitidos = ("nombre", "objetivo", "audiencia", "fecha")
+    permitidos = ("nombre", "objetivo", "audiencia", "fecha", "archivado")
     return _actualizar("campaigns", campaign_id, permitidos, campos, departamento)
 
 

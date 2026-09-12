@@ -260,6 +260,8 @@ def api_actualizar_campaign(campaign_id: int):
         campos["audiencia"] = _texto(datos, "audiencia", maximo=MAX_TEXTO_LARGO_LEN)
     if "fecha" in datos:
         campos["fecha"] = _fecha(datos, "fecha")
+    if "archivado" in datos:
+        campos["archivado"] = bool(datos["archivado"])
 
     if not actualizar_campaign(campaign_id, departamento_actual(), **campos):
         return jsonify(build_response(False, "Campaña no encontrada o sin cambios.")), 404
