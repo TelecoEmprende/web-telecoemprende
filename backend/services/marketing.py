@@ -30,6 +30,20 @@ def _get_connection():
 
 
 def init_marketing_db():
+    # Se llama en cada petición a marketing_api (ver `requiere_equipo`), así
+    # que puede correr en paralelo con ella misma sobre una base de datos
+    # recién estrenada -- el primer `Promise.all` de un departamento nuevo
+    # dispara varias a la vez. `CREATE TABLE IF NOT EXISTS` no es atómico
+    # entre transacciones: si dos llegan a crearla a la vez, la segunda
+    # revienta contra el catálogo de Postgres (UniqueViolation en pg_type) en
+    # vez de encontrarla ya creada. Si pasa, es que la otra ya la ha creado.
+    try:
+        _crear_tablas_marketing()
+    except psycopg2.errors.UniqueViolation:
+        pass
+
+
+def _crear_tablas_marketing():
     with _get_connection() as conn:
         with conn.cursor() as cur:
             cur.execute("""

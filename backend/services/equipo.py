@@ -20,6 +20,17 @@ def _get_connection():
 
 
 def init_equipo_db():
+    # Mismo motivo que en `init_marketing_db`/`init_registros_db`: se llama en
+    # cada petición y puede correr en paralelo con ella misma sobre una base
+    # de datos recién estrenada, donde `CREATE TABLE IF NOT EXISTS` no es
+    # atómico entre transacciones concurrentes.
+    try:
+        _crear_tablas_equipo()
+    except psycopg2.errors.UniqueViolation:
+        pass
+
+
+def _crear_tablas_equipo():
     with _get_connection() as conn:
         with conn.cursor() as cur:
             cur.execute("""
