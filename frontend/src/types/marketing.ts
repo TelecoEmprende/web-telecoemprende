@@ -113,6 +113,7 @@ export type Campaign = {
   creado_por: string;
   created_at: string;
   updated_at: string;
+  departamento: Team;
 };
 
 export type CampaignResumen = Campaign & {

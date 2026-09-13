@@ -1,6 +1,6 @@
 import { FormEvent, useCallback, useEffect, useState } from "react";
 
-import { useApi } from "../DeptoApi";
+import { apiDepto } from "../../../api/marketing";
 import { AlertBanner } from "../../feedback/AlertBanner";
 import { ContadorCaracteres } from "../../feedback/ContadorCaracteres";
 import { Esqueleto } from "../../feedback/Esqueleto";
@@ -8,6 +8,7 @@ import { AdjuntosDeContent } from "./AdjuntosDeContent";
 import { ContentEditor } from "./ContentEditor";
 import { Badge } from "@/components/ui/badge";
 import type { ApiFailure } from "../../../types/api";
+import type { Team } from "../../../types/equipo";
 import {
   CONTENT_ESTADOS,
   CONTENT_ESTADO_LABEL,
@@ -21,6 +22,12 @@ import {
   type ContentEstado,
   type Task,
 } from "../../../types/marketing";
+
+const DEPTO_LABEL: Record<Team, string> = {
+  marketing: "Marketing",
+  eventos: "Eventos",
+  ingenieria: "Ingeniería",
+};
 
 function mensajeDeError(error: unknown, porDefecto: string) {
   const fallo = error as ApiFailure;
@@ -147,27 +154,19 @@ function EnlaceNuevo({ onAñadir }: { onAñadir: (enlace: string) => void }) {
 }
 
 type Props = {
-  /** Campaña que hay que abrir directamente (viene del calendario). */
+  /** Departamentos que se ven a la vez en el listado -- el filtro de la
+   *  barra decide cuáles (ver `EquipoPage.tsx`). */
+  deptos: Team[];
+  /** Campaña que hay que abrir directamente (viene del calendario o de un
+   *  enlace compartido); su departamento es siempre `deptos[0]`, porque
+   *  quien la manda ya acota el filtro a ese departamento. */
   campaignInicial: number | null;
   onCampaignAbierta: () => void;
 };
 
-export function CampaignsPanel({ campaignInicial, onCampaignAbierta }: Props) {
-  const {
-    createCampaign,
-    createContent,
-    createTask,
-    deleteCampaign,
-    deleteContent,
-    duplicateCampaign,
-    getCampaign,
-    getCampaigns,
-    updateCampaign,
-    updateContent,
-    updateTask,
-  } = useApi();
-
+export function CampaignsPanel({ deptos, campaignInicial, onCampaignAbierta }: Props) {
   const [campaigns, setCampaigns] = useState<CampaignResumen[]>([]);
+  const [deptoNuevaCampaign, setDeptoNuevaCampaign] = useState<Team>(deptos[0]);
   const [detalle, setDetalle] = useState<CampaignDetalle | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [editando, setEditando] = useState<Content | null>(null);
@@ -186,9 +185,9 @@ export function CampaignsPanel({ campaignInicial, onCampaignAbierta }: Props) {
   const [audiencia, setAudiencia] = useState("");
   const [fecha, setFecha] = useState("");
 
-  const abrir = useCallback(async (id: number) => {
+  const abrir = useCallback(async (id: number, depto: Team) => {
     try {
-      const respuesta = await getCampaign(id);
+      const respuesta = await apiDepto(depto).getCampaign(id);
       setDetalle(respuesta.campaign);
       setError(null);
     } catch (err) {
@@ -199,29 +198,39 @@ export function CampaignsPanel({ campaignInicial, onCampaignAbierta }: Props) {
   const cargarCampaigns = useCallback(async () => {
     setIsLoading(true);
     try {
-      const respuesta = await getCampaigns();
-      setCampaigns(respuesta.campaigns);
+      const respuestas = await Promise.all(deptos.map((d) => apiDepto(d).getCampaigns()));
+      setCampaigns(respuestas.flatMap((r) => r.campaigns));
       setError(null);
     } catch (err) {
       setError(mensajeDeError(err, "No se pudieron cargar las campañas."));
     } finally {
       setIsLoading(false);
     }
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [deptos.join(",")]);
 
   useEffect(() => {
     void cargarCampaigns();
   }, [cargarCampaigns]);
 
   useEffect(() => {
+    if (!deptos.includes(deptoNuevaCampaign)) setDeptoNuevaCampaign(deptos[0]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [deptos.join(",")]);
+
+  useEffect(() => {
+    // El departamento de una campaña que llega por enlace o desde el
+    // calendario ya viene acotado en `deptos` (ver `EquipoPage.tsx`), así que
+    // siempre es el primero.
     if (campaignInicial !== null) {
-      void abrir(campaignInicial);
+      void abrir(campaignInicial, deptos[0]);
       onCampaignAbierta();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [campaignInicial, abrir, onCampaignAbierta]);
 
   async function recargarDetalle() {
-    if (detalle) await abrir(detalle.id);
+    if (detalle) await abrir(detalle.id, detalle.departamento);
   }
 
   async function enviarNueva(event: FormEvent) {
@@ -229,7 +238,9 @@ export function CampaignsPanel({ campaignInicial, onCampaignAbierta }: Props) {
     if (!nombre.trim()) return;
 
     try {
-      await createCampaign({ nombre, objetivo, audiencia, fecha: fecha || null });
+      await apiDepto(deptoNuevaCampaign).createCampaign({
+        nombre, objetivo, audiencia, fecha: fecha || null,
+      });
       setNombre("");
       setObjetivo("");
       setAudiencia("");
@@ -246,14 +257,14 @@ export function CampaignsPanel({ campaignInicial, onCampaignAbierta }: Props) {
     if (!detalle || !nombre.trim()) return;
 
     try {
-      await updateCampaign(detalle.id, {
+      await apiDepto(detalle.departamento).updateCampaign(detalle.id, {
         nombre,
         objetivo,
         audiencia,
         fecha: fecha || null,
       });
       setEditandoCampaign(false);
-      await abrir(detalle.id);
+      await abrir(detalle.id, detalle.departamento);
       await cargarCampaigns();
     } catch (err) {
       setError(mensajeDeError(err, "No se pudo guardar la campaña."));
@@ -271,7 +282,7 @@ export function CampaignsPanel({ campaignInicial, onCampaignAbierta }: Props) {
 
   async function borrarCampaign(campaign: CampaignResumen | CampaignDetalle) {
     try {
-      await deleteCampaign(campaign.id);
+      await apiDepto(campaign.departamento).deleteCampaign(campaign.id);
       setConfirmando(null);
       if (detalle?.id === campaign.id) setDetalle(null);
       await cargarCampaigns();
@@ -294,8 +305,10 @@ export function CampaignsPanel({ campaignInicial, onCampaignAbierta }: Props) {
   async function alternarArchivado(campaign: CampaignDetalle) {
     setArchivando(true);
     try {
-      await updateCampaign(campaign.id, { archivado: !campaign.archivado });
-      await abrir(campaign.id);
+      await apiDepto(campaign.departamento).updateCampaign(campaign.id, {
+        archivado: !campaign.archivado,
+      });
+      await abrir(campaign.id, campaign.departamento);
       await cargarCampaigns();
     } catch (err) {
       setError(mensajeDeError(err, "No se pudo archivar la campaña."));
@@ -307,7 +320,7 @@ export function CampaignsPanel({ campaignInicial, onCampaignAbierta }: Props) {
   async function duplicarCampaign(campaign: CampaignResumen | CampaignDetalle) {
     setDuplicando(campaign.id);
     try {
-      const respuesta = await duplicateCampaign(campaign.id);
+      const respuesta = await apiDepto(campaign.departamento).duplicateCampaign(campaign.id);
       await cargarCampaigns();
       setDetalle(respuesta.campaign);
     } catch (err) {
@@ -320,7 +333,7 @@ export function CampaignsPanel({ campaignInicial, onCampaignAbierta }: Props) {
   async function añadirContent() {
     if (!detalle) return;
     try {
-      const respuesta = await createContent(detalle.id, {
+      const respuesta = await apiDepto(detalle.departamento).createContent(detalle.id, {
         titulo: "Contenido sin título",
       });
       await recargarDetalle();
@@ -333,8 +346,9 @@ export function CampaignsPanel({ campaignInicial, onCampaignAbierta }: Props) {
   }
 
   async function cambiarEstadoContent(content: Content, estado: ContentEstado) {
+    if (!detalle) return;
     try {
-      await updateContent(content.id, { estado });
+      await apiDepto(detalle.departamento).updateContent(content.id, { estado });
       await recargarDetalle();
     } catch (err) {
       setError(mensajeDeError(err, "No se pudo cambiar el estado."));
@@ -342,8 +356,9 @@ export function CampaignsPanel({ campaignInicial, onCampaignAbierta }: Props) {
   }
 
   async function borrarContent(content: Content) {
+    if (!detalle) return;
     try {
-      await deleteContent(content.id);
+      await apiDepto(detalle.departamento).deleteContent(content.id);
       setConfirmandoContent(null);
       await recargarDetalle();
     } catch (err) {
@@ -352,8 +367,11 @@ export function CampaignsPanel({ campaignInicial, onCampaignAbierta }: Props) {
   }
 
   async function anadirEnlace(content: Content, enlace: string) {
+    if (!detalle) return;
     try {
-      await updateContent(content.id, { enlaces: [...content.enlaces, enlace] });
+      await apiDepto(detalle.departamento).updateContent(content.id, {
+        enlaces: [...content.enlaces, enlace],
+      });
       await recargarDetalle();
     } catch (err) {
       setError(mensajeDeError(err, "No se pudo añadir el enlace."));
@@ -361,8 +379,9 @@ export function CampaignsPanel({ campaignInicial, onCampaignAbierta }: Props) {
   }
 
   async function quitarEnlace(content: Content, enlace: string) {
+    if (!detalle) return;
     try {
-      await updateContent(content.id, {
+      await apiDepto(detalle.departamento).updateContent(content.id, {
         enlaces: content.enlaces.filter((e) => e !== enlace),
       });
       await recargarDetalle();
@@ -372,11 +391,12 @@ export function CampaignsPanel({ campaignInicial, onCampaignAbierta }: Props) {
   }
 
   async function alternarTarea(task: Task) {
+    if (!detalle) return;
     // Al desmarcar se vuelve a "en progreso", no a "pendiente": alguien que
     // desmarca está corrigiendo, no deshaciendo todo el trabajo hecho.
     const estado = task.estado === "acabado" ? "en_progreso" : "acabado";
     try {
-      await updateTask(task.id, { estado });
+      await apiDepto(detalle.departamento).updateTask(task.id, { estado });
       await recargarDetalle();
     } catch (err) {
       setError(mensajeDeError(err, "No se pudo actualizar la tarea."));
@@ -384,8 +404,9 @@ export function CampaignsPanel({ campaignInicial, onCampaignAbierta }: Props) {
   }
 
   async function añadirTarea(contentId: number, titulo: string) {
+    if (!detalle) return;
     try {
-      await createTask({ titulo, content_id: contentId });
+      await apiDepto(detalle.departamento).createTask({ titulo, content_id: contentId });
       await recargarDetalle();
     } catch (err) {
       setError(mensajeDeError(err, "No se pudo crear la tarea."));
@@ -698,33 +719,54 @@ export function CampaignsPanel({ campaignInicial, onCampaignAbierta }: Props) {
     <section className="mkt-panel-react">
       {error ? <AlertBanner variant="error" message={error} /> : null}
 
-      <header className="mkt-panel-header-react">
-        <p className="mkt-resumen-react">
+      <header className="crm-cabecera-react">
+        <h3 className="crm-h1">
           {visibles.length === 0
             ? "Sin campañas"
             : `${visibles.length} ${visibles.length === 1 ? "campaña" : "campañas"}`}
-        </p>
-        {archivadasCount > 0 ? (
-          <label className="mkt-toggle-react">
-            <input
-              type="checkbox"
-              checked={mostrarArchivadas}
-              onChange={(event) => setMostrarArchivadas(event.target.checked)}
-            />
-            Mostrar archivadas ({archivadasCount})
-          </label>
-        ) : null}
-        <button
-          type="button"
-          className="mkt-btn-react"
-          onClick={() => setMostrarFormulario((abierto) => !abierto)}
-        >
-          {mostrarFormulario ? "Cancelar" : "+ Nueva campaña"}
-        </button>
+        </h3>
+        <div className="crm-tags-react">
+          {archivadasCount > 0 ? (
+            <label
+              className={`crm-tag crm-tag-check-react${mostrarArchivadas ? " crm-tag-azul-react" : ""}`}
+            >
+              <input
+                type="checkbox"
+                className="crm-check"
+                checked={mostrarArchivadas}
+                onChange={(event) => setMostrarArchivadas(event.target.checked)}
+              />
+              Archivadas ({archivadasCount})
+            </label>
+          ) : null}
+          <button
+            type="button"
+            className="crm-btn"
+            onClick={() => setMostrarFormulario((abierto) => !abierto)}
+          >
+            {mostrarFormulario ? "Cancelar" : "+ Nueva campaña"}
+          </button>
+        </div>
       </header>
 
       {mostrarFormulario ? (
         <form className="mkt-form-react" onSubmit={enviarNueva}>
+          {deptos.length > 1 ? (
+            <div className="field-group-react">
+              <label htmlFor="mkt-depto">Departamento</label>
+              <select
+                id="mkt-depto"
+                value={deptoNuevaCampaign}
+                onChange={(event) => setDeptoNuevaCampaign(event.target.value as Team)}
+              >
+                {deptos.map((d) => (
+                  <option key={d} value={d}>
+                    {DEPTO_LABEL[d]}
+                  </option>
+                ))}
+              </select>
+            </div>
+          ) : null}
           <div className="field-group-react">
             <label htmlFor="mkt-nombre">Nombre</label>
             <input
@@ -788,10 +830,13 @@ export function CampaignsPanel({ campaignInicial, onCampaignAbierta }: Props) {
               <button
                 type="button"
                 className="mkt-campaign-card-react"
-                onClick={() => void abrir(campaign.id)}
+                onClick={() => void abrir(campaign.id, campaign.departamento)}
               >
                 <span className="mkt-campaign-nombre-react">
                   {campaign.nombre}
+                  {deptos.length > 1 ? (
+                    <Badge variant="outline">{DEPTO_LABEL[campaign.departamento]}</Badge>
+                  ) : null}
                   {campaign.archivado ? (
                     <Badge variant="secondary" className="mkt-archivada-badge-react">
                       Archivada
@@ -805,6 +850,20 @@ export function CampaignsPanel({ campaignInicial, onCampaignAbierta }: Props) {
                   {campaign.total_contents} contenidos · {campaign.total_tasks} tareas
                   {campaign.fecha ? ` · ${formatearFecha(campaign.fecha, true)}` : ""}
                 </span>
+                {campaign.total_tasks > 0 ? (
+                  <span className="crm-campaign-progreso-react">
+                    <span className="crm-bar" aria-hidden="true">
+                      <i
+                        style={{
+                          width: `${Math.round((campaign.tareas_acabadas / campaign.total_tasks) * 100)}%`,
+                        }}
+                      />
+                    </span>
+                    <span className="crm-s">
+                      {Math.round((campaign.tareas_acabadas / campaign.total_tasks) * 100)}%
+                    </span>
+                  </span>
+                ) : null}
               </button>
               <button
                 type="button"
