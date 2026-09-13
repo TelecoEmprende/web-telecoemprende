@@ -570,6 +570,18 @@
   gap: 14px;
 }
 
+/* Historial de "Completadas": una columna, no un tablero -- ya no hay
+   estados que comparar entre sí, solo consultar quién hizo qué y cuándo. */
+.mkt-archivadas-lista-react {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.mkt-archivadas-lista-react .mkt-task-card-react {
+  width: 100%;
+}
+
 .mkt-columna-react {
   display: flex;
   flex-direction: column;
