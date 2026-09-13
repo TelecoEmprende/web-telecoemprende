@@ -1,10 +1,13 @@
 import { FormEvent, useMemo, useState, useEffect } from "react";
 
 import {
+  checkinEventoCalendario,
+  confirmarEventoCalendario,
   createEquipoCalendarioEvento,
   getDirectorioClub,
   getEquipoCalendario,
   getEquipoSession,
+  getMisProyectos,
   getMisTareas,
 } from "../../api/equipo";
 import { apiDepto } from "../../api/marketing";
@@ -14,7 +17,12 @@ import { TaskDialog } from "./marketing/TaskDialog";
 import type { ApiFailure } from "../../types/api";
 import type { EventoCalendario, MiembroDirectorio, Team } from "../../types/equipo";
 import { textoDe, type Registro } from "../../types/registros";
-import { diasHasta, formatearFecha as formatearFechaCorta, type Task } from "../../types/marketing";
+import {
+  diasHasta,
+  formatearFecha as formatearFechaCorta,
+  type ProyectoResumen,
+  type Task,
+} from "../../types/marketing";
 
 const DEPTO_LABEL: Record<string, string> = {
   marketing: "Marketing",
@@ -148,6 +156,9 @@ export function CalendarioEquipo({ onVerAnuncios }: Props) {
   const [email, setEmail] = useState("");
   const [teams, setTeams] = useState<Team[]>([]);
   const [vpDe, setVpDe] = useState<string[]>([]);
+  const [cargo, setCargo] = useState("");
+  const [mentorEmail, setMentorEmail] = useState("");
+  const [proyectos, setProyectos] = useState<ProyectoResumen[]>([]);
   const [tareaAbierta, setTareaAbierta] = useState<Task | null>(null);
   const [mostrarFormularioEvento, setMostrarFormularioEvento] = useState(false);
   const [eventoForm, setEventoForm] = useState({ titulo: "", descripcion: "", fecha: "", hora: "" });
@@ -159,7 +170,6 @@ export function CalendarioEquipo({ onVerAnuncios }: Props) {
   const [filtroTareas, setFiltroTareas] = useState<"mias" | "departamentos">("departamentos");
   const [anuncio, setAnuncio] = useState<Registro | null>(null);
   const [directorio, setDirectorio] = useState<MiembroDirectorio[]>([]);
-  const [busquedaDirectorio, setBusquedaDirectorio] = useState("");
 
   async function cargarCalendario() {
     try {
@@ -182,6 +192,8 @@ export function CalendarioEquipo({ onVerAnuncios }: Props) {
         setEmail(sesion.email);
         setTeams(sesion.teams);
         setVpDe(sesion.vp_de);
+        setCargo(sesion.cargo);
+        setMentorEmail(sesion.mentor_email);
         // Tareas abiertas de cualquier departamento al que pertenezca -- con
         // uno solo es lo mismo que ve en el resumen de ese departamento, pero
         // repetirlo aquí es gratis y evita el salto raro de "aparece según
@@ -192,6 +204,14 @@ export function CalendarioEquipo({ onVerAnuncios }: Props) {
           })
           .catch(() => {
             // Sin agenda disponible: la sección no aparece, sin más.
+          });
+
+        getMisProyectos()
+          .then((respuesta) => {
+            if (active) setProyectos(respuesta.proyectos);
+          })
+          .catch(() => {
+            // Sin proyectos disponibles: la sección no aparece, sin más.
           });
 
         // Los anuncios son del club entero pero se piden por la ruta de un
@@ -233,15 +253,72 @@ export function CalendarioEquipo({ onVerAnuncios }: Props) {
     [tareas, filtroTareas, email],
   );
 
-  const directorioVisible = useMemo(() => {
-    const q = busquedaDirectorio.trim().toLowerCase();
-    if (!q) return directorio;
-    return directorio.filter(
-      (m) =>
-        etiquetaDe(m.email, m.nombre).toLowerCase().includes(q) ||
-        m.equipos.some((eq) => (DEPTO_LABEL[eq] ?? eq).toLowerCase().includes(q)),
-    );
-  }, [directorio, busquedaDirectorio]);
+  const miMentor = useMemo(
+    () => (mentorEmail ? directorio.find((m) => m.email === mentorEmail) ?? null : null),
+    [directorio, mentorEmail],
+  );
+
+  const tutorizados = useMemo(
+    () => directorio.filter((m) => m.mentor_email === email),
+    [directorio, email],
+  );
+
+  /** El VP de cada uno de mis departamentos (menos yo mismo, si lo soy): a
+   *  quién escribir con dudas -- ver "Quién es quién" en el boceto, que aquí
+   *  se resuelve así en vez de con el directorio entero (ya está en
+   *  Miembros). */
+  const misVPs = useMemo(
+    () =>
+      directorio.filter(
+        (m) => m.email !== email && teams.some((t) => m.vp_de.includes(t)),
+      ),
+    [directorio, teams, email],
+  );
+
+  async function confirmarAsistencia(evento: EventoCalendario, confirmar: boolean) {
+    try {
+      await confirmarEventoCalendario(evento.id, confirmar);
+      setEventos((actuales) =>
+        actuales.map((e) =>
+          e.id === evento.id
+            ? {
+                ...e,
+                confirmados: confirmar
+                  ? [...e.confirmados, email]
+                  : e.confirmados.filter((m) => m !== email),
+              }
+            : e,
+        ),
+      );
+    } catch {
+      // Sin confirmar, el evento se queda como estaba -- no bloquea el resto.
+    }
+  }
+
+  /** Check-in el día del evento: lo hace quien gestiona la puerta (VP de
+   *  cualquier departamento o admin, mismo criterio que `puedeAnadirEvento`),
+   *  marcando a cada confirmado según va llegando. Alimenta la asistencia
+   *  media de `MetricasPanel`, a diferencia de `confirmarAsistencia`, que es
+   *  solo la intención previa. */
+  async function marcarAsistio(evento: EventoCalendario, personaEmail: string, asistio: boolean) {
+    try {
+      await checkinEventoCalendario(evento.id, personaEmail, asistio);
+      setEventos((actuales) =>
+        actuales.map((e) =>
+          e.id === evento.id
+            ? {
+                ...e,
+                asistio: asistio
+                  ? [...e.asistio, personaEmail]
+                  : e.asistio.filter((m) => m !== personaEmail),
+              }
+            : e,
+        ),
+      );
+    } catch {
+      // Sin marcar, el check-in se queda como estaba -- no bloquea el resto.
+    }
+  }
 
   async function crearEvento(event: FormEvent) {
     event.preventDefault();
@@ -445,70 +522,143 @@ export function CalendarioEquipo({ onVerAnuncios }: Props) {
         </p>
       ) : (
         <ul className="equipo-eventos-lista-react">
-          {proximos.map((evento) => (
-            <li key={evento.id} className="equipo-evento-react">
-              <span className="equipo-evento-fecha-react">
-                {formatearFecha(evento.fecha)}
-                {evento.hora ? ` · ${evento.hora}` : ""}
-              </span>
-              <span className="equipo-evento-titulo-react">{evento.titulo}</span>
-              {evento.descripcion ? (
-                <span className="equipo-evento-desc-react">{evento.descripcion}</span>
-              ) : null}
-            </li>
-          ))}
+          {proximos.map((evento) => {
+            const voy = evento.confirmados.includes(email);
+            return (
+              <li key={evento.id} className="equipo-evento-react">
+                <span className="equipo-evento-fecha-react">
+                  {formatearFecha(evento.fecha)}
+                  {evento.hora ? ` · ${evento.hora}` : ""}
+                </span>
+                <span className="equipo-evento-titulo-react">{evento.titulo}</span>
+                {evento.descripcion ? (
+                  <span className="equipo-evento-desc-react">{evento.descripcion}</span>
+                ) : null}
+                <button
+                  type="button"
+                  className="mkt-btn-mini-react"
+                  onClick={() => void confirmarAsistencia(evento, !voy)}
+                >
+                  {voy ? "Voy ✓" : "Confirmar asistencia"}
+                </button>
+
+                {puedeAnadirEvento && evento.confirmados.length > 0 ? (
+                  <div className="equipo-checkin-react">
+                    <span className="mkt-meta-react">
+                      Check-in · {evento.asistio.length}/{evento.confirmados.length}
+                    </span>
+                    {evento.confirmados.map((confirmadoEmail) => {
+                      const asistio = evento.asistio.includes(confirmadoEmail);
+                      return (
+                        <button
+                          key={confirmadoEmail}
+                          type="button"
+                          className="mkt-btn-mini-react"
+                          onClick={() => void marcarAsistio(evento, confirmadoEmail, !asistio)}
+                        >
+                          {asistio ? "✓ " : ""}
+                          {etiquetaDe(confirmadoEmail, directorio.find((m) => m.email === confirmadoEmail)?.nombre)}
+                        </button>
+                      );
+                    })}
+                  </div>
+                ) : null}
+              </li>
+            );
+          })}
         </ul>
       )}
     </section>
   );
 
-  const quienEsQuien = (
-    <section className="equipo-proximos-react">
-      <header className="equipo-panel-header-react">
-        <h3>Quién es quién</h3>
-        <span className="mkt-meta-react">
-          {directorio.length} {directorio.length === 1 ? "miembro" : "miembros"}
-        </span>
+  const misProyectos = (
+    <section className="mkt-panel-react">
+      <header className="mkt-panel-header-react">
+        <h3>Mis proyectos</h3>
       </header>
 
-      {directorio.length > 0 ? (
-        <input
-          type="search"
-          className="mkt-buscador-react"
-          placeholder="Buscar por nombre o departamento..."
-          aria-label="Buscar en el directorio del club"
-          value={busquedaDirectorio}
-          onChange={(e) => setBusquedaDirectorio(e.target.value)}
-        />
-      ) : null}
-
-      {directorio.length === 0 ? (
-        <p className="equipo-vacio-react">Directorio no disponible ahora mismo.</p>
-      ) : directorioVisible.length === 0 ? (
-        <p className="equipo-vacio-react">Nadie coincide con esa búsqueda.</p>
+      {proyectos.length === 0 ? (
+        <p className="mkt-vacio-react">No tienes tareas en ningún proyecto ahora mismo.</p>
       ) : (
-        <ul className="mkt-miembros-react equipo-directorio-react">
-          {directorioVisible.slice(0, 8).map((miembro) => (
-            <li key={miembro.email} className="mkt-miembro-react">
-              <AvatarResponsable email={miembro.email} nombre={miembro.nombre} />
-              <span className="mkt-miembro-datos-react">
-                <span className="mkt-miembro-nombre-react">
-                  {etiquetaDe(miembro.email, miembro.nombre)}
+        <ul className="equipo-eventos-lista-react">
+          {proyectos.map((proyecto) => {
+            const porcentaje =
+              proyecto.total_tasks === 0
+                ? 0
+                : Math.round((proyecto.tareas_acabadas / proyecto.total_tasks) * 100);
+            return (
+              <li key={proyecto.id} className="equipo-evento-react">
+                <span className="equipo-evento-titulo-react">
+                  {proyecto.nombre}
+                  <span className="mkt-meta-react"> · {DEPTO_LABEL[proyecto.departamento] ?? proyecto.departamento}</span>
                 </span>
-                <span className="mkt-meta-react">
-                  {miembro.equipos.map((eq) => DEPTO_LABEL[eq] ?? eq).join(" · ") || "Sin departamento"}
-                </span>
-              </span>
-            </li>
-          ))}
+                <div className="mkt-progreso-react">
+                  <div className="mkt-progreso-barra-react" aria-hidden="true">
+                    <span style={{ transform: `scaleX(${porcentaje / 100})` }} />
+                  </div>
+                  <span className="mkt-progreso-texto-react">{porcentaje}%</span>
+                </div>
+              </li>
+            );
+          })}
         </ul>
       )}
-
-      {directorioVisible.length > 8 ? (
-        <p className="mkt-meta-react">+{directorioVisible.length - 8} más</p>
-      ) : null}
     </section>
   );
+
+  const contactos = miMentor || misVPs.length > 0 || tutorizados.length > 0 ? (
+    <section className="mkt-panel-react">
+      <header className="mkt-panel-header-react">
+        <h3>A quién escribir</h3>
+      </header>
+
+      {miMentor ? (
+        <div className="equipo-contacto-react">
+          <AvatarResponsable email={miMentor.email} nombre={miMentor.nombre} />
+          <span className="mkt-miembro-datos-react">
+            <span className="mkt-miembro-nombre-react">{etiquetaDe(miMentor.email, miMentor.nombre)}</span>
+            <span className="mkt-meta-react">Tu mentora</span>
+          </span>
+          <a className="mkt-btn-mini-react" href={`mailto:${miMentor.email}`}>
+            Escribir
+          </a>
+        </div>
+      ) : null}
+
+      {misVPs.map((vp) => (
+        <div key={vp.email} className="equipo-contacto-react">
+          <AvatarResponsable email={vp.email} nombre={vp.nombre} />
+          <span className="mkt-miembro-datos-react">
+            <span className="mkt-miembro-nombre-react">{etiquetaDe(vp.email, vp.nombre)}</span>
+            <span className="mkt-meta-react">
+              VP de {vp.vp_de.filter((t) => teams.includes(t)).map((t) => DEPTO_LABEL[t] ?? t).join(", ")}
+            </span>
+          </span>
+          <a className="mkt-btn-mini-react" href={`mailto:${vp.email}`}>
+            Escribir
+          </a>
+        </div>
+      ))}
+
+      {tutorizados.length > 0 ? (
+        <>
+          <p className="mkt-meta-react" style={{ marginTop: 10 }}>Tutorizas a</p>
+          <ul className="mkt-miembros-react equipo-directorio-react">
+            {tutorizados.map((persona) => (
+              <li key={persona.email} className="mkt-miembro-react">
+                <AvatarResponsable email={persona.email} nombre={persona.nombre} />
+                <span className="mkt-miembro-datos-react">
+                  <span className="mkt-miembro-nombre-react">
+                    {etiquetaDe(persona.email, persona.nombre)}
+                  </span>
+                </span>
+              </li>
+            ))}
+          </ul>
+        </>
+      ) : null}
+    </section>
+  ) : null;
 
   return (
     <>
@@ -562,12 +712,10 @@ export function CalendarioEquipo({ onVerAnuncios }: Props) {
       </div>
 
       <div className="mkt-inicio-columnas-react">
+        <div className="mkt-inicio-lateral-react">
         <section className="mkt-panel-react mkt-agenda-panel-react">
           <header className="mkt-panel-header-react">
             <h3>Tu agenda</h3>
-            <span className="mkt-meta-react">
-              {teams.map((t) => DEPTO_LABEL[t] ?? t).join(" + ")}
-            </span>
           </header>
 
           <div className="mkt-vista-toggle-react" role="group" aria-label="Filtrar tareas">
@@ -640,10 +788,13 @@ export function CalendarioEquipo({ onVerAnuncios }: Props) {
           ) : null}
         </section>
 
+        {misProyectos}
+        </div>
+
         <div className="mkt-inicio-lateral-react">
           {calendario}
           {proximosEventos}
-          {quienEsQuien}
+          {contactos}
         </div>
       </div>
 
@@ -651,6 +802,7 @@ export function CalendarioEquipo({ onVerAnuncios }: Props) {
         <DeptoProvider value={tareaAbierta.departamento as Team}>
           <TaskDialog
             task={tareaAbierta}
+            puedeAsignar={cargo === "presidente" || cargo === "boardmember" || vpDe.includes(tareaAbierta.departamento)}
             onCerrar={() => setTareaAbierta(null)}
             onGuardado={async () => {
               setTareaAbierta(null);

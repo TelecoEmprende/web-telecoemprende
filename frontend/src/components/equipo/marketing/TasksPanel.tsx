@@ -39,12 +39,20 @@ function compararTareas(a: Task, b: Task) {
   return ORDEN_PRIORIDAD[a.prioridad] - ORDEN_PRIORIDAD[b.prioridad];
 }
 
+type Props = {
+  /** Board del club o VP de este departamento (ver docs/CLAUDE.md: "solo
+   *  board y VPs asignan"). Un miembro raso sigue pudiendo mover su propia
+   *  tarea de estado (el drag y el diálogo lo permiten igual), pero no crea
+   *  tareas nuevas ni reasigna el responsable de una ya existente. */
+  puedeAsignar: boolean;
+};
+
 /**
  * Tablero por estado. Arrastrar una tarjeta cambia su estado; abrirla y
  * elegir "Estado" en el diálogo hace lo mismo y es la vía accesible por
  * teclado -- el drag es un atajo encima de eso, no lo sustituye.
  */
-export function TasksPanel() {
+export function TasksPanel({ puedeAsignar }: Props) {
   const { createTask, getTasks, updateTask } = useApi();
   const directorio = useDirectorio();
 
@@ -67,6 +75,7 @@ export function TasksPanel() {
   const deshacerTimeoutRef = useRef<number | null>(null);
 
   const [titulo, setTitulo] = useState("");
+  const [instrucciones, setInstrucciones] = useState("");
   const [prioridad, setPrioridad] = useState<Prioridad>("media");
   const [deadline, setDeadline] = useState("");
   const [hora, setHora] = useState("");
@@ -95,17 +104,19 @@ export function TasksPanel() {
 
   async function crear(event: FormEvent) {
     event.preventDefault();
-    if (!titulo.trim()) return;
+    if (!titulo.trim() || !instrucciones.trim()) return;
 
     try {
       await createTask({
         titulo,
+        instrucciones,
         prioridad,
         deadline: deadline || null,
         hora,
         responsables,
       });
       setTitulo("");
+      setInstrucciones("");
       setPrioridad("media");
       setDeadline("");
       setHora("");
@@ -190,16 +201,18 @@ export function TasksPanel() {
           />
           Solo lo mío
         </label>
-        <button
-          type="button"
-          className="mkt-btn-react"
-          onClick={() => setMostrarFormulario((abierto) => !abierto)}
-        >
-          {mostrarFormulario ? "Cancelar" : "+ Nueva tarea"}
-        </button>
+        {puedeAsignar ? (
+          <button
+            type="button"
+            className="mkt-btn-react"
+            onClick={() => setMostrarFormulario((abierto) => !abierto)}
+          >
+            {mostrarFormulario ? "Cancelar" : "+ Nueva tarea"}
+          </button>
+        ) : null}
       </header>
 
-      {mostrarFormulario ? (
+      {mostrarFormulario && puedeAsignar ? (
         <form className="mkt-form-react" onSubmit={crear}>
           <div className="field-group-react">
             <label htmlFor="tp-titulo">Título</label>
@@ -211,6 +224,17 @@ export function TasksPanel() {
               onChange={(event) => setTitulo(event.target.value)}
             />
             <ContadorCaracteres valor={titulo} maximo={MAX_TITULO_LEN} />
+          </div>
+          <div className="field-group-react">
+            <label htmlFor="tp-instrucciones">Instrucciones</label>
+            <textarea
+              id="tp-instrucciones"
+              rows={2}
+              required
+              value={instrucciones}
+              placeholder="Cómo se hace: a quién se escribe, qué plantilla se usa..."
+              onChange={(event) => setInstrucciones(event.target.value)}
+            />
           </div>
           <div className="mkt-form-fila-react">
             <div className="field-group-react">
@@ -254,7 +278,11 @@ export function TasksPanel() {
               onCambiar={setResponsables}
             />
           </div>
-          <button type="submit" className="mkt-btn-react" disabled={!titulo.trim()}>
+          <button
+            type="submit"
+            className="mkt-btn-react"
+            disabled={!titulo.trim() || !instrucciones.trim()}
+          >
             Crear tarea
           </button>
         </form>
@@ -397,6 +425,7 @@ export function TasksPanel() {
         <TaskDialog
           task={abierta}
           etiquetasExistentes={etiquetasExistentes}
+          puedeAsignar={puedeAsignar}
           onCerrar={() => setAbierta(null)}
           onGuardado={() => {
             setAbierta(null);

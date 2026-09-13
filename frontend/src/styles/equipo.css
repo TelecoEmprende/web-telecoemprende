@@ -203,6 +203,16 @@
   color: var(--color-navy);
 }
 
+/* Selector de departamento para un panel compartido (Tareas, Proyectos...)
+   cuando la persona está en más de uno con ese panel -- ver `equiposConPanel`
+   en EquipoSidebar.tsx. A la derecha de la barra, no en el sidebar: ya no hay
+   un grupo por departamento del que colgarlo. */
+.workspace-selector-depto-react {
+  display: flex;
+  gap: 6px;
+  margin-left: auto;
+}
+
 /* El departamento al que pertenece la sección abierta: rótulo Inter 500 en
    mayúsculas (Etiqueta de la guía). */
 .workspace-barra-depto-react {
@@ -347,6 +357,25 @@ span.mkt-dia-numero-react:hover {
   background: var(--color-surface);
 }
 
+/* Mentor / VP a quien escribir con dudas, en "Mi semana" -- ver `contactos`
+   en CalendarioEquipo.tsx. Misma idea de fila que el aviso del board, pero
+   sin el borde punteado: no es una alerta, es un dato fijo. */
+.equipo-contacto-react {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+}
+
+.equipo-contacto-react:not(:last-child) {
+  border-bottom: 1px solid var(--color-border);
+}
+
+.equipo-contacto-react .mkt-miembro-datos-react {
+  flex: 1;
+  min-width: 0;
+}
+
 .equipo-aviso-board-cuerpo-react {
   flex: 1;
   min-width: 200px;
@@ -411,6 +440,18 @@ span.mkt-dia-numero-react:hover {
   color: var(--color-text-muted);
   font-size: 0.86rem;
   line-height: 1.55;
+}
+
+/* Check-in de un evento: quien confirmó "voy", con un botón por persona para
+   marcar si llegó a la puerta -- ver `marcarAsistio` en CalendarioEquipo.tsx. */
+.equipo-checkin-react {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--color-border);
 }
 
 /* ==========================================================================

@@ -452,6 +452,7 @@ def api_admin_crear_equipo():
     vp_de = payload.get("vp_de") or []
     cargo = str(payload.get("cargo", "") or "")
     nombre = limpiar_texto(str(payload.get("nombre", "") or ""))
+    mentor_email = limpiar_texto(str(payload.get("mentor_email", "") or "")).lower()
 
     # No exigimos que sea correo UPM (puede ser gente externa colaborando en un
     # equipo): solo que tenga forma de email.
@@ -484,7 +485,13 @@ def api_admin_crear_equipo():
     if len(nombre) > MAX_NOMBRE_EQUIPO_LEN:
         return jsonify(build_response(False, "El nombre supera la longitud permitida.")), 400
 
-    acceso = crear_equipo_acceso(email, password, equipos, vp_de=vp_de, cargo=cargo, nombre=nombre)
+    if mentor_email and (len(mentor_email) > MAX_EMAIL_LEN or "@" not in mentor_email):
+        return jsonify(build_response(False, "El email del mentor no es válido.")), 400
+
+    acceso = crear_equipo_acceso(
+        email, password, equipos, vp_de=vp_de, cargo=cargo, nombre=nombre,
+        mentor_email=mentor_email,
+    )
     if acceso is None:
         return jsonify(build_response(False, "Ese email ya tiene acceso de equipo.")), 409
 
@@ -504,6 +511,7 @@ def api_admin_actualizar_equipo(acceso_id: int):
     activo = payload.get("activo")
     password = str(payload.get("password", "")) or None
     nombre = payload.get("nombre")
+    mentor_email = payload.get("mentor_email")
 
     # La combinación equipos/vp_de/cargo la valida el servicio contra la fila ya
     # guardada (aquí solo se ven los campos que llegan en la petición).
@@ -529,6 +537,11 @@ def api_admin_actualizar_equipo(acceso_id: int):
         if len(nombre) > MAX_NOMBRE_EQUIPO_LEN:
             return jsonify(build_response(False, "El nombre supera la longitud permitida.")), 400
 
+    if mentor_email is not None:
+        mentor_email = limpiar_texto(str(mentor_email)).lower()
+        if mentor_email and (len(mentor_email) > MAX_EMAIL_LEN or "@" not in mentor_email):
+            return jsonify(build_response(False, "El email del mentor no es válido.")), 400
+
     if actualizar_equipo_acceso(
         acceso_id,
         equipos=equipos,
@@ -537,6 +550,7 @@ def api_admin_actualizar_equipo(acceso_id: int):
         activo=activo,
         password=password,
         nombre=nombre,
+        mentor_email=mentor_email,
     ):
         logger.info("admin actualiza acceso equipo id=%s", acceso_id)
         return jsonify(build_response(True, "Acceso actualizado.")), 200

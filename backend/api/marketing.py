@@ -224,6 +224,15 @@ def _autor() -> str:
     return session.get("equipo_email", "admin")
 
 
+def _puede_asignar_tareas() -> bool:
+    """Solo board y VPs del departamento asignan (ver docs/CLAUDE.md) --
+    mismo criterio que `/miembros/salud`, no uno nuevo."""
+    if is_admin_authenticated():
+        return True
+    sesion = equipo_session_info()
+    return sesion["cargo"] in CARGOS_VALIDOS or departamento_actual() in sesion["vp_de"]
+
+
 # --------------------------------------------------------------------------
 # Campaigns
 # --------------------------------------------------------------------------
@@ -394,6 +403,9 @@ def api_listar_tasks():
 @marketing_api.route("/tasks", methods=["POST"])
 @requiere_equipo
 def api_crear_task():
+    if not _puede_asignar_tareas():
+        return jsonify(build_response(False, "Solo board y VPs pueden asignar tareas.")), 403
+
     datos = _payload()
 
     def id_opcional(clave):
@@ -411,6 +423,10 @@ def api_crear_task():
         titulo=_texto(datos, "titulo", obligatorio=True),
         descripcion=_texto(
             datos, "descripcion", maximo=MAX_TEXTO_LARGO_LEN, multilinea=True
+        ),
+        instrucciones=_texto(
+            datos, "instrucciones", obligatorio=True,
+            maximo=MAX_TEXTO_LARGO_LEN, multilinea=True,
         ),
         estado=_opcion(datos, "estado", TASK_ESTADOS, "pendiente"),
         prioridad=_opcion(datos, "prioridad", TASK_PRIORIDADES, "media"),
@@ -450,6 +466,11 @@ def api_actualizar_task(task_id: int):
         campos["descripcion"] = _texto(
             datos, "descripcion", maximo=MAX_TEXTO_LARGO_LEN, multilinea=True
         )
+    if "instrucciones" in datos:
+        campos["instrucciones"] = _texto(
+            datos, "instrucciones", obligatorio=True,
+            maximo=MAX_TEXTO_LARGO_LEN, multilinea=True,
+        )
     if "estado" in datos:
         campos["estado"] = _opcion(datos, "estado", TASK_ESTADOS, "pendiente")
     if "prioridad" in datos:
@@ -459,7 +480,21 @@ def api_actualizar_task(task_id: int):
     if "hora" in datos:
         campos["hora"] = _texto(datos, "hora", maximo=5)
     if "responsables" in datos:
-        campos["responsables"] = _lista_textos(datos, "responsables", MAX_RESPONSABLES)
+        nuevos = _lista_textos(datos, "responsables", MAX_RESPONSABLES)
+        # Reasignar (cambiar quién es responsable) es "asignar" igual que
+        # crear la tarea -- solo board/VP. El propio responsable sigue
+        # pudiendo mover su tarea de estado o tocar su checklist sin pasar
+        # por aquí (el diálogo reenvía `responsables` sin cambios en ese
+        # guardado; por eso se compara contra lo guardado, no solo la
+        # presencia de la clave).
+        anterior = obtener_task(task_id, departamento_actual())
+        if (
+            anterior is not None
+            and sorted(nuevos) != sorted(anterior["responsables"])
+            and not _puede_asignar_tareas()
+        ):
+            return jsonify(build_response(False, "Solo board y VPs pueden reasignar tareas.")), 403
+        campos["responsables"] = nuevos
     if "tags" in datos:
         campos["tags"] = _lista_textos(datos, "tags", MAX_RESPONSABLES)
     if "checklist" in datos:
@@ -630,6 +665,7 @@ def api_ficha_miembro():
         nombre=acceso["nombre"],
         onboarding=acceso["onboarding"],
         desde=acceso["created_at"],
+        mentor_email=acceso["mentor_email"],
     )
     return jsonify({"ok": True, "ficha": ficha}), 200
 

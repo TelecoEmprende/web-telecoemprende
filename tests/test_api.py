@@ -58,6 +58,12 @@ class ApiTestCase(unittest.TestCase):
         vp_de=None,
         cargo="",
     ):
+        equipos = equipos or ["marketing"]
+        # VP de todos sus equipos por defecto: crear tareas ahora exige
+        # VP/board (ver `_puede_asignar_tareas` en backend/api/marketing.py),
+        # y la mayoría de estos tests ejercitan ese CRUD, no el límite de
+        # permisos en sí.
+        vp_de = equipos if vp_de is None else vp_de
         conn = registration_service._get_connection()
         with conn.cursor() as cur:
             cur.execute(
@@ -68,9 +74,9 @@ class ApiTestCase(unittest.TestCase):
                 (
                     email,
                     generate_password_hash(password),
-                    equipos or ["marketing"],
+                    equipos,
                     activo,
-                    vp_de or [],
+                    vp_de,
                     cargo,
                 ),
             )
@@ -538,6 +544,75 @@ class ApiTestCase(unittest.TestCase):
         self.assertEqual(acceso["vp_de"], ["eventos"])
         self.assertEqual(acceso["cargo"], "boardmember")
 
+    def test_admin_equipo_create_with_mentor(self):
+        self.login()
+        self.seed_equipo(email="mentora@example.com", equipos=["marketing"])
+
+        create = self.client.post(
+            "/api/admin/equipo",
+            json={
+                "email": "nuevo@example.com",
+                "password": "contrasena-larga",
+                "equipos": ["marketing"],
+                "mentor_email": "mentora@example.com",
+            },
+        )
+        self.assertEqual(create.status_code, 201, create.get_json())
+        self.assertEqual(create.get_json()["acceso"]["mentor_email"], "mentora@example.com")
+
+    def test_admin_equipo_create_rejects_mentor_sin_forma_de_email(self):
+        self.login()
+
+        response = self.client.post(
+            "/api/admin/equipo",
+            json={
+                "email": "otro@example.com",
+                "password": "contrasena-larga",
+                "equipos": ["marketing"],
+                "mentor_email": "no-es-un-email",
+            },
+        )
+        self.assertEqual(response.status_code, 400)
+
+    def test_admin_equipo_update_mentor(self):
+        self.login()
+        self.seed_equipo(email="miembro@example.com", equipos=["marketing"])
+        acceso_id = equipo_service.listar_equipo_accesos()[0]["id"]
+
+        respuesta = self.client.put(
+            f"/api/admin/equipo/{acceso_id}", json={"mentor_email": "Mentora@Example.com"}
+        )
+        self.assertEqual(respuesta.status_code, 200)
+        self.assertEqual(
+            equipo_service.listar_equipo_accesos()[0]["mentor_email"], "mentora@example.com"
+        )
+
+    def test_directorio_incluye_el_mentor(self):
+        self.seed_equipo(email="mentora@example.com", equipos=["marketing"])
+        conn = registration_service._get_connection()
+        with conn.cursor() as cur:
+            cur.execute(
+                "INSERT INTO equipo_accesos (email, password_hash, equipos, vp_de, mentor_email)"
+                " VALUES (%s, %s, %s, %s, %s)",
+                (
+                    "nueva@example.com",
+                    generate_password_hash("x"),
+                    ["marketing"],
+                    [],
+                    "mentora@example.com",
+                ),
+            )
+        conn.commit()
+        conn.close()
+
+        self.equipo_login(email="mentora@example.com")
+        respuesta = self.client.get("/api/equipo/directorio")
+        self.assertEqual(respuesta.status_code, 200)
+        nueva = next(
+            m for m in respuesta.get_json()["miembros"] if m["email"] == "nueva@example.com"
+        )
+        self.assertEqual(nueva["mentor_email"], "mentora@example.com")
+
     def test_admin_calendario_endpoints_require_auth(self):
         self.assertEqual(self.client.get("/api/admin/calendario").status_code, 401)
         self.assertEqual(self.client.post("/api/admin/calendario", json={}).status_code, 401)
@@ -608,6 +683,93 @@ class ApiTestCase(unittest.TestCase):
         titulos = [e["titulo"] for e in response.get_json()["eventos"]]
         self.assertIn("Charla", titulos)
 
+    def test_confirmar_evento_se_apunta_y_se_puede_quitar(self):
+        self.login()
+        evento_id = self.client.post(
+            "/api/admin/calendario",
+            json={"titulo": "Demo Day", "descripcion": "", "fecha": "2026-10-24", "hora": "17:00"},
+        ).get_json()["evento"]["id"]
+        self.client.post("/api/admin/logout")
+
+        self.seed_equipo(email="voy@example.com")
+        self.equipo_login(email="voy@example.com")
+
+        confirmar = self.client.post(f"/api/equipo/calendario/{evento_id}/confirmar", json={})
+        self.assertEqual(confirmar.status_code, 200)
+        eventos = self.client.get("/api/equipo/calendario").get_json()["eventos"]
+        evento = next(e for e in eventos if e["id"] == evento_id)
+        self.assertEqual(evento["confirmados"], ["voy@example.com"])
+
+        quitar = self.client.post(
+            f"/api/equipo/calendario/{evento_id}/confirmar", json={"confirmar": False}
+        )
+        self.assertEqual(quitar.status_code, 200)
+        eventos = self.client.get("/api/equipo/calendario").get_json()["eventos"]
+        evento = next(e for e in eventos if e["id"] == evento_id)
+        self.assertEqual(evento["confirmados"], [])
+
+    def test_checkin_requiere_ser_vp_o_admin(self):
+        self.login()
+        evento_id = self.client.post(
+            "/api/admin/calendario",
+            json={"titulo": "Demo Day", "descripcion": "", "fecha": "2026-10-24", "hora": "17:00"},
+        ).get_json()["evento"]["id"]
+        self.client.post("/api/admin/logout")
+
+        self.seed_equipo(email="raso@example.com", vp_de=[])
+        self.equipo_login(email="raso@example.com")
+
+        respuesta = self.client.post(
+            f"/api/equipo/calendario/{evento_id}/checkin", json={"email": "raso@example.com"}
+        )
+        self.assertEqual(respuesta.status_code, 401)
+
+    def test_vp_hace_checkin_y_alimenta_asistencia(self):
+        self.login()
+        evento_id = self.client.post(
+            "/api/admin/calendario",
+            json={"titulo": "Demo Day", "descripcion": "", "fecha": "2026-10-24", "hora": "17:00"},
+        ).get_json()["evento"]["id"]
+        self.client.post("/api/admin/logout")
+
+        self.seed_equipo(email="vp@example.com", vp_de=["marketing"])
+        self.equipo_login(email="vp@example.com")
+
+        checkin = self.client.post(
+            f"/api/equipo/calendario/{evento_id}/checkin", json={"email": "asistio@example.com"}
+        )
+        self.assertEqual(checkin.status_code, 200)
+        eventos = self.client.get("/api/equipo/calendario").get_json()["eventos"]
+        evento = next(e for e in eventos if e["id"] == evento_id)
+        self.assertEqual(evento["asistio"], ["asistio@example.com"])
+
+    def test_mis_proyectos_requiere_sesion(self):
+        self.assertEqual(self.client.get("/api/equipo/mis-proyectos").status_code, 401)
+
+    def test_mis_proyectos_junta_departamentos_con_progreso(self):
+        self.seed_equipo(equipos=["marketing", "eventos"])
+        self.equipo_login()
+
+        campaign_id = self.client.post(
+            "/api/marketing/campaigns", json={"nombre": "Demo Day octubre"}
+        ).get_json()["campaign"]["id"]
+        tarea_id = self.client.post(
+            "/api/marketing/tasks",
+            json={
+                "titulo": "Cerrar sala", "instrucciones": "Ver notas.",
+                "campaign_id": campaign_id, "responsables": ["marketing@example.com"],
+            },
+        ).get_json()["task"]["id"]
+        self.client.put(f"/api/marketing/tasks/{tarea_id}", json={"estado": "acabado"})
+
+        respuesta = self.client.get("/api/equipo/mis-proyectos")
+        self.assertEqual(respuesta.status_code, 200)
+        proyectos = respuesta.get_json()["proyectos"]
+        self.assertEqual(len(proyectos), 1)
+        self.assertEqual(proyectos[0]["nombre"], "Demo Day octubre")
+        self.assertEqual(proyectos[0]["total_tasks"], 1)
+        self.assertEqual(proyectos[0]["tareas_acabadas"], 1)
+
     def test_mis_tareas_requiere_sesion(self):
         self.assertEqual(self.client.get("/api/equipo/mis-tareas").status_code, 401)
 
@@ -617,22 +779,31 @@ class ApiTestCase(unittest.TestCase):
 
         self.client.post(
             "/api/marketing/tasks",
-            json={"titulo": "Guion", "responsables": ["marketing@example.com"]},
+            json={
+                "titulo": "Guion", "instrucciones": "Ver notas.",
+                "responsables": ["marketing@example.com"],
+            },
         )
         self.client.post(
             "/api/eventos/tasks",
-            json={"titulo": "Reservar sala", "responsables": ["marketing@example.com"]},
-        )
-        self.client.post(
-            "/api/marketing/tasks",
             json={
-                "titulo": "Ya acabada", "estado": "acabado",
+                "titulo": "Reservar sala", "instrucciones": "Ver notas.",
                 "responsables": ["marketing@example.com"],
             },
         )
         self.client.post(
             "/api/marketing/tasks",
-            json={"titulo": "De otra persona", "responsables": ["hugo@example.com"]},
+            json={
+                "titulo": "Ya acabada", "instrucciones": "Ver notas.", "estado": "acabado",
+                "responsables": ["marketing@example.com"],
+            },
+        )
+        self.client.post(
+            "/api/marketing/tasks",
+            json={
+                "titulo": "De otra persona", "instrucciones": "Ver notas.",
+                "responsables": ["hugo@example.com"],
+            },
         )
 
         respuesta = self.client.get("/api/equipo/mis-tareas")
@@ -644,7 +815,7 @@ class ApiTestCase(unittest.TestCase):
         self.assertEqual(self.client.get("/api/equipo/metricas").status_code, 401)
 
     def test_metricas_rechaza_a_quien_no_es_board_ni_vp(self):
-        self.seed_equipo()
+        self.seed_equipo(vp_de=[])
         self.equipo_login()
         self.assertEqual(self.client.get("/api/equipo/metricas").status_code, 403)
 
@@ -656,14 +827,20 @@ class ApiTestCase(unittest.TestCase):
 
         creada = self.client.post(
             "/api/marketing/tasks",
-            json={"titulo": "Guion", "responsables": ["marketing@example.com"]},
+            json={
+                "titulo": "Guion", "instrucciones": "Ver notas.",
+                "responsables": ["marketing@example.com"],
+            },
         ).get_json()["task"]
         self.client.put(
             f"/api/marketing/tasks/{creada['id']}", json={"estado": "acabado"}
         )
         self.client.post(
             "/api/marketing/tasks",
-            json={"titulo": "Aún abierta", "responsables": ["marketing@example.com"]},
+            json={
+                "titulo": "Aún abierta", "instrucciones": "Ver notas.",
+                "responsables": ["marketing@example.com"],
+            },
         )
 
         respuesta = self.client.get("/api/equipo/metricas")
