@@ -128,6 +128,15 @@ def _crear_tablas_marketing():
                 ALTER TABLE tasks
                 ADD COLUMN IF NOT EXISTS completado_en TIMESTAMP
             """)
+            # Toda tarea nace con instrucciones: es la regla que responde a
+            # "que todos sepan qué hacer y cómo" (ver docs/CLAUDE.md). Se
+            # exige a nivel de API (`_texto(..., obligatorio=True)` en
+            # `api_crear_task`), no aquí -- una columna NOT NULL sin default
+            # habría roto las tareas ya existentes.
+            cur.execute("""
+                ALTER TABLE tasks
+                ADD COLUMN IF NOT EXISTS instrucciones TEXT NOT NULL DEFAULT ''
+            """)
             # Archivar en vez de borrar: una campaña vieja deja de estorbar en
             # el listado sin perder su historial (contenidos, tareas, enlaces).
             cur.execute("""
@@ -181,11 +190,47 @@ def listar_campaigns(departamento: str) -> list[dict]:
                        (SELECT COUNT(*) FROM contents co WHERE co.campaign_id = c.id)
                            AS total_contents,
                        (SELECT COUNT(*) FROM tasks t WHERE t.campaign_id = c.id)
-                           AS total_tasks
+                           AS total_tasks,
+                       (SELECT COUNT(*) FROM tasks t
+                            WHERE t.campaign_id = c.id AND t.estado = 'acabado')
+                           AS tareas_acabadas
                 FROM campaigns c
                 WHERE c.departamento = %s
                 ORDER BY COALESCE(c.fecha, c.created_at::date) DESC, c.id DESC
             """, (departamento,))
+            return [_serializar(f) for f in cur.fetchall()]
+
+
+def mis_campanas(email: str) -> list[dict]:
+    """Campañas de cualquier departamento donde la persona tiene una tarea
+    asignada, con su progreso -- para "Mis proyectos" en el Inicio de
+    /equipo (mismo criterio cruzado que `mis_tareas`). "Campaña" es la
+    entidad que ya hace de proyecto (ver README de docs/CLAUDE.md); no hay
+    tabla `proyectos` aparte que mantener sincronizada con ella.
+    """
+    with _get_connection() as conn:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(
+                """
+                SELECT c.id, c.nombre, c.departamento,
+                       COUNT(t.id) AS total_tasks,
+                       COUNT(t.id) FILTER (WHERE t.estado = 'acabado') AS tareas_acabadas
+                FROM campaigns c
+                JOIN tasks t ON t.campaign_id = c.id
+                WHERE c.archivado = FALSE
+                  -- El progreso es del proyecto entero, no solo de "mis"
+                  -- tareas dentro de él (por eso el JOIN cuenta todas las de
+                  -- la campaña) -- la persona solo decide qué campañas
+                  -- aparecen, comprobado aparte con este subquery.
+                  AND EXISTS (
+                      SELECT 1 FROM tasks t2
+                      WHERE t2.campaign_id = c.id AND %s = ANY(t2.responsables)
+                  )
+                GROUP BY c.id
+                ORDER BY c.departamento, c.nombre
+                """,
+                (email,),
+            )
             return [_serializar(f) for f in cur.fetchall()]
 
 
@@ -292,6 +337,7 @@ def duplicar_campaign(campaign_id: int, departamento: str, creado_por: str) -> d
         return {
             "titulo": tarea["titulo"],
             "descripcion": tarea["descripcion"],
+            "instrucciones": tarea["instrucciones"],
             "estado": "pendiente",
             "prioridad": tarea["prioridad"],
             "deadline": None,
@@ -555,10 +601,10 @@ def crear_task(**campos) -> dict | None:
                 """
                 INSERT INTO tasks (
                     departamento, campaign_id, content_id, titulo, descripcion,
-                    estado, prioridad, deadline, hora, responsables, tags,
-                    checklist, enlaces, creado_por
+                    instrucciones, estado, prioridad, deadline, hora,
+                    responsables, tags, checklist, enlaces, creado_por
                 )
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 RETURNING *
                 """,
                 (
@@ -567,6 +613,7 @@ def crear_task(**campos) -> dict | None:
                     content_id,
                     campos.get("titulo", ""),
                     campos.get("descripcion", ""),
+                    campos.get("instrucciones", ""),
                     campos.get("estado", "pendiente"),
                     campos.get("prioridad", "media"),
                     campos.get("deadline"),
@@ -585,8 +632,8 @@ def crear_task(**campos) -> dict | None:
 
 def actualizar_task(task_id: int, departamento: str, **campos) -> bool:
     permitidos = (
-        "titulo", "descripcion", "estado", "prioridad", "deadline", "hora",
-        "responsables", "tags", "checklist", "enlaces", "completado_en",
+        "titulo", "descripcion", "instrucciones", "estado", "prioridad", "deadline",
+        "hora", "responsables", "tags", "checklist", "enlaces", "completado_en",
     )
     if "checklist" in campos:
         campos = dict(campos, checklist=json.dumps(campos["checklist"]))
@@ -1004,9 +1051,9 @@ def metricas_club(dias_periodo: int = 30) -> dict:
     tareas cerradas en el periodo, % de esas a tiempo, abiertas y vencidas
     ahora mismo. Sin tabla de puntos -- un número inventado no es más fácil
     de entender que cuatro reales, y estos se pueden auditar volviendo a la
-    tarea que los generó. Por lo mismo no hay aquí "asistencia" ni "altas del
-    curso": no hay check-in de eventos ni flujo de solicitud todavía (ver
-    docs/CLAUDE.md), y un 0 fingido sería peor que no enseñar la tarjeta.
+    tarea que los generó. "Altas del curso" sigue sin salir de aquí: el
+    flujo de solicitud (`registrations`) no tiene un límite de curso claro
+    que contar, y un 0 fingido sería peor que no enseñar la tarjeta.
     """
     from backend.config import EQUIPOS_VALIDOS
     from backend.services.equipo import init_equipo_db, listar_equipo_accesos
@@ -1016,6 +1063,23 @@ def metricas_club(dias_periodo: int = 30) -> dict:
 
     hoy = date.today()
     desde_periodo = hoy - timedelta(days=dias_periodo)
+
+    # Asistencia media de los eventos del club ya celebrados en el periodo --
+    # sale del check-in real (`calendario_eventos.asistio`), no de quién dijo
+    # que iba a venir. `init_equipo_db()` ya se llamó arriba (misma conexión
+    # a la tabla que crea `calendario_eventos`).
+    with _get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT AVG(COALESCE(array_length(asistio, 1), 0))
+                FROM calendario_eventos
+                WHERE fecha BETWEEN %s AND %s
+                """,
+                (desde_periodo, hoy),
+            )
+            promedio = cur.fetchone()[0]
+    asistencia_media = round(float(promedio)) if promedio is not None else None
 
     with _get_connection() as conn:
         with conn.cursor() as cur:
@@ -1169,6 +1233,7 @@ def metricas_club(dias_periodo: int = 30) -> dict:
         "pct_a_tiempo_club": (
             round(100 * a_tiempo_club / con_deadline_club) if con_deadline_club else None
         ),
+        "asistencia_media": asistencia_media,
         "participacion_semanal": participacion_semanal,
         "por_departamento": por_departamento,
         "miembros": miembros,

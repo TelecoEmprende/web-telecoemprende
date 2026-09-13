@@ -79,10 +79,11 @@ export function createEquipoAcceso(
   vp_de: Team[] = [],
   cargo: Cargo = "",
   nombre: string = "",
+  mentor_email: string = "",
 ) {
   return apiRequest<ApiResult & { acceso: EquipoAcceso }>("/api/admin/equipo", {
     method: "POST",
-    body: JSON.stringify({ email, password, equipos, vp_de, cargo, nombre }),
+    body: JSON.stringify({ email, password, equipos, vp_de, cargo, nombre, mentor_email }),
   });
 }
 
@@ -95,6 +96,7 @@ export function updateEquipoAcceso(
     activo?: boolean;
     password?: string;
     nombre?: string;
+    mentor_email?: string;
   },
 ) {
   return apiRequest<ApiResult>(`/api/admin/equipo/${id}`, {

@@ -41,10 +41,13 @@ class CronTests(unittest.TestCase):
 
         conn = equipo_service._get_connection()
         with conn.cursor() as cur:
+            # vp_de = equipos: crear tareas ahora exige VP/board (ver
+            # `_puede_asignar_tareas`), y este test ejercita la creación en
+            # sí, no ese límite de permisos.
             cur.execute(
-                "INSERT INTO equipo_accesos (email, password_hash, equipos)"
-                " VALUES (%s, %s, %s)",
-                ("marketing@example.com", generate_password_hash("x"), ["marketing"]),
+                "INSERT INTO equipo_accesos (email, password_hash, equipos, vp_de)"
+                " VALUES (%s, %s, %s, %s)",
+                ("marketing@example.com", generate_password_hash("x"), ["marketing"], ["marketing"]),
             )
         conn.commit()
         conn.close()
@@ -55,7 +58,11 @@ class CronTests(unittest.TestCase):
     def crear_tarea(self, titulo, deadline, estado="pendiente", departamento="marketing"):
         ruta = "/api/marketing" if departamento == "marketing" else f"/api/{departamento}"
         respuesta = self.client.post(
-            f"{ruta}/tasks", json={"titulo": titulo, "deadline": deadline, "estado": estado}
+            f"{ruta}/tasks",
+            json={
+                "titulo": titulo, "instrucciones": "Ver notas.",
+                "deadline": deadline, "estado": estado,
+            },
         )
         return respuesta.get_json()["task"]
 
