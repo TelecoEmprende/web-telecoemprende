@@ -9,6 +9,7 @@ import type { Prioridad, Task, TaskEstado } from "../../types/marketing";
 const getCampaigns = vi.fn();
 const getCampaign = vi.fn();
 const getTasks = vi.fn();
+const getTasksArchivadas = vi.fn();
 const getCalendario = vi.fn();
 const getMiembros = vi.fn();
 const updateTask = vi.fn();
@@ -35,6 +36,7 @@ vi.mock("../../api/marketing", () => ({
       getCampaigns: (...args: unknown[]) => getCampaigns(...args),
       getCampaign: (...args: unknown[]) => getCampaign(...args),
       getTasks: (...args: unknown[]) => getTasks(...args),
+      getTasksArchivadas: (...args: unknown[]) => getTasksArchivadas(...args),
       getCalendario: (...args: unknown[]) => getCalendario(...args),
       getMiembros: (...args: unknown[]) => getMiembros(...args),
       updateTask: (...args: unknown[]) => updateTask(...args),
@@ -123,6 +125,7 @@ const TAREA = {
   creado_por: YO,
   created_at: "2026-09-06T10:00:00",
   updated_at: "2026-09-06T10:00:00",
+  completado_en: null,
   content_titulo: "Reel: cómo empezar a invertir",
   campaign_nombre: "Cómo empezar a invertir",
 };
@@ -152,6 +155,7 @@ describe("/equipo — panel de Marketing", () => {
     getCampaigns.mockReset().mockResolvedValue({ ok: true, campaigns: [] });
     getCampaign.mockReset();
     getTasks.mockReset().mockResolvedValue({ ok: true, tasks: [], usuario: YO });
+    getTasksArchivadas.mockReset().mockResolvedValue({ ok: true, tasks: [] });
     getCalendario
       .mockReset()
       .mockResolvedValue({ ok: true, desde: "", hasta: "", items: [] });
@@ -190,6 +194,34 @@ describe("/equipo — panel de Marketing", () => {
     // Las tarjetas son botones que abren la tarea en grande, estilo Trello.
     expect(await screen.findByRole("button", { name: /Escribir guion/ })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Grabar/ })).toBeInTheDocument();
+  });
+
+  it("'Completadas' enseña el historial en vez del tablero", async () => {
+    getTasks.mockResolvedValue({
+      ok: true,
+      usuario: YO,
+      tasks: tareas({ titulo: "Escribir guion" }),
+    });
+    getTasksArchivadas.mockResolvedValue({
+      ok: true,
+      tasks: tareas({
+        titulo: "Grabar hace una semana",
+        estado: "acabado",
+        completado_en: "2026-08-30T10:00:00",
+      }),
+    });
+
+    await renderMarketing();
+    await userEvent.click(screen.getByRole("button", { name: "Tareas" }));
+    expect(await screen.findByRole("button", { name: /Escribir guion/ })).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "Completadas" }));
+
+    // El tablero desaparece (ya no está "Escribir guion") y aparece el
+    // historial pedido aparte, no un filtro sobre las mismas tareas.
+    expect(await screen.findByRole("button", { name: /Grabar hace una semana/ })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Escribir guion/ })).not.toBeInTheDocument();
+    expect(getTasksArchivadas).toHaveBeenCalled();
   });
 
   it("cada tarjeta dice de qué campaña cuelga", async () => {
@@ -691,6 +723,7 @@ describe("/equipo — panel de Eventos", () => {
     getCampaigns.mockReset().mockResolvedValue({ ok: true, campaigns: [] });
     getCampaign.mockReset();
     getTasks.mockReset().mockResolvedValue({ ok: true, tasks: [], usuario: YO });
+    getTasksArchivadas.mockReset().mockResolvedValue({ ok: true, tasks: [] });
     getCalendario
       .mockReset()
       .mockResolvedValue({ ok: true, desde: "", hasta: "", items: [] });

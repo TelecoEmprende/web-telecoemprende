@@ -52,6 +52,7 @@ from backend.services.marketing import (
     listar_campaigns,
     listar_task_comments,
     listar_tasks,
+    listar_tasks_archivadas,
     obtener_campaign,
     obtener_content,
     obtener_task,
@@ -397,6 +398,15 @@ def api_listar_tasks():
         "ok": True,
         "tasks": listar_tasks(departamento_actual()),
         "usuario": _autor(),
+    }), 200
+
+
+@marketing_api.route("/tasks/archivadas", methods=["GET"])
+@requiere_equipo
+def api_listar_tasks_archivadas():
+    return jsonify({
+        "ok": True,
+        "tasks": listar_tasks_archivadas(departamento_actual()),
     }), 200
 
 
