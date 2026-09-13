@@ -3,12 +3,14 @@ import { FormEvent, useEffect, useRef, useState } from "react";
 import { AvataresDeResponsables } from "./Avatares";
 import { SelectorMiembros } from "./SelectorMiembros";
 import { TaskDialog } from "./TaskDialog";
-import { useApi, useDirectorio } from "../DeptoApi";
+import { apiDepto } from "../../../api/marketing";
+import { DeptoProvider, useDirectorio } from "../DeptoApi";
 import { AlertBanner } from "../../feedback/AlertBanner";
 import { ContadorCaracteres } from "../../feedback/ContadorCaracteres";
 import { Esqueleto } from "../../feedback/Esqueleto";
 import { Badge } from "@/components/ui/badge";
 import type { ApiFailure } from "../../../types/api";
+import type { Team } from "../../../types/equipo";
 import {
   MAX_TITULO_LEN,
   PRIORIDADES,
@@ -28,6 +30,20 @@ const TASK_MIME = "application/x-teleco-task-id";
 
 const ORDEN_PRIORIDAD: Record<Prioridad, number> = { alta: 0, media: 1, baja: 2 };
 
+const DEPTO_LABEL: Record<Team, string> = {
+  marketing: "Marketing",
+  eventos: "Eventos",
+  ingenieria: "Ingeniería",
+};
+
+/** La misma cajita de departamento que en "Mi semana" (ver CalendarioEquipo):
+ *  un color por departamento, no una pastilla gris para los tres. */
+const DEPTO_TAG: Record<string, string> = {
+  ingenieria: "crm-tag-azul-react",
+  marketing: "crm-tag-ambar-react",
+  eventos: "",
+};
+
 /** Antes por fecha límite (sin fecha, al final), luego por prioridad: lo
  *  urgente arriba de cada columna en vez del orden en que se crearon. */
 function compararTareas(a: Task, b: Task) {
@@ -40,20 +56,25 @@ function compararTareas(a: Task, b: Task) {
 }
 
 type Props = {
-  /** Board del club o VP de este departamento (ver docs/CLAUDE.md: "solo
-   *  board y VPs asignan"). Un miembro raso sigue pudiendo mover su propia
-   *  tarea de estado (el drag y el diálogo lo permiten igual), pero no crea
-   *  tareas nuevas ni reasigna el responsable de una ya existente. */
-  puedeAsignar: boolean;
+  /** Departamentos que se ven a la vez en el tablero -- el filtro de la
+   *  barra decide cuáles (ver `EquipoPage.tsx`), no el propio panel. */
+  deptos: Team[];
+  /** Subconjunto de `deptos` donde la persona es VP. */
+  vpDe: Team[];
+  /** Board del club: asigna en cualquier departamento, sea VP o no. */
+  esBoard: boolean;
 };
 
 /**
- * Tablero por estado. Arrastrar una tarjeta cambia su estado; abrirla y
- * elegir "Estado" en el diálogo hace lo mismo y es la vía accesible por
- * teclado -- el drag es un atajo encima de eso, no lo sustituye.
+ * Tablero por estado, con las tareas de todos los `deptos` a la vez.
+ *
+ * Arrastrar una tarjeta cambia su estado; abrirla y elegir "Estado" en el
+ * diálogo hace lo mismo y es la vía accesible por teclado -- el drag es un
+ * atajo encima de eso, no lo sustituye. Solo board y VP del departamento de
+ * CADA tarea pueden crearla o reasignarla (ver docs/CLAUDE.md); un miembro
+ * raso sigue pudiendo mover su propia tarea de estado.
  */
-export function TasksPanel({ puedeAsignar }: Props) {
-  const { createTask, getTasks, updateTask } = useApi();
+export function TasksPanel({ deptos, vpDe, esBoard }: Props) {
   const directorio = useDirectorio();
 
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -68,6 +89,7 @@ export function TasksPanel({ puedeAsignar }: Props) {
   const [sobreColumna, setSobreColumna] = useState<TaskEstado | null>(null);
   const [ultimoMovimiento, setUltimoMovimiento] = useState<{
     taskId: number;
+    departamento: Team;
     titulo: string;
     anterior: TaskEstado;
     actual: TaskEstado;
@@ -80,20 +102,32 @@ export function TasksPanel({ puedeAsignar }: Props) {
   const [deadline, setDeadline] = useState("");
   const [hora, setHora] = useState("");
   const [responsables, setResponsables] = useState<string[]>([]);
+  const [deptoNuevaTarea, setDeptoNuevaTarea] = useState<Team>(deptos[0]);
+
+  function puedeAsignarEn(depto: Team) {
+    return esBoard || vpDe.includes(depto);
+  }
+  const deptosDondePuedeAsignar = deptos.filter(puedeAsignarEn);
 
   useEffect(() => {
     void cargar();
     return () => {
       if (deshacerTimeoutRef.current) window.clearTimeout(deshacerTimeoutRef.current);
     };
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [deptos.join(",")]);
+
+  useEffect(() => {
+    if (!deptos.includes(deptoNuevaTarea)) setDeptoNuevaTarea(deptosDondePuedeAsignar[0] ?? deptos[0]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [deptos.join(",")]);
 
   async function cargar() {
     setIsLoading(true);
     try {
-      const respuesta = await getTasks();
-      setTasks(respuesta.tasks);
-      setUsuario(respuesta.usuario);
+      const respuestas = await Promise.all(deptos.map((d) => apiDepto(d).getTasks()));
+      setTasks(respuestas.flatMap((r) => r.tasks));
+      setUsuario(respuestas[0]?.usuario ?? "");
       setError(null);
     } catch (err) {
       setError((err as ApiFailure)?.message || "No se pudieron cargar las tareas.");
@@ -107,7 +141,7 @@ export function TasksPanel({ puedeAsignar }: Props) {
     if (!titulo.trim() || !instrucciones.trim()) return;
 
     try {
-      await createTask({
+      await apiDepto(deptoNuevaTarea).createTask({
         titulo,
         instrucciones,
         prioridad,
@@ -145,9 +179,12 @@ export function TasksPanel({ puedeAsignar }: Props) {
       actuales.map((t) => (t.id === task.id ? { ...t, estado } : t)),
     );
     try {
-      await updateTask(task.id, { estado });
+      await apiDepto(task.departamento as Team).updateTask(task.id, { estado });
       if (avisar) {
-        avisarMovimiento({ taskId: task.id, titulo: task.titulo, anterior, actual: estado });
+        avisarMovimiento({
+          taskId: task.id, departamento: task.departamento as Team,
+          titulo: task.titulo, anterior, actual: estado,
+        });
       }
     } catch (err) {
       setError((err as ApiFailure)?.message || "No se pudo mover la tarea.");
@@ -167,6 +204,7 @@ export function TasksPanel({ puedeAsignar }: Props) {
   if (isLoading) return <Esqueleto filas={5} alto={78} />;
 
   const etiquetasExistentes = [...new Set(tasks.flatMap((t) => t.tags))].sort();
+  const variosDeptos = deptos.length > 1;
 
   const filtroTexto = busqueda.trim().toLowerCase();
   const visibles = tasks
@@ -184,27 +222,28 @@ export function TasksPanel({ puedeAsignar }: Props) {
         />
       ) : null}
 
-      <header className="mkt-panel-header-react">
+      <header className="crm-barra-react">
         <input
           type="search"
-          className="mkt-buscador-react"
+          className="crm-input-react"
           value={busqueda}
           placeholder="Buscar por título..."
           aria-label="Buscar tareas por título"
           onChange={(event) => setBusqueda(event.target.value)}
         />
-        <label className="mkt-toggle-react">
+        <label className={`crm-tag crm-tag-check-react${soloMias ? " crm-tag-azul-react" : ""}`}>
           <input
             type="checkbox"
+            className="crm-check"
             checked={soloMias}
             onChange={(event) => setSoloMias(event.target.checked)}
           />
           Solo lo mío
         </label>
-        {puedeAsignar ? (
+        {deptosDondePuedeAsignar.length > 0 ? (
           <button
             type="button"
-            className="mkt-btn-react"
+            className="crm-btn"
             onClick={() => setMostrarFormulario((abierto) => !abierto)}
           >
             {mostrarFormulario ? "Cancelar" : "+ Nueva tarea"}
@@ -212,8 +251,24 @@ export function TasksPanel({ puedeAsignar }: Props) {
         ) : null}
       </header>
 
-      {mostrarFormulario && puedeAsignar ? (
+      {mostrarFormulario && deptosDondePuedeAsignar.length > 0 ? (
         <form className="mkt-form-react" onSubmit={crear}>
+          {deptosDondePuedeAsignar.length > 1 ? (
+            <div className="field-group-react">
+              <label htmlFor="tp-depto">Departamento</label>
+              <select
+                id="tp-depto"
+                value={deptoNuevaTarea}
+                onChange={(event) => setDeptoNuevaTarea(event.target.value as Team)}
+              >
+                {deptosDondePuedeAsignar.map((d) => (
+                  <option key={d} value={d}>
+                    {DEPTO_LABEL[d]}
+                  </option>
+                ))}
+              </select>
+            </div>
+          ) : null}
           <div className="field-group-react">
             <label htmlFor="tp-titulo">Título</label>
             <input
@@ -352,7 +407,7 @@ export function TasksPanel({ puedeAsignar }: Props) {
 
                   return (
                     <button
-                      key={task.id}
+                      key={`${task.departamento}-${task.id}`}
                       type="button"
                       className={`mkt-task-card-react${arrastrando?.id === task.id ? " mkt-task-card-arrastrando-react" : ""}`}
                       draggable
@@ -367,6 +422,14 @@ export function TasksPanel({ puedeAsignar }: Props) {
                       }}
                       onClick={() => setAbierta(task)}
                     >
+                      {variosDeptos ? (
+                        <span className="mkt-etiquetas-react">
+                          <span className={`crm-tag ${DEPTO_TAG[task.departamento] ?? ""}`}>
+                            {DEPTO_LABEL[task.departamento as Team]}
+                          </span>
+                        </span>
+                      ) : null}
+
                       {task.tags.length > 0 ? (
                         <span className="mkt-etiquetas-react">
                           {task.tags.map((tag) => (
@@ -388,9 +451,11 @@ export function TasksPanel({ puedeAsignar }: Props) {
                       <span className="mkt-task-pie-react">
                         <span className="mkt-task-senales-react">
                           {task.prioridad !== "media" ? (
-                            <Badge variant={task.prioridad === "alta" ? "destructive" : "outline"}>
+                            <span
+                              className={`crm-tag${task.prioridad === "alta" ? " crm-tag-ambar-react" : ""}`}
+                            >
                               {PRIORIDAD_LABEL[task.prioridad]}
-                            </Badge>
+                            </span>
                           ) : null}
                           {task.deadline ? (
                             <span
@@ -422,16 +487,18 @@ export function TasksPanel({ puedeAsignar }: Props) {
       </div>
 
       {abierta ? (
-        <TaskDialog
-          task={abierta}
-          etiquetasExistentes={etiquetasExistentes}
-          puedeAsignar={puedeAsignar}
-          onCerrar={() => setAbierta(null)}
-          onGuardado={() => {
-            setAbierta(null);
-            void cargar();
-          }}
-        />
+        <DeptoProvider value={abierta.departamento as Team}>
+          <TaskDialog
+            task={abierta}
+            etiquetasExistentes={etiquetasExistentes}
+            puedeAsignar={puedeAsignarEn(abierta.departamento as Team)}
+            onCerrar={() => setAbierta(null)}
+            onGuardado={() => {
+              setAbierta(null);
+              void cargar();
+            }}
+          />
+        </DeptoProvider>
       ) : null}
     </section>
   );

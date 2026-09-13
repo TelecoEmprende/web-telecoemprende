@@ -8,7 +8,6 @@ import { CalendarioEquipo } from "../components/equipo/CalendarioEquipo";
 import {
   EquipoSidebar,
   equiposConPanel,
-  etiquetaDeDepto,
   seccionesDe,
   type Panel,
   type Seccion,
@@ -41,16 +40,18 @@ export function EquipoPage() {
   const [teams, setTeams] = useState<Team[]>([]);
   const [vpDe, setVpDe] = useState<Team[]>([]);
   const [cargo, setCargo] = useState<Cargo>("");
+  /** Quién ha entrado: el pie del sidebar lo enseña, como en el boceto. */
+  const [perfil, setPerfil] = useState({ nombre: "", email: "" });
   const [loginError, setLoginError] = useState<string | null>(null);
   // ponytail: solo lo usa el alta temporal de cuentas (ver EquipoLoginForm).
   const [registroMessage, setRegistroMessage] = useState<string | null>(null);
   // Se abre en el inicio del club, que es lo único común a todo el mundo.
   const [seccion, setSeccion] = useState<Seccion>("club");
-  // Qué departamento ve un panel compartido (Tareas, Proyectos, Miembros...)
-  // cuando la persona está en más de uno con ese panel -- antes esto salía
-  // de qué grupo del sidebar se tocaba (uno por departamento); ahora el
-  // sidebar tiene una sola entrada por panel y este selector decide.
-  const [deptoActivo, setDeptoActivo] = useState<Team | null>(null);
+  // Qué departamentos se ven a la vez en un panel compartido (Tareas,
+  // Proyectos...). El sidebar NUNCA depende de esto -- tiene una sola
+  // entrada por panel siempre; esto solo filtra qué datos se cargan dentro.
+  // Por defecto, todos los que la persona tiene.
+  const [deptosFiltro, setDeptosFiltro] = useState<Team[]>([]);
   // La campaña que "Proyectos" abre directamente al montar: por un enlace
   // compartido (?campaign=, ver el efecto de abajo) o porque se saltó aquí
   // desde un evento del calendario de otro departamento (`abrirCampaign`).
@@ -70,7 +71,8 @@ export function EquipoPage() {
           setTeams(session.teams);
           setVpDe(session.vp_de);
           setCargo(session.cargo);
-          setDeptoActivo(session.teams[0] ?? null);
+          setPerfil({ nombre: session.nombre, email: session.email });
+          setDeptosFiltro(session.teams);
         }
       } catch {
         // Sin sesión previa o backend no disponible: se queda en el login.
@@ -87,7 +89,7 @@ export function EquipoPage() {
   }, []);
 
   // Enlace compartible (ver "Copiar enlace" en CampaignsPanel): al entrar con
-  // ?campaign=<id> en la URL se abre directo en Proyectos, del primer
+  // ?campaign=<id> en la URL se abre directo en Proyectos, acotado al primer
   // departamento de la persona -- no resuelve el departamento por sí solo, si
   // el enlace es de otro no aparece, pero evita tener que explicar "entra
   // primero a Proyectos". Depende de `teams`, que llega async tras el login.
@@ -97,7 +99,8 @@ export function EquipoPage() {
     if (!campaignId) return;
 
     setCampaignInicial(campaignId);
-    irA("campanas", teams[0]);
+    setDeptosFiltro([teams[0]]);
+    setSeccion("campanas");
     setSearchParams(
       (actuales) => {
         const siguientes = new URLSearchParams(actuales);
@@ -132,7 +135,10 @@ export function EquipoPage() {
         setTeams(response.teams);
         setVpDe(response.vp_de);
         setCargo(response.cargo);
-        setDeptoActivo(response.teams[0] ?? null);
+        // La respuesta del login no repite el email: es el que se acaba de
+        // teclear.
+        setPerfil({ nombre: response.nombre, email });
+        setDeptosFiltro(response.teams);
       }
     } catch (error) {
       const apiError = error as ApiFailure;
@@ -160,37 +166,20 @@ export function EquipoPage() {
       setTeams([]);
       setVpDe([]);
       setCargo("");
+      setPerfil({ nombre: "", email: "" });
       setSeccion("club");
-      setDeptoActivo(null);
+      setDeptosFiltro([]);
       setIsLoggingOut(false);
     }
   }
 
-  /** Cambia de sección y, si el panel al que se entra no lo tiene el
-   *  departamento activo, salta al primero que sí -- así "Tareas" siempre
-   *  abre con datos reales aunque el último departamento visto fuera, por
-   *  ejemplo, uno sin Presupuesto. */
-  function irA(destino: Seccion, depto?: Team) {
-    if (depto) {
-      setDeptoActivo(depto);
-      setSeccion(destino);
-      return;
-    }
-    if (esPanel(destino)) {
-      const disponibles = equiposConPanel(destino, teams);
-      if (deptoActivo === null || !disponibles.includes(deptoActivo)) {
-        setDeptoActivo(disponibles[0] ?? null);
-      }
-    }
-    setSeccion(destino);
-  }
-
   /** Desde el calendario se salta a la campaña del elemento tocado -- puede
-   *  ser de un departamento DISTINTO al activo (ver `irA`, que ya remonta el
-   *  panel con `key` al cambiar de departamento). */
+   *  ser de un departamento distinto al filtrado, así que acota el filtro a
+   *  ese uno para que se vea sin ambigüedad. */
   function abrirCampaign(campaignId: number, departamento: Team) {
     setCampaignInicial(campaignId);
-    irA("campanas", departamento);
+    setDeptosFiltro([departamento]);
+    setSeccion("campanas");
   }
 
   // El equipo de ingeniería (y presidencia/board) no tiene secciones propias
@@ -220,33 +209,38 @@ export function EquipoPage() {
     );
   }
 
-  const esBoardOVp = esBoard || vpDe.length > 0;
+  // Qué departamentos de la persona tienen el panel actual, y cuáles de esos
+  // están marcados en el filtro ahora mismo -- si se deselecciona todo, se
+  // trata como "todos" (nunca se puede quedar en cero paneles con datos).
   const equiposDelPanel = esPanel(seccion) ? equiposConPanel(seccion, teams) : [];
-  // Con un panel de un departamento concreto, el título habla su idioma
-  // (Eventos llama "Gestiones" a sus tareas); el resto usa la etiqueta
-  // genérica del sidebar. Ver `etiquetaDeDepto`.
-  const titulo = esPanel(seccion)
-    ? etiquetaDeDepto(seccion, deptoActivo)
-    : (seccionesDe(teams, esBoardOVp, deptoActivo).find((s) => s.id === seccion)?.label ?? "");
-  const rotuloBarra =
-    seccion === "club" || seccion === "metricas" || seccion === "calendario" || seccion === "anuncios"
-      ? "Club"
-      : deptoActivo
-        ? TEAM_LABEL[deptoActivo]
-        : "Club";
+  const seleccionEnPanel = equiposDelPanel.filter((t) => deptosFiltro.includes(t));
+  const deptosDelPanel = seleccionEnPanel.length > 0 ? seleccionEnPanel : equiposDelPanel;
+
+  const titulo = seccionesDe(teams).find((s) => s.id === seccion)?.label
+    ?? (seccion === "metricas" ? "Métricas" : seccion === "presupuesto" ? "Presupuesto" : "");
+  function alternarDepto(team: Team) {
+    setDeptosFiltro((actuales) => {
+      const activos = equiposDelPanel.filter((t) => actuales.includes(t));
+      const base = activos.length > 0 ? activos : equiposDelPanel;
+      const siguiente = base.includes(team) ? base.filter((t) => t !== team) : [...base, team];
+      // El resto de deptosFiltro (de otros paneles) se conserva tal cual.
+      return [...actuales.filter((t) => !equiposDelPanel.includes(t)), ...siguiente];
+    });
+  }
 
   return (
     // El workspace se lleva la pantalla entera: no hay cabecera del sitio, la
     // navegación (y la salida) están en el sidebar.
-    <div className="shadcn-scope workspace-react font-sans">
+    <div className="shadcn-scope workspace-react crm-react font-sans">
       <SidebarProvider>
         <EquipoSidebar
           seccion={seccion}
-          onSeccion={(destino) => irA(destino)}
+          onSeccion={setSeccion}
           teams={teams}
           vpDe={vpDe}
           cargo={cargo}
-          deptoActivo={deptoActivo}
+          nombre={perfil.nombre}
+          email={perfil.email}
           tieneAccesoAdmin={tieneAccesoAdmin}
           onLogout={() => void handleLogout()}
           isLoggingOut={isLoggingOut}
@@ -255,21 +249,25 @@ export function EquipoPage() {
         <main className="workspace-main-react">
           <header className="workspace-barra-react">
             <SidebarTrigger />
-            <span className="workspace-barra-depto-react">{rotuloBarra}</span>
             <h2>{titulo}</h2>
 
             {equiposDelPanel.length > 1 ? (
-              <div className="workspace-selector-depto-react" role="group" aria-label="Departamento">
+              <div className="workspace-selector-depto-react" role="group" aria-label="Departamentos visibles">
                 {equiposDelPanel.map((team) => (
-                  <button
+                  <label
                     key={team}
-                    type="button"
-                    className={`mkt-btn-mini-react${deptoActivo === team ? " mkt-btn-mini-activo-react" : ""}`}
-                    aria-pressed={deptoActivo === team}
-                    onClick={() => setDeptoActivo(team)}
+                    className={`crm-tag crm-tag-check-react${
+                      deptosDelPanel.includes(team) ? " crm-tag-azul-react" : ""
+                    }`}
                   >
+                    <input
+                      type="checkbox"
+                      className="crm-check"
+                      checked={deptosDelPanel.includes(team)}
+                      onChange={() => alternarDepto(team)}
+                    />
                     {TEAM_LABEL[team]}
-                  </button>
+                  </label>
                 ))}
               </div>
             ) : null}
@@ -277,23 +275,24 @@ export function EquipoPage() {
 
           <div className="workspace-contenido-react">
             {seccion === "club" ? (
-              <CalendarioEquipo onVerAnuncios={teams.length > 0 ? () => irA("anuncios") : undefined} />
+              <CalendarioEquipo onIrA={setSeccion} />
             ) : null}
             {seccion === "metricas" ? <MetricasPanel /> : null}
-            {(esPanel(seccion) || seccion === "calendario" || seccion === "anuncios") &&
-            (deptoActivo ?? teams[0]) ? (
-              // `key` para que cambiar de departamento remonte el panel: si
-              // no, dos departamentos comparten estado y el tablero enseña
-              // un momento las tareas del anterior.
+            {esPanel(seccion) || seccion === "calendario" || seccion === "anuncios" ? (
+              // `key` para que cambiar de departamento(s) remonte el panel: si
+              // no, dos conjuntos de departamentos comparten estado y el
+              // tablero enseña un momento los datos del anterior.
               <DeptoDashboard
-                key={`${deptoActivo ?? teams[0]}-${esPanel(seccion) ? seccion : "club"}`}
-                depto={deptoActivo ?? teams[0]}
+                key={`${seccion}:${(esPanel(seccion) ? deptosDelPanel : [teams[0]]).join(",")}`}
+                depto={(esPanel(seccion) ? deptosDelPanel[0] : teams[0]) ?? teams[0]}
+                deptos={esPanel(seccion) ? deptosDelPanel : [teams[0]].filter(Boolean) as Team[]}
                 seccion={seccion as Panel | "calendario" | "anuncios"}
                 teams={teams}
                 campaignInicial={seccion === "campanas" ? campaignInicial : null}
                 onCampaignAbierta={() => setCampaignInicial(null)}
                 onAbrirCampaign={abrirCampaign}
-                puedeAsignarTareas={!!deptoActivo && (esBoard || vpDe.includes(deptoActivo))}
+                vpDe={vpDe}
+                esBoard={esBoard}
               />
             ) : null}
           </div>

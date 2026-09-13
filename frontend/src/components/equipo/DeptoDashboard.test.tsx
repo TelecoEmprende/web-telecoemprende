@@ -141,7 +141,7 @@ async function renderMarketing() {
       <EquipoPage />
     </MemoryRouter>,
   );
-  await screen.findByText(/cosa pendiente|cosas pendientes/);
+  await screen.findByText(/tarea vence|tareas vencen|ninguna tarea vence/);
 }
 
 describe("/equipo — panel de Marketing", () => {
@@ -591,9 +591,12 @@ describe("/equipo — panel de Marketing", () => {
     await renderMarketing();
     await userEvent.click(screen.getByRole("button", { name: "Calendario" }));
 
-    // La barra rotula "Club", no "Marketing": el contenido es de todo el
-    // equipo aunque se pida por la ruta de un departamento (ver `irA`).
-    expect(document.querySelector(".workspace-barra-depto-react")?.textContent).toBe("Club");
+    // Se pide con los departamentos de la persona, no con el de la ruta: el
+    // calendario es uno solo para todo el club (ver `irA`).
+    await waitFor(() => expect(getCalendarioEquipo).toHaveBeenCalled());
+    expect(getCalendarioEquipo.mock.calls.at(-1)?.[2]).toEqual(
+      expect.arrayContaining(teamsDeSesion),
+    );
   });
 
   it("con más de un departamento, el calendario deja elegir a cuál va la tarea nueva", async () => {
@@ -674,9 +677,9 @@ describe("/equipo — panel de Marketing", () => {
       await screen.findByRole("heading", { name: "Semana de bienvenida" }),
     ).toBeInTheDocument();
     expect(getCampaign).toHaveBeenCalledWith(5);
-    // Se saltó al contexto de Eventos: la barra ya no dice "Club" sino el
-    // departamento al que se saltó, y el selector de departamento lo refleja.
-    expect(document.querySelector(".workspace-barra-depto-react")?.textContent).toBe("Eventos");
+    // Y se pidió por la ruta de Eventos, que es de donde era el evento -- no
+    // solo por la de Marketing, que es el panel desde el que se saltó.
+    expect(deptosPedidos).toContain("eventos");
   });
 });
 
@@ -719,22 +722,22 @@ describe("/equipo — panel de Eventos", () => {
         <EquipoPage />
       </MemoryRouter>,
     );
-    await screen.findByText(/cosa pendiente|cosas pendientes/);
+    await screen.findByText(/tarea vence|tareas vencen|ninguna tarea vence/);
   }
 
-  it("Eventos tiene su navegación completa, con los nombres de Eventos", async () => {
+  it("Eventos tiene su navegación completa, con las etiquetas genéricas del sidebar", async () => {
     await renderEventos();
 
+    // El sidebar siempre usa el mismo rótulo, esté quien esté de Eventos o
+    // de Marketing: nunca dice "Gestiones"/"Eventos" -- eso, si acaso, va en
+    // el título de la página, nunca en el sidebar (ver EquipoSidebar.tsx).
     for (const panel of [
-      "Mi semana", "Gestiones", "Eventos", "Calendario",
+      "Mi semana", "Tareas", "Proyectos", "Calendario",
       "Recursos", "Presupuesto", "Reuniones", "Miembros", "Avisos",
     ]) {
       expect(screen.getByRole("button", { name: panel })).toBeInTheDocument();
     }
-    // Sola en Eventos, la navegación habla su idioma: no hay una entrada
-    // aparte llamada "Tareas"/"Proyectos" además de la ya renombrada.
-    expect(screen.queryByRole("button", { name: "Tareas" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Proyectos" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Gestiones" })).not.toBeInTheDocument();
   });
 
   it("los anuncios cuelgan del club, no de un departamento", async () => {
@@ -745,21 +748,22 @@ describe("/equipo — panel de Eventos", () => {
 
     await userEvent.click(anuncios);
 
-    // Se abre el panel de anuncios (el h3 es el del panel; el h2 es el título
-    // que pinta la barra del shell).
+    // Se abre el panel de anuncios: el título lo pinta la barra del shell, así
+    // que lo que identifica al panel es su propia frase y su acción.
     expect(
-      await screen.findByRole("heading", { name: "Anuncios", level: 3 }),
+      await screen.findByText(/Comunicados para todo el club/),
     ).toBeInTheDocument();
     expect(listarRegistros).toHaveBeenCalledWith("anuncios");
 
-    // Y la barra lo rotula como Club, no como Eventos: el contenido es de todo
-    // el equipo aunque la ruta cuelgue de un departamento.
-    expect(document.querySelector(".workspace-barra-depto-react")?.textContent).toBe("Club");
+    // El sidebar tiene UNA entrada de Avisos, no una por departamento: el
+    // contenido es de todo el equipo aunque la ruta cuelgue de uno.
+    const navegacion = screen.getByRole("navigation", { name: "Secciones de /equipo" });
+    expect(within(navegacion).getAllByRole("button", { name: "Avisos" })).toHaveLength(1);
   });
 
   it("pide los datos al departamento de Eventos, no al de Marketing", async () => {
     await renderEventos();
-    await userEvent.click(screen.getByRole("button", { name: "Gestiones" }));
+    await userEvent.click(screen.getByRole("button", { name: "Tareas" }));
 
     await waitFor(() => expect(getTasks).toHaveBeenCalled());
     expect([...new Set(deptosPedidos)]).toEqual(["eventos"]);
@@ -781,7 +785,7 @@ describe("/equipo — panel de Eventos", () => {
     });
 
     await renderEventos();
-    await userEvent.click(screen.getByRole("button", { name: "Gestiones" }));
+    await userEvent.click(screen.getByRole("button", { name: "Tareas" }));
 
     expect(
       await screen.findByText("Reservar el espacio de la feria"),
@@ -795,28 +799,38 @@ describe("/equipo — panel de Eventos", () => {
     expect(deptosPedidos).not.toContain("marketing");
   });
 
-  it("con más de un departamento, el selector de la barra deja cambiar entre ellos", async () => {
+  it("con más de un departamento, Proyectos junta los dos por defecto y el filtro deja acotar a uno", async () => {
     teamsDeSesion = ["marketing", "eventos"];
     vpDeSesion = ["marketing", "eventos"];
+    getCampaigns.mockResolvedValue({ ok: true, campaigns: [] });
 
     render(
       <MemoryRouter>
         <EquipoPage />
       </MemoryRouter>,
     );
-    await screen.findByText(/cosa pendiente|cosas pendientes/);
+    await screen.findByText(/tarea vence|tareas vencen|ninguna tarea vence/);
 
-    // Un solo "Tareas"/"Proyectos" en el sidebar, no uno por departamento; el
-    // rótulo sigue al primer departamento de la persona por defecto
-    // (Marketing, sin vocabulario propio) hasta que se cambia el selector.
+    // Un solo "Proyectos" en el sidebar, no uno por departamento; el título
+    // de la página es siempre el mismo rótulo genérico, nunca cambia con el
+    // filtro (ver docs/CLAUDE.md).
     await userEvent.click(screen.getByRole("button", { name: "Proyectos" }));
     expect(screen.getByRole("heading", { level: 2, name: "Proyectos" })).toBeInTheDocument();
-    expect(deptosPedidos.at(-1)).toBe("marketing");
 
-    const selector = screen.getByRole("group", { name: "Departamento" });
-    await userEvent.click(within(selector).getByRole("button", { name: "Eventos" }));
+    // Por defecto se ven los dos departamentos a la vez -- no hace falta
+    // elegir uno para entrar.
+    await waitFor(() => expect(deptosPedidos).toEqual(expect.arrayContaining(["marketing", "eventos"])));
 
-    expect(screen.getByRole("heading", { level: 2, name: "Eventos" })).toBeInTheDocument();
-    expect(deptosPedidos.at(-1)).toBe("eventos");
+    const selector = screen.getByRole("group", { name: "Departamentos visibles" });
+    const casillaEventos = within(selector).getByRole("checkbox", { name: "Eventos" });
+    expect(casillaEventos).toBeChecked();
+
+    // Se desmarca Eventos: el filtro se acota a solo Marketing, y el título
+    // sigue diciendo "Proyectos" -- el sidebar y el título nunca cambian.
+    deptosPedidos.length = 0;
+    await userEvent.click(casillaEventos);
+
+    expect(screen.getByRole("heading", { level: 2, name: "Proyectos" })).toBeInTheDocument();
+    await waitFor(() => expect(new Set(deptosPedidos)).toEqual(new Set(["marketing"])));
   });
 });

@@ -101,14 +101,14 @@ export function MembersPanel() {
     <section className="mkt-panel-react">
       {error ? <AlertBanner variant="error" message={error} /> : null}
 
-      <header className="mkt-panel-header-react">
-        <h3>Miembros de {TEAM_LABEL[depto] ?? depto}</h3>
+      <header className="crm-cabecera-react">
+        <h3 className="crm-h1">Miembros de {TEAM_LABEL[depto] ?? depto}</h3>
         <div className="flex flex-wrap items-center gap-3">
           {habilidades.length > 0 ? (
-            <div className="mkt-filtros-react" role="group" aria-label="Filtrar por habilidad">
+            <div className="crm-tags-react" role="group" aria-label="Filtrar por habilidad">
               <button
                 type="button"
-                className="mkt-btn-mini-react"
+                className={`crm-tag${filtro === null ? " crm-tag-azul-react" : ""}`}
                 aria-pressed={filtro === null}
                 onClick={() => setFiltro(null)}
               >
@@ -118,7 +118,7 @@ export function MembersPanel() {
                 <button
                   key={tag}
                   type="button"
-                  className="mkt-btn-mini-react"
+                  className={`crm-tag${filtro === tag ? " crm-tag-azul-react" : ""}`}
                   aria-pressed={filtro === tag}
                   onClick={() => setFiltro(filtro === tag ? null : tag)}
                 >
@@ -153,6 +153,7 @@ export function MembersPanel() {
         </p>
       ) : (
         <>
+          <div className="crm-c">
           <div className="mkt-directorio-cabecera-react" aria-hidden="true">
             <span>Miembro</span>
             <span>Departamentos</span>
@@ -220,6 +221,7 @@ export function MembersPanel() {
             </li>
           ))}
           </ul>
+          </div>
         </>
       )}
 
