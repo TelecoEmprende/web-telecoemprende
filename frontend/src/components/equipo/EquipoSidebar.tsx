@@ -30,13 +30,14 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar";
+import { AvatarResponsable, etiquetaDe } from "./marketing/Avatares";
 import type { Cargo, Team } from "../../types/equipo";
 
 /** Una entrada de la navegación: un panel, no un par departamento+panel. Antes
  *  cada departamento repetía su propio "Tareas"/"Campañas"/"Miembros" en el
- *  sidebar; ahora hay una sola entrada por panel y, si la persona pertenece a
- *  más de un departamento que lo tiene, un selector dentro del panel decide
- *  cuál se ve (ver `EquipoPage.tsx`, `equiposConPanel`). */
+ *  sidebar; ahora hay una sola entrada por panel, siempre con la misma
+ *  etiqueta -- el filtro de departamento (checkboxes dentro del panel, ver
+ *  `EquipoPage.tsx`) no toca nunca el sidebar. */
 type Item = { id: Seccion; label: string; icono: LucideIcon };
 
 export type Panel =
@@ -53,9 +54,8 @@ export type Seccion = "club" | "metricas" | "calendario" | "anuncios" | Panel;
 /** Qué panel tiene cada departamento. Los tres comparten Tareas, Recursos y
  *  Miembros; Campañas es de Marketing/Eventos (Ingeniería no tiene, ver
  *  `docs/CLAUDE.md`); Presupuesto es de quien mueve dinero (Eventos) y Alumni
- *  de Ingeniería. Esto decide qué panel aparece cuando (`seccionesDe`) y qué
- *  departamentos ofrece su selector interno (`equiposConPanel`) -- no hay ya
- *  un grupo de sidebar por departamento que mantener en paralelo. */
+ *  de Ingeniería. Esto decide qué panel aparece (`seccionesDe`) y qué
+ *  departamentos ofrece el filtro dentro de cada uno (`equiposConPanel`). */
 const PANELES_POR_EQUIPO: Record<Team, Panel[]> = {
   marketing: ["campanas", "tareas", "recursos", "miembros"],
   eventos: ["campanas", "tareas", "recursos", "presupuesto", "reuniones", "miembros"],
@@ -72,11 +72,11 @@ const ICONO: Record<Panel, LucideIcon> = {
   alumni: Handshake,
 };
 
-/** Etiqueta genérica del panel para el sidebar (un solo nombre, no uno por
- *  departamento). El vocabulario propio de un departamento (Eventos llama
- *  "Eventos" a sus campañas y "Gestiones" a sus tareas) se enseña dentro del
- *  panel mismo, en el título de la página (ver `tituloDe` en EquipoPage.tsx),
- *  no aquí -- así el sidebar no repite ni renombra la misma entrada. */
+/** Etiqueta del panel en el sidebar: siempre la misma, para todo el mundo,
+ *  la vea con uno o con varios departamentos filtrados. El vocabulario
+ *  propio de un departamento (Eventos llama "Eventos" a sus campañas) no
+ *  vive aquí -- si hace falta, va dentro del propio panel, nunca cambiando
+ *  esta entrada. */
 const ETIQUETA_PANEL: Record<Panel, string> = {
   campanas: "Proyectos",
   tareas: "Tareas",
@@ -87,42 +87,21 @@ const ETIQUETA_PANEL: Record<Panel, string> = {
   alumni: "Red Alumni",
 };
 
-/** Qué departamentos de la persona tienen este panel -- para el selector
- *  interno del panel (un desplegable/pestañas) cuando hay más de uno. */
+/** Qué departamentos de la persona tienen este panel -- para el filtro
+ *  interno del panel (checkboxes) cuando hay más de uno. */
 export function equiposConPanel(panel: Panel, teams: Team[]): Team[] {
   return teams.filter((t) => PANELES_POR_EQUIPO[t].includes(panel));
-}
-
-/** El vocabulario propio de un departamento para un panel, o la etiqueta
- *  genérica si no tiene uno especial. Se usa para el título de la página
- *  cuando el panel está mostrando un único departamento concreto. */
-export function etiquetaDeDepto(panel: Panel, depto: Team | null): string {
-  if (depto === "eventos") {
-    if (panel === "campanas") return "Eventos";
-    if (panel === "tareas") return "Gestiones";
-  }
-  return ETIQUETA_PANEL[panel];
 }
 
 /** Todas las secciones visibles para esa persona, en el orden del sidebar --
  *  primero lo del boceto (Mi semana, Tareas, Proyectos, Calendario, Miembros,
  *  Avisos), luego lo que no sale ahí porque es de un departamento concreto
- *  (Recursos, Presupuesto, Reuniones, Alumni).
- *
- *  `deptoActivo` decide el rótulo de Tareas/Proyectos cuando quien pertenece
- *  a un solo departamento con vocabulario propio (Eventos: "Gestiones") lo
- *  quiere ver escrito así, no con el nombre genérico -- si tiene varios, el
- *  rótulo sigue al que esté activo en el selector interno del panel (ver
- *  `EquipoPage.tsx`), no a uno fijo por persona. */
-export function seccionesDe(
-  teams: Team[], esBoardOVp = false, deptoActivo: Team | null = null,
-): Item[] {
+ *  (Recursos, Presupuesto, Reuniones, Alumni). Métricas y Presupuesto no
+ *  están aquí -- son del grupo "Admin" (ver `EquipoSidebar`). */
+export function seccionesDe(teams: Team[]): Item[] {
   const paneles = new Set<Panel>(teams.flatMap((t) => PANELES_POR_EQUIPO[t]));
-  const referencia = deptoActivo ?? teams[0] ?? null;
   const item = (id: Panel): Item[] =>
-    paneles.has(id)
-      ? [{ id, label: etiquetaDeDepto(id, referencia), icono: ICONO[id] }]
-      : [];
+    paneles.has(id) ? [{ id, label: ETIQUETA_PANEL[id], icono: ICONO[id] }] : [];
 
   return [
     { id: "club", label: "Mi semana", icono: Home },
@@ -135,9 +114,7 @@ export function seccionesDe(
     ...(teams.length > 0
       ? [{ id: "anuncios" as const, label: "Avisos", icono: Anuncio }]
       : []),
-    ...(esBoardOVp ? [{ id: "metricas" as const, label: "Métricas", icono: BarChart3 }] : []),
     ...item("recursos"),
-    ...item("presupuesto"),
     ...item("reuniones"),
     ...item("alumni"),
   ];
@@ -148,20 +125,35 @@ const CARGO_LABEL: Record<Exclude<Cargo, "">, string> = {
   boardmember: "Board member",
 };
 
+const TEAM_LABEL: Record<Team, string> = {
+  marketing: "Marketing",
+  eventos: "Eventos",
+  ingenieria: "Ingeniería",
+};
+
 type Props = {
   seccion: Seccion;
   onSeccion: (seccion: Seccion) => void;
   teams: Team[];
   vpDe: Team[];
   cargo: Cargo;
-  /** Departamento activo del panel compartido que se está viendo (o el
-   *  primero de la persona si ninguno) -- decide el rótulo de Tareas/
-   *  Proyectos cuando un departamento tiene vocabulario propio. */
-  deptoActivo: Team | null;
+  /** Quién ha entrado, para el pie del sidebar (boceto 2a). */
+  nombre: string;
+  email: string;
   tieneAccesoAdmin: boolean;
   onLogout: () => void;
   isLoggingOut: boolean;
 };
+
+/** "VP de Marketing", "Board", "Marketing + Eventos": lo que pone debajo del
+ *  nombre en el pie del sidebar. El cargo manda sobre el departamento -- es
+ *  lo que explica por qué esa persona ve lo que ve. */
+function papelDe(cargo: Cargo, vpDe: Team[], teams: Team[]) {
+  if (vpDe.length > 0) return `VP de ${vpDe.map((t) => TEAM_LABEL[t]).join(" + ")}`;
+  if (cargo) return CARGO_LABEL[cargo];
+  if (teams.length > 0) return teams.map((t) => TEAM_LABEL[t]).join(" + ");
+  return "Equipo";
+}
 
 export function EquipoSidebar({
   seccion,
@@ -169,7 +161,8 @@ export function EquipoSidebar({
   teams,
   vpDe,
   cargo,
-  deptoActivo,
+  nombre,
+  email,
   tieneAccesoAdmin,
   onLogout,
   isLoggingOut,
@@ -178,13 +171,23 @@ export function EquipoSidebar({
 
   const ayuda = (label: string) => (state === "collapsed" ? label : undefined);
   const esBoardOVp = cargo === "presidente" || cargo === "boardmember" || vpDe.length > 0;
+  const tienePresupuesto = equiposConPanel("presupuesto", teams).length > 0;
 
   function elegir(id: Seccion) {
     onSeccion(id);
     if (isMobile) setOpenMobile(false);
   }
 
-  const items = seccionesDe(teams, esBoardOVp, deptoActivo);
+  const items = seccionesDe(teams);
+  // Métricas, Presupuesto y el panel de administración son herramientas de
+  // gestión, no de trabajo diario: un solo grupo "Admin" en vez de mezclarlas
+  // con Tareas/Proyectos/Miembros o repartirlas sueltas por el sidebar.
+  const itemsAdmin: Item[] = [
+    ...(esBoardOVp ? [{ id: "metricas" as const, label: "Métricas", icono: BarChart3 }] : []),
+    ...(tienePresupuesto
+      ? [{ id: "presupuesto" as const, label: "Presupuesto", icono: Wallet }]
+      : []),
+  ];
 
   return (
     <Sidebar collapsible="icon">
@@ -221,19 +224,34 @@ export function EquipoSidebar({
             </SidebarGroupContent>
           </SidebarGroup>
 
-          {tieneAccesoAdmin ? (
+          {itemsAdmin.length > 0 || tieneAccesoAdmin ? (
             <SidebarGroup>
-              <SidebarGroupLabel>Ingeniería</SidebarGroupLabel>
+              <SidebarGroupLabel>Admin</SidebarGroupLabel>
               <SidebarGroupContent>
                 <SidebarMenu>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild tooltip={ayuda("Panel admin")}>
-                      <Link to="/admin">
-                        <Settings />
-                        <span>Panel admin</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
+                  {itemsAdmin.map(({ id, label, icono: Icono }) => (
+                    <SidebarMenuItem key={id}>
+                      <SidebarMenuButton
+                        isActive={seccion === id}
+                        aria-current={seccion === id ? "page" : undefined}
+                        onClick={() => elegir(id)}
+                        tooltip={ayuda(label)}
+                      >
+                        <Icono />
+                        <span>{label}</span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  ))}
+                  {tieneAccesoAdmin ? (
+                    <SidebarMenuItem>
+                      <SidebarMenuButton asChild tooltip={ayuda("Panel admin")}>
+                        <Link to="/admin">
+                          <Settings />
+                          <span>Panel admin</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  ) : null}
                 </SidebarMenu>
               </SidebarGroupContent>
             </SidebarGroup>
@@ -242,6 +260,16 @@ export function EquipoSidebar({
       </SidebarContent>
 
       <SidebarFooter>
+        {email ? (
+          <div className="workspace-perfil-react">
+            <AvatarResponsable email={email} nombre={nombre} className="crm-av" />
+            <span className="workspace-perfil-texto-react">
+              <strong>{etiquetaDe(email, nombre)}</strong>
+              <span>{papelDe(cargo, vpDe, teams)}</span>
+            </span>
+          </div>
+        ) : null}
+
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton asChild tooltip={ayuda("Ver la web")}>
