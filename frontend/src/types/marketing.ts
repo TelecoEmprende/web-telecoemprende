@@ -78,6 +78,10 @@ export type Task = {
   creado_por: string;
   created_at: string;
   updated_at: string;
+  /** Cuándo entró en 'acabado', o null si nunca ha llegado a estarlo (o si
+   *  se cerró antes de que existiera esta columna). Decide cuándo pasa al
+   *  historial de "Completadas" (ver `getTasksArchivadas`). */
+  completado_en: string | null;
   /** Sólo en el listado de tareas: de qué contenido/campaña cuelga. */
   content_titulo?: string | null;
   campaign_nombre?: string | null;

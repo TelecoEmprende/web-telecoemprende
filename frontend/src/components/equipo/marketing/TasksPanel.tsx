@@ -84,6 +84,12 @@ export function TasksPanel({ deptos, vpDe, esBoard }: Props) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
+  // El historial es de solo lectura y se pide aparte: las acabadas hace más
+  // de un día ya no vienen en `tasks` (ver `listar_tasks` en el backend), así
+  // que "Completadas" es una vista distinta, no un filtro sobre esta lista.
+  const [verArchivadas, setVerArchivadas] = useState(false);
+  const [archivadas, setArchivadas] = useState<Task[]>([]);
+  const [cargandoArchivadas, setCargandoArchivadas] = useState(false);
   const [abierta, setAbierta] = useState<Task | null>(null);
   const [arrastrando, setArrastrando] = useState<Task | null>(null);
   const [sobreColumna, setSobreColumna] = useState<TaskEstado | null>(null);
@@ -134,6 +140,25 @@ export function TasksPanel({ deptos, vpDe, esBoard }: Props) {
     } finally {
       setIsLoading(false);
     }
+  }
+
+  async function cargarArchivadas() {
+    setCargandoArchivadas(true);
+    try {
+      const respuestas = await Promise.all(deptos.map((d) => apiDepto(d).getTasksArchivadas()));
+      setArchivadas(respuestas.flatMap((r) => r.tasks));
+      setError(null);
+    } catch (err) {
+      setError((err as ApiFailure)?.message || "No se pudo cargar el historial.");
+    } finally {
+      setCargandoArchivadas(false);
+    }
+  }
+
+  function alternarArchivadas() {
+    const abrir = !verArchivadas;
+    setVerArchivadas(abrir);
+    if (abrir) void cargarArchivadas();
   }
 
   async function crear(event: FormEvent) {
@@ -210,6 +235,9 @@ export function TasksPanel({ deptos, vpDe, esBoard }: Props) {
   const visibles = tasks
     .filter((t) => !soloMias || t.responsables.includes(usuario))
     .filter((t) => !filtroTexto || t.titulo.toLowerCase().includes(filtroTexto));
+  const archivadasVisibles = archivadas
+    .filter((t) => !soloMias || t.responsables.includes(usuario))
+    .filter((t) => !filtroTexto || t.titulo.toLowerCase().includes(filtroTexto));
 
   return (
     <section className="mkt-panel-react">
@@ -240,6 +268,14 @@ export function TasksPanel({ deptos, vpDe, esBoard }: Props) {
           />
           Solo lo mío
         </label>
+        <button
+          type="button"
+          className={`crm-tag${verArchivadas ? " crm-tag-azul-react" : ""}`}
+          aria-pressed={verArchivadas}
+          onClick={alternarArchivadas}
+        >
+          Completadas
+        </button>
         {deptosDondePuedeAsignar.length > 0 ? (
           <button
             type="button"
@@ -343,6 +379,56 @@ export function TasksPanel({ deptos, vpDe, esBoard }: Props) {
         </form>
       ) : null}
 
+      {verArchivadas ? (
+        cargandoArchivadas ? (
+          <Esqueleto filas={4} alto={78} />
+        ) : archivadasVisibles.length === 0 ? (
+          <p className="mkt-vacio-react">
+            {filtroTexto
+              ? `Ninguna completada con "${busqueda.trim()}" en el título.`
+              : "Nada archivado todavía: aparecen aquí las tareas acabadas hace más de un día."}
+          </p>
+        ) : (
+          <div className="mkt-archivadas-lista-react">
+            {archivadasVisibles.map((task) => (
+              <button
+                key={`${task.departamento}-${task.id}`}
+                type="button"
+                className="mkt-task-card-react"
+                onClick={() => setAbierta(task)}
+              >
+                {variosDeptos ? (
+                  <span className="mkt-etiquetas-react">
+                    <span className={`crm-tag ${DEPTO_TAG[task.departamento] ?? ""}`}>
+                      {DEPTO_LABEL[task.departamento as Team]}
+                    </span>
+                  </span>
+                ) : null}
+
+                {task.content_titulo || task.campaign_nombre ? (
+                  <span className="mkt-task-padre-react">
+                    {task.content_titulo ?? task.campaign_nombre}
+                  </span>
+                ) : null}
+
+                <span className="mkt-task-titulo-react">{task.titulo}</span>
+
+                <span className="mkt-task-pie-react">
+                  <span className="crm-s">
+                    Acabada el {formatearFecha(task.completado_en?.slice(0, 10) ?? null, true)}
+                  </span>
+                  <AvataresDeResponsables
+                    responsables={task.responsables}
+                    directorio={directorio}
+                    maximo={3}
+                  />
+                </span>
+              </button>
+            ))}
+          </div>
+        )
+      ) : (
+        <>
       {visibles.length === 0 && filtroTexto ? (
         <p className="mkt-vacio-react">
           Ninguna tarea con "{busqueda.trim()}" en el título.
@@ -485,6 +571,8 @@ export function TasksPanel({ deptos, vpDe, esBoard }: Props) {
           );
         })}
       </div>
+        </>
+      )}
 
       {abierta ? (
         <DeptoProvider value={abierta.departamento as Team}>
