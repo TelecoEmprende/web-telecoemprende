@@ -11,6 +11,7 @@ import {
   getMisTareas,
 } from "../../api/equipo";
 import { apiDepto } from "../../api/marketing";
+import type { Seccion } from "./EquipoSidebar";
 import { DeptoProvider } from "./DeptoApi";
 import { AvatarResponsable, etiquetaDe } from "./marketing/Avatares";
 import { TaskDialog } from "./marketing/TaskDialog";
@@ -30,34 +31,51 @@ const DEPTO_LABEL: Record<string, string> = {
   ingenieria: "Ingeniería",
 };
 
-/** Color por departamento: el hilo visual de la agenda en vez de repetir la
- *  etiqueta en cada fila. */
-const DEPTO_CLASE: Record<string, string> = {
-  marketing: "mkt-agenda-marketing-react",
-  eventos: "mkt-agenda-eventos-react",
-  ingenieria: "mkt-agenda-ingenieria-react",
+/** Cada departamento con su cajita: Tech en azul, Marketing en ámbar y
+ *  Eventos en el gris neutro del boceto -- tres tonos que se distinguen de un
+ *  vistazo sin que ninguna fila se convierta en un semáforo. */
+const DEPTO_TAG: Record<string, string> = {
+  ingenieria: "crm-tag-azul-react",
+  marketing: "crm-tag-ambar-react",
+  eventos: "",
 };
 
-/** "Ayer" / "Hoy" / "Mañana", y a partir de ahí la fecha -- para no decir
- *  siempre "9 sept" cuando "mañana" se lee más rápido. */
+/** El Slack del club. Es el mismo para todo el mundo (invitación abierta),
+ *  así que vive aquí y no en la ficha de cada persona. */
+const SLACK_CLUB =
+  "https://join.slack.com/t/telecoemprende/shared_invite/zt-492kyuq78-CJ~sB7TN5xz_j11xj1nnAw";
+
+/** Por qué le escribes a esta persona: primero su VP-azgo en TUS
+ *  departamentos, que es lo que la hace tu referente; la presidencia, si no
+ *  es VP de ninguno tuyo. */
+function papelDe(persona: MiembroDirectorio, teams: Team[]) {
+  const mios = persona.vp_de.filter((t) => teams.includes(t));
+  if (mios.length > 0) return `VP de ${mios.map((t) => DEPTO_LABEL[t] ?? t).join(" + ")}`;
+  if (persona.cargo === "presidente") return "Presidencia del club";
+  if (persona.vp_de.length > 0) {
+    return `VP de ${persona.vp_de.map((t) => DEPTO_LABEL[t] ?? t).join(" + ")}`;
+  }
+  return "Board";
+}
+
+/** "Ayer" / "Hoy" / "Mañana", y a partir de ahí el día corto ("vie") -- para
+ *  no decir siempre "9 sept" cuando "mañana" se lee más rápido. */
 function cuandoTarea(deadline: string | null) {
   const dias = diasHasta(deadline);
   if (dias === null) return "Sin fecha";
   if (dias < 0) return dias === -1 ? "Ayer" : `Hace ${Math.abs(dias)} días`;
   if (dias === 0) return "Hoy";
   if (dias === 1) return "Mañana";
+  if (dias < 7) return DIAS[(parsearFechaLocal(deadline as string).getDay() + 6) % 7];
   return formatearFechaCorta(deadline);
 }
 
-/** "Martes 8 de septiembre", con mayúscula inicial -- toLocaleDateString la
- *  da en minúscula. */
-function tituloDeHoy() {
-  const texto = new Date().toLocaleDateString("es-ES", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-  });
-  return texto.charAt(0).toUpperCase() + texto.slice(1);
+/** "Buenos días"/"Buenas tardes"/"Buenas noches", según la hora local. */
+function saludoDeAhora() {
+  const hora = new Date().getHours();
+  if (hora < 12) return "Buenos días";
+  if (hora < 20) return "Buenas tardes";
+  return "Buenas noches";
 }
 
 /** "Hace 2h" / "Hace 3 días", para el aviso del board -- una fecha exacta ahí
@@ -71,8 +89,7 @@ function haceTiempo(iso: string) {
   return dias === 1 ? "Hace 1 día" : `Hace ${dias} días`;
 }
 
-/** Lunes de la semana de `fecha`, para la tira de "esta semana" encima de
- *  la agenda -- los 7 días siempre, sin huecos de mes que rellenar. */
+/** Lunes de la semana de `fecha`, para la rejilla de "esta semana". */
 function celdasDeLaSemana(fecha: Date) {
   const lunes = new Date(fecha);
   lunes.setDate(fecha.getDate() - ((fecha.getDay() + 6) % 7));
@@ -84,13 +101,12 @@ function celdasDeLaSemana(fecha: Date) {
 }
 
 const DIAS = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
+/** La rejilla de la semana va con una sola letra, como en el boceto: "L 13". */
+const DIAS_LETRA = ["L", "M", "X", "J", "V", "S", "D"];
 const MESES = [
   "enero", "febrero", "marzo", "abril", "mayo", "junio",
   "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre",
 ];
-
-/** Cuántos eventos caben en una celda antes de plegar el resto. */
-const MAX_POR_DIA = 3;
 
 function iso(fecha: Date) {
   // toISOString() pasa por UTC y en España adelanta/atrasa un día según la
@@ -100,64 +116,42 @@ function iso(fecha: Date) {
   return `${fecha.getFullYear()}-${mes}-${dia}`;
 }
 
-/** Días del mes precedidos por los huecos necesarios para que el 1 caiga en su
- *  columna. Semana que empieza en lunes, como el calendario de aquí. */
-function celdasDelMes(anio: number, mes: number) {
-  const primero = new Date(anio, mes, 1);
-  const huecos = (primero.getDay() + 6) % 7;
-  const diasEnMes = new Date(anio, mes + 1, 0).getDate();
-
-  return [
-    ...Array.from({ length: huecos }, () => null),
-    ...Array.from({ length: diasEnMes }, (_, i) => new Date(anio, mes, i + 1)),
-  ];
-}
-
 function parsearFechaLocal(fecha: string) {
   const [anio, mes, dia] = fecha.split("-").map(Number);
   return new Date(anio, mes - 1, dia);
 }
 
-function formatearFecha(fecha: string) {
-  return parsearFechaLocal(fecha).toLocaleDateString("es-ES", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-  });
+/** "12 al 18 de octubre" (o "28 sep al 4 oct" si la semana cruza de mes). */
+function rangoSemana(lunes: Date, domingo: Date) {
+  if (lunes.getMonth() === domingo.getMonth()) {
+    return `${lunes.getDate()} al ${domingo.getDate()} de ${MESES[lunes.getMonth()]}`;
+  }
+  return `${lunes.getDate()} de ${MESES[lunes.getMonth()].slice(0, 3)} al ` +
+    `${domingo.getDate()} de ${MESES[domingo.getMonth()].slice(0, 3)}`;
 }
 
 /**
- * Inicio del club: el calendario compartido y lo que viene.
+ * Inicio del club: "Mi semana", la única pantalla que se abre a diario.
  *
- * Es la sección con la que abre `/equipo`, común a todo el mundo -- las de
- * cada departamento cuelgan debajo en el sidebar.
- *
- * La rejilla es la misma que la del calendario de Marketing: reutiliza sus
- * clases `mkt-*` (`marketing.css`) en vez de duplicar el diseño con otro
- * prefijo, así que un retoque a esa rejilla se ve en los dos sitios. Aquí es
- * solo lectura -- los eventos del club se crean desde `/admin` --, así que no
- * hay ni "+" en el día ni formulario: solo lo que `equipo.css` neutraliza del
- * estilo de botón que traen esas clases.
+ * Sigue el boceto de alta fidelidad (pantalla 2a) pieza a pieza: cabecera con
+ * saludo y dos acciones, aviso del board, y dos columnas de cajas -- tareas
+ * de la semana con casilla, rejilla de siete días, proyectos con su barra a
+ * la izquierda; próximos eventos y a quién escribir a la derecha.
  */
 type Props = {
-  /** Ir a la sección de Anuncios, para el enlace del aviso del board. Sin
-   *  esto (nadie lo pasa) el aviso se ve pero no navega a ningún sitio. */
-  onVerAnuncios?: () => void;
+  /** Cambiar de sección del workspace (Avisos, Calendario, Tareas...), para
+   *  los atajos de la cabecera y el enlace del aviso del board. */
+  onIrA: (seccion: Seccion) => void;
 };
 
-export function CalendarioEquipo({ onVerAnuncios }: Props) {
+export function CalendarioEquipo({ onIrA }: Props) {
   const [eventos, setEventos] = useState<EventoCalendario[]>([]);
-  const [cursor, setCursor] = useState(() => {
-    const hoy = new Date();
-    return new Date(hoy.getFullYear(), hoy.getMonth(), 1);
-  });
   const [tareas, setTareas] = useState<Task[]>([]);
   const [nombre, setNombre] = useState("");
   const [email, setEmail] = useState("");
   const [teams, setTeams] = useState<Team[]>([]);
   const [vpDe, setVpDe] = useState<string[]>([]);
   const [cargo, setCargo] = useState("");
-  const [mentorEmail, setMentorEmail] = useState("");
   const [proyectos, setProyectos] = useState<ProyectoResumen[]>([]);
   const [tareaAbierta, setTareaAbierta] = useState<Task | null>(null);
   const [mostrarFormularioEvento, setMostrarFormularioEvento] = useState(false);
@@ -170,6 +164,7 @@ export function CalendarioEquipo({ onVerAnuncios }: Props) {
   const [filtroTareas, setFiltroTareas] = useState<"mias" | "departamentos">("departamentos");
   const [anuncio, setAnuncio] = useState<Registro | null>(null);
   const [directorio, setDirectorio] = useState<MiembroDirectorio[]>([]);
+  const [marcandoHecha, setMarcandoHecha] = useState<number | null>(null);
 
   async function cargarCalendario() {
     try {
@@ -177,6 +172,15 @@ export function CalendarioEquipo({ onVerAnuncios }: Props) {
       if (response.ok) setEventos(response.eventos);
     } catch {
       // Sin calendario disponible: la sección se queda con su estado vacío.
+    }
+  }
+
+  async function cargarTareas() {
+    try {
+      const respuesta = await getMisTareas();
+      setTareas(respuesta.tareas);
+    } catch {
+      // Sin agenda disponible: la sección no aparece, sin más.
     }
   }
 
@@ -193,18 +197,11 @@ export function CalendarioEquipo({ onVerAnuncios }: Props) {
         setTeams(sesion.teams);
         setVpDe(sesion.vp_de);
         setCargo(sesion.cargo);
-        setMentorEmail(sesion.mentor_email);
         // Tareas abiertas de cualquier departamento al que pertenezca -- con
         // uno solo es lo mismo que ve en el resumen de ese departamento, pero
         // repetirlo aquí es gratis y evita el salto raro de "aparece según
         // cuántos equipos tengas".
-        getMisTareas()
-          .then((respuesta) => {
-            if (active) setTareas(respuesta.tareas);
-          })
-          .catch(() => {
-            // Sin agenda disponible: la sección no aparece, sin más.
-          });
+        void cargarTareas();
 
         getMisProyectos()
           .then((respuesta) => {
@@ -237,7 +234,7 @@ export function CalendarioEquipo({ onVerAnuncios }: Props) {
         if (active) setDirectorio(respuesta.miembros);
       })
       .catch(() => {
-        // Sin directorio disponible: el widget "Quién es quién" no aparece.
+        // Sin directorio disponible: los contactos no aparecen, sin más.
       });
 
     return () => {
@@ -253,27 +250,22 @@ export function CalendarioEquipo({ onVerAnuncios }: Props) {
     [tareas, filtroTareas, email],
   );
 
-  const miMentor = useMemo(
-    () => (mentorEmail ? directorio.find((m) => m.email === mentorEmail) ?? null : null),
-    [directorio, mentorEmail],
-  );
-
-  const tutorizados = useMemo(
-    () => directorio.filter((m) => m.mentor_email === email),
-    [directorio, email],
-  );
-
-  /** El VP de cada uno de mis departamentos (menos yo mismo, si lo soy): a
-   *  quién escribir con dudas -- ver "Quién es quién" en el boceto, que aquí
-   *  se resuelve así en vez de con el directorio entero (ya está en
-   *  Miembros). */
-  const misVPs = useMemo(
-    () =>
-      directorio.filter(
-        (m) => m.email !== email && teams.some((t) => m.vp_de.includes(t)),
-      ),
-    [directorio, teams, email],
-  );
+  /** A quién escribir cuando te atascas: el VP de cada departamento tuyo y la
+   *  presidencia del club. Ocupa el sitio del "Quién es quién" del boceto --
+   *  el directorio entero ya está en Miembros; lo que falta aquí es saber a
+   *  quién preguntar y por dónde. */
+  const contactos = useMemo(() => {
+    const vps = directorio.filter(
+      (m) => m.email !== email && teams.some((t) => m.vp_de.includes(t)),
+    );
+    const presidencia = directorio.filter(
+      (m) =>
+        m.email !== email &&
+        m.cargo === "presidente" &&
+        !vps.some((vp) => vp.email === m.email),
+    );
+    return [...vps, ...presidencia];
+  }, [directorio, teams, email]);
 
   async function confirmarAsistencia(evento: EventoCalendario, confirmar: boolean) {
     try {
@@ -320,6 +312,21 @@ export function CalendarioEquipo({ onVerAnuncios }: Props) {
     }
   }
 
+  /** Marcar hecha desde la casilla, sin abrir el diálogo -- para eso está la
+   *  casilla en el boceto. Vuelve a "pendiente" si se desmarca. */
+  async function alternarHecha(tarea: Task) {
+    setMarcandoHecha(tarea.id);
+    const nuevoEstado = tarea.estado === "acabado" ? "pendiente" : "acabado";
+    try {
+      await apiDepto(tarea.departamento as Team).updateTask(tarea.id, { estado: nuevoEstado });
+      await cargarTareas();
+    } catch {
+      // Sin marcar, la tarea se queda como estaba -- no bloquea el resto.
+    } finally {
+      setMarcandoHecha(null);
+    }
+  }
+
   async function crearEvento(event: FormEvent) {
     event.preventDefault();
     setCreandoEvento(true);
@@ -345,13 +352,12 @@ export function CalendarioEquipo({ onVerAnuncios }: Props) {
     [eventos],
   );
 
-  /** Qué departamentos tienen una tarea que vence cada día, para los
-   *  puntitos de color de la tira de la semana. */
-  const deptosPorDia = useMemo(() => {
-    const mapa: Record<string, Set<string>> = {};
+  /** Vencimientos de tareas por día, para la rejilla de "esta semana". */
+  const tareasPorDia = useMemo(() => {
+    const mapa: Record<string, Task[]> = {};
     for (const tarea of tareas) {
       if (!tarea.deadline) continue;
-      (mapa[tarea.deadline] ??= new Set()).add(tarea.departamento);
+      (mapa[tarea.deadline] ??= []).push(tarea);
     }
     return mapa;
   }, [tareas]);
@@ -368,433 +374,392 @@ export function CalendarioEquipo({ onVerAnuncios }: Props) {
 
   const hoy = iso(new Date());
 
-  // Todo lo abierto con fecha, no solo hoy/mañana: contar nada más lo próximo
-  // dejaba "ninguna cosa pendiente" a quien tenía tareas ya vencidas la
-  // semana pasada -- se lee como "vas al día" y es lo contrario. Mismo
-  // criterio que el resumen de cada departamento (`WeekPanel.totalPendientes`).
-  const cosasPorDelante = tareas.filter((t) => diasHasta(t.deadline) !== null).length;
-
-  function mover(meses: number) {
-    setCursor((actual) => new Date(actual.getFullYear(), actual.getMonth() + meses, 1));
-  }
-
-  function irAHoy() {
-    const ahora = new Date();
-    setCursor(new Date(ahora.getFullYear(), ahora.getMonth(), 1));
-  }
-
-  const calendario = (
-    <section className="mkt-panel-react">
-      <header className="mkt-panel-header-react">
-        <h3>
-          {MESES[cursor.getMonth()]} {cursor.getFullYear()}
-        </h3>
-        <div className="mkt-calendario-nav-react">
-          <button type="button" className="mkt-btn-mini-react" onClick={() => mover(-1)}>
-            ← Anterior
-          </button>
-          <button type="button" className="mkt-btn-mini-react" onClick={irAHoy}>
-            Hoy
-          </button>
-          <button type="button" className="mkt-btn-mini-react" onClick={() => mover(1)}>
-            Siguiente →
-          </button>
-        </div>
-      </header>
-
-      <div className="mkt-calendario-react">
-        {DIAS.map((dia) => (
-          <div key={dia} className="mkt-calendario-cabecera-react">
-            {dia}
-          </div>
-        ))}
-
-        {celdasDelMes(cursor.getFullYear(), cursor.getMonth()).map((fecha, indice) => {
-          if (fecha === null) {
-            return <div key={`hueco-${indice}`} className="mkt-dia-vacio-react" />;
-          }
-
-          const clave = iso(fecha);
-          const delDia = porDia[clave] ?? [];
-          const visibles = delDia.slice(0, MAX_POR_DIA);
-          const ocultos = delDia.length - visibles.length;
-
-          return (
-            <div
-              key={clave}
-              className={`mkt-dia-react${clave === hoy ? " mkt-dia-hoy-react" : ""}`}
-            >
-              <span className="mkt-dia-numero-react">{fecha.getDate()}</span>
-
-              {visibles.map((evento) => (
-                <span
-                  key={evento.id}
-                  className="mkt-evento-react equipo-evento-chip-react"
-                  title={`${evento.titulo}${evento.hora ? ` · ${evento.hora}` : ""}`}
-                >
-                  {evento.hora ? `${evento.hora} ` : ""}
-                  {evento.titulo}
-                </span>
-              ))}
-
-              {ocultos > 0 ? (
-                <span className="mkt-dia-mas-eventos-react">+{ocultos} más</span>
-              ) : null}
-            </div>
-          );
-        })}
-      </div>
-    </section>
-  );
-
-  const proximosEventos = (
-    <section className="equipo-proximos-react">
-      <header className="equipo-panel-header-react">
-        <h3>Próximos eventos</h3>
-        {puedeAnadirEvento ? (
-          <button
-            type="button"
-            className={mostrarFormularioEvento ? "mkt-btn-mini-react" : "mkt-btn-react"}
-            onClick={() => setMostrarFormularioEvento((abierto) => !abierto)}
-          >
-            {mostrarFormularioEvento ? "Cancelar" : "+ Evento"}
-          </button>
-        ) : null}
-      </header>
-
-      {mostrarFormularioEvento ? (
-        <form className="mkt-form-react" onSubmit={(e) => void crearEvento(e)}>
-          {errorEvento ? <p className="mkt-resumen-alerta-react">{errorEvento}</p> : null}
-          <div className="field-group-react">
-            <label htmlFor="ce-titulo">Título</label>
-            <input
-              id="ce-titulo"
-              type="text"
-              required
-              maxLength={150}
-              value={eventoForm.titulo}
-              onChange={(e) => setEventoForm((f) => ({ ...f, titulo: e.target.value }))}
-            />
-          </div>
-          <div className="field-group-react">
-            <label htmlFor="ce-descripcion">Descripción (opcional)</label>
-            <input
-              id="ce-descripcion"
-              type="text"
-              maxLength={500}
-              value={eventoForm.descripcion}
-              onChange={(e) => setEventoForm((f) => ({ ...f, descripcion: e.target.value }))}
-            />
-          </div>
-          <div className="mkt-form-fila-react">
-            <div className="field-group-react">
-              <label htmlFor="ce-fecha">Fecha</label>
-              <input
-                id="ce-fecha"
-                type="date"
-                required
-                value={eventoForm.fecha}
-                onChange={(e) => setEventoForm((f) => ({ ...f, fecha: e.target.value }))}
-              />
-            </div>
-            <div className="field-group-react">
-              <label htmlFor="ce-hora">Hora (opcional)</label>
-              <input
-                id="ce-hora"
-                type="time"
-                value={eventoForm.hora}
-                onChange={(e) => setEventoForm((f) => ({ ...f, hora: e.target.value }))}
-              />
-            </div>
-          </div>
-          <button type="submit" className="mkt-btn-react" disabled={creandoEvento}>
-            {creandoEvento ? "Creando..." : "Crear evento"}
-          </button>
-        </form>
-      ) : null}
-
-      {proximos.length === 0 ? (
-        <p className="equipo-vacio-react">
-          No hay nada apuntado.{" "}
-          {puedeAnadirEvento
-            ? "Añade el primero con el botón de arriba."
-            : "Los eventos del club se añaden desde el panel de administración."}
-        </p>
-      ) : (
-        <ul className="equipo-eventos-lista-react">
-          {proximos.map((evento) => {
-            const voy = evento.confirmados.includes(email);
-            return (
-              <li key={evento.id} className="equipo-evento-react">
-                <span className="equipo-evento-fecha-react">
-                  {formatearFecha(evento.fecha)}
-                  {evento.hora ? ` · ${evento.hora}` : ""}
-                </span>
-                <span className="equipo-evento-titulo-react">{evento.titulo}</span>
-                {evento.descripcion ? (
-                  <span className="equipo-evento-desc-react">{evento.descripcion}</span>
-                ) : null}
-                <button
-                  type="button"
-                  className="mkt-btn-mini-react"
-                  onClick={() => void confirmarAsistencia(evento, !voy)}
-                >
-                  {voy ? "Voy ✓" : "Confirmar asistencia"}
-                </button>
-
-                {puedeAnadirEvento && evento.confirmados.length > 0 ? (
-                  <div className="equipo-checkin-react">
-                    <span className="mkt-meta-react">
-                      Check-in · {evento.asistio.length}/{evento.confirmados.length}
-                    </span>
-                    {evento.confirmados.map((confirmadoEmail) => {
-                      const asistio = evento.asistio.includes(confirmadoEmail);
-                      return (
-                        <button
-                          key={confirmadoEmail}
-                          type="button"
-                          className="mkt-btn-mini-react"
-                          onClick={() => void marcarAsistio(evento, confirmadoEmail, !asistio)}
-                        >
-                          {asistio ? "✓ " : ""}
-                          {etiquetaDe(confirmadoEmail, directorio.find((m) => m.email === confirmadoEmail)?.nombre)}
-                        </button>
-                      );
-                    })}
-                  </div>
-                ) : null}
-              </li>
-            );
-          })}
-        </ul>
-      )}
-    </section>
-  );
-
-  const misProyectos = (
-    <section className="mkt-panel-react">
-      <header className="mkt-panel-header-react">
-        <h3>Mis proyectos</h3>
-      </header>
-
-      {proyectos.length === 0 ? (
-        <p className="mkt-vacio-react">No tienes tareas en ningún proyecto ahora mismo.</p>
-      ) : (
-        <ul className="equipo-eventos-lista-react">
-          {proyectos.map((proyecto) => {
-            const porcentaje =
-              proyecto.total_tasks === 0
-                ? 0
-                : Math.round((proyecto.tareas_acabadas / proyecto.total_tasks) * 100);
-            return (
-              <li key={proyecto.id} className="equipo-evento-react">
-                <span className="equipo-evento-titulo-react">
-                  {proyecto.nombre}
-                  <span className="mkt-meta-react"> · {DEPTO_LABEL[proyecto.departamento] ?? proyecto.departamento}</span>
-                </span>
-                <div className="mkt-progreso-react">
-                  <div className="mkt-progreso-barra-react" aria-hidden="true">
-                    <span style={{ transform: `scaleX(${porcentaje / 100})` }} />
-                  </div>
-                  <span className="mkt-progreso-texto-react">{porcentaje}%</span>
-                </div>
-              </li>
-            );
-          })}
-        </ul>
-      )}
-    </section>
-  );
-
-  const contactos = miMentor || misVPs.length > 0 || tutorizados.length > 0 ? (
-    <section className="mkt-panel-react">
-      <header className="mkt-panel-header-react">
-        <h3>A quién escribir</h3>
-      </header>
-
-      {miMentor ? (
-        <div className="equipo-contacto-react">
-          <AvatarResponsable email={miMentor.email} nombre={miMentor.nombre} />
-          <span className="mkt-miembro-datos-react">
-            <span className="mkt-miembro-nombre-react">{etiquetaDe(miMentor.email, miMentor.nombre)}</span>
-            <span className="mkt-meta-react">Tu mentora</span>
-          </span>
-          <a className="mkt-btn-mini-react" href={`mailto:${miMentor.email}`}>
-            Escribir
-          </a>
-        </div>
-      ) : null}
-
-      {misVPs.map((vp) => (
-        <div key={vp.email} className="equipo-contacto-react">
-          <AvatarResponsable email={vp.email} nombre={vp.nombre} />
-          <span className="mkt-miembro-datos-react">
-            <span className="mkt-miembro-nombre-react">{etiquetaDe(vp.email, vp.nombre)}</span>
-            <span className="mkt-meta-react">
-              VP de {vp.vp_de.filter((t) => teams.includes(t)).map((t) => DEPTO_LABEL[t] ?? t).join(", ")}
-            </span>
-          </span>
-          <a className="mkt-btn-mini-react" href={`mailto:${vp.email}`}>
-            Escribir
-          </a>
-        </div>
-      ))}
-
-      {tutorizados.length > 0 ? (
-        <>
-          <p className="mkt-meta-react" style={{ marginTop: 10 }}>Tutorizas a</p>
-          <ul className="mkt-miembros-react equipo-directorio-react">
-            {tutorizados.map((persona) => (
-              <li key={persona.email} className="mkt-miembro-react">
-                <AvatarResponsable email={persona.email} nombre={persona.nombre} />
-                <span className="mkt-miembro-datos-react">
-                  <span className="mkt-miembro-nombre-react">
-                    {etiquetaDe(persona.email, persona.nombre)}
-                  </span>
-                </span>
-              </li>
-            ))}
-          </ul>
-        </>
-      ) : null}
-    </section>
-  ) : null;
+  // Cuántas tareas vencen dentro de la semana en curso (lunes a domingo): es
+  // lo que dice la cabecera del boceto, no "todo lo pendiente alguna vez".
+  const tareasQueVencenEstaSemana = useMemo(() => {
+    const lunes = semana[0];
+    const domingo = semana[6];
+    return tareas.filter((t) => {
+      if (!t.deadline) return false;
+      const fecha = parsearFechaLocal(t.deadline);
+      return fecha >= lunes && fecha <= domingo;
+    }).length;
+  }, [tareas, semana]);
 
   return (
     <>
-      <header className="mkt-saludo-react">
-        <h3>Hola{nombre ? `, ${nombre}` : ""} 👋</h3>
-        <p className="mkt-meta-react">
-          {tituloDeHoy()} —{" "}
-          {cosasPorDelante === 0
-            ? "ninguna cosa pendiente"
-            : `${cosasPorDelante} ${cosasPorDelante === 1 ? "cosa pendiente" : "cosas pendientes"}`}
-        </p>
+      <header className="crm-cabecera-react">
+        <div>
+          <h1 className="crm-h1">{saludoDeAhora()}{nombre ? `, ${nombre}` : ""}</h1>
+          <p className="crm-sub">
+            Semana del {rangoSemana(semana[0], semana[6])} ·{" "}
+            {tareasQueVencenEstaSemana === 0
+              ? "ninguna tarea vence esta semana"
+              : `${tareasQueVencenEstaSemana} ${tareasQueVencenEstaSemana === 1 ? "tarea vence" : "tareas vencen"} esta semana`}
+          </p>
+        </div>
+        <div className="crm-acciones-react">
+          <button type="button" className="crm-btn crm-btn-ghost-react" onClick={() => onIrA("miembros")}>
+            Buscar miembro
+          </button>
+          <button type="button" className="crm-btn" onClick={() => onIrA("tareas")}>
+            Nueva tarea
+          </button>
+        </div>
       </header>
 
       {anuncio ? (
-        <div className="equipo-aviso-board-react">
-          <span className="mkt-tag-react">Aviso del board</span>
-          <div className="equipo-aviso-board-cuerpo-react">
-            <strong>{textoDe(anuncio, "titulo")}</strong>
-            {textoDe(anuncio, "cuerpo") ? <p>{textoDe(anuncio, "cuerpo")}</p> : null}
-            <span className="mkt-meta-react">{haceTiempo(anuncio.created_at)}</span>
+        <div className="crm-c crm-c-aviso-react">
+          <span className="crm-tag crm-tag-azul-react">Aviso del board</span>
+          <div className="crm-row-cuerpo-react">
+            <div className="crm-t">{textoDe(anuncio, "titulo")}</div>
+            <div className="crm-s">
+              {[haceTiempo(anuncio.created_at), textoDe(anuncio, "cuerpo")]
+                .filter(Boolean)
+                .join(" · ")}
+            </div>
           </div>
-          {onVerAnuncios ? (
-            <button type="button" className="mkt-btn-mini-react" onClick={onVerAnuncios}>
-              Ver anuncios
-            </button>
-          ) : null}
+          <button type="button" className="crm-btn crm-btn-ghost-react" onClick={() => onIrA("anuncios")}>
+            Ver anuncios
+          </button>
         </div>
       ) : null}
 
-      <div className="mkt-semana-tira-react">
-        {semana.map((dia) => {
-          const clave = iso(dia);
-          const deptos = [...(deptosPorDia[clave] ?? [])];
-          const hayEvento = (porDia[clave] ?? []).length > 0;
-          return (
-            <div
-              key={clave}
-              className={`mkt-semana-dia-react${clave === hoy ? " mkt-semana-dia-hoy-react" : ""}`}
-            >
-              <span className="mkt-semana-letra-react">{DIAS[(dia.getDay() + 6) % 7]}</span>
-              <span className="mkt-semana-numero-react">{dia.getDate()}</span>
-              <span className="mkt-semana-puntos-react">
-                {deptos.map((depto) => (
-                  <i key={depto} className={`mkt-semana-punto-react ${DEPTO_CLASE[depto] ?? ""}`} />
-                ))}
-                {hayEvento ? <i className="mkt-semana-punto-react mkt-semana-punto-club-react" /> : null}
-              </span>
+      <div className="crm-grid-react">
+        <div className="crm-col-react">
+          <section className="crm-c">
+            <div className="crm-cabecera-react">
+              <p className="crm-k">Mis tareas de la semana</p>
+              <div className="crm-tags-react" role="group" aria-label="Filtrar tareas">
+                <button
+                  type="button"
+                  className={`crm-tag${filtroTareas === "mias" ? " crm-tag-azul-react" : ""}`}
+                  aria-pressed={filtroTareas === "mias"}
+                  onClick={() => setFiltroTareas("mias")}
+                >
+                  Asignadas a mí
+                </button>
+                <button
+                  type="button"
+                  className={`crm-tag${filtroTareas === "departamentos" ? " crm-tag-azul-react" : ""}`}
+                  aria-pressed={filtroTareas === "departamentos"}
+                  onClick={() => setFiltroTareas("departamentos")}
+                >
+                  Mis departamentos
+                </button>
+              </div>
             </div>
-          );
-        })}
-      </div>
 
-      <div className="mkt-inicio-columnas-react">
-        <div className="mkt-inicio-lateral-react">
-        <section className="mkt-panel-react mkt-agenda-panel-react">
-          <header className="mkt-panel-header-react">
-            <h3>Tu agenda</h3>
-          </header>
-
-          <div className="mkt-vista-toggle-react" role="group" aria-label="Filtrar tareas">
-            <button
-              type="button"
-              className={`mkt-btn-mini-react${filtroTareas === "mias" ? " mkt-btn-mini-activo-react" : ""}`}
-              aria-pressed={filtroTareas === "mias"}
-              onClick={() => setFiltroTareas("mias")}
-            >
-              Asignadas a mí
-            </button>
-            <button
-              type="button"
-              className={`mkt-btn-mini-react${filtroTareas === "departamentos" ? " mkt-btn-mini-activo-react" : ""}`}
-              aria-pressed={filtroTareas === "departamentos"}
-              onClick={() => setFiltroTareas("departamentos")}
-            >
-              Mis departamentos
-            </button>
-          </div>
-
-          {tareasVisibles.length === 0 ? (
-            <p className="mkt-vacio-react">
-              {filtroTareas === "mias"
-                ? "No tienes ninguna tarea asignada ahora mismo."
-                : "Nada pendiente en ningún departamento ahora mismo."}
-            </p>
-          ) : (
-            <ul className="mkt-agenda-react">
-              {tareasVisibles.map((tarea) => {
-                const dias = diasHasta(tarea.deadline);
-                const vencida = dias !== null && dias < 0;
-                return (
-                  <li
-                    key={`${tarea.departamento}-${tarea.id}`}
-                    className={`mkt-agenda-item-react ${DEPTO_CLASE[tarea.departamento] ?? ""}`}
-                  >
-                    <button
-                      type="button"
-                      className="mkt-agenda-abrir-react"
-                      onClick={() => setTareaAbierta(tarea)}
+            {tareasVisibles.length === 0 ? (
+              <p className="crm-s">
+                {filtroTareas === "mias"
+                  ? "No tienes ninguna tarea asignada ahora mismo."
+                  : "Nada pendiente en ningún departamento ahora mismo."}
+              </p>
+            ) : (
+              <div>
+                {tareasVisibles.map((tarea) => {
+                  const otros = tarea.responsables
+                    .filter((r) => r !== email)
+                    .map((r) => etiquetaDe(r, undefined));
+                  const dias = diasHasta(tarea.deadline);
+                  const hecha = tarea.estado === "acabado";
+                  const vencida = dias !== null && dias < 0 && !hecha;
+                  return (
+                    <div
+                      key={`${tarea.departamento}-${tarea.id}`}
+                      className={`crm-row${hecha ? " crm-row-apagada-react" : ""}`}
                     >
-                      <span
-                        className={`mkt-agenda-cuando-react${vencida ? " mkt-agenda-vencida-react" : ""}`}
+                      <input
+                        type="checkbox"
+                        className="crm-check"
+                        checked={hecha}
+                        disabled={marcandoHecha === tarea.id}
+                        aria-label={`Marcar "${tarea.titulo}" como hecha`}
+                        onChange={() => void alternarHecha(tarea)}
+                      />
+                      <button
+                        type="button"
+                        className="crm-row-cuerpo-react"
+                        onClick={() => setTareaAbierta(tarea)}
                       >
-                        {cuandoTarea(tarea.deadline)}
-                      </span>
-                      <span className="mkt-agenda-titulo-react">{tarea.titulo}</span>
-                      <span className="mkt-meta-react">
+                        <div className={`crm-t${hecha ? " crm-tachado-react" : ""}`}>
+                          {tarea.titulo}
+                        </div>
+                        <div className="crm-s">
+                          {hecha
+                            ? "Completada"
+                            : [
+                                tarea.campaign_nombre ? `Proyecto: ${tarea.campaign_nombre}` : null,
+                                otros.length > 0 ? `con ${otros.join(", ")}` : null,
+                                tarea.instrucciones ? "la tarea incluye instrucciones" : null,
+                              ].filter(Boolean).join(" · ")}
+                        </div>
+                      </button>
+                      <span className={`crm-tag ${DEPTO_TAG[tarea.departamento] ?? ""}`}>
                         {DEPTO_LABEL[tarea.departamento] ?? tarea.departamento}
                       </span>
-                    </button>
-                  </li>
+                      {hecha ? (
+                        <span className="crm-tag crm-tag-verde-react">Hecho</span>
+                      ) : (
+                        <span
+                          className={`crm-tag${vencida || dias === 0 ? " crm-tag-ambar-react" : ""}`}
+                        >
+                          {cuandoTarea(tarea.deadline)}
+                        </span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </section>
+
+          <section className="crm-c">
+            <div className="crm-cabecera-react">
+              <p className="crm-k">Esta semana</p>
+              <button type="button" className="crm-enlace-react" onClick={() => onIrA("calendario")}>
+                Ver el mes
+              </button>
+            </div>
+
+            <div className="crm-semana-react">
+              {semana.map((dia, indice) => {
+                const clave = iso(dia);
+                return (
+                  <div
+                    key={clave}
+                    className={`crm-semana-dia-react${clave === hoy ? " crm-semana-hoy-react" : ""}`}
+                  >
+                    <div className="crm-s">
+                      {DIAS_LETRA[indice]} {dia.getDate()}
+                    </div>
+                    {(porDia[clave] ?? []).map((evento) => (
+                      <span
+                        key={`ev-${evento.id}`}
+                        className="crm-tag crm-tag-bloque-react crm-tag-azul-react"
+                      >
+                        {evento.titulo}
+                        {evento.hora ? ` ${evento.hora}` : ""}
+                      </span>
+                    ))}
+                    {(tareasPorDia[clave] ?? []).map((tarea) => (
+                      <span
+                        key={`t-${tarea.id}`}
+                        className="crm-tag crm-tag-bloque-react crm-tag-ambar-react"
+                      >
+                        Vence: {tarea.titulo}
+                      </span>
+                    ))}
+                  </div>
                 );
               })}
-            </ul>
-          )}
-
-          {tareasVisibles.length > 0 ? (
-            <div className="mkt-agenda-leyenda-react">
-              {[...new Set(tareasVisibles.map((t) => t.departamento))].map((depto) => (
-                <span key={depto} className={`mkt-agenda-leyenda-punto-react ${DEPTO_CLASE[depto] ?? ""}`}>
-                  {DEPTO_LABEL[depto] ?? depto}
-                </span>
-              ))}
-              <span className="mkt-agenda-leyenda-punto-react mkt-agenda-leyenda-vencida-react">
-                Vencida
-              </span>
             </div>
-          ) : null}
-        </section>
 
-        {misProyectos}
+            <div className="crm-s">
+              Eventos del club, reuniones de departamento y vencimientos de tus tareas en la misma rejilla.
+            </div>
+          </section>
+
+          <section className="crm-c">
+            <p className="crm-k">Mis proyectos</p>
+
+            {proyectos.length === 0 ? (
+              <p className="crm-s">No tienes tareas en ningún proyecto ahora mismo.</p>
+            ) : (
+              <div className="crm-pila-react">
+                {proyectos.map((proyecto) => {
+                  const porcentaje =
+                    proyecto.total_tasks === 0
+                      ? 0
+                      : Math.round((proyecto.tareas_acabadas / proyecto.total_tasks) * 100);
+                  return (
+                    <div key={proyecto.id}>
+                      <div className="crm-cabecera-react">
+                        <div className="crm-t">
+                          {proyecto.nombre}{" "}
+                          <span className="crm-s" style={{ fontWeight: 400 }}>
+                            · {DEPTO_LABEL[proyecto.departamento] ?? proyecto.departamento}
+                          </span>
+                        </div>
+                        <div className="crm-s">{porcentaje}%</div>
+                      </div>
+                      <div className="crm-bar" style={{ marginTop: 7 }} aria-hidden="true">
+                        <i style={{ width: `${porcentaje}%` }} />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </section>
         </div>
 
-        <div className="mkt-inicio-lateral-react">
-          {calendario}
-          {proximosEventos}
-          {contactos}
+        <div className="crm-col-react">
+          <section className="crm-c">
+            <div className="crm-cabecera-react">
+              <p className="crm-k">Próximos eventos</p>
+              {puedeAnadirEvento ? (
+                <button
+                  type="button"
+                  className="crm-enlace-react"
+                  onClick={() => setMostrarFormularioEvento((abierto) => !abierto)}
+                >
+                  {mostrarFormularioEvento ? "Cancelar" : "+ Evento"}
+                </button>
+              ) : null}
+            </div>
+
+            {mostrarFormularioEvento ? (
+              <form className="mkt-form-react" onSubmit={(e) => void crearEvento(e)}>
+                {errorEvento ? <p className="mkt-resumen-alerta-react">{errorEvento}</p> : null}
+                <div className="field-group-react">
+                  <label htmlFor="ce-titulo">Título</label>
+                  <input
+                    id="ce-titulo"
+                    type="text"
+                    required
+                    maxLength={150}
+                    value={eventoForm.titulo}
+                    onChange={(e) => setEventoForm((f) => ({ ...f, titulo: e.target.value }))}
+                  />
+                </div>
+                <div className="field-group-react">
+                  <label htmlFor="ce-descripcion">Descripción (opcional)</label>
+                  <input
+                    id="ce-descripcion"
+                    type="text"
+                    maxLength={500}
+                    value={eventoForm.descripcion}
+                    onChange={(e) => setEventoForm((f) => ({ ...f, descripcion: e.target.value }))}
+                  />
+                </div>
+                <div className="mkt-form-fila-react">
+                  <div className="field-group-react">
+                    <label htmlFor="ce-fecha">Fecha</label>
+                    <input
+                      id="ce-fecha"
+                      type="date"
+                      required
+                      value={eventoForm.fecha}
+                      onChange={(e) => setEventoForm((f) => ({ ...f, fecha: e.target.value }))}
+                    />
+                  </div>
+                  <div className="field-group-react">
+                    <label htmlFor="ce-hora">Hora (opcional)</label>
+                    <input
+                      id="ce-hora"
+                      type="time"
+                      value={eventoForm.hora}
+                      onChange={(e) => setEventoForm((f) => ({ ...f, hora: e.target.value }))}
+                    />
+                  </div>
+                </div>
+                <button type="submit" className="crm-btn" disabled={creandoEvento}>
+                  {creandoEvento ? "Creando..." : "Crear evento"}
+                </button>
+              </form>
+            ) : null}
+
+            {proximos.length === 0 ? (
+              <p className="crm-s">
+                No hay nada apuntado.{" "}
+                {puedeAnadirEvento
+                  ? "Añade el primero con el botón de arriba."
+                  : "Los eventos del club se añaden desde el panel de administración."}
+              </p>
+            ) : (
+              <div>
+                {proximos.map((evento) => {
+                  const voy = evento.confirmados.includes(email);
+                  return (
+                    <div key={evento.id}>
+                      <div className="crm-row">
+                        <div className="crm-row-cuerpo-react">
+                          <div className="crm-t">{evento.titulo}</div>
+                          <div className="crm-s">
+                            {[
+                              formatearFechaCorta(evento.fecha),
+                              evento.hora || null,
+                              evento.descripcion || null,
+                            ].filter(Boolean).join(" · ")}
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          className={`crm-tag${voy ? " crm-tag-verde-react" : ""}`}
+                          onClick={() => void confirmarAsistencia(evento, !voy)}
+                        >
+                          {voy ? "Voy" : "Confirmar"}
+                        </button>
+                      </div>
+
+                      {puedeAnadirEvento && evento.confirmados.length > 0 ? (
+                        <div className="crm-tags-react" style={{ paddingBottom: 11 }}>
+                          <span className="crm-s">
+                            Check-in · {evento.asistio.length}/{evento.confirmados.length}
+                          </span>
+                          {evento.confirmados.map((confirmadoEmail) => {
+                            const asistio = evento.asistio.includes(confirmadoEmail);
+                            return (
+                              <button
+                                key={confirmadoEmail}
+                                type="button"
+                                className={`crm-tag${asistio ? " crm-tag-verde-react" : ""}`}
+                                onClick={() => void marcarAsistio(evento, confirmadoEmail, !asistio)}
+                              >
+                                {asistio ? "✓ " : ""}
+                                {etiquetaDe(confirmadoEmail, directorio.find((m) => m.email === confirmadoEmail)?.nombre)}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      ) : null}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </section>
+
+          {contactos.length > 0 ? (
+            <section className="crm-c crm-c-oscura-react">
+              <p className="crm-k">A quién escribir</p>
+
+              <div>
+                {contactos.map((persona) => (
+                  <div key={persona.email} className="crm-row">
+                    <AvatarResponsable
+                      email={persona.email}
+                      nombre={persona.nombre}
+                      className="crm-av"
+                    />
+                    <div className="crm-row-cuerpo-react">
+                      <div className="crm-t">{etiquetaDe(persona.email, persona.nombre)}</div>
+                      <div className="crm-s">{papelDe(persona, teams)}</div>
+                    </div>
+                    <span className="crm-tags-react">
+                      <a
+                        className="crm-tag"
+                        href={SLACK_CLUB}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        Slack
+                      </a>
+                      <a className="crm-tag" href={`mailto:${persona.email}`}>
+                        Email
+                      </a>
+                    </span>
+                  </div>
+                ))}
+              </div>
+
+              <div className="crm-s">
+                Escríbeles por el Slack del club o por correo si te atascas con algo.
+              </div>
+            </section>
+          ) : null}
         </div>
       </div>
 
@@ -806,8 +771,7 @@ export function CalendarioEquipo({ onVerAnuncios }: Props) {
             onCerrar={() => setTareaAbierta(null)}
             onGuardado={async () => {
               setTareaAbierta(null);
-              const respuesta = await getMisTareas();
-              setTareas(respuesta.tareas);
+              await cargarTareas();
             }}
           />
         </DeptoProvider>

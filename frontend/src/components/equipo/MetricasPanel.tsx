@@ -68,36 +68,36 @@ export function MetricasPanel() {
 
   return (
     <>
-      <header className="equipo-panel-header-react">
-        <h3>Salud del club</h3>
-        <span className="mkt-meta-react">Últimos {metricas.dias_periodo} días</span>
+      <header className="crm-cabecera-react">
+        <h3 className="crm-h1">Salud del club</h3>
+        <span className="crm-s">Últimos {metricas.dias_periodo} días</span>
       </header>
 
       <div className="mkt-tiles-react">
-        <div className="mkt-tile-react">
+        <div className="crm-c mkt-tile-react">
+          <p className="crm-k">Miembros activos</p>
           <span className="mkt-tile-numero-react">{metricas.total_activos}</span>
-          <span className="mkt-tile-label-react">Miembros activos</span>
         </div>
-        <div className={`mkt-tile-react${metricas.sobrecargados > 0 ? " mkt-tile-alerta-react" : ""}`}>
+        <div className={`crm-c mkt-tile-react${metricas.sobrecargados > 0 ? " mkt-tile-alerta-react" : ""}`}>
+          <p className="crm-k">Sobrecargados</p>
           <span className="mkt-tile-numero-react">{metricas.sobrecargados}</span>
-          <span className="mkt-tile-label-react">Sobrecargados</span>
         </div>
-        <div className={`mkt-tile-react${metricas.inactivos > 0 ? " mkt-tile-alerta-react" : ""}`}>
+        <div className={`crm-c mkt-tile-react${metricas.inactivos > 0 ? " mkt-tile-alerta-react" : ""}`}>
+          <p className="crm-k">Sin tarea hace +15 días</p>
           <span className="mkt-tile-numero-react">{metricas.inactivos}</span>
-          <span className="mkt-tile-label-react">Sin tarea hace +15 días</span>
         </div>
-        <div className="mkt-tile-react">
+        <div className="crm-c mkt-tile-react">
+          <p className="crm-k">
+            {metricas.pct_a_tiempo_club === null ? "Sin datos suficientes" : "Tareas a tiempo"}
+          </p>
           <span className="mkt-tile-numero-react">
             {metricas.pct_a_tiempo_club === null ? "—" : `${metricas.pct_a_tiempo_club}%`}
-          </span>
-          <span className="mkt-tile-label-react">
-            {metricas.pct_a_tiempo_club === null ? "Sin datos suficientes" : "Tareas a tiempo"}
           </span>
         </div>
       </div>
 
       {(metricas.alertas_inactividad.length > 0 || metricas.alertas_departamento.length > 0) && (
-        <div className="mkt-grupo-react">
+        <div className="crm-c mkt-grupo-react">
           <h4 className="mkt-grupo-titulo-react">Alertas</h4>
           <ul className="mkt-miembros-react">
             {metricas.alertas_inactividad.map((m) => (
@@ -133,7 +133,7 @@ export function MetricasPanel() {
         </div>
       )}
 
-      <div className="mkt-grupo-react">
+      <div className="crm-c mkt-grupo-react">
         <h4 className="mkt-grupo-titulo-react">Actividad por departamento</h4>
         {(Object.keys(metricas.por_departamento) as Team[]).map((depto) => {
           const salud = metricas.por_departamento[depto];
@@ -153,7 +153,7 @@ export function MetricasPanel() {
       </div>
 
       {metricas.participacion_semanal.length > 0 ? (
-        <div className="mkt-grupo-react">
+        <div className="crm-c mkt-grupo-react">
           <h4 className="mkt-grupo-titulo-react">Participación semana a semana</h4>
           <p className="mkt-meta-react" style={{ marginBottom: 10 }}>
             Tareas cerradas por semana, en todo el club. Nadie lo teclea: sale solo de las
@@ -173,7 +173,7 @@ export function MetricasPanel() {
         </div>
       ) : null}
 
-      <div className="mkt-grupo-react">
+      <div className="crm-c mkt-grupo-react">
         <h4 className="mkt-grupo-titulo-react">Productividad por persona</h4>
         {metricas.miembros.length === 0 ? (
           <p className="mkt-vacio-react">No hay miembros activos todavía.</p>

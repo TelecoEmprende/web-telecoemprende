@@ -42,12 +42,12 @@ describe("CalendarioEquipo — tu agenda", () => {
     });
     getMisTareas.mockResolvedValue({
       ok: true,
-      tareas: [{ id: 1, departamento: "marketing", titulo: "Escribir guion", deadline: null }],
+      tareas: [{ id: 1, departamento: "marketing", titulo: "Escribir guion", deadline: null, responsables: [] }],
     });
 
-    render(<CalendarioEquipo />);
+    render(<CalendarioEquipo onIrA={() => {}} />);
 
-    expect(await screen.findByText("Hola, Abril 👋")).toBeInTheDocument();
+    expect(await screen.findByText(/^Buenos días, Abril|^Buenas tardes, Abril|^Buenas noches, Abril/)).toBeInTheDocument();
     expect(await screen.findByText("Escribir guion")).toBeInTheDocument();
     expect(getMisTareas).toHaveBeenCalled();
   });
@@ -60,18 +60,17 @@ describe("CalendarioEquipo — tu agenda", () => {
     getMisTareas.mockResolvedValue({
       ok: true,
       tareas: [
-        { id: 1, departamento: "marketing", titulo: "Escribir guion", deadline: null },
-        { id: 2, departamento: "eventos", titulo: "Reservar sala", deadline: null },
+        { id: 1, departamento: "marketing", titulo: "Escribir guion", deadline: null, responsables: [] },
+        { id: 2, departamento: "eventos", titulo: "Reservar sala", deadline: null, responsables: [] },
       ],
     });
 
-    render(<CalendarioEquipo />);
+    render(<CalendarioEquipo onIrA={() => {}} />);
 
-    expect(await screen.findByText("Hola, Abril 👋")).toBeInTheDocument();
+    expect(await screen.findByText(/^Buenos días, Abril|^Buenas tardes, Abril|^Buenas noches, Abril/)).toBeInTheDocument();
     expect(await screen.findByText("Escribir guion")).toBeInTheDocument();
     expect(screen.getByText("Reservar sala")).toBeInTheDocument();
-    // "Marketing"/"Eventos" salen dos veces cada uno: en la fila de la tarea
-    // y en la leyenda de abajo.
+    // Cada tarea lleva la etiqueta de su departamento en su propia fila.
     expect(screen.getAllByText("Marketing").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Eventos").length).toBeGreaterThan(0);
   });
@@ -83,17 +82,12 @@ describe("CalendarioEquipo — tu agenda", () => {
     });
     getMisTareas.mockResolvedValue({
       ok: true,
-      tareas: [{ id: 1, departamento: "marketing", titulo: "Guion", deadline: "2020-01-01" }],
+      tareas: [{ id: 1, departamento: "marketing", titulo: "Guion", deadline: "2020-01-01", responsables: [] }],
     });
 
-    render(<CalendarioEquipo />);
+    render(<CalendarioEquipo onIrA={() => {}} />);
 
     const cuando = await screen.findByText(/Hace \d+ días/);
-    expect(cuando).toHaveClass("mkt-agenda-vencida-react");
-
-    // Antes el saludo solo contaba hoy/mañana: con una única tarea ya
-    // vencida y nada para hoy o mañana, decía "ninguna cosa" -- que se lee
-    // como "vas al día" siendo mentira.
-    expect(await screen.findByText(/1 cosa pendiente/)).toBeInTheDocument();
+    expect(cuando).toHaveClass("crm-tag-ambar-react");
   });
 });

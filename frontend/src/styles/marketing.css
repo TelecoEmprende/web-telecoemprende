@@ -395,7 +395,7 @@
 
 .mkt-progreso-barra-react {
   flex: 1;
-  height: 8px;
+  height: 6px;
   border-radius: 999px;
   background: var(--color-border);
   overflow: hidden;
@@ -571,84 +571,50 @@
 }
 
 .mkt-columna-react {
-  padding: 14px;
-  border-radius: var(--radius-lg);
-  background: var(--color-background);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
   min-height: 160px;
-  border: 2px solid transparent;
+  border: 1px dashed rgba(var(--color-noche-rgb), 0.16);
+  border-radius: 10px;
+  background: rgba(var(--color-noche-rgb), 0.02);
   transition: border-color var(--dur-fast) var(--ease-out);
 }
 
 /* Zona de destino mientras se arrastra una tarjeta encima. */
 .mkt-columna-sobre-react {
+  border-style: solid;
   border-color: var(--color-orange);
 }
 
-/* Un vistazo al tablero debe bastar para saber qué columna es cuál, sin leer
-   la cabecera: gris-azulado neutro para lo que aún no se ha tocado, naranja
-   cada vez más intenso según se acerca a publicarse, y verde para lo ya
-   acabado (mismo verde que el resto del sitio usa para "éxito", no un
-   naranja forzado ahí donde no pega). */
-.mkt-columna-react[data-estado="pendiente"] {
-  background: rgba(var(--color-azul-rgb), 0.14);
-}
-
-.mkt-columna-react[data-estado="en_progreso"] {
-  background: var(--color-info-bg);
-}
-
-.mkt-columna-react[data-estado="por_revisar"] {
-  background: rgba(var(--color-impulso-rgb), 0.14);
-}
-
-.mkt-columna-react[data-estado="acabado"] {
-  background: var(--color-success-bg);
-}
-
-.mkt-columna-react[data-estado="pendiente"] .mkt-contador-react {
-  background: var(--color-steel);
-  color: #fff;
-}
-
-.mkt-columna-react[data-estado="en_progreso"] .mkt-contador-react {
-  background: var(--color-gold);
-  color: var(--color-navy);
-}
-
-.mkt-columna-react[data-estado="por_revisar"] .mkt-contador-react {
-  background: var(--color-impulso);
-  color: #fff;
-}
-
-.mkt-columna-react[data-estado="acabado"] .mkt-contador-react {
-  background: var(--color-success-text);
-  color: #fff;
-}
-
+/* Las columnas del boceto son todas iguales: el color lo ponen las cajitas de
+   las tarjetas, no el fondo de la columna. Cuatro fondos de colores detrás de
+   unas tarjetas que ya llevan sus propias etiquetas era ruido sobre ruido. */
 .mkt-columna-react h4 {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  margin: 0 0 12px;
-  font-size: 0.9rem;
+  gap: 6px;
+  margin: 0 0 2px;
+  padding: 0 2px;
+  font-size: 0.66rem;
   font-weight: 700;
-  color: var(--color-navy);
+  letter-spacing: var(--tracking-label);
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  color: rgba(var(--color-noche-rgb), 0.62);
 }
 
-/* La forma (pill, tamaño, padding) la da <Badge>; esto solo pone el fondo
-   por defecto, que las reglas de abajo recolorean por columna. */
+/* El contador va pegado al rótulo ("Por hacer · 5"), no como pastilla suelta. */
 .mkt-contador-react {
-  background: var(--color-surface);
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
 }
 
-.mkt-task-card-react {
-  padding: 13px 14px;
-  margin-bottom: 10px;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  background: var(--color-surface);
+.mkt-contador-react::before {
+  content: "· ";
 }
 
 .mkt-task-titulo-react {
@@ -688,6 +654,108 @@
   gap: 8px;
 }
 
+/* "Capas": el filtro de departamento vive en una columna vertical junto a la
+   rejilla, no en chips horizontales encima -- así el filtro se lee como
+   parte fija del calendario en vez de una barra que aparece y desaparece. */
+.mkt-calendario-layout-react {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.mkt-capas-react {
+  flex: 0 0 156px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+}
+
+.mkt-capas-titulo-react {
+  margin: 0;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-label);
+  color: var(--color-text-muted);
+}
+
+/* Las capas se apilan pero no se estiran: son cajitas, no bandas de color
+   de lado a lado -- tres losas saturadas pesaban más que la propia rejilla. */
+.mkt-capas-lista-react {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 5px;
+}
+
+.mkt-calendario-principal-react {
+  flex: 1;
+  min-width: 0;
+}
+
+.mkt-calendario-fila-inferior-react {
+  display: flex;
+  align-items: stretch;
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.mkt-calendario-fila-inferior-react .mkt-ficha-evento-react {
+  flex: 1;
+  min-width: 0;
+  margin-top: 0;
+}
+
+.mkt-sincronizacion-react {
+  flex: 0 0 240px;
+  padding: 16px;
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+}
+
+.mkt-sincronizacion-lista-react {
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 0.82rem;
+  color: var(--color-text-muted);
+}
+
+@media (max-width: 720px) {
+  .mkt-calendario-layout-react,
+  .mkt-calendario-fila-inferior-react {
+    flex-direction: column;
+  }
+
+  .mkt-capas-react {
+    flex: 0 0 auto;
+    width: 100%;
+  }
+
+  .mkt-capas-lista-react {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+
+  .mkt-capas-lista-react .mkt-toggle-react,
+  .mkt-capas-lista-react .mkt-btn-mini-react {
+    width: auto;
+  }
+
+  .mkt-sincronizacion-react {
+    flex: 0 0 auto;
+    width: 100%;
+  }
+}
+
 .mkt-vista-toggle-react {
   display: flex;
   gap: 4px;
@@ -708,66 +776,78 @@
 .mkt-calendario-react {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
-  gap: 4px;
-  margin-top: 16px;
+  gap: 6px;
+  margin-top: 12px;
 }
 
 .mkt-calendario-cabecera-react {
-  padding: 8px 4px;
-  text-align: center;
-  color: var(--color-text-muted);
-  font-size: 0.76rem;
+  padding: 4px 2px;
+  text-align: left;
+  font-size: 0.62rem;
   font-weight: 700;
+  letter-spacing: var(--tracking-label);
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  color: rgba(var(--color-noche-rgb), 0.62);
 }
 
+/* Celda del boceto: trazo discontinuo fino, nada de relleno ni sombra --
+   la celda es una guía, lo que se lee son las cajitas de dentro. */
 .mkt-dia-react {
-  min-height: 88px;
-  padding: 6px;
-  border: 1px dashed var(--color-border);
-  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-height: 74px;
+  padding: 5px;
+  border: 1px dashed rgba(var(--color-noche-rgb), 0.14);
+  border-radius: 6px;
   background: var(--color-surface);
 }
 
 .mkt-dia-vacio-react {
-  min-height: 88px;
+  min-height: 74px;
 }
 
 .mkt-dia-hoy-react {
+  border-style: solid;
   border-color: var(--color-orange);
-  box-shadow: 0 0 0 2px rgba(var(--color-impulso-rgb), 0.14);
 }
 
 .mkt-dia-numero-react {
   display: block;
-  margin-bottom: 4px;
-  color: var(--color-text-muted);
-  font-size: 0.76rem;
+  font-size: 0.66rem;
   font-weight: 700;
+  color: rgba(var(--color-noche-rgb), 0.62);
 }
 
+/* Los eventos de la rejilla son las mismas cajitas que el resto del
+   workspace: rectángulo redondeado con su color, no una pastilla. */
 .mkt-evento-react {
   display: block;
-  margin-bottom: 3px;
-  padding: 3px 6px;
-  border-radius: 6px;
-  font-size: 0.72rem;
-  font-weight: 700;
-  line-height: 1.3;
+  padding: 3px 5px;
+  border-radius: 5px;
+  background: rgba(var(--color-noche-rgb), 0.07);
+  color: rgba(var(--color-noche-rgb), 0.78);
+  font-size: 0.64rem;
+  font-weight: 600;
+  line-height: 1.25;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.mkt-evento-content-react {
-  background: var(--color-info-bg);
+.mkt-evento-marketing-react {
+  background: rgba(var(--color-impulso-rgb), 0.12);
   color: var(--color-info-text);
 }
 
-.mkt-evento-task-react {
-  background: rgba(var(--color-azul-rgb), 0.28);
-  color: var(--color-navy);
+.mkt-evento-ingenieria-react {
+  background: rgba(var(--color-azul-rgb), 0.1);
+  color: var(--color-azul);
+}
+
+.mkt-evento-eventos-react {
+  background: rgba(var(--color-noche-rgb), 0.08);
+  color: var(--color-noche);
 }
 
 .mkt-leyenda-react {
@@ -808,31 +888,33 @@
   color: var(--color-navy);
 }
 
-.mkt-ficha-evento-datos-react {
+.mkt-ficha-evento-meta-react {
+  margin: 2px 0 0;
+  font-size: 0.82rem;
+  color: var(--color-text-muted);
+  text-transform: capitalize;
+}
+
+.mkt-ficha-evento-chips-react {
   display: flex;
   flex-wrap: wrap;
-  gap: 16px 28px;
+  gap: 8px;
   margin: 14px 0 0;
-}
-
-.mkt-ficha-evento-datos-react dt {
-  font-size: 0.68rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: var(--tracking-label);
-  color: var(--color-text-muted);
-}
-
-.mkt-ficha-evento-datos-react dd {
-  margin: 2px 0 0;
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: var(--color-navy);
-  text-transform: capitalize;
 }
 
 .mkt-ficha-evento-react .mkt-btn-mini-react {
   margin-top: 14px;
+}
+
+.mkt-ficha-evento-vacia-react {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  justify-content: center;
+}
+
+.mkt-ficha-evento-vacia-react .mkt-vacio-react {
+  margin: 0;
 }
 
 /* ---------- Miembros ---------- */
@@ -951,10 +1033,10 @@
 
 .mkt-carga-react {
   flex: 0 0 auto;
-  font-size: 0.72rem;
-  font-weight: 700;
-  padding: 4px 10px;
-  border-radius: 999px;
+  padding: 4px 9px;
+  border-radius: 6px;
+  font-size: 0.68rem;
+  font-weight: 600;
   white-space: nowrap;
 }
 
@@ -981,7 +1063,7 @@
   gap: 6px;
 }
 
-.mkt-filtros-react [aria-pressed="true"] {
+.mkt-filtros-react [aria-pressed="true"]:not(.crm-tag) {
   background: var(--color-impulso);
   border-color: var(--color-impulso);
   color: #fff;
@@ -993,20 +1075,21 @@
    a blanco en ese estado: sobre una pastilla ya coloreada, un punto del
    mismo color que el fondo es invisible (le pasaba a Marketing, cuyo color
    es justo ese naranja genérico). */
-.mkt-filtros-react .mkt-agenda-marketing-react[aria-pressed="true"] {
-  background: var(--color-depto-marketing);
-  border-color: var(--color-depto-marketing);
+/* Capa activa: la cajita se rellena con el color de su departamento; la
+   apagada se queda en el gris neutro del sistema. */
+.crm-tag[aria-pressed="true"] {
+  background: rgba(var(--color-noche-rgb), 0.85);
+  color: #fff;
 }
-.mkt-filtros-react .mkt-agenda-eventos-react[aria-pressed="true"] {
-  background: var(--color-depto-eventos);
-  border-color: var(--color-depto-eventos);
+
+.crm-tag-azul-react[aria-pressed="true"] {
+  background: var(--color-azul);
+  color: #fff;
 }
-.mkt-filtros-react .mkt-agenda-ingenieria-react[aria-pressed="true"] {
-  background: var(--color-depto-tech);
-  border-color: var(--color-depto-tech);
-}
-.mkt-filtros-react .mkt-agenda-leyenda-punto-react[aria-pressed="true"]::before {
-  background: #fff;
+
+.crm-tag-ambar-react[aria-pressed="true"] {
+  background: var(--color-impulso);
+  color: #fff;
 }
 
 /* ---------- Directorio de miembros: variante tabla ---------- */
@@ -1057,11 +1140,20 @@
    la habilidad (ámbar) y la carga (verde/ámbar/rojo); un cuarto color sólido
    en la misma fila sería ruido. */
 .mkt-depto-chip-react {
-  font-size: 0.72rem;
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: rgba(var(--color-noche-rgb), 0.05);
+  color: rgba(var(--color-noche-rgb), 0.78);
+  font-size: 0.68rem;
   font-weight: 600;
-  padding: 2px 8px;
-  border-radius: 999px;
-  border: 1px solid currentColor;
+}
+
+.mkt-depto-chip-react.mkt-agenda-ingenieria-react {
+  background: rgba(var(--color-azul-rgb), 0.1);
+}
+
+.mkt-depto-chip-react.mkt-agenda-marketing-react {
+  background: rgba(var(--color-impulso-rgb), 0.12);
 }
 
 .mkt-depto-chip-react.mkt-agenda-marketing-react { color: var(--color-depto-marketing); }
@@ -1388,8 +1480,16 @@
     min-width: 560px;
   }
 
-  .mkt-panel-react:has(.mkt-calendario-react) {
+  /* El scroll va en la columna que contiene la rejilla, no en el panel: al
+     partir el calendario en "Capas" + contenido, el `:has()` del panel dejó
+     de ser el ancestro que recorta y la rejilla empujaba el layout entero. */
+  .mkt-calendario-principal-react {
     overflow-x: auto;
+    /* Sin un tope explícito la columna crece hasta el `min-width` de la
+       rejilla (560px) y entonces no hay nada que recortar: el scroll se lo
+       come el layout entero en vez de quedarse aquí dentro. */
+    width: 100%;
+    max-width: 100%;
   }
 
   .mkt-campaigns-react li {
@@ -1473,11 +1573,11 @@
   align-items: center;
   gap: 10px;
   margin: 0 0 10px;
-  font-size: 0.82rem;
+  font-size: 0.66rem;
   font-weight: 700;
-  color: var(--color-text-muted);
+  color: rgba(var(--color-noche-rgb), 0.5);
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: var(--tracking-label);
 }
 
 .mkt-grupo-urgente-react {
@@ -2159,15 +2259,14 @@ button.mkt-evento-react:hover {
   align-items: stretch;
   gap: 6px;
   width: 100%;
-  padding: 12px 14px;
-  margin-bottom: 10px;
-  border: 1px solid var(--color-border);
-  border-radius: 14px;
+  padding: 10px 11px;
+  border: 1px solid rgba(var(--color-noche-rgb), 0.09);
+  border-radius: 10px;
   background: var(--color-surface);
   text-align: left;
   font-family: inherit;
   cursor: pointer;
-  box-shadow: 0 1px 2px rgba(var(--color-noche-rgb), 0.06);
+  box-shadow: 0 1px 2px rgba(var(--color-noche-rgb), 0.04);
   transition: border-color var(--dur-fast) var(--ease-out),
     box-shadow var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out);
 }
@@ -2186,8 +2285,8 @@ button.mkt-evento-react:hover {
 }
 
 .mkt-task-card-react .mkt-task-titulo-react {
-  font-size: 0.93rem;
-  font-weight: 700;
+  font-size: 0.875rem;
+  font-weight: 600;
   color: var(--color-navy);
   line-height: 1.4;
 }
@@ -2233,18 +2332,12 @@ button.mkt-evento-react:hover {
 .mkt-tiles-react {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 12px;
-  margin-bottom: 24px;
+  gap: 16px;
+  margin-bottom: 16px;
 }
 
 .mkt-tile-react {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 16px 18px;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  background: var(--color-surface);
+  gap: 4px;
 }
 
 .mkt-tile-alerta-react {
@@ -2253,9 +2346,9 @@ button.mkt-evento-react:hover {
 }
 
 .mkt-tile-numero-react {
-  font-size: 1.7rem;
+  font-size: 1.8rem;
   font-weight: 700;
-  letter-spacing: -0.04em;
+  letter-spacing: -0.03em;
   color: var(--color-navy);
   line-height: 1.1;
 }
@@ -2799,22 +2892,10 @@ button.mkt-evento-react {
   border: 1px solid var(--color-border);
 }
 
-.mkt-agenda-item-react {
-  display: flex;
-  align-items: baseline;
-  gap: 12px;
-  padding: 12px 16px;
-  background: var(--color-surface);
-  border-left: 3px solid var(--color-divider);
-}
-
-.mkt-agenda-item-react + .mkt-agenda-item-react {
-  border-top: 1px solid var(--color-divider);
-}
-
-.mkt-agenda-marketing-react { border-left-color: var(--color-depto-marketing); }
-.mkt-agenda-eventos-react { border-left-color: var(--color-depto-eventos); }
-.mkt-agenda-ingenieria-react { border-left-color: var(--color-depto-tech); }
+/* Color por departamento para los chips del directorio (`MembersPanel`). */
+.mkt-agenda-marketing-react { color: var(--color-depto-marketing); }
+.mkt-agenda-eventos-react { color: var(--color-depto-eventos); }
+.mkt-agenda-ingenieria-react { color: var(--color-depto-tech); }
 
 .mkt-agenda-cuando-react {
   flex-shrink: 0;

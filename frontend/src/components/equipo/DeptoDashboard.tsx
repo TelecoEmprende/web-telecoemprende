@@ -14,11 +14,17 @@ import {
 import type { Team } from "../../types/equipo";
 
 type Props = {
+  /** Departamento primario: el que ata el contexto (`DeptoProvider`) para los
+   *  paneles que todavía no son multi-departamento (Miembros, Recursos,
+   *  Presupuesto, Reuniones, Alumni, Calendario, Anuncios). */
   depto: Team;
+  /** Departamentos filtrados a la vez -- solo lo usan Tareas y Proyectos, que
+   *  sí saben mezclar varios (ver `TasksPanel`/`CampaignsPanel`). */
+  deptos: Team[];
   seccion: Panel | "calendario" | "anuncios";
-  /** Departamentos de la persona (no solo `depto`): el calendario ahora es
+  /** Departamentos de la persona (no solo `deptos`): el calendario ahora es
    *  uno solo para todo el mundo y puede enseñar eventos de cualquiera de
-   *  sus departamentos, no solo del que está activo. */
+   *  sus departamentos, no solo del que está filtrado. */
   teams: Team[];
   /** La campaña que "Proyectos" debe abrir directamente al montar (enlace
    *  compartido o salto desde el calendario de otro departamento) -- la
@@ -26,31 +32,36 @@ type Props = {
   campaignInicial: number | null;
   onCampaignAbierta: () => void;
   /** Desde el calendario se salta a la campaña del elemento tocado, que
-   *  puede ser de un departamento distinto al activo. */
+   *  puede ser de un departamento distinto al filtrado. */
   onAbrirCampaign: (campaignId: number, depto: Team) => void;
-  /** Board del club o VP de `depto`: solo ellos crean o reasignan tareas
-   *  (ver docs/CLAUDE.md). */
-  puedeAsignarTareas: boolean;
+  /** Subconjunto de `teams` donde la persona es VP. */
+  vpDe: Team[];
+  /** Board del club: asigna tareas en cualquier departamento, sea VP o no. */
+  esBoard: boolean;
 };
 
 /**
- * El panel activo, ya atado al departamento elegido.
+ * El panel activo, ya atado a su(s) departamento(s).
  *
  * Antes cada departamento montaba su propia copia de estos paneles bajo su
  * propio grupo del sidebar; ahora el sidebar tiene una sola entrada por panel
- * y quien lo llama (`EquipoPage`) ya decidió de qué departamento se trata --
- * este componente solo pinta el panel que toca con ese departamento atado.
+ * y quien lo llama (`EquipoPage`) ya decidió qué departamento(s) tocan --
+ * este componente solo pinta el panel que corresponde.
  */
 export function DeptoDashboard({
-  depto, seccion, teams, campaignInicial, onCampaignAbierta, onAbrirCampaign, puedeAsignarTareas,
+  depto, deptos, seccion, teams, campaignInicial, onCampaignAbierta, onAbrirCampaign, vpDe, esBoard,
 }: Props) {
   return (
     <DeptoProvider value={depto}>
       <DirectorioProvider>
         {seccion === "campanas" ? (
-          <CampaignsPanel campaignInicial={campaignInicial} onCampaignAbierta={onCampaignAbierta} />
+          <CampaignsPanel
+            deptos={deptos}
+            campaignInicial={campaignInicial}
+            onCampaignAbierta={onCampaignAbierta}
+          />
         ) : null}
-        {seccion === "tareas" ? <TasksPanel puedeAsignar={puedeAsignarTareas} /> : null}
+        {seccion === "tareas" ? <TasksPanel deptos={deptos} vpDe={vpDe} esBoard={esBoard} /> : null}
         {seccion === "calendario" ? (
           <CalendarPanel teams={teams} onAbrirCampaign={onAbrirCampaign} />
         ) : null}

@@ -74,6 +74,9 @@
   --sidebar-primary-foreground: #ffffff;
   --sidebar-accent: rgba(var(--color-azul-rgb), 0.08);
   --sidebar-accent-foreground: var(--color-azul-profundo);
+  /* El boceto rellena el item activo en azul con el texto en blanco; el
+     hover se queda en el velo suave de arriba. */
+  --sidebar-activo: var(--color-azul);
   --sidebar-border: var(--color-paper-line);
   --sidebar-ring: var(--color-azul);
 
@@ -105,10 +108,29 @@
   color: var(--color-text-muted);
 }
 
-/* Item activo: el propio mecanismo de shadcn (`data-[active=true]:bg-sidebar-accent`
-   + `--sidebar-accent`/`--sidebar-accent-foreground`, ya en Azul TE arriba),
-   sin pisarlo con una regla más específica -- así conserva el mismo
-   comportamiento/transición que trae el componente de fábrica. */
+/* Item activo relleno (boceto 2a): shadcn lo deja en el velo de
+   `--sidebar-accent`, que sirve de hover pero no marca dónde estás.
+   Solo en /equipo: `/admin` comparte este chasis y no entra en el rediseño. */
+.crm-react [data-slot="sidebar-menu-button"][data-active="true"] {
+  background: var(--sidebar-activo);
+  color: #fff;
+  border-radius: 7px;
+}
+
+.crm-react [data-slot="sidebar-menu-button"][data-active="true"]:hover {
+  background: var(--sidebar-activo);
+  color: #fff;
+}
+
+/* La columna de trabajo del boceto: cajas apiladas con un hueco fijo entre
+   ellas, nunca pegadas ni con márgenes propios. Igual que arriba, solo aquí:
+   `/admin` se queda con el flujo de bloque de siempre. */
+.crm-react .workspace-contenido-react {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 22px 26px 60px;
+}
 
 /* ---------- Marca en la cabecera del sidebar ---------- */
 
@@ -159,6 +181,45 @@
 
 /* Plegado a iconos: el texto de la marca estorba, solo queda el logo. */
 [data-state="collapsed"] .workspace-marca-texto-react {
+  display: none;
+}
+
+/* ---------- Quién ha entrado, al pie del sidebar (boceto 2a) ---------- */
+
+.workspace-perfil-react {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+  padding: 10px 6px 4px;
+  border-top: 1px solid rgba(var(--color-noche-rgb), 0.08);
+}
+
+.workspace-perfil-texto-react {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.25;
+}
+
+.workspace-perfil-texto-react strong {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--color-navy);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.workspace-perfil-texto-react span {
+  font-size: 0.72rem;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+[data-state="collapsed"] .workspace-perfil-texto-react {
   display: none;
 }
 
@@ -632,4 +693,545 @@ span.mkt-dia-numero-react:hover {
 .equipo-shell-react .brand-name-react,
 .equipo-shell-react .header-nav-react a {
   color: #ffffff;
+}
+
+/* ==========================================================================
+   Sistema CRM — el boceto de alta fidelidad de Claude Design, pieza a pieza.
+
+   El workspace entero se dibuja con seis piezas y ninguna más: la caja
+   (`crm-c`), el rótulo (`crm-k`), la fila (`crm-row`), la cajita (`crm-tag`),
+   la barra (`crm-bar`) y el botón (`crm-btn`). Dos reglas del boceto que no
+   se saltan: nada flota sobre el fondo (todo va dentro de una caja) y los
+   títulos de sección son rótulos pequeños, no titulares -- lo que separa dos
+   bloques es su borde, no el tamaño de su letra.
+
+   El boceto pinta su propio azul de maqueta (#1f4ed8); aquí cada color sale
+   de `tokens.css`, que ya trae el azul de marca.
+   ========================================================================== */
+
+.crm-c {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+  padding: 16px 18px;
+  border: 1px solid rgba(var(--color-noche-rgb), 0.09);
+  border-radius: 12px;
+  background: var(--color-surface);
+  box-shadow: 0 1px 2px rgba(var(--color-noche-rgb), 0.04);
+}
+
+/* El aviso del board: una fila, con el borde teñido de azul para que pese
+   más que las demás cajas sin llegar a ser una alerta. */
+.crm-c-aviso-react {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+  border-color: rgba(var(--color-azul-rgb), 0.22);
+}
+
+/* La única caja oscura del boceto: la mentora. */
+.crm-c-oscura-react {
+  border-color: var(--color-noche);
+  background: var(--color-noche);
+  color: #fff;
+}
+
+.crm-c-oscura-react .crm-k {
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.crm-c-oscura-react .crm-t {
+  color: #fff;
+}
+
+.crm-c-oscura-react .crm-s {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+/* Sobre Noche, el filete y las cajitas se dan la vuelta: un separador claro
+   translúcido y pastillas de fondo claro sobre texto blanco. */
+.crm-c-oscura-react .crm-row {
+  border-top-color: rgba(255, 255, 255, 0.12);
+}
+
+.crm-c-oscura-react .crm-tag {
+  background: rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.crm-c-oscura-react a.crm-tag:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.crm-k {
+  margin: 0;
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  /* A este tamaño, medio Noche se queda en 3:1 sobre blanco. */
+  color: rgba(var(--color-noche-rgb), 0.62);
+}
+
+/* Cabecera de caja: rótulo a la izquierda, filtros o enlace a la derecha.
+   Envuelve en pantallas estrechas en vez de desbordar la caja. */
+.crm-cabecera-react {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.crm-h1 {
+  margin: 0;
+  /* El boceto escribe el saludo en la tipografía de cuerpo, no en la
+     display: es una frase, no un cartel. Anton solo grita los titulares. */
+  font-family: var(--font-body);
+  text-transform: none;
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.015em;
+  color: var(--color-navy);
+}
+
+.crm-sub {
+  margin: 4px 0 0;
+  font-size: 0.86rem;
+  color: var(--color-text-muted);
+}
+
+.crm-t {
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--color-navy);
+  /* Un correo o un título largo no tiene por dónde partir: sin esto se sale
+     de la fila en un móvil estrecho. */
+  overflow-wrap: break-word;
+}
+
+.crm-s {
+  font-size: 0.78rem;
+  line-height: 1.4;
+  color: var(--color-text-muted);
+  overflow-wrap: break-word;
+}
+
+.crm-tachado-react {
+  text-decoration: line-through;
+}
+
+/* Fila: filete fino arriba, nunca caja dentro de caja. */
+.crm-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 11px;
+  padding: 11px 0;
+  border-top: 1px solid rgba(var(--color-noche-rgb), 0.07);
+}
+
+.crm-row:first-child {
+  border-top: 0;
+}
+
+/* Lo ya cerrado sigue a la vista, pero apagado -- como en el boceto. */
+.crm-row-apagada-react {
+  opacity: 0.55;
+}
+
+.crm-row-cuerpo-react {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+}
+
+button.crm-row-cuerpo-react {
+  cursor: pointer;
+}
+
+/* La cajita: rectángulo redondeado (6px), no pastilla. Es la pieza que el
+   boceto repite en tareas, días, eventos, departamentos y filtros. */
+.crm-tag {
+  display: inline-block;
+  padding: 5px 9px;
+  border: 0;
+  border-radius: 6px;
+  background: rgba(var(--color-noche-rgb), 0.05);
+  color: rgba(var(--color-noche-rgb), 0.78);
+  font-family: inherit;
+  font-size: 0.7rem;
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.crm-tag-azul-react {
+  background: rgba(var(--color-azul-rgb), 0.1);
+  color: var(--color-azul);
+}
+
+.crm-tag-ambar-react {
+  background: rgba(var(--color-impulso-rgb), 0.12);
+  color: var(--color-info-text);
+}
+
+.crm-tag-verde-react {
+  background: var(--color-success-bg);
+  color: var(--color-success-text);
+}
+
+.crm-tag-noche-react {
+  background: rgba(var(--color-noche-rgb), 0.1);
+  color: var(--color-noche);
+}
+
+/* La cajita del día en la rejilla de la semana: sí parte línea. */
+.crm-tag-bloque-react {
+  display: block;
+  padding: 5px 7px;
+  font-size: 0.66rem;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+button.crm-tag,
+label.crm-tag,
+a.crm-tag {
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out);
+}
+
+a.crm-tag {
+  text-decoration: none;
+}
+
+button.crm-tag:hover {
+  background: rgba(var(--color-noche-rgb), 0.1);
+}
+
+button.crm-tag-azul-react:hover {
+  background: rgba(var(--color-azul-rgb), 0.16);
+}
+
+.crm-btn {
+  padding: 9px 13px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--color-impulso);
+  color: #fff;
+  font-family: inherit;
+  font-size: 0.78rem;
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.crm-btn-ghost-react {
+  border: 1px solid rgba(var(--color-noche-rgb), 0.14);
+  background: var(--color-surface);
+  color: var(--color-navy);
+}
+
+.crm-btn-ghost-react:hover {
+  border-color: rgba(var(--color-noche-rgb), 0.28);
+}
+
+.crm-btn:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--color-impulso) 88%, #000);
+}
+
+.crm-btn-ghost-react:hover:not(:disabled) {
+  background: var(--color-surface);
+}
+
+.crm-btn,
+.crm-tag,
+.crm-check,
+.crm-enlace-react,
+.crm-input-react {
+  transition: background var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out);
+}
+
+.crm-btn:focus-visible,
+button.crm-tag:focus-visible,
+a.crm-tag:focus-visible,
+.crm-enlace-react:focus-visible,
+.crm-check:focus-visible,
+.crm-tag-check-react:focus-within {
+  outline: 2px solid var(--color-azul);
+  outline-offset: 2px;
+}
+
+.crm-btn:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+/* Enlace de caja ("Ver el mes"): texto, no botón. */
+.crm-enlace-react {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-impulso);
+  font-family: inherit;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.crm-check {
+  appearance: none;
+  flex: none;
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  border: 1.5px solid rgba(var(--color-noche-rgb), 0.22);
+  border-radius: 5px;
+  background: var(--color-surface);
+  cursor: pointer;
+}
+
+.crm-check:checked {
+  border-color: var(--color-impulso);
+  background: var(--color-impulso);
+}
+
+.crm-check:checked::after {
+  content: "";
+  display: block;
+  width: 4px;
+  height: 8px;
+  margin: 1px auto 0;
+  border: solid #fff;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+.crm-check:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.crm-av {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  font-size: 0.68rem;
+}
+
+.crm-c-oscura-react .crm-av [data-slot="avatar-fallback"] {
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+}
+
+.crm-bar {
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(var(--color-noche-rgb), 0.08);
+  overflow: hidden;
+}
+
+.crm-bar i {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--color-azul);
+}
+
+/* ---------- Rejillas de la pantalla ---------- */
+
+/* Dos columnas del boceto: el trabajo a la izquierda, el contexto a la
+   derecha. Container query, no media query: lo que se estrecha es la
+   columna de contenido, que ya cambia de ancho cuando se pliega el sidebar. */
+.crm-grid-react {
+  display: grid;
+  grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.crm-col-react {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+
+.crm-pila-react {
+  display: flex;
+  flex-direction: column;
+  gap: 13px;
+}
+
+.crm-semana-react {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 7px;
+}
+
+/* El día de la semana no es una celda con borde: es una columna con su
+   fecha arriba y sus cajitas debajo. */
+.crm-semana-dia-react {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+
+.crm-semana-hoy-react .crm-s {
+  color: var(--color-impulso);
+  font-weight: 700;
+}
+
+.crm-tags-react {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+/* Cabecera o barra que encabeza un panel entero (no una caja): necesita su
+   propio hueco debajo. Dentro de `.crm-c` no hace falta -- ahí el espacio lo
+   pone el `gap` de la caja --, por eso la regla mira quién es el padre. */
+.mkt-panel-react > .crm-cabecera-react,
+.mkt-panel-react > .crm-barra-react {
+  margin-bottom: 16px;
+}
+
+/* Barra de herramientas de un panel: buscador, filtros y la acción. Va sobre
+   el fondo, no dentro de una caja -- como la fila de chips del boceto. */
+.crm-barra-react {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+/* El buscador ocupa lo que necesita, no la fila entera: estirado de lado a
+   lado empujaba los filtros contra el borde y competía con el tablero. */
+.crm-input-react {
+  flex: 0 1 320px;
+  min-width: 0;
+  margin-right: auto;
+  padding: 9px 12px;
+  border: 1px solid rgba(var(--color-noche-rgb), 0.14);
+  border-radius: 8px;
+  background: var(--color-surface);
+  color: var(--color-navy);
+  font-family: inherit;
+  font-size: 0.82rem;
+}
+
+.crm-input-react:focus {
+  outline: 2px solid var(--color-azul);
+  outline-offset: -1px;
+}
+
+/* Cajita con casilla dentro: el filtro de departamentos de la barra. */
+.crm-tag-check-react {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  cursor: pointer;
+}
+
+.crm-tag-check-react .crm-check {
+  width: 15px;
+  height: 15px;
+  border-radius: 4px;
+}
+
+.crm-acciones-react {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* Progreso de un proyecto en la lista: la barra y su porcentaje en la misma
+   línea, como en "Mis proyectos". */
+.crm-campaign-progreso-react {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.crm-campaign-progreso-react .crm-bar {
+  flex: 1;
+  min-width: 0;
+}
+
+@container (max-width: 900px) {
+  .crm-grid-react {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@container (max-width: 640px) {
+  .crm-semana-react {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+/* La navegación no cabe entera en una pantalla corta y hace scroll, pero sin
+   barra visible el último item parece cortado en vez de "hay más abajo". */
+.crm-react [data-slot="sidebar-content"] {
+  padding-bottom: 6px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(var(--color-noche-rgb), 0.22) transparent;
+}
+
+.crm-react [data-slot="sidebar-content"]::-webkit-scrollbar {
+  width: 8px;
+}
+
+.crm-react [data-slot="sidebar-content"]::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background: rgba(var(--color-noche-rgb), 0.22);
+  background-clip: content-box;
+}
+
+/* Lo que no se dibuja también lleva la marca: selección, cursor y barras. */
+.crm-react ::selection {
+  background: rgba(var(--color-azul-rgb), 0.18);
+  color: var(--color-noche);
+}
+
+.crm-react .crm-input-react {
+  caret-color: var(--color-azul);
+}
+
+/* Avatares apilados: el aro que los separa va del color de la tarjeta. El
+   `ring-background` de shadcn no lo resuelve aquí -- dentro del workspace
+   `--background` no es el blanco sobre el que se pintan --, así que las caras
+   se solapaban sin corte y las iniciales quedaban cortadas. */
+.crm-react [data-slot="avatar-group"] {
+  /* `-space-x-2` sobre avatares de 32px tapaba media cara: con un solape de
+     6px se siguen leyendo las dos. */
+  margin-right: 0;
+}
+
+/* Sin solape: apilarlas tapaba la segunda inicial y en un CRM saber quién
+   lleva una tarea pesa más que el efecto de pila. */
+.crm-react [data-slot="avatar-group"] > * + * {
+  margin-left: 3px;
+}
+
+.crm-react [data-slot="avatar-group"] > [data-slot="avatar"],
+.crm-react [data-slot="avatar-group-count"] {
+  box-shadow: 0 0 0 2px var(--color-surface);
 }
