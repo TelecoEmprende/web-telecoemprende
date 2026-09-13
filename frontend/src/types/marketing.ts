@@ -63,6 +63,9 @@ export type Task = {
   content_id: number | null;
   titulo: string;
   descripcion: string;
+  /** Cómo hacerla, obligatoria al crear (ver docs/CLAUDE.md: "toda tarea
+   *  nace con instrucciones"). */
+  instrucciones: string;
   estado: TaskEstado;
   prioridad: Prioridad;
   deadline: string | null;
@@ -115,6 +118,18 @@ export type Campaign = {
 export type CampaignResumen = Campaign & {
   total_contents: number;
   total_tasks: number;
+  tareas_acabadas: number;
+};
+
+/** Una fila de "Mis proyectos" en Mi semana: la campaña (que ya hace de
+ *  proyecto, ver docs/CLAUDE.md) de cualquier departamento donde la persona
+ *  tiene una tarea, con su progreso -- ver `GET /api/equipo/mis-proyectos`. */
+export type ProyectoResumen = {
+  id: number;
+  nombre: string;
+  departamento: Team;
+  total_tasks: number;
+  tareas_acabadas: number;
 };
 
 export type CampaignDetalle = Campaign & {
@@ -181,6 +196,9 @@ export type FichaMiembro = {
   abiertas: number;
   completadas: number;
   campanas: number;
+  /** Vacío si no tiene mentor asignado. Lo asigna admin, no el propio
+   *  departamento (ver `EquipoAccesosPanel`). */
+  mentor_email: string;
   actividad: ActividadMiembro[];
   /** Claves libres, ver ONBOARDING_PASOS: qué pasos ya se han marcado. */
   onboarding: Record<string, boolean>;
