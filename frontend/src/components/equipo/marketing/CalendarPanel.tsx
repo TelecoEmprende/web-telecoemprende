@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
 import { X } from "lucide-react";
 
+import { Badge } from "@/components/ui/badge";
 import { useDirectorio } from "../DeptoApi";
 import { apiDepto } from "../../../api/marketing";
 import { getCalendarioEquipo } from "../../../api/equipo";
@@ -17,12 +18,20 @@ const DEPTO_LABEL: Record<Team, string> = {
   eventos: "Eventos",
   ingenieria: "Ingeniería",
 };
-/** Mismas clases que usa el color por departamento en `CalendarioEquipo.tsx`
- *  (`marketing.css`), reutilizadas aquí para el acento del evento. */
-const DEPTO_CLASE: Record<string, string> = {
-  marketing: "mkt-agenda-marketing-react",
-  eventos: "mkt-agenda-eventos-react",
-  ingenieria: "mkt-agenda-ingenieria-react",
+/** La cajita de departamento del sistema (ver CalendarioEquipo). */
+const DEPTO_TAG: Record<string, string> = {
+  ingenieria: "crm-tag-azul-react",
+  marketing: "crm-tag-ambar-react",
+  eventos: "",
+};
+
+/** El color de un elemento en la rejilla es el de su departamento, el mismo
+ *  que su capa -- así "Capas" es la leyenda del calendario y no hace falta
+ *  una tira de colores aparte explicando nada. */
+const DEPTO_EVENTO: Record<string, string> = {
+  marketing: "mkt-evento-marketing-react",
+  eventos: "mkt-evento-eventos-react",
+  ingenieria: "mkt-evento-ingenieria-react",
 };
 
 const ORIGEN_LABEL: Record<CalendarioItem["origen"], string> = {
@@ -368,23 +377,26 @@ export function CalendarPanel({ teams, onAbrirCampaign }: Props) {
     item: CalendarioItem,
     extra?: { style?: CSSProperties; className?: string },
   ) {
-    const claseDepto = item.departamento ? ` ${DEPTO_CLASE[item.departamento] ?? ""}` : "";
+    const claseDepto = item.departamento ? ` ${DEPTO_EVENTO[item.departamento] ?? ""}` : "";
     const etiquetaDepto = item.departamento ? DEPTO_LABEL[item.departamento as Team] : null;
 
     return (
       <button
         key={`${item.origen}-${item.id}`}
         type="button"
-        className={`mkt-evento-react mkt-evento-${item.origen}-react${
+        className={`mkt-evento-react${claseDepto}${
           item.prioridad === "alta" ? " mkt-evento-alta-react" : ""
-        }${claseDepto}${extra?.className ? ` ${extra.className}` : ""}`}
+        }${extra?.className ? ` ${extra.className}` : ""}`}
         style={extra?.style}
-        title={`${item.hora ? `${item.hora} — ` : ""}${etiquetaDepto ? `${etiquetaDepto} — ` : ""}${item.padre ? `${item.padre} — ` : ""}${item.titulo}`}
+        title={`${ORIGEN_LABEL[item.origen]}${item.hora ? ` · ${item.hora}` : ""}${etiquetaDepto ? ` · ${etiquetaDepto}` : ""}${item.padre ? ` · ${item.padre}` : ""} — ${item.titulo}`}
         onClick={() => setSeleccionado(item)}
       >
         {item.hora ? <span className="mkt-evento-hora-react">{item.hora}</span> : null}
         <span className="mkt-evento-texto-react">{item.titulo}</span>
-        {item.responsables.length > 0 ? (
+        {/* Las caras solo caben en la rejilla horaria de la semana: en una
+            celda del mes empujaban el título fuera de la cajita. Quién lo
+            lleva se ve al abrir la ficha. */}
+        {extra?.className && item.responsables.length > 0 ? (
           <AvataresDeResponsables
             responsables={item.responsables}
             directorio={directorio}
@@ -441,88 +453,79 @@ export function CalendarPanel({ teams, onAbrirCampaign }: Props) {
     <section className="mkt-panel-react">
       {error ? <AlertBanner variant="error" message={error} /> : null}
 
-      <header className="mkt-panel-header-react">
-        <h3>{tituloDeVista()}</h3>
-        <div className="mkt-calendario-nav-react">
-          <div className="mkt-vista-toggle-react" role="group" aria-label="Vista del calendario">
-            <button
-              type="button"
-              className={`mkt-btn-mini-react${vista === "mes" ? " mkt-btn-mini-activo-react" : ""}`}
-              aria-pressed={vista === "mes"}
-              onClick={() => setVista("mes")}
-            >
-              Mes
-            </button>
-            <button
-              type="button"
-              className={`mkt-btn-mini-react${vista === "semana" ? " mkt-btn-mini-activo-react" : ""}`}
-              aria-pressed={vista === "semana"}
-              onClick={() => setVista("semana")}
-            >
-              Semana
-            </button>
-          </div>
-          <button type="button" className="mkt-btn-mini-react" onClick={() => mover(-1)}>
+      <header className="crm-cabecera-react">
+        <h3 className="crm-h1">{tituloDeVista()}</h3>
+        <div className="crm-tags-react" role="group" aria-label="Vista del calendario">
+          <button
+            type="button"
+            className={`crm-tag${vista === "mes" ? " crm-tag-azul-react" : ""}`}
+            aria-pressed={vista === "mes"}
+            onClick={() => setVista("mes")}
+          >
+            Mes
+          </button>
+          <button
+            type="button"
+            className={`crm-tag${vista === "semana" ? " crm-tag-azul-react" : ""}`}
+            aria-pressed={vista === "semana"}
+            onClick={() => setVista("semana")}
+          >
+            Semana
+          </button>
+          <button type="button" className="crm-tag" onClick={() => mover(-1)}>
             ← Anterior
           </button>
-          <button type="button" className="mkt-btn-mini-react" onClick={irAHoy}>
+          <button type="button" className="crm-tag" onClick={irAHoy}>
             Hoy
           </button>
-          <button type="button" className="mkt-btn-mini-react" onClick={() => mover(1)}>
+          <button type="button" className="crm-tag" onClick={() => mover(1)}>
             Siguiente →
           </button>
         </div>
       </header>
 
-      <div className="mkt-filtros-react" role="group" aria-label="Departamentos visibles">
-        <label className="mkt-toggle-react">
-          <input
-            type="checkbox"
-            checked={todosDepartamentos}
-            onChange={(event) => setTodosDepartamentos(event.target.checked)}
-          />
-          Todos los departamentos
-        </label>
-        {todosDepartamentos
-          ? TODOS_LOS_DEPARTAMENTOS.map((depto) => (
-              <button
-                key={depto}
-                type="button"
-                className={`mkt-btn-mini-react mkt-agenda-leyenda-punto-react ${DEPTO_CLASE[depto]}`}
-                aria-pressed={deptosFiltro.includes(depto)}
-                onClick={() =>
-                  setDeptosFiltro((actuales) =>
-                    actuales.includes(depto)
-                      ? actuales.filter((d) => d !== depto)
-                      : [...actuales, depto],
-                  )
-                }
-              >
-                {DEPTO_LABEL[depto]}
-              </button>
-            ))
-          : null}
-      </div>
+      <div className="mkt-calendario-layout-react">
+        <aside className="crm-c mkt-capas-react">
+          <p className="crm-k">Capas</p>
+          <div className="mkt-filtros-react mkt-capas-lista-react" role="group" aria-label="Departamentos visibles">
+            <label
+              className={`crm-tag crm-tag-check-react${
+                todosDepartamentos ? " crm-tag-azul-react" : ""
+              }`}
+            >
+              <input
+                type="checkbox"
+                className="crm-check"
+                checked={todosDepartamentos}
+                onChange={(event) => setTodosDepartamentos(event.target.checked)}
+              />
+              Todos
+            </label>
+            {todosDepartamentos
+              ? TODOS_LOS_DEPARTAMENTOS.map((depto) => (
+                  <button
+                    key={depto}
+                    type="button"
+                    className={`crm-tag ${DEPTO_TAG[depto]}`}
+                    aria-pressed={deptosFiltro.includes(depto)}
+                    onClick={() =>
+                      setDeptosFiltro((actuales) =>
+                        actuales.includes(depto)
+                          ? actuales.filter((d) => d !== depto)
+                          : [...actuales, depto],
+                      )
+                    }
+                  >
+                    {DEPTO_LABEL[depto]}
+                  </button>
+                ))
+              : null}
+          </div>
+        </aside>
 
+        <div className="mkt-calendario-principal-react">
       {/* La leyenda va antes de la rejilla: leerla después de haber necesitado
           el código de color no sirve de nada. */}
-      <div className="mkt-leyenda-react">
-        <span className="mkt-evento-react mkt-evento-content-react">Publicación</span>
-        <span className="mkt-evento-react mkt-evento-task-react">Tarea</span>
-        <span className="mkt-evento-react mkt-evento-reunion-react">Reunión</span>
-        <span className="mkt-evento-react mkt-evento-alta-react">Tarea urgente</span>
-        <span className="mkt-leyenda-notas-react">
-          {todosDepartamentos ? (
-            <span className="mkt-leyenda-nota-react">
-              El color del borde izquierdo dice de qué departamento es.
-            </span>
-          ) : null}
-          <span className="mkt-leyenda-nota-react">
-            Toca un día para añadir una tarea.
-          </span>
-        </span>
-      </div>
-
       {isLoading ? (
         <Esqueleto filas={5} alto={54} />
       ) : items.length === 0 ? (
@@ -583,6 +586,10 @@ export function CalendarPanel({ teams, onAbrirCampaign }: Props) {
             );
           })}
         </div>
+      ) : null}
+
+      {!isLoading && vista === "mes" ? (
+        <p className="crm-s">Toca un día para añadir una tarea.</p>
       ) : null}
 
       {/* Vista semana: una rejilla de horas de verdad, como Google Calendar.
@@ -682,74 +689,85 @@ export function CalendarPanel({ teams, onAbrirCampaign }: Props) {
         </div>
       ) : null}
 
-      {seleccionado ? (
-        <div className="mkt-ficha-evento-react">
-          <header className="mkt-ficha-evento-header-react">
-            <div>
-              <span className="mkt-meta-react">{ORIGEN_LABEL[seleccionado.origen]}</span>
-              <h4>{seleccionado.titulo}</h4>
-            </div>
-            <button
-              type="button"
-              className="mkt-icon-btn-react"
-              title="Cerrar ficha"
-              onClick={() => setSeleccionado(null)}
-            >
-              <X size={14} strokeWidth={1.75} aria-hidden="true" />
-              <span className="sr-only">Cerrar ficha</span>
-            </button>
-          </header>
+      <div className="mkt-calendario-fila-inferior-react">
+        {seleccionado ? (
+          <div className="crm-c mkt-ficha-evento-react">
+            <header className="mkt-ficha-evento-header-react">
+              <div>
+                <p className="crm-k">Ficha de evento</p>
+                <h4>
+                  {seleccionado.titulo} · {formatearFecha(seleccionado.fecha, true)}
+                  {seleccionado.hora ? `, ${seleccionado.hora}` : ""}
+                </h4>
+                <p className="mkt-ficha-evento-meta-react">
+                  {ORIGEN_LABEL[seleccionado.origen]}
+                  {seleccionado.departamento
+                    ? ` · ${DEPTO_LABEL[seleccionado.departamento as Team] ?? seleccionado.departamento}`
+                    : ""}
+                  {seleccionado.padre ? ` · ${seleccionado.padre}` : ""}
+                </p>
+              </div>
+              <button
+                type="button"
+                className="mkt-icon-btn-react"
+                title="Cerrar ficha"
+                onClick={() => setSeleccionado(null)}
+              >
+                <X size={14} strokeWidth={1.75} aria-hidden="true" />
+                <span className="sr-only">Cerrar ficha</span>
+              </button>
+            </header>
 
-          <dl className="mkt-ficha-evento-datos-react">
-            <div>
-              <dt>Cuándo</dt>
-              <dd>
-                {formatearFecha(seleccionado.fecha, true)}
-                {seleccionado.hora ? ` · ${seleccionado.hora}` : ""}
-              </dd>
+            <div className="mkt-ficha-evento-chips-react">
+              <Badge variant="outline">{seleccionado.estado.replace(/_/g, " ")}</Badge>
+              {seleccionado.prioridad === "alta" ? (
+                <Badge variant="destructive">Urgente</Badge>
+              ) : null}
+              {seleccionado.responsables.length > 0 ? (
+                <Badge variant="outline">{seleccionado.responsables.join(", ")}</Badge>
+              ) : null}
+              {seleccionado.detalle ? (
+                <Badge variant="outline">
+                  {DETALLE_LABEL[seleccionado.origen]}: {seleccionado.detalle}
+                </Badge>
+              ) : null}
             </div>
-            {seleccionado.departamento ? (
-              <div>
-                <dt>Departamento</dt>
-                <dd>{DEPTO_LABEL[seleccionado.departamento as Team] ?? seleccionado.departamento}</dd>
-              </div>
-            ) : null}
-            {seleccionado.padre ? (
-              <div>
-                <dt>De</dt>
-                <dd>{seleccionado.padre}</dd>
-              </div>
-            ) : null}
-            <div>
-              <dt>Estado</dt>
-              <dd>{seleccionado.estado.replace(/_/g, " ")}</dd>
-            </div>
-            {seleccionado.detalle ? (
-              <div>
-                <dt>{DETALLE_LABEL[seleccionado.origen]}</dt>
-                <dd>{seleccionado.detalle}</dd>
-              </div>
-            ) : null}
-          </dl>
 
-          {/* Abrir la campaña solo tiene sentido si es de un departamento PROPIO
-              -- una del departamento de otra persona no se encontraría en su
-              panel de Campañas (sin acceso), así que la ficha se ve pero sin
-              ese botón. */}
-          {seleccionado.campaign_id !== null &&
-          (!seleccionado.departamento || teams.includes(seleccionado.departamento as Team)) ? (
-            <button
-              type="button"
-              className="mkt-btn-mini-react"
-              onClick={() =>
-                onAbrirCampaign(seleccionado.campaign_id as number, seleccionado.departamento as Team)
-              }
-            >
-              Ver campaña →
-            </button>
-          ) : null}
+            {/* Abrir la campaña solo tiene sentido si es de un departamento PROPIO
+                -- una del departamento de otra persona no se encontraría en su
+                panel de Campañas (sin acceso), así que la ficha se ve pero sin
+                ese botón. */}
+            {seleccionado.campaign_id !== null &&
+            (!seleccionado.departamento || teams.includes(seleccionado.departamento as Team)) ? (
+              <button
+                type="button"
+                className="mkt-btn-mini-react"
+                onClick={() =>
+                  onAbrirCampaign(seleccionado.campaign_id as number, seleccionado.departamento as Team)
+                }
+              >
+                Ver campaña →
+              </button>
+            ) : null}
+          </div>
+        ) : (
+          <div className="crm-c mkt-ficha-evento-react mkt-ficha-evento-vacia-react">
+            <p className="crm-k">Ficha de evento</p>
+            <p className="mkt-vacio-react">Toca un evento del calendario para ver su ficha.</p>
+          </div>
+        )}
+
+        <div className="crm-c mkt-sincronizacion-react">
+          <p className="crm-k">Sincronización</p>
+          <ul className="mkt-sincronizacion-lista-react">
+            <li>Las tareas con fecha límite se colocan solas en su día.</li>
+            <li>Toca un día para añadir una tarea directamente ahí.</li>
+            <li>El filtro de capas no cambia el menú, solo lo que ves aquí.</li>
+          </ul>
         </div>
-      ) : null}
+      </div>
+        </div>
+      </div>
     </section>
   );
 }
