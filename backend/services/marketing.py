@@ -492,6 +492,11 @@ def listar_tasks(departamento: str) -> list[dict]:
     Sin esto el tablero enseña cuatro filas llamadas "Guion" y tres llamadas
     "Revisión" sin decir de qué son, y quien lo mira tiene que reconstruir de
     memoria a qué reel pertenece cada una.
+
+    Una acabada hace más de un día ya no aparece aquí (ver `listar_tasks_archivadas`):
+    el tablero es para lo que todavía se está moviendo, no un archivo de todo
+    lo que se ha cerrado alguna vez. No se borra nada -- las métricas leen la
+    tabla `tasks` directamente, sin pasar por esta función.
     """
     with _get_connection() as conn:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
@@ -504,7 +509,33 @@ def listar_tasks(departamento: str) -> list[dict]:
                 LEFT JOIN contents co ON co.id = t.content_id
                 LEFT JOIN campaigns c ON c.id = t.campaign_id
                 WHERE t.departamento = %s
+                  AND NOT (t.estado = 'acabado' AND COALESCE(t.completado_en, t.updated_at) < now() - interval '1 day')
                 ORDER BY COALESCE(t.deadline, '9999-12-31'::date), t.id
+                """,
+                (departamento,),
+            )
+            return [_serializar(f) for f in cur.fetchall()]
+
+
+def listar_tasks_archivadas(departamento: str) -> list[dict]:
+    """Las tareas que `listar_tasks` ya no enseña: acabadas hace más de un
+    día. Es el historial que pide "Completadas" en el panel -- de solo
+    lectura, para consultar quién hizo qué y cuándo sin que estorbe en el
+    tablero del día a día.
+    """
+    with _get_connection() as conn:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(
+                """
+                SELECT t.*,
+                       co.titulo AS content_titulo,
+                       c.nombre AS campaign_nombre
+                FROM tasks t
+                LEFT JOIN contents co ON co.id = t.content_id
+                LEFT JOIN campaigns c ON c.id = t.campaign_id
+                WHERE t.departamento = %s
+                  AND t.estado = 'acabado' AND COALESCE(t.completado_en, t.updated_at) < now() - interval '1 day'
+                ORDER BY COALESCE(t.completado_en, t.updated_at) DESC
                 """,
                 (departamento,),
             )

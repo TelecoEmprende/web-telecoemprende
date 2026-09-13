@@ -71,6 +71,12 @@ export function apiDepto(depto: Team) {
     getTasks: () =>
       apiRequest<{ ok: true; tasks: Task[]; usuario: string }>(`${BASE}/tasks`),
 
+    /** Acabadas hace más de un día: no salen de `getTasks` (ver
+     *  `listar_tasks` en el backend), pero siguen existiendo para consultar
+     *  el historial -- no se borran, las métricas las necesitan. */
+    getTasksArchivadas: () =>
+      apiRequest<{ ok: true; tasks: Task[] }>(`${BASE}/tasks/archivadas`),
+
     createTask: (datos: Partial<Task>) => post<{ ok: true; task: Task }>("/tasks", datos),
 
     updateTask: (id: number, datos: Partial<Task>) => put<ApiResult>(`/tasks/${id}`, datos),

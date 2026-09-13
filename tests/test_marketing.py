@@ -109,6 +109,7 @@ class AutorizacionTests(MarketingTestCase):
         ("PUT", "/api/marketing/contents/1"),
         ("DELETE", "/api/marketing/contents/1"),
         ("GET", "/api/marketing/tasks"),
+        ("GET", "/api/marketing/tasks/archivadas"),
         ("POST", "/api/marketing/tasks"),
         ("GET", "/api/marketing/tasks/1"),
         ("PUT", "/api/marketing/tasks/1"),
@@ -560,6 +561,54 @@ class TaskTests(MarketingTestCase):
         self.assertEqual(
             self.client.get(f"/api/marketing/tasks/{task['id']}").status_code, 404
         )
+
+    def _marcar_acabada_hace(self, task_id, dias):
+        """Simula que se cerró hace `dias` días -- `completado_en` lo pone el
+        propio servicio al pasar a 'acabado' (ver `actualizar_task`), así que
+        aquí solo se retrasa ese reloj para probar el corte de un día."""
+        self.client.put(f"/api/marketing/tasks/{task_id}", json={"estado": "acabado"})
+        conn = marketing_service._get_connection()
+        with conn.cursor() as cur:
+            cur.execute(
+                "UPDATE tasks SET completado_en = NOW() - %s::interval WHERE id = %s",
+                (f"{dias} days", task_id),
+            )
+            conn.commit()
+
+    def test_acabada_hace_mas_de_un_dia_sale_del_tablero(self):
+        task = self.crear_task()
+        self._marcar_acabada_hace(task["id"], 2)
+
+        tablero = self.client.get("/api/marketing/tasks").get_json()["tasks"]
+        self.assertNotIn(task["id"], [t["id"] for t in tablero])
+
+    def test_acabada_hace_menos_de_un_dia_se_queda_en_el_tablero(self):
+        task = self.crear_task()
+        self._marcar_acabada_hace(task["id"], 0)
+
+        tablero = self.client.get("/api/marketing/tasks").get_json()["tasks"]
+        self.assertIn(task["id"], [t["id"] for t in tablero])
+
+    def test_archivadas_solo_enseña_las_de_mas_de_un_dia(self):
+        reciente = self.crear_task(titulo="Reciente")
+        self._marcar_acabada_hace(reciente["id"], 0)
+        vieja = self.crear_task(titulo="Vieja")
+        self._marcar_acabada_hace(vieja["id"], 5)
+
+        archivadas = self.client.get("/api/marketing/tasks/archivadas").get_json()["tasks"]
+        ids = [t["id"] for t in archivadas]
+        self.assertIn(vieja["id"], ids)
+        self.assertNotIn(reciente["id"], ids)
+
+    def test_archivar_no_borra_la_tarea(self):
+        task = self.crear_task()
+        self._marcar_acabada_hace(task["id"], 3)
+
+        # Sigue accesible por su ficha aunque ya no salga en el tablero: no
+        # se ha borrado, solo se ha dejado de enseñar en el día a día.
+        detalle = self.client.get(f"/api/marketing/tasks/{task['id']}")
+        self.assertEqual(detalle.status_code, 200)
+        self.assertEqual(detalle.get_json()["task"]["estado"], "acabado")
 
 
 class TaskAsignacionTests(MarketingTestCase):
