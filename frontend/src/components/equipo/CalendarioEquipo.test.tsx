@@ -6,13 +6,16 @@ import { CalendarioEquipo } from "./CalendarioEquipo";
 const getEquipoCalendario = vi.fn();
 const getEquipoSession = vi.fn();
 const getMisTareas = vi.fn();
+const getMisProyectos = vi.fn();
 const getDirectorioClub = vi.fn();
 
 vi.mock("../../api/equipo", () => ({
   getEquipoCalendario: () => getEquipoCalendario(),
   getEquipoSession: () => getEquipoSession(),
   getMisTareas: () => getMisTareas(),
+  getMisProyectos: () => getMisProyectos(),
   getDirectorioClub: () => getDirectorioClub(),
+  confirmarEventoCalendario: vi.fn(),
 }));
 
 // El aviso del board sale de los anuncios (`apiDepto(...).listarRegistros`),
@@ -28,13 +31,14 @@ describe("CalendarioEquipo — tu agenda", () => {
   beforeEach(() => {
     getEquipoCalendario.mockReset().mockResolvedValue({ ok: true, eventos: [] });
     getMisTareas.mockReset().mockResolvedValue({ ok: true, tareas: [] });
+    getMisProyectos.mockReset().mockResolvedValue({ ok: true, proyectos: [] });
     getDirectorioClub.mockReset().mockResolvedValue({ ok: true, miembros: [] });
   });
 
   it("saluda y pide la agenda también con un solo departamento", async () => {
     getEquipoSession.mockResolvedValue({
       ok: true, authenticated: true, teams: ["marketing"], vp_de: [], cargo: "",
-      email: "abril@example.com", nombre: "Abril",
+      email: "abril@example.com", nombre: "Abril", mentor_email: "",
     });
     getMisTareas.mockResolvedValue({
       ok: true,
@@ -51,7 +55,7 @@ describe("CalendarioEquipo — tu agenda", () => {
   it("con varios departamentos, saluda y junta sus tareas por departamento", async () => {
     getEquipoSession.mockResolvedValue({
       ok: true, authenticated: true, teams: ["marketing", "eventos"], vp_de: [], cargo: "",
-      email: "abril@example.com", nombre: "Abril",
+      email: "abril@example.com", nombre: "Abril", mentor_email: "",
     });
     getMisTareas.mockResolvedValue({
       ok: true,
@@ -75,7 +79,7 @@ describe("CalendarioEquipo — tu agenda", () => {
   it("marca como vencida una tarea con deadline pasado", async () => {
     getEquipoSession.mockResolvedValue({
       ok: true, authenticated: true, teams: ["marketing", "eventos"], vp_de: [], cargo: "",
-      email: "abril@example.com", nombre: "Abril",
+      email: "abril@example.com", nombre: "Abril", mentor_email: "",
     });
     getMisTareas.mockResolvedValue({
       ok: true,

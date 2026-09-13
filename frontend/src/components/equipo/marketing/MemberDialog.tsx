@@ -224,6 +224,11 @@ export function MemberDialog({ email, habilidadesConocidas = [], onCerrar, onGua
                 {" · desde "}
                 {formatearFecha(ficha.desde.slice(0, 10), true)}
               </p>
+              {ficha.mentor_email ? (
+                <p className="mkt-meta-react">
+                  Mentor: {etiquetaDe(ficha.mentor_email, undefined)}
+                </p>
+              ) : null}
 
               {tags.length > 0 ? (
                 <span className="mkt-tags-react mkt-ficha-skills-react">

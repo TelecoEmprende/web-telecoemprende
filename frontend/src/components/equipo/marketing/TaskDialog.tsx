@@ -36,6 +36,9 @@ type Props = {
   /** Para el autocompletado del campo de etiquetas -- las que ya se usan en
    *  el departamento, no una lista fija (ver `TasksPanel`/`WeekPanel`). */
   etiquetasExistentes?: string[];
+  /** Solo board y VPs reasignan (ver docs/CLAUDE.md) -- si es `false`, el
+   *  selector de responsables se enseña de solo lectura. */
+  puedeAsignar?: boolean;
 };
 
 function comoLineas(valores: string[]) {
@@ -56,12 +59,15 @@ function desdeLineas(texto: string) {
  * checklist, tags y enlaces se guardaban en base de datos pero no había forma
  * de tocarlos desde la interfaz. Aquí es donde se editan.
  */
-export function TaskDialog({ task, onCerrar, onGuardado, etiquetasExistentes = [] }: Props) {
+export function TaskDialog({
+  task, onCerrar, onGuardado, etiquetasExistentes = [], puedeAsignar = true,
+}: Props) {
   const { deleteTask, getTaskComments, createTaskComment, updateTask } = useApi();
   const directorio = useDirectorio();
 
   const [titulo, setTitulo] = useState(task.titulo);
   const [descripcion, setDescripcion] = useState(task.descripcion);
+  const [instrucciones, setInstrucciones] = useState(task.instrucciones);
   const [estado, setEstado] = useState<TaskEstado>(task.estado);
   const [prioridad, setPrioridad] = useState<Prioridad>(task.prioridad);
   const [deadline, setDeadline] = useState(task.deadline ?? "");
@@ -125,6 +131,10 @@ export function TaskDialog({ task, onCerrar, onGuardado, etiquetasExistentes = [
       setError("El título es obligatorio.");
       return;
     }
+    if (!instrucciones.trim()) {
+      setError("Las instrucciones son obligatorias.");
+      return;
+    }
 
     setIsSaving(true);
     setError(null);
@@ -133,6 +143,7 @@ export function TaskDialog({ task, onCerrar, onGuardado, etiquetasExistentes = [
       await updateTask(task.id, {
         titulo,
         descripcion,
+        instrucciones,
         estado,
         prioridad,
         deadline: deadline || null,
@@ -192,6 +203,19 @@ export function TaskDialog({ task, onCerrar, onGuardado, etiquetasExistentes = [
               onChange={(event) => setDescripcion(event.target.value)}
             />
             <ContadorCaracteres valor={descripcion} maximo={MAX_TEXTO_LARGO_LEN} />
+          </div>
+
+          <div className="field-group-react">
+            <label htmlFor="td-instrucciones">Instrucciones</label>
+            <textarea
+              id="td-instrucciones"
+              rows={3}
+              required
+              value={instrucciones}
+              placeholder="Cómo se hace: a quién se escribe, qué plantilla se usa..."
+              onChange={(event) => setInstrucciones(event.target.value)}
+            />
+            <ContadorCaracteres valor={instrucciones} maximo={MAX_TEXTO_LARGO_LEN} />
           </div>
 
           <div className="mkt-form-fila-react">
@@ -314,11 +338,20 @@ export function TaskDialog({ task, onCerrar, onGuardado, etiquetasExistentes = [
 
           <div className="field-group-react">
             <label htmlFor="td-responsables">Responsables</label>
-            <SelectorMiembros
-              id="td-responsables"
-              seleccionados={responsables}
-              onCambiar={setResponsables}
-            />
+            {puedeAsignar ? (
+              <SelectorMiembros
+                id="td-responsables"
+                seleccionados={responsables}
+                onCambiar={setResponsables}
+              />
+            ) : (
+              <p className="mkt-meta-react">
+                {responsables.length > 0
+                  ? responsables.map((email) => etiquetaDe(email, directorio[email])).join(", ")
+                  : "Sin asignar"}
+                {" · solo board y VPs reasignan"}
+              </p>
+            )}
           </div>
 
           <div className="field-group-react">

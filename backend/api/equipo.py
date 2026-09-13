@@ -14,6 +14,7 @@ from backend.config import (
 from backend.schemas import build_response
 from backend.services.admin import is_admin_authenticated
 from backend.services.equipo import (
+    confirmar_evento_calendario,
     crear_evento_calendario,
     equipo_session_info,
     init_equipo_db,
@@ -22,12 +23,14 @@ from backend.services.equipo import (
     listar_eventos_calendario,
     login_equipo,
     logout_equipo,
+    marcar_asistio_evento,
     registrar_equipo_acceso,
 )
 from backend.services.marketing import (
     calendario_equipo,
     init_marketing_db,
     metricas_club,
+    mis_campanas,
     mis_tareas,
 )
 from backend.services.security import demasiadas_peticiones, limpiar_texto, obtener_ip_real
@@ -198,6 +201,44 @@ def api_equipo_crear_calendario():
     return jsonify(build_response(True, "Evento creado.", evento=evento)), 201
 
 
+@equipo_api.route("/calendario/<int:evento_id>/confirmar", methods=["POST"])
+def api_equipo_confirmar_evento(evento_id: int):
+    """"Voy" / "no voy" de la propia persona -- cualquiera con sesión de
+    equipo, sobre sí mismo (no hay `email` en el payload a propósito)."""
+    if not is_equipo_authenticated():
+        return jsonify(build_response(False, "No autorizado.")), 401
+
+    init_equipo_db()
+    payload = request.get_json(silent=True) or {}
+    confirmar = bool(payload.get("confirmar", True))
+    email = session.get("equipo_email", "")
+
+    if not confirmar_evento_calendario(evento_id, email, confirmar):
+        return jsonify(build_response(False, "Evento no encontrado.")), 404
+    return jsonify(build_response(True, "Confirmación actualizada.")), 200
+
+
+@equipo_api.route("/calendario/<int:evento_id>/checkin", methods=["POST"])
+def api_equipo_checkin_evento(evento_id: int):
+    """Check-in el día del evento: lo marca quien gestiona la puerta (VP de
+    cualquier departamento, o admin), no la propia persona -- mismo criterio
+    que añadir un evento (`_puede_editar_calendario_club`)."""
+    if not _puede_editar_calendario_club():
+        return jsonify(build_response(False, "No autorizado.")), 401
+
+    init_equipo_db()
+    payload = request.get_json(silent=True) or {}
+    email = limpiar_texto(str(payload.get("email", ""))).lower()
+    asistio = bool(payload.get("asistio", True))
+
+    if not email or "@" not in email:
+        return jsonify(build_response(False, "Introduce un email válido.")), 400
+
+    if not marcar_asistio_evento(evento_id, email, asistio):
+        return jsonify(build_response(False, "Evento no encontrado.")), 404
+    return jsonify(build_response(True, "Asistencia actualizada.")), 200
+
+
 @equipo_api.route("/calendario-equipo", methods=["GET"])
 def api_equipo_calendario_cruzado():
     """Lectura cruzada: deadlines/publicaciones/reuniones de los
@@ -253,6 +294,18 @@ def api_equipo_mis_tareas():
     init_marketing_db()
     email = session.get("equipo_email", "")
     return jsonify({"ok": True, "tareas": mis_tareas(email)}), 200
+
+
+@equipo_api.route("/mis-proyectos", methods=["GET"])
+def api_equipo_mis_proyectos():
+    """Campañas (proyectos) de cualquier departamento donde la persona tiene
+    una tarea, con su progreso -- mismo criterio cruzado que `/mis-tareas`."""
+    if not is_equipo_authenticated():
+        return jsonify(build_response(False, "No autorizado.")), 401
+
+    init_marketing_db()
+    email = session.get("equipo_email", "")
+    return jsonify({"ok": True, "proyectos": mis_campanas(email)}), 200
 
 
 @equipo_api.route("/metricas", methods=["GET"])
