@@ -246,6 +246,32 @@ describe("/equipo — panel de Marketing", () => {
     expect(screen.queryByRole("button", { name: "+ Nueva tarea" })).not.toBeInTheDocument();
   });
 
+  it("VP de varios departamentos elige a cuál va la tarea nueva, aunque la vista esté filtrada a uno solo", async () => {
+    // Por defecto la vista arranca filtrada al primero de sus departamentos
+    // (ver `EquipoPage.tsx`), sin tocar el filtro de la barra -- el selector
+    // de "Nueva tarea" tiene que salir igual, con los DOS departamentos.
+    teamsDeSesion = ["marketing", "ingenieria"];
+    vpDeSesion = ["marketing", "ingenieria"];
+
+    await renderMarketing();
+    await userEvent.click(screen.getByRole("button", { name: "Tareas" }));
+    await userEvent.click(screen.getByRole("button", { name: "+ Nueva tarea" }));
+
+    await userEvent.selectOptions(screen.getByLabelText("Departamento"), "ingenieria");
+    await userEvent.type(screen.getByLabelText("Título"), "Preparar taller");
+    await userEvent.type(screen.getByLabelText("Instrucciones"), "Ver notas.");
+    await userEvent.click(screen.getByRole("button", { name: "Crear tarea" }));
+
+    await waitFor(() =>
+      expect(createTask).toHaveBeenCalledWith(
+        expect.objectContaining({ titulo: "Preparar taller" }),
+      ),
+    );
+    // Se creó en el departamento elegido en el selector, no en el que estaba
+    // filtrado en la vista.
+    expect(deptosPedidos.at(-1)).toBe("ingenieria");
+  });
+
   it("'Solo lo mío' filtra el tablero por responsable", async () => {
     getTasks.mockResolvedValue({
       ok: true,

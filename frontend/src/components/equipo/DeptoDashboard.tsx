@@ -61,7 +61,9 @@ export function DeptoDashboard({
             onCampaignAbierta={onCampaignAbierta}
           />
         ) : null}
-        {seccion === "tareas" ? <TasksPanel deptos={deptos} vpDe={vpDe} esBoard={esBoard} /> : null}
+        {seccion === "tareas" ? (
+          <TasksPanel deptos={deptos} teams={teams} vpDe={vpDe} esBoard={esBoard} />
+        ) : null}
         {seccion === "calendario" ? (
           <CalendarPanel teams={teams} onAbrirCampaign={onAbrirCampaign} />
         ) : null}

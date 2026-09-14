@@ -36,6 +36,10 @@ const DEPTO_LABEL: Record<Team, string> = {
   ingenieria: "Ingeniería",
 };
 
+/** Board asigna en cualquier departamento del club, esté o no dado de alta
+ *  ahí (ver `puedeAsignarEn`). */
+const TODOS_LOS_EQUIPOS: Team[] = ["marketing", "eventos", "ingenieria"];
+
 /** La misma cajita de departamento que en "Mi semana" (ver CalendarioEquipo):
  *  un color por departamento, no una pastilla gris para los tres. */
 const DEPTO_TAG: Record<string, string> = {
@@ -59,7 +63,13 @@ type Props = {
   /** Departamentos que se ven a la vez en el tablero -- el filtro de la
    *  barra decide cuáles (ver `EquipoPage.tsx`), no el propio panel. */
   deptos: Team[];
-  /** Subconjunto de `deptos` donde la persona es VP. */
+  /** Todos los departamentos de la persona, aunque no estén en el filtro de
+   *  vista -- de aquí sale a qué departamentos puede dar de alta una tarea
+   *  nueva (ver `deptoNuevaTarea` más abajo), igual que ya hace el
+   *  calendario (`CalendarPanel`): ver el tablero de uno y crear en otro son
+   *  cosas distintas. */
+  teams: Team[];
+  /** Subconjunto de `teams` donde la persona es VP. */
   vpDe: Team[];
   /** Board del club: asigna en cualquier departamento, sea VP o no. */
   esBoard: boolean;
@@ -74,7 +84,7 @@ type Props = {
  * CADA tarea pueden crearla o reasignarla (ver docs/CLAUDE.md); un miembro
  * raso sigue pudiendo mover su propia tarea de estado.
  */
-export function TasksPanel({ deptos, vpDe, esBoard }: Props) {
+export function TasksPanel({ deptos, teams, vpDe, esBoard }: Props) {
   const directorio = useDirectorio();
 
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -108,12 +118,17 @@ export function TasksPanel({ deptos, vpDe, esBoard }: Props) {
   const [deadline, setDeadline] = useState("");
   const [hora, setHora] = useState("");
   const [responsables, setResponsables] = useState<string[]>([]);
-  const [deptoNuevaTarea, setDeptoNuevaTarea] = useState<Team>(deptos[0]);
-
   function puedeAsignarEn(depto: Team) {
     return esBoard || vpDe.includes(depto);
   }
-  const deptosDondePuedeAsignar = deptos.filter(puedeAsignarEn);
+  // De dónde sale a qué departamentos se puede dar de alta una tarea: todo el
+  // club si es board, o los suyos propios si no -- nunca solo `deptos` (el
+  // filtro de qué se está VIENDO ahora mismo), igual que ya hace el
+  // calendario (`CalendarPanel`).
+  const deptosDondePuedeAsignar = (esBoard ? TODOS_LOS_EQUIPOS : teams).filter(puedeAsignarEn);
+  const [deptoNuevaTarea, setDeptoNuevaTarea] = useState<Team>(
+    deptosDondePuedeAsignar[0] ?? deptos[0],
+  );
 
   useEffect(() => {
     void cargar();
@@ -124,9 +139,11 @@ export function TasksPanel({ deptos, vpDe, esBoard }: Props) {
   }, [deptos.join(",")]);
 
   useEffect(() => {
-    if (!deptos.includes(deptoNuevaTarea)) setDeptoNuevaTarea(deptosDondePuedeAsignar[0] ?? deptos[0]);
+    if (!deptosDondePuedeAsignar.includes(deptoNuevaTarea)) {
+      setDeptoNuevaTarea(deptosDondePuedeAsignar[0] ?? deptos[0]);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [deptos.join(",")]);
+  }, [deptosDondePuedeAsignar.join(",")]);
 
   async function cargar() {
     setIsLoading(true);
