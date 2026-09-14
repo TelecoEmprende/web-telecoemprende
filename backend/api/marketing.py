@@ -32,7 +32,12 @@ from backend.config import (
 from backend.schemas import build_response
 from backend.services.admin import is_admin_authenticated
 from backend.services.equipo import equipo_session_info, is_equipo_authenticated
-from backend.services.slack import tarea_cambia_estado, tarea_creada
+from backend.services.slack import (
+    onboarding_completado,
+    tarea_cambia_estado,
+    tarea_comentada,
+    tarea_creada,
+)
 from backend.services.marketing import (
     actualizar_campaign,
     carga_por_miembro,
@@ -550,7 +555,8 @@ def api_listar_task_comments(task_id: int):
 @marketing_api.route("/tasks/<int:task_id>/comments", methods=["POST"])
 @requiere_equipo
 def api_crear_task_comment(task_id: int):
-    if obtener_task(task_id, departamento_actual()) is None:
+    tarea = obtener_task(task_id, departamento_actual())
+    if tarea is None:
         return jsonify(build_response(False, "Tarea no encontrada.")), 404
 
     datos = _payload()
@@ -559,6 +565,7 @@ def api_crear_task_comment(task_id: int):
     )
     comentario = crear_task_comment(task_id, _autor(), texto)
     logger.info("marketing crea comentario task_id=%s", task_id)
+    tarea_comentada(tarea, texto, departamento_actual(), _autor())
     return jsonify(build_response(True, "Comentario añadido.", comment=comentario)), 201
 
 
@@ -689,7 +696,8 @@ def api_actualizar_ficha_miembro():
 
     datos = _payload()
     email = _texto(datos, "email", obligatorio=True).lower()
-    if _miembro_del_departamento(email) is None:
+    anterior = _miembro_del_departamento(email)
+    if anterior is None:
         return jsonify(build_response(False, "Miembro no encontrado.")), 404
 
     tags = (
@@ -713,4 +721,14 @@ def api_actualizar_ficha_miembro():
         raise DatosInvalidos("No hay nada que actualizar.")
 
     actualizar_perfil(email, tags=tags, notas=notas, onboarding=onboarding)
+
+    # Solo al cruzar de "no completo" a "completo" -- si no, cada punto
+    # marcado de la checklist avisaría por separado.
+    def _completo(o):
+        return bool(o) and all(o.values())
+
+    if onboarding is not None and _completo(onboarding) and not _completo(anterior["onboarding"]):
+        onboarding_completado(
+            anterior["nombre"] or email, departamento_actual(), anterior["mentor_email"]
+        )
     return jsonify(build_response(True, "Ficha actualizada.")), 200
