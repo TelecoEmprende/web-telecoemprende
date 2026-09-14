@@ -93,6 +93,29 @@ def aviso_deadlines_manana(tareas: list[dict]) -> bool:
     return enviar("\n".join(lineas))
 
 
+def tarea_comentada(tarea: dict, texto: str, departamento: str, autor: str) -> bool:
+    responsables = ", ".join(_quien(r) for r in tarea.get("responsables") or [])
+    resumen = texto if len(texto) <= 200 else texto[:200] + "…"
+    linea = (
+        f":speech_balloon: *{_quien(autor)}* comenta en *{tarea.get('titulo', '')}* "
+        f"({departamento})"
+    )
+    if responsables:
+        linea += f"\n> Para: {responsables}"
+    linea += f"\n> {resumen}"
+    return enviar(linea)
+
+
+def onboarding_completado(nombre: str, departamento: str, mentor_email: str = "") -> bool:
+    """Se dispara al marcar el último punto de la checklist -- ver
+    `api_actualizar_ficha_miembro`, que compara antes/después para no avisar
+    en cada paso intermedio."""
+    linea = f":tada: *{nombre}* ha completado su onboarding en *{departamento}*"
+    if mentor_email:
+        linea += f" — mentor: {_quien(mentor_email)}"
+    return enviar(linea)
+
+
 def resumen_salud_equipo(salud: dict, departamento: str) -> bool:
     """Resumen semanal (cron de los lunes, ver `api/cron.py`), no una acción
     de alguien -- por eso no lleva firma de autor como el resto de avisos."""
