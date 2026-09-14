@@ -21,7 +21,7 @@ import {
 /** Nombres con foto en `frontend/public/equipo-*.jpg`. */
 const CON_FOTO = new Set([
   "abril", "alex", "david", "diego", "guillermo", "hammad",
-  "hugo", "iker", "jorge", "mamoun", "mariano",
+  "hugo", "iker", "jorge", "mamoun", "mariano", "marta",
 ]);
 
 function nombreAdivinado(email: string) {
