@@ -1,3 +1,4 @@
+import base64
 import os
 import unittest
 from datetime import date, timedelta
@@ -699,6 +700,73 @@ class TaskAsignacionTests(MarketingTestCase):
         )
         mudada = self.client.get(f"/api/eventos/tasks/{task['id']}").get_json()["task"]
         self.assertIsNone(mudada["campaign_id"])
+
+
+class FotoPerfilTestCase(MarketingTestCase):
+    """La foto de perfil la cambia cada cual la suya, y acaba en un `src` que
+    se le sirve a todo el club: la forma se valida en servidor."""
+
+    JPEG = "data:image/jpeg;base64," + base64.b64encode(b"no-es-un-jpeg-real").decode()
+
+    def setUp(self):
+        super().setUp()
+        self.login(email="marketing@example.com")
+
+    def _put(self, email, foto):
+        return self.client.put(
+            "/api/marketing/miembros/ficha", json={"email": email, "foto": foto}
+        )
+
+    def test_cambia_su_propia_foto_y_sale_en_el_directorio(self):
+        respuesta = self._put("marketing@example.com", self.JPEG)
+        self.assertEqual(respuesta.status_code, 200, respuesta.get_json())
+
+        miembros = self.client.get("/api/marketing/miembros").get_json()["miembros"]
+        self.assertEqual(miembros[0]["foto"], self.JPEG)
+
+    def test_vaciarla_devuelve_a_la_foto_por_defecto(self):
+        self._put("marketing@example.com", self.JPEG)
+        self.assertEqual(self._put("marketing@example.com", "").status_code, 200)
+
+        miembros = self.client.get("/api/marketing/miembros").get_json()["miembros"]
+        self.assertEqual(miembros[0]["foto"], "")
+
+    def test_no_puede_cambiar_la_foto_de_otra_persona(self):
+        self.seed_acceso(email="otra@example.com")
+        # Sin cargo ni admin: la ficha de otra persona se puede leer, su cara no.
+        self.client.post("/api/equipo/logout")
+        self.login(email="raso@example.com", vp_de=[])
+
+        respuesta = self._put("otra@example.com", self.JPEG)
+        self.assertEqual(respuesta.status_code, 403)
+
+    def test_rechaza_lo_que_no_sea_una_imagen(self):
+        # Un data:text/html colado aquí sería un problema de quien lo mira, no
+        # de quien lo sube.
+        html = "data:text/html;base64," + base64.b64encode(b"<script>").decode()
+        self.assertEqual(self._put("marketing@example.com", html).status_code, 400)
+
+    def test_rechaza_una_foto_demasiado_grande(self):
+        enorme = "data:image/jpeg;base64," + "A" * 300_001
+        self.assertEqual(self._put("marketing@example.com", enorme).status_code, 400)
+
+    def test_rechaza_base64_roto(self):
+        self.assertEqual(
+            self._put("marketing@example.com", "data:image/png;base64,@@@@").status_code,
+            400,
+        )
+
+    def test_la_ficha_dice_si_es_la_tuya(self):
+        mia = self.client.get(
+            "/api/marketing/miembros/ficha?email=marketing@example.com"
+        ).get_json()["ficha"]
+        self.assertTrue(mia["es_tu_ficha"])
+
+        self.seed_acceso(email="otra@example.com")
+        suya = self.client.get(
+            "/api/marketing/miembros/ficha?email=otra@example.com"
+        ).get_json()["ficha"]
+        self.assertFalse(suya["es_tu_ficha"])
 
 
 class CalendarioTests(MarketingTestCase):

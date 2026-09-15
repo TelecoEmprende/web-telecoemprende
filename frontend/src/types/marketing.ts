@@ -168,6 +168,9 @@ export type Miembro = {
   tags: string[];
   /** Nombre para mostrar. Vacío si todavía no se ha rellenado en /admin. */
   nombre: string;
+  /** Foto propia como data URL, o "" si no ha subido ninguna y vale la de
+   *  `public/equipo-*.jpg` (ver `Avatares.tsx`). */
+  foto: string;
   /** Tareas sin acabar en ESTE departamento. Se calcula, no se guarda. */
   abiertas: number;
 };
@@ -207,6 +210,11 @@ export type FichaMiembro = {
   actividad: ActividadMiembro[];
   /** Claves libres, ver ONBOARDING_PASOS: qué pasos ya se han marcado. */
   onboarding: Record<string, boolean>;
+  /** Foto propia (data URL), o "" si vale la de `public/equipo-*.jpg`. */
+  foto: string;
+  /** Si quien mira puede cambiar esta foto: su propia ficha, o admin. Lo
+   *  decide el servidor; aquí solo sirve para enseñar u ocultar el botón. */
+  es_tu_ficha: boolean;
 };
 
 /** Pasos del checklist de onboarding. El backend solo guarda el objeto

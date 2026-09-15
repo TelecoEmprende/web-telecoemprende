@@ -1230,6 +1230,24 @@
   margin-bottom: 10px;
 }
 
+/* Subir/quitar la foto propia, justo debajo del avatar de la ficha. */
+.mkt-ficha-foto-acciones-react {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+/* El disparador del <input type="file"> es su <label>: hay que darle el
+   puntero a mano, un label no lo trae. */
+.mkt-ficha-foto-acciones-react label {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+}
+
 .mkt-ficha-nombre-react {
   margin: 0;
   font-family: var(--font-body);

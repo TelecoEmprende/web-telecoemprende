@@ -5,6 +5,7 @@ import {
   AvatarGroupCount,
   AvatarImage,
 } from "@/components/ui/avatar";
+import { useFotos } from "../DeptoApi";
 
 /**
  * Caras de los responsables.
@@ -97,17 +98,25 @@ export function etiquetaDe(email: string, nombreReal?: string) {
 export function AvatarResponsable({
   email,
   nombre,
+  foto,
   className,
 }: {
   email: string;
   /** Nombre real del perfil, si ya se conoce (ver comentario arriba). */
   nombre?: string;
+  /** Foto propia ya cargada (data URL). Sin ella se busca en `useFotos()`, y
+   *  si tampoco está, se cae a la de `public/`. */
+  foto?: string;
   className?: string;
 }) {
+  const fotos = useFotos();
   const etiqueta = etiquetaDe(email, nombre);
+  // Lo que haya subido la persona manda sobre la foto por defecto: es justo
+  // lo que significa poder cambiarla.
+  const src = foto || fotos[email] || fotoDe(email);
   return (
     <Avatar title={nombre?.trim() ? `${etiqueta} · ${email}` : email} className={className}>
-      <AvatarImage src={fotoDe(email)} alt={etiqueta} />
+      <AvatarImage src={src} alt={etiqueta} />
       <AvatarFallback>{inicialesDe(email, nombre)}</AvatarFallback>
     </Avatar>
   );
