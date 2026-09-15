@@ -737,6 +737,12 @@
   margin-top: 0;
 }
 
+/* La ficha de evento ya se abre en un modal, así que esta caja suele quedarse
+   sola en la fila: sin esto se quedaba encogida a 240px con el resto vacío. */
+.mkt-calendario-fila-inferior-react .mkt-sincronizacion-react:only-child {
+  flex: 1;
+}
+
 .mkt-sincronizacion-react {
   flex: 0 0 240px;
   padding: 16px;
@@ -898,38 +904,9 @@
 
 /* ---------- Ficha de evento ---------- */
 
-/* Se abre al tocar un evento del calendario, en vez de saltar directo a la
-   campaña -- mismo trazo discontinuo que la rejilla del mes, así se lee
-   como parte del mismo calendario y no como un cuadro de diálogo aparte. */
-.mkt-ficha-evento-react {
-  margin-top: 16px;
-  padding: 16px;
-  border: 1px dashed var(--color-border);
-  border-radius: var(--radius-lg);
-  background: var(--color-surface);
-}
-
-.mkt-ficha-evento-header-react {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.mkt-ficha-evento-header-react h4 {
-  margin: 2px 0 0;
-  font-size: 1.05rem;
-  font-weight: 700;
-  color: var(--color-navy);
-}
-
-.mkt-ficha-evento-meta-react {
-  margin: 2px 0 0;
-  font-size: 0.82rem;
-  color: var(--color-text-muted);
-  text-transform: capitalize;
-}
-
+/* Lo que queda de la ficha: el resto (caja, cabecera, estado vacío) se fue al
+   borrarla de debajo del calendario -- ahora se abre en un modal y el marco lo
+   pone el propio Dialog. */
 .mkt-ficha-evento-chips-react {
   display: flex;
   flex-wrap: wrap;
@@ -937,19 +914,15 @@
   margin: 14px 0 0;
 }
 
-.mkt-ficha-evento-react .mkt-btn-mini-react {
+.mkt-ficha-evento-chips-react + .mkt-btn-mini-react {
   margin-top: 14px;
 }
 
-.mkt-ficha-evento-vacia-react {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  justify-content: center;
-}
-
-.mkt-ficha-evento-vacia-react .mkt-vacio-react {
-  margin: 0;
+/* Salto al proyecto desde la cabecera del diálogo de tarea: alineado con el
+   título, no estirado a lo ancho como los campos del formulario. */
+.mkt-dialogo-ir-react {
+  align-self: flex-start;
+  margin-top: 10px;
 }
 
 /* ---------- Miembros ---------- */
@@ -1903,8 +1876,21 @@ button.mkt-evento-react {
   cursor: pointer;
 }
 
-button.mkt-evento-react:hover {
-  filter: brightness(0.94);
+/* Con puntero fino: en táctil el resaltado se queda pegado tras el tap. */
+@media (hover: hover) and (pointer: fine) {
+  button.mkt-evento-react:hover {
+    filter: brightness(0.94);
+  }
+}
+
+/* Acuse del toque. Abrir la ficha puede tardar lo que tarde la red en traer
+   la tarea entera, y sin esto el clic se quedaba sin respuesta ninguna. */
+button.mkt-evento-react {
+  transition: transform var(--dur-press) var(--ease-out);
+}
+
+button.mkt-evento-react:active {
+  transform: scale(0.97);
 }
 
 .mkt-evento-alta-react {

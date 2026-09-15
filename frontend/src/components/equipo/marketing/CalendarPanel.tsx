@@ -1,15 +1,22 @@
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
-import { X } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
-import { useDirectorio } from "../DeptoApi";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { DeptoProvider, useDirectorio } from "../DeptoApi";
 import { apiDepto } from "../../../api/marketing";
 import { getCalendarioEquipo } from "../../../api/equipo";
 import { AlertBanner } from "../../feedback/AlertBanner";
 import { Esqueleto } from "../../feedback/Esqueleto";
 import { AvataresDeResponsables } from "./Avatares";
+import { TaskDialog } from "./TaskDialog";
 import type { ApiFailure } from "../../../types/api";
-import { formatearFecha, type CalendarioItem } from "../../../types/marketing";
+import { formatearFecha, type CalendarioItem, type Task } from "../../../types/marketing";
 import type { Team } from "../../../types/equipo";
 
 const TODOS_LOS_DEPARTAMENTOS: Team[] = ["marketing", "eventos", "ingenieria"];
@@ -164,6 +171,35 @@ function posicionEnRejilla(hora: string): Posicion | null {
   };
 }
 
+/** El resumen del calendario disfrazado de `Task`, para que el diálogo pueda
+ *  pintar título y cabecera antes de que llegue la tarea de verdad. Todo lo
+ *  que el resumen no trae va vacío, pero da igual: mientras `cargando` está
+ *  puesto el formulario no se enseña. */
+function resumenComoTarea(item: CalendarioItem): Task {
+  return {
+    id: item.id,
+    departamento: item.departamento ?? "",
+    campaign_id: item.campaign_id,
+    content_id: null,
+    titulo: item.titulo,
+    descripcion: "",
+    instrucciones: "",
+    estado: item.estado as Task["estado"],
+    prioridad: (item.prioridad ?? "media") as Task["prioridad"],
+    deadline: item.fecha,
+    hora: item.hora ?? "",
+    responsables: item.responsables,
+    tags: [],
+    checklist: [],
+    enlaces: [],
+    creado_por: "",
+    created_at: "",
+    updated_at: "",
+    completado_en: null,
+    campaign_nombre: item.padre,
+  };
+}
+
 type Bloque = { item: CalendarioItem; pos: Posicion; columna: number; columnas: number };
 
 /** Reparte los items que se solapan en columnas lado a lado, como hace
@@ -206,9 +242,16 @@ type Props = {
    *  departamento va aparte porque puede ser distinto del de quien mira
    *  (ver más abajo, `esDeUnDeptoPropio`). */
   onAbrirCampaign: (campaignId: number, departamento: Team) => void;
+  /** Departamentos donde la persona es VP, y si asigna en todo el club --
+   *  los mismos que usa el tablero, porque al abrir una tarea desde aquí se
+   *  abre su diálogo de edición y hay que saber si puede reasignarla. */
+  vpDe: Team[];
+  puedeAsignarEnTodo: boolean;
 };
 
-export function CalendarPanel({ teams, onAbrirCampaign }: Props) {
+export function CalendarPanel({
+  teams, onAbrirCampaign, vpDe, puedeAsignarEnTodo,
+}: Props) {
   const directorio = useDirectorio();
   // A qué departamento se da de alta una tarea nueva: si la persona está en
   // uno solo no hay nada que elegir; si está en varios, un desplegable lo
@@ -230,6 +273,16 @@ export function CalendarPanel({ teams, onAbrirCampaign }: Props) {
   const [deptosFiltro, setDeptosFiltro] = useState<Team[]>(TODOS_LOS_DEPARTAMENTOS);
   const [diaAbierto, setDiaAbierto] = useState<string | null>(null);
   const [seleccionado, setSeleccionado] = useState<CalendarioItem | null>(null);
+  // Una tarea del calendario abre el MISMO diálogo que en el tablero, no una
+  // ficha aparte: se edita, se comenta y se mueve de estado sin salir de
+  // aquí. El resto de orígenes (publicaciones, reuniones, eventos del club)
+  // no tienen diálogo propio, así que siguen con la ficha de resumen -- que
+  // ahora también es un modal, no una tarjeta debajo del calendario.
+  const [tareaAbierta, setTareaAbierta] = useState<Task | null>(null);
+  // Mientras la tarea entera viene de camino se enseña el diálogo ya, con lo
+  // que el calendario sabe de ella. Esperar a la red para abrir dejaba el
+  // clic sin ninguna respuesta visible.
+  const [tareaPedida, setTareaPedida] = useState<CalendarioItem | null>(null);
   const [tituloNuevo, setTituloNuevo] = useState("");
   // Se busca un mes con datos una sola vez, en el primer montaje. Después el
   // usuario manda: si navega a un mes vacío, se queda ahí.
@@ -320,6 +373,33 @@ export function CalendarPanel({ teams, onAbrirCampaign }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cursor, cargar]);
 
+  async function abrir(item: CalendarioItem) {
+    if (item.origen !== "task" || !item.departamento) {
+      setSeleccionado(item);
+      return;
+    }
+    // El diálogo se abre YA con el resumen, y la tarea entera (checklist,
+    // enlaces, instrucciones, comentarios) llega después y lo rellena.
+    setTareaPedida(item);
+    setTareaAbierta(null);
+    try {
+      const respuesta = await apiDepto(item.departamento as Team).getTask(item.id);
+      setTareaAbierta(respuesta.task);
+      setError(null);
+    } catch (err) {
+      setError((err as ApiFailure)?.message || "No se pudo abrir la tarea.");
+      // Sin la tarea entera no hay nada que editar: se cierra y se cae al
+      // resumen, que es lo que sí se tiene.
+      setTareaPedida(null);
+      setSeleccionado(item);
+    }
+  }
+
+  function cerrarTarea() {
+    setTareaAbierta(null);
+    setTareaPedida(null);
+  }
+
   const porDia = items.reduce<Record<string, CalendarioItem[]>>((acc, item) => {
     (acc[item.fecha] ??= []).push(item);
     return acc;
@@ -395,7 +475,7 @@ export function CalendarPanel({ teams, onAbrirCampaign }: Props) {
         }${extra?.className ? ` ${extra.className}` : ""}`}
         style={extra?.style}
         title={`${ORIGEN_LABEL[item.origen]}${item.hora ? ` · ${item.hora}` : ""}${etiquetaDepto ? ` · ${etiquetaDepto}` : ""}${item.padre ? ` · ${item.padre}` : ""} — ${item.titulo}`}
-        onClick={() => setSeleccionado(item)}
+        onClick={() => void abrir(item)}
       >
         {item.hora ? <span className="mkt-evento-hora-react">{item.hora}</span> : null}
         <span className="mkt-evento-texto-react">{item.titulo}</span>
@@ -705,76 +785,103 @@ export function CalendarPanel({ teams, onAbrirCampaign }: Props) {
         </div>
       ) : null}
 
-      <div className="mkt-calendario-fila-inferior-react">
-        {seleccionado ? (
-          <div className="crm-c mkt-ficha-evento-react">
-            <header className="mkt-ficha-evento-header-react">
-              <div>
-                <p className="crm-k">Ficha de evento</p>
-                <h4>
+      {/* La ficha de resumen ya no vive debajo del calendario: al tocar algo
+          se abre encima, igual que una tarea. Así lo que se mira está donde
+          se ha tocado y no hay que bajar la vista a buscarlo. */}
+      <Dialog open={seleccionado !== null} onOpenChange={(a) => !a && setSeleccionado(null)}>
+        <DialogContent className="mkt-dialogo-react">
+          {seleccionado ? (
+            <>
+              <DialogHeader>
+                <DialogTitle>
                   {seleccionado.titulo} · {formatearFecha(seleccionado.fecha, true)}
                   {seleccionado.hora ? `, ${seleccionado.hora}` : ""}
-                </h4>
-                <p className="mkt-ficha-evento-meta-react">
+                </DialogTitle>
+                <DialogDescription>
                   {ORIGEN_LABEL[seleccionado.origen]}
                   {seleccionado.departamento
                     ? ` · ${DEPTO_LABEL[seleccionado.departamento as Team] ?? seleccionado.departamento}`
                     : ""}
                   {seleccionado.padre ? ` · ${seleccionado.padre}` : ""}
-                </p>
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="mkt-ficha-evento-chips-react">
+                {seleccionado.estado ? (
+                  <Badge variant="outline">{seleccionado.estado.replace(/_/g, " ")}</Badge>
+                ) : null}
+                {seleccionado.prioridad === "alta" ? (
+                  <Badge variant="destructive">Urgente</Badge>
+                ) : null}
+                {seleccionado.responsables.length > 0 ? (
+                  <Badge variant="outline">{seleccionado.responsables.join(", ")}</Badge>
+                ) : null}
+                {seleccionado.detalle ? (
+                  <Badge variant="outline">
+                    {DETALLE_LABEL[seleccionado.origen]}: {seleccionado.detalle}
+                  </Badge>
+                ) : null}
               </div>
-              <button
-                type="button"
-                className="mkt-icon-btn-react"
-                title="Cerrar ficha"
-                onClick={() => setSeleccionado(null)}
-              >
-                <X size={14} strokeWidth={1.75} aria-hidden="true" />
-                <span className="sr-only">Cerrar ficha</span>
-              </button>
-            </header>
 
-            <div className="mkt-ficha-evento-chips-react">
-              {seleccionado.estado ? (
-                <Badge variant="outline">{seleccionado.estado.replace(/_/g, " ")}</Badge>
+              {/* Abrir la campaña solo tiene sentido si es de un departamento PROPIO
+                  -- una del departamento de otra persona no se encontraría en su
+                  panel de Campañas (sin acceso), así que la ficha se ve pero sin
+                  ese botón. */}
+              {seleccionado.campaign_id !== null &&
+              (!seleccionado.departamento || teams.includes(seleccionado.departamento as Team)) ? (
+                <button
+                  type="button"
+                  className="mkt-btn-mini-react"
+                  onClick={() => {
+                    onAbrirCampaign(
+                      seleccionado.campaign_id as number,
+                      seleccionado.departamento as Team,
+                    );
+                    setSeleccionado(null);
+                  }}
+                >
+                  Ver campaña →
+                </button>
               ) : null}
-              {seleccionado.prioridad === "alta" ? (
-                <Badge variant="destructive">Urgente</Badge>
-              ) : null}
-              {seleccionado.responsables.length > 0 ? (
-                <Badge variant="outline">{seleccionado.responsables.join(", ")}</Badge>
-              ) : null}
-              {seleccionado.detalle ? (
-                <Badge variant="outline">
-                  {DETALLE_LABEL[seleccionado.origen]}: {seleccionado.detalle}
-                </Badge>
-              ) : null}
-            </div>
+            </>
+          ) : null}
+        </DialogContent>
+      </Dialog>
 
-            {/* Abrir la campaña solo tiene sentido si es de un departamento PROPIO
-                -- una del departamento de otra persona no se encontraría en su
-                panel de Campañas (sin acceso), así que la ficha se ve pero sin
-                ese botón. */}
-            {seleccionado.campaign_id !== null &&
-            (!seleccionado.departamento || teams.includes(seleccionado.departamento as Team)) ? (
-              <button
-                type="button"
-                className="mkt-btn-mini-react"
-                onClick={() =>
-                  onAbrirCampaign(seleccionado.campaign_id as number, seleccionado.departamento as Team)
-                }
-              >
-                Ver campaña →
-              </button>
-            ) : null}
-          </div>
-        ) : (
-          <div className="crm-c mkt-ficha-evento-react mkt-ficha-evento-vacia-react">
-            <p className="crm-k">Ficha de evento</p>
-            <p className="mkt-vacio-react">Toca un evento del calendario para ver su ficha.</p>
-          </div>
-        )}
+      {tareaPedida ? (
+        <DeptoProvider value={tareaPedida.departamento as Team}>
+          <TaskDialog
+            // Remonta una sola vez, al pasar de esqueleto a tarea real: los
+            // campos se inicializan desde `task` y con el esqueleto delante no
+            // hay nada escrito que perder.
+            key={tareaAbierta ? "tarea" : "esqueleto"}
+            task={tareaAbierta ?? resumenComoTarea(tareaPedida)}
+            cargando={tareaAbierta === null}
+            puedeAsignar={
+              puedeAsignarEnTodo || vpDe.includes(tareaPedida.departamento as Team)
+            }
+            deptosDisponibles={puedeAsignarEnTodo ? TODOS_LOS_DEPARTAMENTOS : vpDe}
+            onAbrirCampaign={
+              // Solo si es de un departamento propio: el panel de Proyectos de
+              // otro no se podría abrir (mismo criterio que la ficha de
+              // resumen de aquí abajo).
+              teams.includes(tareaPedida.departamento as Team)
+                ? (id, depto) => {
+                    cerrarTarea();
+                    onAbrirCampaign(id, depto);
+                  }
+                : undefined
+            }
+            onCerrar={cerrarTarea}
+            onGuardado={() => {
+              cerrarTarea();
+              void cargar(cursor);
+            }}
+          />
+        </DeptoProvider>
+      ) : null}
 
+      <div className="mkt-calendario-fila-inferior-react">
         <div className="crm-c mkt-sincronizacion-react">
           <p className="crm-k">Sincronización</p>
           <ul className="mkt-sincronizacion-lista-react">
