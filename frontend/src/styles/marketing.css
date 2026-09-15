@@ -217,6 +217,21 @@
   gap: 14px;
 }
 
+/* A qué departamentos va una tarea nueva: casillas y no un <select>, porque
+   puede ir a varios a la vez. Fuera de `.field-group-react` a propósito -- su
+   regla para `input` estiraría cada casilla a 54px de alto. */
+.mkt-form-deptos-react {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.mkt-form-deptos-react > span {
+  font-weight: 700;
+  color: var(--color-slate);
+}
+
 .mkt-form-react input[type="text"],
 .mkt-form-react input[type="date"],
 .mkt-form-react input[type="time"],

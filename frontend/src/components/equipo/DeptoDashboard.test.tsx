@@ -257,7 +257,8 @@ describe("/equipo — panel de Marketing", () => {
     await userEvent.click(screen.getByRole("button", { name: "Tareas" }));
     await userEvent.click(screen.getByRole("button", { name: "+ Nueva tarea" }));
 
-    await userEvent.selectOptions(screen.getByLabelText("Departamento"), "ingenieria");
+    await userEvent.click(screen.getByLabelText("Crear en Marketing"));
+    await userEvent.click(screen.getByLabelText("Crear en Ingeniería"));
     await userEvent.type(screen.getByLabelText("Título"), "Preparar taller");
     await userEvent.type(screen.getByLabelText("Instrucciones"), "Ver notas.");
     await userEvent.click(screen.getByRole("button", { name: "Crear tarea" }));
@@ -270,6 +271,25 @@ describe("/equipo — panel de Marketing", () => {
     // Se creó en el departamento elegido en el selector, no en el que estaba
     // filtrado en la vista.
     expect(deptosPedidos.at(-1)).toBe("ingenieria");
+  });
+
+  it("una tarea nueva puede ir a varios departamentos a la vez", async () => {
+    teamsDeSesion = ["marketing", "ingenieria"];
+    vpDeSesion = ["marketing", "ingenieria"];
+
+    await renderMarketing();
+    await userEvent.click(screen.getByRole("button", { name: "Tareas" }));
+    await userEvent.click(screen.getByRole("button", { name: "+ Nueva tarea" }));
+
+    // Marketing ya viene marcado; se añade Ingeniería sin quitarlo.
+    await userEvent.click(screen.getByLabelText("Crear en Ingeniería"));
+    await userEvent.type(screen.getByLabelText("Título"), "Preparar taller");
+    await userEvent.type(screen.getByLabelText("Instrucciones"), "Ver notas.");
+    await userEvent.click(screen.getByRole("button", { name: "Crear tarea" }));
+
+    await waitFor(() => expect(createTask).toHaveBeenCalledTimes(2));
+    // Una copia en cada tablero: cada departamento tiene su propia fila.
+    expect(deptosPedidos.slice(-2).sort()).toEqual(["ingenieria", "marketing"]);
   });
 
   it("'Solo lo mío' filtra el tablero por responsable", async () => {

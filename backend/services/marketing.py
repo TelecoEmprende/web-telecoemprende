@@ -665,7 +665,13 @@ def actualizar_task(task_id: int, departamento: str, **campos) -> bool:
     permitidos = (
         "titulo", "descripcion", "instrucciones", "estado", "prioridad", "deadline",
         "hora", "responsables", "tags", "checklist", "enlaces", "completado_en",
+        "departamento", "campaign_id", "content_id",
     )
+    if campos.get("departamento") not in (None, departamento):
+        # La campaña/contenido de los que cuelga son del departamento viejo
+        # (`crear_task` lo exige), así que al mudarse se queda suelta en vez
+        # de colgando de algo que ya no se ve desde su tablero.
+        campos = dict(campos, campaign_id=None, content_id=None)
     if "checklist" in campos:
         campos = dict(campos, checklist=json.dumps(campos["checklist"]))
     if "estado" in campos:

@@ -1,5 +1,15 @@
 export type Team = "marketing" | "eventos" | "ingenieria";
 
+/** Los tres departamentos del club, en el orden en que se enseñan. Board
+ *  puede asignar en cualquiera, esté o no dado de alta ahí. */
+export const TEAMS: Team[] = ["marketing", "eventos", "ingenieria"];
+
+export const DEPTO_LABEL: Record<Team, string> = {
+  marketing: "Marketing",
+  eventos: "Eventos",
+  ingenieria: "Ingeniería",
+};
+
 export type Cargo = "presidente" | "boardmember" | "";
 
 export type EquipoLoginResponse =
