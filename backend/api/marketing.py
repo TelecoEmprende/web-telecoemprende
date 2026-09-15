@@ -104,6 +104,8 @@ _DEPARTAMENTO_POR_BLUEPRINT = {
     "ingenieria_api": "ingenieria",
 }
 
+DEPARTAMENTOS = tuple(_DEPARTAMENTO_POR_BLUEPRINT.values())
+
 marketing_api = Blueprint("marketing_api", __name__, url_prefix="/api/marketing")
 
 
@@ -230,13 +232,19 @@ def _autor() -> str:
     return session.get("equipo_email", "admin")
 
 
-def _puede_asignar_tareas() -> bool:
+def _puede_asignar_tareas(departamento: str | None = None) -> bool:
     """Solo board y VPs del departamento asignan (ver docs/CLAUDE.md) --
-    mismo criterio que `/miembros/salud`, no uno nuevo."""
+    mismo criterio que `/miembros/salud`, no uno nuevo.
+
+    `departamento` sirve para preguntar por uno distinto al de la ruta: mover
+    una tarea a otro departamento exige poder asignar en los dos, y el de
+    destino no es el que sirvió la petición.
+    """
     if is_admin_authenticated():
         return True
     sesion = equipo_session_info()
-    return sesion["cargo"] in CARGOS_VALIDOS or departamento_actual() in sesion["vp_de"]
+    depto = departamento or departamento_actual()
+    return sesion["cargo"] in CARGOS_VALIDOS or depto in sesion["vp_de"]
 
 
 # --------------------------------------------------------------------------
@@ -516,6 +524,18 @@ def api_actualizar_task(task_id: int):
         campos["checklist"] = _checklist(datos)
     if "enlaces" in datos:
         campos["enlaces"] = _lista_textos(datos, "enlaces", MAX_ENLACES)
+    if "departamento" in datos:
+        # Mover una tarea de departamento es asignarla igual que crearla, y
+        # hay que poder hacerlo en los dos: en el de origen para sacarla y en
+        # el de destino para meterla. La ruta sigue siendo la del de origen
+        # (es donde vive la fila ahora mismo).
+        destino = _opcion(datos, "departamento", DEPARTAMENTOS, departamento_actual())
+        if destino != departamento_actual():
+            if not _puede_asignar_tareas() or not _puede_asignar_tareas(destino):
+                return jsonify(build_response(
+                    False, "Solo board y VPs pueden mover tareas de departamento."
+                )), 403
+            campos["departamento"] = destino
 
     if not actualizar_task(task_id, departamento_actual(), **campos):
         return jsonify(build_response(False, "Tarea no encontrada o sin cambios.")), 404

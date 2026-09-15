@@ -10,7 +10,7 @@ import { ContadorCaracteres } from "../../feedback/ContadorCaracteres";
 import { Esqueleto } from "../../feedback/Esqueleto";
 import { Badge } from "@/components/ui/badge";
 import type { ApiFailure } from "../../../types/api";
-import type { Team } from "../../../types/equipo";
+import { DEPTO_LABEL, TEAMS, type Team } from "../../../types/equipo";
 import {
   MAX_TITULO_LEN,
   PRIORIDADES,
@@ -29,16 +29,6 @@ import {
 const TASK_MIME = "application/x-teleco-task-id";
 
 const ORDEN_PRIORIDAD: Record<Prioridad, number> = { alta: 0, media: 1, baja: 2 };
-
-const DEPTO_LABEL: Record<Team, string> = {
-  marketing: "Marketing",
-  eventos: "Eventos",
-  ingenieria: "Ingeniería",
-};
-
-/** Board asigna en cualquier departamento del club, esté o no dado de alta
- *  ahí (ver `puedeAsignarEn`). */
-const TODOS_LOS_EQUIPOS: Team[] = ["marketing", "eventos", "ingenieria"];
 
 /** La misma cajita de departamento que en "Mi semana" (ver CalendarioEquipo):
  *  un color por departamento, no una pastilla gris para los tres. */
@@ -65,7 +55,7 @@ type Props = {
   deptos: Team[];
   /** Todos los departamentos de la persona, aunque no estén en el filtro de
    *  vista -- de aquí sale a qué departamentos puede dar de alta una tarea
-   *  nueva (ver `deptoNuevaTarea` más abajo), igual que ya hace el
+   *  nueva (ver `deptosNuevaTarea` más abajo), igual que ya hace el
    *  calendario (`CalendarPanel`): ver el tablero de uno y crear en otro son
    *  cosas distintas. */
   teams: Team[];
@@ -122,12 +112,15 @@ export function TasksPanel({ deptos, teams, vpDe, esBoard }: Props) {
     return esBoard || vpDe.includes(depto);
   }
   // De dónde sale a qué departamentos se puede dar de alta una tarea: todo el
-  // club si es board, o los suyos propios si no -- nunca solo `deptos` (el
-  // filtro de qué se está VIENDO ahora mismo), igual que ya hace el
-  // calendario (`CalendarPanel`).
-  const deptosDondePuedeAsignar = (esBoard ? TODOS_LOS_EQUIPOS : teams).filter(puedeAsignarEn);
-  const [deptoNuevaTarea, setDeptoNuevaTarea] = useState<Team>(
-    deptosDondePuedeAsignar[0] ?? deptos[0],
+  // club si es board (esté o no dado de alta ahí), o los suyos propios si no
+  // -- nunca solo `deptos` (el filtro de qué se está VIENDO ahora mismo),
+  // igual que ya hace el calendario (`CalendarPanel`).
+  const deptosDondePuedeAsignar = (esBoard ? TEAMS : teams).filter(puedeAsignarEn);
+  // Varios a la vez: una misma tarea que toca a dos departamentos se da de
+  // alta una vez en cada uno (no hay tarea compartida, cada tablero tiene la
+  // suya y la mueve de estado por su cuenta).
+  const [deptosNuevaTarea, setDeptosNuevaTarea] = useState<Team[]>(
+    [deptosDondePuedeAsignar[0] ?? deptos[0]].filter(Boolean),
   );
 
   useEffect(() => {
@@ -139,9 +132,13 @@ export function TasksPanel({ deptos, teams, vpDe, esBoard }: Props) {
   }, [deptos.join(",")]);
 
   useEffect(() => {
-    if (!deptosDondePuedeAsignar.includes(deptoNuevaTarea)) {
-      setDeptoNuevaTarea(deptosDondePuedeAsignar[0] ?? deptos[0]);
-    }
+    setDeptosNuevaTarea((actuales) => {
+      const validos = actuales.filter((d) => deptosDondePuedeAsignar.includes(d));
+      if (validos.length === actuales.length) return actuales;
+      return validos.length > 0
+        ? validos
+        : [deptosDondePuedeAsignar[0] ?? deptos[0]].filter(Boolean);
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [deptosDondePuedeAsignar.join(",")]);
 
@@ -180,17 +177,21 @@ export function TasksPanel({ deptos, teams, vpDe, esBoard }: Props) {
 
   async function crear(event: FormEvent) {
     event.preventDefault();
-    if (!titulo.trim() || !instrucciones.trim()) return;
+    if (!titulo.trim() || !instrucciones.trim() || deptosNuevaTarea.length === 0) return;
 
     try {
-      await apiDepto(deptoNuevaTarea).createTask({
-        titulo,
-        instrucciones,
-        prioridad,
-        deadline: deadline || null,
-        hora,
-        responsables,
-      });
+      await Promise.all(
+        deptosNuevaTarea.map((d) =>
+          apiDepto(d).createTask({
+            titulo,
+            instrucciones,
+            prioridad,
+            deadline: deadline || null,
+            hora,
+            responsables,
+          }),
+        ),
+      );
       setTitulo("");
       setInstrucciones("");
       setPrioridad("media");
@@ -307,19 +308,42 @@ export function TasksPanel({ deptos, teams, vpDe, esBoard }: Props) {
       {mostrarFormulario && deptosDondePuedeAsignar.length > 0 ? (
         <form className="mkt-form-react" onSubmit={crear}>
           {deptosDondePuedeAsignar.length > 1 ? (
-            <div className="field-group-react">
-              <label htmlFor="tp-depto">Departamento</label>
-              <select
-                id="tp-depto"
-                value={deptoNuevaTarea}
-                onChange={(event) => setDeptoNuevaTarea(event.target.value as Team)}
-              >
-                {deptosDondePuedeAsignar.map((d) => (
-                  <option key={d} value={d}>
-                    {DEPTO_LABEL[d]}
-                  </option>
-                ))}
-              </select>
+            <div className="mkt-form-deptos-react">
+              <span>Departamentos</span>
+              <div className="mkt-etiquetas-react">
+                {deptosDondePuedeAsignar.map((d) => {
+                  const elegido = deptosNuevaTarea.includes(d);
+                  return (
+                    <label
+                      key={d}
+                      className={`crm-tag crm-tag-check-react${elegido ? " crm-tag-azul-react" : ""}`}
+                    >
+                      <input
+                        type="checkbox"
+                        className="crm-check"
+                        checked={elegido}
+                        // El filtro de la barra tiene una casilla con el
+                        // mismo texto: sin esto, "Marketing" a secas no dice
+                        // si se está filtrando la vista o eligiendo destino.
+                        aria-label={`Crear en ${DEPTO_LABEL[d]}`}
+                        onChange={() =>
+                          setDeptosNuevaTarea((actuales) =>
+                            elegido
+                              ? actuales.filter((otro) => otro !== d)
+                              : [...actuales, d],
+                          )
+                        }
+                      />
+                      {DEPTO_LABEL[d]}
+                    </label>
+                  );
+                })}
+              </div>
+              {deptosNuevaTarea.length > 1 ? (
+                <p className="mkt-meta-react">
+                  Se creará una copia en cada tablero, independiente del resto.
+                </p>
+              ) : null}
             </div>
           ) : null}
           <div className="field-group-react">
@@ -384,12 +408,15 @@ export function TasksPanel({ deptos, teams, vpDe, esBoard }: Props) {
               id="tp-responsables"
               seleccionados={responsables}
               onCambiar={setResponsables}
+              deptos={deptosNuevaTarea}
             />
           </div>
           <button
             type="submit"
             className="mkt-btn-react"
-            disabled={!titulo.trim() || !instrucciones.trim()}
+            disabled={
+              !titulo.trim() || !instrucciones.trim() || deptosNuevaTarea.length === 0
+            }
           >
             Crear tarea
           </button>
@@ -597,6 +624,7 @@ export function TasksPanel({ deptos, teams, vpDe, esBoard }: Props) {
             task={abierta}
             etiquetasExistentes={etiquetasExistentes}
             puedeAsignar={puedeAsignarEn(abierta.departamento as Team)}
+            deptosDisponibles={deptosDondePuedeAsignar}
             onCerrar={() => setAbierta(null)}
             onGuardado={() => {
               setAbierta(null);
