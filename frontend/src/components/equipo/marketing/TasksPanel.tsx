@@ -61,8 +61,12 @@ type Props = {
   teams: Team[];
   /** Subconjunto de `teams` donde la persona es VP. */
   vpDe: Team[];
-  /** Board del club: asigna en cualquier departamento, sea VP o no. */
-  esBoard: boolean;
+  /** Asigna en cualquier departamento, sea VP o no. Es board del club O está
+   *  en ingeniería: los dos reciben sesión de /admin al entrar (ver
+   *  `login_equipo`), y el backend deja asignar a cualquiera que la tenga
+   *  (`_puede_asignar_tareas`). Mirar solo el cargo dejaba a ingeniería con
+   *  permisos de servidor que la interfaz le escondía. */
+  puedeAsignarEnTodo: boolean;
 };
 
 /**
@@ -74,7 +78,7 @@ type Props = {
  * CADA tarea pueden crearla o reasignarla (ver docs/CLAUDE.md); un miembro
  * raso sigue pudiendo mover su propia tarea de estado.
  */
-export function TasksPanel({ deptos, teams, vpDe, esBoard }: Props) {
+export function TasksPanel({ deptos, teams, vpDe, puedeAsignarEnTodo }: Props) {
   const directorio = useDirectorio();
 
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -109,13 +113,13 @@ export function TasksPanel({ deptos, teams, vpDe, esBoard }: Props) {
   const [hora, setHora] = useState("");
   const [responsables, setResponsables] = useState<string[]>([]);
   function puedeAsignarEn(depto: Team) {
-    return esBoard || vpDe.includes(depto);
+    return puedeAsignarEnTodo || vpDe.includes(depto);
   }
   // De dónde sale a qué departamentos se puede dar de alta una tarea: todo el
-  // club si es board (esté o no dado de alta ahí), o los suyos propios si no
-  // -- nunca solo `deptos` (el filtro de qué se está VIENDO ahora mismo),
-  // igual que ya hace el calendario (`CalendarPanel`).
-  const deptosDondePuedeAsignar = (esBoard ? TEAMS : teams).filter(puedeAsignarEn);
+  // club si asigna en todo (esté o no dado de alta ahí), o los suyos propios
+  // si no -- nunca solo `deptos` (el filtro de qué se está VIENDO ahora
+  // mismo), igual que ya hace el calendario (`CalendarPanel`).
+  const deptosDondePuedeAsignar = (puedeAsignarEnTodo ? TEAMS : teams).filter(puedeAsignarEn);
   // Varios a la vez: una misma tarea que toca a dos departamentos se da de
   // alta una vez en cada uno (no hay tarea compartida, cada tablero tiene la
   // suya y la mueve de estado por su cuenta).
