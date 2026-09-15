@@ -171,6 +171,35 @@ function posicionEnRejilla(hora: string): Posicion | null {
   };
 }
 
+/** El resumen del calendario disfrazado de `Task`, para que el diálogo pueda
+ *  pintar título y cabecera antes de que llegue la tarea de verdad. Todo lo
+ *  que el resumen no trae va vacío, pero da igual: mientras `cargando` está
+ *  puesto el formulario no se enseña. */
+function resumenComoTarea(item: CalendarioItem): Task {
+  return {
+    id: item.id,
+    departamento: item.departamento ?? "",
+    campaign_id: item.campaign_id,
+    content_id: null,
+    titulo: item.titulo,
+    descripcion: "",
+    instrucciones: "",
+    estado: item.estado as Task["estado"],
+    prioridad: (item.prioridad ?? "media") as Task["prioridad"],
+    deadline: item.fecha,
+    hora: item.hora ?? "",
+    responsables: item.responsables,
+    tags: [],
+    checklist: [],
+    enlaces: [],
+    creado_por: "",
+    created_at: "",
+    updated_at: "",
+    completado_en: null,
+    campaign_nombre: item.padre,
+  };
+}
+
 type Bloque = { item: CalendarioItem; pos: Posicion; columna: number; columnas: number };
 
 /** Reparte los items que se solapan en columnas lado a lado, como hace
@@ -250,7 +279,10 @@ export function CalendarPanel({
   // no tienen diálogo propio, así que siguen con la ficha de resumen -- que
   // ahora también es un modal, no una tarjeta debajo del calendario.
   const [tareaAbierta, setTareaAbierta] = useState<Task | null>(null);
-  const [abriendo, setAbriendo] = useState<number | null>(null);
+  // Mientras la tarea entera viene de camino se enseña el diálogo ya, con lo
+  // que el calendario sabe de ella. Esperar a la red para abrir dejaba el
+  // clic sin ninguna respuesta visible.
+  const [tareaPedida, setTareaPedida] = useState<CalendarioItem | null>(null);
   const [tituloNuevo, setTituloNuevo] = useState("");
   // Se busca un mes con datos una sola vez, en el primer montaje. Después el
   // usuario manda: si navega a un mes vacío, se queda ahí.
@@ -346,20 +378,26 @@ export function CalendarPanel({
       setSeleccionado(item);
       return;
     }
-    // El calendario solo trae un resumen de la tarea; el diálogo necesita
-    // checklist, enlaces, instrucciones... así que se pide entera.
-    setAbriendo(item.id);
+    // El diálogo se abre YA con el resumen, y la tarea entera (checklist,
+    // enlaces, instrucciones, comentarios) llega después y lo rellena.
+    setTareaPedida(item);
+    setTareaAbierta(null);
     try {
       const respuesta = await apiDepto(item.departamento as Team).getTask(item.id);
       setTareaAbierta(respuesta.task);
       setError(null);
     } catch (err) {
       setError((err as ApiFailure)?.message || "No se pudo abrir la tarea.");
-      // Sin la tarea entera, al menos el resumen que ya se tenía.
+      // Sin la tarea entera no hay nada que editar: se cierra y se cae al
+      // resumen, que es lo que sí se tiene.
+      setTareaPedida(null);
       setSeleccionado(item);
-    } finally {
-      setAbriendo(null);
     }
+  }
+
+  function cerrarTarea() {
+    setTareaAbierta(null);
+    setTareaPedida(null);
   }
 
   const porDia = items.reduce<Record<string, CalendarioItem[]>>((acc, item) => {
@@ -437,7 +475,6 @@ export function CalendarPanel({
         }${extra?.className ? ` ${extra.className}` : ""}`}
         style={extra?.style}
         title={`${ORIGEN_LABEL[item.origen]}${item.hora ? ` · ${item.hora}` : ""}${etiquetaDepto ? ` · ${etiquetaDepto}` : ""}${item.padre ? ` · ${item.padre}` : ""} — ${item.titulo}`}
-        aria-busy={abriendo === item.id}
         onClick={() => void abrir(item)}
       >
         {item.hora ? <span className="mkt-evento-hora-react">{item.hora}</span> : null}
@@ -811,28 +848,33 @@ export function CalendarPanel({
         </DialogContent>
       </Dialog>
 
-      {tareaAbierta ? (
-        <DeptoProvider value={tareaAbierta.departamento as Team}>
+      {tareaPedida ? (
+        <DeptoProvider value={tareaPedida.departamento as Team}>
           <TaskDialog
-            task={tareaAbierta}
+            // Remonta una sola vez, al pasar de esqueleto a tarea real: los
+            // campos se inicializan desde `task` y con el esqueleto delante no
+            // hay nada escrito que perder.
+            key={tareaAbierta ? "tarea" : "esqueleto"}
+            task={tareaAbierta ?? resumenComoTarea(tareaPedida)}
+            cargando={tareaAbierta === null}
             puedeAsignar={
-              puedeAsignarEnTodo || vpDe.includes(tareaAbierta.departamento as Team)
+              puedeAsignarEnTodo || vpDe.includes(tareaPedida.departamento as Team)
             }
             deptosDisponibles={puedeAsignarEnTodo ? TODOS_LOS_DEPARTAMENTOS : vpDe}
             onAbrirCampaign={
               // Solo si es de un departamento propio: el panel de Proyectos de
               // otro no se podría abrir (mismo criterio que la ficha de
               // resumen de aquí abajo).
-              teams.includes(tareaAbierta.departamento as Team)
+              teams.includes(tareaPedida.departamento as Team)
                 ? (id, depto) => {
-                    setTareaAbierta(null);
+                    cerrarTarea();
                     onAbrirCampaign(id, depto);
                   }
                 : undefined
             }
-            onCerrar={() => setTareaAbierta(null)}
+            onCerrar={cerrarTarea}
             onGuardado={() => {
-              setTareaAbierta(null);
+              cerrarTarea();
               void cargar(cursor);
             }}
           />

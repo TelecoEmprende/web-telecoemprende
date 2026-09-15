@@ -5,6 +5,7 @@ import { useApi, useDirectorio } from "../DeptoApi";
 import { AlertBanner } from "../../feedback/AlertBanner";
 import { ContadorCaracteres } from "../../feedback/ContadorCaracteres";
 import { AdjuntosDeContent } from "./AdjuntosDeContent";
+import { Esqueleto } from "../../feedback/Esqueleto";
 import { SelectorMiembros } from "./SelectorMiembros";
 import { etiquetaDe } from "./Avatares";
 import {
@@ -49,6 +50,12 @@ type Props = {
    *  y lo habría perdido al abrir este diálogo en su lugar. Sin esta prop no
    *  se enseña el botón: desde el tablero de Tareas ya se está en el sitio. */
   onAbrirCampaign?: (campaignId: number, departamento: Team) => void;
+  /** La tarea todavía se está pidiendo entera y `task` es solo el resumen que
+   *  tenía quien abrió el diálogo. Se enseña la cabecera con lo que ya se
+   *  sabe y un esqueleto en lugar del formulario -- abrir al instante y
+   *  rellenar es mejor que dejar el clic sin respuesta mientras va la red
+   *  (ver `abrir()` en `CalendarPanel`). */
+  cargando?: boolean;
 };
 
 function comoLineas(valores: string[]) {
@@ -71,7 +78,7 @@ function desdeLineas(texto: string) {
  */
 export function TaskDialog({
   task, onCerrar, onGuardado, etiquetasExistentes = [], puedeAsignar = true,
-  deptosDisponibles = [], onAbrirCampaign,
+  deptosDisponibles = [], onAbrirCampaign, cargando = false,
 }: Props) {
   const { deleteTask, getTaskComments, createTaskComment, updateTask } = useApi();
   const directorio = useDirectorio();
@@ -99,6 +106,7 @@ export function TaskDialog({
   const [enviandoComentario, setEnviandoComentario] = useState(false);
 
   useEffect(() => {
+    if (cargando) return;
     let activo = true;
     void getTaskComments(task.id)
       .then((r) => activo && setComentarios(r.comments))
@@ -108,7 +116,7 @@ export function TaskDialog({
     return () => {
       activo = false;
     };
-  }, [task.id, getTaskComments]);
+  }, [task.id, getTaskComments, cargando]);
 
   async function enviarComentario(event: FormEvent) {
     event.preventDefault();
@@ -205,6 +213,9 @@ export function TaskDialog({
 
         {error ? <AlertBanner variant="error" message={error} /> : null}
 
+        {cargando ? (
+          <Esqueleto filas={4} alto={56} />
+        ) : (
         <form className="mkt-form-react mkt-form-dialogo-react" onSubmit={guardar}>
           <div className="field-group-react">
             <label htmlFor="td-titulo">Título</label>
@@ -515,6 +526,7 @@ export function TaskDialog({
             )}
           </div>
         </form>
+        )}
       </DialogContent>
     </Dialog>
   );

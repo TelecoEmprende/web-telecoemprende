@@ -497,6 +497,43 @@ describe("/equipo — panel de Marketing", () => {
     expect(await screen.findByLabelText("Instrucciones")).toBeInTheDocument();
   });
 
+  it("el diálogo de la tarea abre antes de que llegue la red, no después", async () => {
+    getCalendarioEquipo.mockResolvedValue({
+      ok: true,
+      desde: "2026-09-01",
+      hasta: "2026-09-30",
+      items: [
+        {
+          origen: "task", id: 7, titulo: "Escribir guion", fecha: "2026-09-15",
+          estado: "pendiente", campaign_id: null, detalle: "alta", prioridad: "alta",
+          padre: null, responsables: [], hora: null, departamento: "marketing",
+        },
+      ],
+    });
+    // La tarea entera no llega hasta que este test lo diga.
+    let resolver: (v: unknown) => void = () => {};
+    getTask.mockReturnValue(new Promise((r) => { resolver = r; }));
+
+    await renderMarketing();
+    await userEvent.click(screen.getByRole("button", { name: "Calendario" }));
+    await userEvent.click(await screen.findByRole("button", { name: /Escribir guion/ }));
+
+    // Con la petición todavía en vuelo ya hay diálogo, con el título que el
+    // calendario ya sabía y un esqueleto en lugar del formulario.
+    const dialogo = await screen.findByRole("dialog");
+    expect(dialogo).toHaveTextContent("Escribir guion");
+    expect(within(dialogo).getByRole("status", { name: "Cargando" })).toBeInTheDocument();
+    expect(within(dialogo).queryByLabelText("Instrucciones")).not.toBeInTheDocument();
+
+    resolver({
+      ok: true,
+      task: { ...TAREA, id: 7, titulo: "Escribir guion", instrucciones: "Ver notas." },
+    });
+
+    // Y al llegar, el formulario sustituye al esqueleto sin cerrar nada.
+    expect(await screen.findByLabelText("Instrucciones")).toHaveValue("Ver notas.");
+  });
+
   it("un evento del club abre la ficha de resumen, que tampoco va debajo", async () => {
     getCalendarioEquipo.mockResolvedValue({
       ok: true,

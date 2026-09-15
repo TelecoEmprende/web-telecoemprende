@@ -1876,8 +1876,21 @@ button.mkt-evento-react {
   cursor: pointer;
 }
 
-button.mkt-evento-react:hover {
-  filter: brightness(0.94);
+/* Con puntero fino: en táctil el resaltado se queda pegado tras el tap. */
+@media (hover: hover) and (pointer: fine) {
+  button.mkt-evento-react:hover {
+    filter: brightness(0.94);
+  }
+}
+
+/* Acuse del toque. Abrir la ficha puede tardar lo que tarde la red en traer
+   la tarea entera, y sin esto el clic se quedaba sin respuesta ninguna. */
+button.mkt-evento-react {
+  transition: transform var(--dur-press) var(--ease-out);
+}
+
+button.mkt-evento-react:active {
+  transform: scale(0.97);
 }
 
 .mkt-evento-alta-react {
