@@ -246,6 +246,24 @@ describe("/equipo — panel de Marketing", () => {
     expect(screen.queryByRole("button", { name: "+ Nueva tarea" })).not.toBeInTheDocument();
   });
 
+  it("ingeniería asigna en todo el club aunque no sea VP de nada ni tenga cargo", async () => {
+    // El backend ya la trata como superusuaria: entrar en /equipo estando en
+    // ingeniería da sesión de /admin, y `_puede_asignar_tareas` deja pasar a
+    // cualquiera que la tenga. La interfaz miraba solo el cargo, así que le
+    // escondía permisos que el servidor sí le daba.
+    teamsDeSesion = ["ingenieria"];
+    vpDeSesion = [];
+
+    await renderMarketing();
+    await userEvent.click(screen.getByRole("button", { name: "Tareas" }));
+    await userEvent.click(screen.getByRole("button", { name: "+ Nueva tarea" }));
+
+    // Los tres departamentos del club, no solo el suyo.
+    expect(screen.getByLabelText("Crear en Marketing")).toBeInTheDocument();
+    expect(screen.getByLabelText("Crear en Eventos")).toBeInTheDocument();
+    expect(screen.getByLabelText("Crear en Ingeniería")).toBeInTheDocument();
+  });
+
   it("VP de varios departamentos elige a cuál va la tarea nueva, aunque la vista esté filtrada a uno solo", async () => {
     // Por defecto la vista arranca filtrada al primero de sus departamentos
     // (ver `EquipoPage.tsx`), sin tocar el filtro de la barra -- el selector

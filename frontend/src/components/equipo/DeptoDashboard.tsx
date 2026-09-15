@@ -37,7 +37,7 @@ type Props = {
   /** Subconjunto de `teams` donde la persona es VP. */
   vpDe: Team[];
   /** Board del club: asigna tareas en cualquier departamento, sea VP o no. */
-  esBoard: boolean;
+  puedeAsignarEnTodo: boolean;
 };
 
 /**
@@ -49,7 +49,7 @@ type Props = {
  * este componente solo pinta el panel que corresponde.
  */
 export function DeptoDashboard({
-  depto, deptos, seccion, teams, campaignInicial, onCampaignAbierta, onAbrirCampaign, vpDe, esBoard,
+  depto, deptos, seccion, teams, campaignInicial, onCampaignAbierta, onAbrirCampaign, vpDe, puedeAsignarEnTodo,
 }: Props) {
   return (
     <DeptoProvider value={depto}>
@@ -62,7 +62,12 @@ export function DeptoDashboard({
           />
         ) : null}
         {seccion === "tareas" ? (
-          <TasksPanel deptos={deptos} teams={teams} vpDe={vpDe} esBoard={esBoard} />
+          <TasksPanel
+            deptos={deptos}
+            teams={teams}
+            vpDe={vpDe}
+            puedeAsignarEnTodo={puedeAsignarEnTodo}
+          />
         ) : null}
         {seccion === "calendario" ? (
           <CalendarPanel teams={teams} onAbrirCampaign={onAbrirCampaign} />
