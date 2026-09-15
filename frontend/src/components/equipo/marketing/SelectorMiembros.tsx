@@ -2,9 +2,11 @@ import { ChevronDown } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { useApi } from "../DeptoApi";
+import { apiDepto } from "../../../api/marketing";
 import { AvatarResponsable, etiquetaDe } from "./Avatares";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import type { Team } from "../../../types/equipo";
 import type { Miembro } from "../../../types/marketing";
 
 type Props = {
@@ -12,6 +14,11 @@ type Props = {
   seleccionados: string[];
   onCambiar: (emails: string[]) => void;
   placeholder?: string;
+  /** De qué departamentos sale el roster. Por defecto, el del contexto
+   *  (`useApi`); se pasa explícitamente cuando lo que se está editando no es
+   *  del departamento que se está viendo -- crear una tarea para Eventos
+   *  desde el tablero de Marketing ofrecía la gente de Marketing. */
+  deptos?: Team[];
 };
 
 /**
@@ -26,21 +33,33 @@ export function SelectorMiembros({
   seleccionados,
   onCambiar,
   placeholder = "Elegir personas...",
+  deptos,
 }: Props) {
   const { getMiembros } = useApi();
   const [miembros, setMiembros] = useState<Miembro[]>([]);
 
   useEffect(() => {
     let activo = true;
-    void getMiembros()
-      .then((r) => activo && setMiembros(r.miembros))
+    // Con varios departamentos el roster es la unión de los suyos, sin
+    // repetir a quien esté en más de uno.
+    const peticiones = deptos?.length
+      ? deptos.map((d) => apiDepto(d).getMiembros())
+      : [getMiembros()];
+    void Promise.all(peticiones)
+      .then((respuestas) => {
+        if (!activo) return;
+        const porEmail = new Map<string, Miembro>();
+        for (const r of respuestas) for (const m of r.miembros) porEmail.set(m.email, m);
+        setMiembros([...porEmail.values()]);
+      })
       .catch(() => {
         // Sin roster no hay picker que ofrecer; no bloquea el formulario.
       });
     return () => {
       activo = false;
     };
-  }, [getMiembros]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [getMiembros, deptos?.join(",")]);
 
   function alternar(email: string) {
     onCambiar(

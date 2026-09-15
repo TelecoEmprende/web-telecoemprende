@@ -664,6 +664,42 @@ class TaskAsignacionTests(MarketingTestCase):
         )
         self.assertEqual(respuesta.status_code, 403)
 
+    def test_vp_de_los_dos_mueve_la_tarea_de_departamento(self):
+        self.login(equipos=["marketing", "eventos"], vp_de=["marketing", "eventos"])
+        task = self.crear_task_directo().get_json()["task"]
+
+        respuesta = self.client.put(
+            f"/api/marketing/tasks/{task['id']}", json={"departamento": "eventos"}
+        )
+        self.assertEqual(respuesta.status_code, 200, respuesta.get_json())
+
+        # Ya no está en el tablero de Marketing, sí en el de Eventos.
+        marketing = self.client.get("/api/marketing/tasks").get_json()["tasks"]
+        eventos = self.client.get("/api/eventos/tasks").get_json()["tasks"]
+        self.assertEqual([t["id"] for t in marketing], [])
+        self.assertEqual([t["id"] for t in eventos], [task["id"]])
+
+    def test_mover_a_un_departamento_donde_no_asigna_da_403(self):
+        self.login(equipos=["marketing", "eventos"], vp_de=["marketing"])
+        task = self.crear_task_directo().get_json()["task"]
+
+        respuesta = self.client.put(
+            f"/api/marketing/tasks/{task['id']}", json={"departamento": "eventos"}
+        )
+        self.assertEqual(respuesta.status_code, 403)
+
+    def test_mudarse_de_departamento_suelta_la_campana_del_viejo(self):
+        self.login(equipos=["marketing", "eventos"], vp_de=["marketing", "eventos"])
+        campaign = self.crear_campaign()
+        task = self.crear_task_directo(campaign_id=campaign["id"]).get_json()["task"]
+        self.assertEqual(task["campaign_id"], campaign["id"])
+
+        self.client.put(
+            f"/api/marketing/tasks/{task['id']}", json={"departamento": "eventos"}
+        )
+        mudada = self.client.get(f"/api/eventos/tasks/{task['id']}").get_json()["task"]
+        self.assertIsNone(mudada["campaign_id"])
+
 
 class CalendarioTests(MarketingTestCase):
     def setUp(self):
