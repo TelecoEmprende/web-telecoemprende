@@ -143,7 +143,10 @@ export type CampaignDetalle = Campaign & {
 };
 
 export type CalendarioItem = {
-  origen: "task" | "content" | "reunion";
+  /** "club" son los eventos que pone /admin para todo el club (charlas de
+   *  alumni, feria...): no son de ningún departamento, así que llegan con
+   *  `departamento` vacío y salen esté filtrada la vista a lo que sea. */
+  origen: "task" | "content" | "reunion" | "club";
   id: number;
   titulo: string;
   fecha: string;
@@ -156,7 +159,8 @@ export type CalendarioItem = {
   responsables: string[];
   /** "HH:MM", o null si es de día completo (publicaciones siempre lo son). */
   hora: string | null;
-  /** Solo en la lectura cruzada entre departamentos (`getCalendarioEquipo`). */
+  /** Solo en la lectura cruzada entre departamentos (`getCalendarioEquipo`),
+   *  y vacío en los eventos del club, que no son de ninguno. */
   departamento?: string;
 };
 
@@ -168,6 +172,9 @@ export type Miembro = {
   tags: string[];
   /** Nombre para mostrar. Vacío si todavía no se ha rellenado en /admin. */
   nombre: string;
+  /** Foto propia como data URL, o "" si no ha subido ninguna y vale la de
+   *  `public/equipo-*.jpg` (ver `Avatares.tsx`). */
+  foto: string;
   /** Tareas sin acabar en ESTE departamento. Se calcula, no se guarda. */
   abiertas: number;
 };
@@ -207,6 +214,11 @@ export type FichaMiembro = {
   actividad: ActividadMiembro[];
   /** Claves libres, ver ONBOARDING_PASOS: qué pasos ya se han marcado. */
   onboarding: Record<string, boolean>;
+  /** Foto propia (data URL), o "" si vale la de `public/equipo-*.jpg`. */
+  foto: string;
+  /** Si quien mira puede cambiar esta foto: su propia ficha, o admin. Lo
+   *  decide el servidor; aquí solo sirve para enseñar u ocultar el botón. */
+  es_tu_ficha: boolean;
 };
 
 /** Pasos del checklist de onboarding. El backend solo guarda el objeto

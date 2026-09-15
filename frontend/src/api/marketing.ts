@@ -105,7 +105,13 @@ export function apiDepto(depto: Team) {
 
     updateFichaMiembro: (
       email: string,
-      datos: { tags?: string[]; notas?: string; onboarding?: Record<string, boolean> },
+      datos: {
+        tags?: string[];
+        notas?: string;
+        onboarding?: Record<string, boolean>;
+        /** Data URL ya reducida (ver `utils/imagen.ts`); "" borra la propia. */
+        foto?: string;
+      },
     ) => put<ApiResult>("/miembros/ficha", { email, ...datos }),
 
     getSalud: () => apiRequest<{ ok: true; salud: SaludEquipo }>(`${BASE}/miembros/salud`),

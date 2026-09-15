@@ -8,6 +8,8 @@ const getMiembros = vi.fn();
 
 vi.mock("../DeptoApi", () => ({
   useApi: () => ({ getMiembros }),
+  // Los avatares del selector leen las fotos propias del contexto.
+  useFotos: () => ({}),
 }));
 
 describe("SelectorMiembros", () => {
@@ -15,8 +17,8 @@ describe("SelectorMiembros", () => {
     getMiembros.mockReset().mockResolvedValue({
       ok: true,
       miembros: [
-        { email: "abril@example.com", equipos: ["marketing"], activo: true, tags: [], abiertas: 0 },
-        { email: "hugo@example.com", equipos: ["marketing"], activo: true, tags: [], abiertas: 0 },
+        { email: "abril@example.com", equipos: ["marketing"], activo: true, tags: [], foto: "", abiertas: 0 },
+        { email: "hugo@example.com", equipos: ["marketing"], activo: true, tags: [], foto: "", abiertas: 0 },
       ],
     });
   });

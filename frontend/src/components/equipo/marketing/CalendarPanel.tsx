@@ -38,6 +38,7 @@ const ORIGEN_LABEL: Record<CalendarioItem["origen"], string> = {
   content: "Publicación",
   task: "Tarea",
   reunion: "Reunión",
+  club: "Evento del club",
 };
 
 /** `detalle` no es una descripción libre: el backend reutiliza esa columna
@@ -49,6 +50,7 @@ const DETALLE_LABEL: Record<CalendarioItem["origen"], string> = {
   content: "Plataforma",
   task: "Prioridad",
   reunion: "Objetivo",
+  club: "Descripción",
 };
 
 const DIAS = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
@@ -377,7 +379,11 @@ export function CalendarPanel({ teams, onAbrirCampaign }: Props) {
     item: CalendarioItem,
     extra?: { style?: CSSProperties; className?: string },
   ) {
-    const claseDepto = item.departamento ? ` ${DEPTO_EVENTO[item.departamento] ?? ""}` : "";
+    const claseDepto = item.departamento
+      ? ` ${DEPTO_EVENTO[item.departamento] ?? ""}`
+      : item.origen === "club"
+        ? " mkt-evento-club-react"
+        : "";
     const etiquetaDepto = item.departamento ? DEPTO_LABEL[item.departamento as Team] : null;
 
     return (
@@ -501,6 +507,16 @@ export function CalendarPanel({ teams, onAbrirCampaign }: Props) {
               />
               Todos
             </label>
+            {/* No es un filtro como los de abajo: los eventos del club salen
+                siempre, se esté mirando el departamento que se esté mirando.
+                Está aquí porque "Capas" es también la leyenda de colores, y
+                un cuarto color sin entrada no se podría leer. */}
+            <span
+              className="crm-tag mkt-evento-club-react"
+              title="Charlas de alumni, ferias, asambleas... Los pone el club desde /admin y salen siempre."
+            >
+              Club
+            </span>
             {todosDepartamentos
               ? TODOS_LOS_DEPARTAMENTOS.map((depto) => (
                   <button
@@ -719,7 +735,9 @@ export function CalendarPanel({ teams, onAbrirCampaign }: Props) {
             </header>
 
             <div className="mkt-ficha-evento-chips-react">
-              <Badge variant="outline">{seleccionado.estado.replace(/_/g, " ")}</Badge>
+              {seleccionado.estado ? (
+                <Badge variant="outline">{seleccionado.estado.replace(/_/g, " ")}</Badge>
+              ) : null}
               {seleccionado.prioridad === "alta" ? (
                 <Badge variant="destructive">Urgente</Badge>
               ) : null}

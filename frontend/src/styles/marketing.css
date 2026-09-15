@@ -877,6 +877,14 @@
   color: var(--color-noche);
 }
 
+/* Los eventos del club (los que pone /admin) no son de ningún departamento,
+   así que llevan la cuarta cara de la marca -- ámbar, la única libre entre las
+   tres que ya usan los departamentos. */
+.mkt-evento-club-react {
+  background: rgba(var(--color-chispa-rgb), 0.22);
+  color: var(--color-noche);
+}
+
 .mkt-leyenda-react {
   display: flex;
   gap: 10px;
@@ -1228,6 +1236,24 @@
   height: 72px;
   font-size: 1.4rem;
   margin-bottom: 10px;
+}
+
+/* Subir/quitar la foto propia, justo debajo del avatar de la ficha. */
+.mkt-ficha-foto-acciones-react {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+/* El disparador del <input type="file"> es su <label>: hay que darle el
+   puntero a mano, un label no lo trae. */
+.mkt-ficha-foto-acciones-react label {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
 }
 
 .mkt-ficha-nombre-react {

@@ -31,9 +31,20 @@ export function useDirectorio(): Record<string, string> {
   return useContext(DirectorioContext);
 }
 
+/** email → foto propia (data URL) de quien haya subido una. Va aparte del
+ *  directorio de nombres para no cambiarle la forma a `directorio[email]`,
+ *  que se usa como string en media docena de paneles. Lo llena la misma
+ *  llamada, así que no cuesta una petición más. */
+const FotosContext = createContext<Record<string, string>>({});
+
+export function useFotos(): Record<string, string> {
+  return useContext(FotosContext);
+}
+
 export function DirectorioProvider({ children }: { children: ReactNode }) {
   const { getMiembros } = useApi();
   const [directorio, setDirectorio] = useState<Record<string, string>>({});
+  const [fotos, setFotos] = useState<Record<string, string>>({});
 
   useEffect(() => {
     let activo = true;
@@ -41,8 +52,13 @@ export function DirectorioProvider({ children }: { children: ReactNode }) {
       .then((r) => {
         if (!activo) return;
         const mapa: Record<string, string> = {};
-        for (const m of r.miembros) if (m.nombre.trim()) mapa[m.email] = m.nombre;
+        const caras: Record<string, string> = {};
+        for (const m of r.miembros) {
+          if (m.nombre.trim()) mapa[m.email] = m.nombre;
+          if (m.foto) caras[m.email] = m.foto;
+        }
         setDirectorio(mapa);
+        setFotos(caras);
       })
       .catch(() => {
         // Sin directorio, los avatares caen al nombre adivinado del email.
@@ -52,5 +68,9 @@ export function DirectorioProvider({ children }: { children: ReactNode }) {
     };
   }, [getMiembros]);
 
-  return <DirectorioContext.Provider value={directorio}>{children}</DirectorioContext.Provider>;
+  return (
+    <DirectorioContext.Provider value={directorio}>
+      <FotosContext.Provider value={fotos}>{children}</FotosContext.Provider>
+    </DirectorioContext.Provider>
+  );
 }
