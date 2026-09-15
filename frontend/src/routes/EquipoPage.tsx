@@ -292,7 +292,7 @@ export function EquipoPage() {
                 onCampaignAbierta={() => setCampaignInicial(null)}
                 onAbrirCampaign={abrirCampaign}
                 vpDe={vpDe}
-                esBoard={esBoard}
+                puedeAsignarEnTodo={tieneAccesoAdmin}
               />
             ) : null}
           </div>
