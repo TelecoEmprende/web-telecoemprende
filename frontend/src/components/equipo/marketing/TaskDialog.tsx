@@ -15,6 +15,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import type { ApiFailure } from "../../../types/api";
+import { DEPTO_LABEL, type Team } from "../../../types/equipo";
 import {
   MAX_TEXTO_LARGO_LEN,
   MAX_TITULO_LEN,
@@ -39,6 +40,10 @@ type Props = {
   /** Solo board y VPs reasignan (ver docs/CLAUDE.md) -- si es `false`, el
    *  selector de responsables se enseña de solo lectura. */
   puedeAsignar?: boolean;
+  /** Departamentos a los que se puede mudar la tarea: los mismos donde la
+   *  persona puede darla de alta (ver `TasksPanel`). Con menos de dos no se
+   *  enseña el selector, que no habría nada que elegir. */
+  deptosDisponibles?: Team[];
 };
 
 function comoLineas(valores: string[]) {
@@ -61,6 +66,7 @@ function desdeLineas(texto: string) {
  */
 export function TaskDialog({
   task, onCerrar, onGuardado, etiquetasExistentes = [], puedeAsignar = true,
+  deptosDisponibles = [],
 }: Props) {
   const { deleteTask, getTaskComments, createTaskComment, updateTask } = useApi();
   const directorio = useDirectorio();
@@ -69,6 +75,7 @@ export function TaskDialog({
   const [descripcion, setDescripcion] = useState(task.descripcion);
   const [instrucciones, setInstrucciones] = useState(task.instrucciones);
   const [estado, setEstado] = useState<TaskEstado>(task.estado);
+  const [departamento, setDepartamento] = useState<Team>(task.departamento as Team);
   const [prioridad, setPrioridad] = useState<Prioridad>(task.prioridad);
   const [deadline, setDeadline] = useState(task.deadline ?? "");
   const [hora, setHora] = useState(task.hora);
@@ -152,6 +159,7 @@ export function TaskDialog({
         tags: tags.split(",").map((t) => t.trim()).filter(Boolean),
         enlaces: desdeLineas(enlaces),
         checklist,
+        ...(departamento !== task.departamento ? { departamento } : {}),
       });
       onGuardado();
     } catch (err) {
@@ -217,6 +225,29 @@ export function TaskDialog({
             />
             <ContadorCaracteres valor={instrucciones} maximo={MAX_TEXTO_LARGO_LEN} />
           </div>
+
+          {puedeAsignar && deptosDisponibles.length > 1 ? (
+            <div className="field-group-react">
+              <label htmlFor="td-depto">Departamento</label>
+              <select
+                id="td-depto"
+                value={departamento}
+                onChange={(event) => setDepartamento(event.target.value as Team)}
+              >
+                {deptosDisponibles.map((d) => (
+                  <option key={d} value={d}>
+                    {DEPTO_LABEL[d]}
+                  </option>
+                ))}
+              </select>
+              {departamento !== task.departamento ? (
+                <p className="mkt-meta-react">
+                  Al guardar deja de colgar de su campaña o contenido: son de{" "}
+                  {DEPTO_LABEL[task.departamento as Team]}.
+                </p>
+              ) : null}
+            </div>
+          ) : null}
 
           <div className="mkt-form-fila-react">
             <div className="field-group-react">
@@ -343,6 +374,7 @@ export function TaskDialog({
                 id="td-responsables"
                 seleccionados={responsables}
                 onCambiar={setResponsables}
+                deptos={[departamento]}
               />
             ) : (
               <p className="mkt-meta-react">
