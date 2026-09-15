@@ -1,5 +1,5 @@
-import { FormEvent, useEffect, useMemo, useState } from "react";
-import { Mail, StickyNote } from "lucide-react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { Camera, Mail, StickyNote } from "lucide-react";
 
 import { useApi } from "../DeptoApi";
 import { AlertBanner } from "../../feedback/AlertBanner";
@@ -13,6 +13,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { aAvatarCuadrado } from "../../../utils/imagen";
 import type { ApiFailure } from "../../../types/api";
 import {
   formatearFecha,
@@ -74,6 +75,12 @@ export function MemberDialog({ email, habilidadesConocidas = [], onCerrar, onGua
   const [guardado, setGuardado] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // La foto se guarda sola al elegirla, sin pasar por "Editar perfil": nadie
+  // espera tener que darle a Guardar después de recortarse la cara.
+  const [foto, setFoto] = useState("");
+  const [subiendoFoto, setSubiendoFoto] = useState(false);
+  const archivoRef = useRef<HTMLInputElement>(null);
+
   const [asignando, setAsignando] = useState(false);
   const [tituloTarea, setTituloTarea] = useState("");
   const [asignandoGuardando, setAsignandoGuardando] = useState(false);
@@ -89,6 +96,7 @@ export function MemberDialog({ email, habilidadesConocidas = [], onCerrar, onGua
         if (!activo) return;
         setFicha(respuesta.ficha);
         setTags(respuesta.ficha.tags);
+        setFoto(respuesta.ficha.foto);
         setNotas(respuesta.ficha.notas);
         setOnboarding(respuesta.ficha.onboarding ?? {});
       } catch (err) {
@@ -140,6 +148,38 @@ export function MemberDialog({ email, habilidadesConocidas = [], onCerrar, onGua
     setTags((actuales) => [...actuales, nueva]);
     setNuevaHabilidad("");
     setGuardado(false);
+  }
+
+  async function cambiarFoto(archivo: File | undefined) {
+    if (!archivo) return;
+    setSubiendoFoto(true);
+    setError(null);
+    try {
+      const nueva = await aAvatarCuadrado(archivo);
+      await updateFichaMiembro(email, { foto: nueva });
+      setFoto(nueva);
+      onGuardado?.();
+    } catch (err) {
+      setError((err as ApiFailure)?.message || "No se pudo cambiar la foto.");
+    } finally {
+      setSubiendoFoto(false);
+      // Sin esto, volver a elegir el mismo archivo no dispara "change".
+      if (archivoRef.current) archivoRef.current.value = "";
+    }
+  }
+
+  async function quitarFoto() {
+    setSubiendoFoto(true);
+    setError(null);
+    try {
+      await updateFichaMiembro(email, { foto: "" });
+      setFoto("");
+      onGuardado?.();
+    } catch (err) {
+      setError((err as ApiFailure)?.message || "No se pudo quitar la foto.");
+    } finally {
+      setSubiendoFoto(false);
+    }
   }
 
   async function guardar() {
@@ -211,7 +251,38 @@ export function MemberDialog({ email, habilidadesConocidas = [], onCerrar, onGua
         ) : (
           <div className="mkt-ficha-react">
             <div className="mkt-ficha-lateral-react">
-              <AvatarResponsable email={email} nombre={ficha?.nombre} className="mkt-ficha-avatar-react" />
+              <AvatarResponsable
+                email={email}
+                nombre={ficha?.nombre}
+                foto={foto}
+                className="mkt-ficha-avatar-react"
+              />
+              {ficha.es_tu_ficha ? (
+                <div className="mkt-ficha-foto-acciones-react">
+                  <input
+                    ref={archivoRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    className="sr-only"
+                    id="mf-foto"
+                    onChange={(event) => void cambiarFoto(event.target.files?.[0])}
+                  />
+                  <label htmlFor="mf-foto" className="mkt-btn-mini-react">
+                    <Camera size={14} strokeWidth={1.75} aria-hidden="true" />
+                    {subiendoFoto ? "Guardando..." : foto ? "Cambiar foto" : "Subir foto"}
+                  </label>
+                  {foto ? (
+                    <button
+                      type="button"
+                      className="mkt-btn-mini-react"
+                      disabled={subiendoFoto}
+                      onClick={() => void quitarFoto()}
+                    >
+                      Quitar
+                    </button>
+                  ) : null}
+                </div>
+              ) : null}
               <p className="mkt-ficha-nombre-react">{nombre}</p>
               <p className="mkt-meta-react">
                 {ficha.cargo

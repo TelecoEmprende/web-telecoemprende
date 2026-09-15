@@ -97,7 +97,7 @@ const TEAM: TeamMember[] = [
   },
   {
     name: "David",
-    photo: "/equipo-david.jpg",
+    photo: "/equipo-david-garcia.jpg",
     role: { es: "Miembro · Preparación de Eventos", en: "Member · Events Preparation" },
     program: "GISD · ETSIT",
     line: {

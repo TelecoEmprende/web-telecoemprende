@@ -5,6 +5,7 @@ import {
   AvatarGroupCount,
   AvatarImage,
 } from "@/components/ui/avatar";
+import { useFotos } from "../DeptoApi";
 
 /**
  * Caras de los responsables.
@@ -18,22 +19,41 @@ import {
  * mientras se rellenan los perfiles.
  */
 
-/** Nombres con foto en `frontend/public/equipo-*.jpg`. */
-const CON_FOTO = new Set([
-  "abril", "alex", "david", "diego", "guillermo", "hammad",
+/** Nombres con foto en `frontend/public/equipo-*.jpg`.
+ *
+ *  Cuando dos personas comparten nombre de pila la clave es `nombre-apellido`
+ *  (`david-garcia`): con solo "david", David Martín salía con la cara de David
+ *  García. Quien no tenga foto se queda en iniciales, que es mejor que la cara
+ *  de otra persona -- para darle la suya basta con dejar el .jpg en `public/`
+ *  con este mismo nombre y añadirlo a la lista. */
+const CON_FOTO = [
+  "abril", "alex", "david-garcia", "diego", "guillermo", "hammad",
   "hugo", "iker", "jorge", "mamoun", "mariano", "marta",
-]);
+];
+
+/** La misma lista, del nombre más largo al más corto: así una entrada futura
+ *  de "david" a secas no puede robarle el prefijo a "david-garcia". */
+const POR_LONGITUD = [...CON_FOTO].sort((a, b) => b.length - a.length);
 
 function nombreAdivinado(email: string) {
   const local = email.split("@")[0].toLowerCase();
   // "nombre.apellido@..." o "nombre_apellido@...": el separador ya lo parte.
-  const primerToken = local.split(/[.+_-]/)[0];
-  if (CON_FOTO.has(primerToken)) return primerToken;
+  const tokens = local.split(/[.+_-]/).filter(Boolean);
+
+  // "david.garcia" antes que "david": el nombre de pila a solas es justo lo
+  // que confundía a los dos Davids.
+  const exacto = [tokens.slice(0, 2).join("-"), tokens[0]].find((c) =>
+    CON_FOTO.includes(c),
+  );
+  if (exacto) return exacto;
 
   // Sin separador (p. ej. "abrilespinosatortuero@gmail.com") el email entero
   // es un solo token: buscar qué nombre conocido empieza el local-part.
-  const prefijo = [...CON_FOTO].find((nombre) => local.startsWith(nombre));
-  return prefijo ?? primerToken;
+  const prefijo = POR_LONGITUD.find(
+    (nombre) =>
+      local.startsWith(nombre) || local.startsWith(nombre.replace(/-/g, "")),
+  );
+  return prefijo ?? tokens[0] ?? local;
 }
 
 export type NivelCarga = "libre" | "media" | "alta";
@@ -51,7 +71,7 @@ export function fotoDe(email: string) {
   const nombre = nombreAdivinado(email);
   // Same-origin: la CSP del sitio es `img-src 'self' data:`, así que una foto
   // externa se bloquearía en silencio.
-  return CON_FOTO.has(nombre) ? `/equipo-${nombre}.jpg` : undefined;
+  return CON_FOTO.includes(nombre) ? `/equipo-${nombre}.jpg` : undefined;
 }
 
 function inicialesDe(email: string, nombreReal?: string) {
@@ -59,29 +79,44 @@ function inicialesDe(email: string, nombreReal?: string) {
     const palabras = nombreReal.trim().split(/\s+/);
     return (palabras[0][0] + (palabras[1]?.[0] ?? palabras[0][1] ?? "")).toUpperCase();
   }
-  return nombreAdivinado(email).slice(0, 2).toUpperCase();
+  // "david-garcia" -> "DG", no "DA": las iniciales son lo único que separa a
+  // dos personas que comparten nombre y no tienen foto.
+  const partes = nombreAdivinado(email).split("-");
+  const iniciales =
+    partes.length > 1 ? partes[0][0] + partes[1][0] : partes[0].slice(0, 2);
+  return iniciales.toUpperCase();
 }
 
 export function etiquetaDe(email: string, nombreReal?: string) {
   if (nombreReal?.trim()) return nombreReal.trim();
-  const nombre = nombreAdivinado(email);
-  return nombre.charAt(0).toUpperCase() + nombre.slice(1);
+  return nombreAdivinado(email)
+    .split("-")
+    .map((parte) => parte.charAt(0).toUpperCase() + parte.slice(1))
+    .join(" ");
 }
 
 export function AvatarResponsable({
   email,
   nombre,
+  foto,
   className,
 }: {
   email: string;
   /** Nombre real del perfil, si ya se conoce (ver comentario arriba). */
   nombre?: string;
+  /** Foto propia ya cargada (data URL). Sin ella se busca en `useFotos()`, y
+   *  si tampoco está, se cae a la de `public/`. */
+  foto?: string;
   className?: string;
 }) {
+  const fotos = useFotos();
   const etiqueta = etiquetaDe(email, nombre);
+  // Lo que haya subido la persona manda sobre la foto por defecto: es justo
+  // lo que significa poder cambiarla.
+  const src = foto || fotos[email] || fotoDe(email);
   return (
     <Avatar title={nombre?.trim() ? `${etiqueta} · ${email}` : email} className={className}>
-      <AvatarImage src={fotoDe(email)} alt={etiqueta} />
+      <AvatarImage src={src} alt={etiqueta} />
       <AvatarFallback>{inicialesDe(email, nombre)}</AvatarFallback>
     </Avatar>
   );

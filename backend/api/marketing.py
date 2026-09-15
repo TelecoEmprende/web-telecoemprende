@@ -11,6 +11,8 @@ pertenecer al departamento de la ruta -- comprobado en servidor, nunca
 confiando en que el frontend haya escondido el botón.
 """
 
+import base64
+import binascii
 import logging
 import re
 from datetime import date, datetime, timedelta
@@ -224,6 +226,34 @@ def _checklist(datos: dict) -> list[dict]:
             continue
         items.append({"texto": texto[:MAX_TITULO_LEN], "hecho": bool(item.get("hecho"))})
     return items
+
+
+# Formatos que acepta una foto de perfil. La imagen llega ya reducida desde el
+# navegador; el límite de aquí es la última red, no la primera.
+_FOTO_RE = re.compile(r"^data:image/(jpeg|png|webp);base64,[A-Za-z0-9+/]+={0,2}$")
+MAX_FOTO_LEN = 300_000  # ~220 KB de imagen; 256px en JPEG son unos 15 KB.
+
+
+def _foto(datos: dict) -> str:
+    """Data URL de la foto de perfil, o "" para volver a la de `public/`.
+
+    Se valida la forma entera (prefijo + base64 decodificable) en vez de
+    confiar en el navegador: esto acaba en un `src` que se le sirve a todo el
+    club, así que un `data:text/html` colado aquí sería un problema de otros,
+    no de quien lo sube.
+    """
+    valor = str(datos.get("foto") or "").strip()
+    if not valor:
+        return ""
+    if len(valor) > MAX_FOTO_LEN:
+        raise DatosInvalidos("La foto es demasiado grande. Prueba con una más pequeña.")
+    if not _FOTO_RE.match(valor):
+        raise DatosInvalidos("La foto debe ser un JPEG, PNG o WEBP.")
+    try:
+        base64.b64decode(valor.split(",", 1)[1], validate=True)
+    except (ValueError, binascii.Error):
+        raise DatosInvalidos("La foto no se ha subido entera. Vuelve a intentarlo.") from None
+    return valor
 
 
 def _autor() -> str:
@@ -640,6 +670,7 @@ def api_miembros():
             "activo": a["activo"],
             "tags": a["tags"],
             "nombre": a["nombre"],
+            "foto": a["foto"],
             "abiertas": carga.get(a["email"], 0),
         }
         for a in miembros_activos(depto)
@@ -663,6 +694,14 @@ def api_miembros_salud():
     if not autorizado:
         return jsonify(build_response(False, "No autorizado.")), 403
     return jsonify({"ok": True, "salud": salud_equipo(departamento_actual())}), 200
+
+
+def _es_mi_ficha(email: str) -> bool:
+    """La foto de perfil la cambia cada cual la suya. Admin también, para poder
+    quitar una que no debería estar ahí."""
+    from flask import session
+
+    return is_admin_authenticated() or session.get("equipo_email", "") == email
 
 
 def _miembro_del_departamento(email: str) -> dict | None:
@@ -703,6 +742,10 @@ def api_ficha_miembro():
         onboarding=acceso["onboarding"],
         desde=acceso["created_at"],
         mentor_email=acceso["mentor_email"],
+        foto=acceso["foto"],
+        # Quién puede cambiar esta foto lo decide el servidor, no el frontend
+        # (que solo lo usa para enseñar u ocultar el botón).
+        es_tu_ficha=_es_mi_ficha(email),
     )
     return jsonify({"ok": True, "ficha": ficha}), 200
 
@@ -737,10 +780,16 @@ def api_actualizar_ficha_miembro():
             raise DatosInvalidos("'onboarding' admite como mucho 20 claves.")
         onboarding = {str(k): bool(v) for k, v in onboarding.items()}
 
-    if tags is None and notas is None and onboarding is None:
+    foto = None
+    if "foto" in datos:
+        if not _es_mi_ficha(email):
+            return jsonify(build_response(False, "Solo puedes cambiar tu propia foto.")), 403
+        foto = _foto(datos)
+
+    if tags is None and notas is None and onboarding is None and foto is None:
         raise DatosInvalidos("No hay nada que actualizar.")
 
-    actualizar_perfil(email, tags=tags, notas=notas, onboarding=onboarding)
+    actualizar_perfil(email, tags=tags, notas=notas, onboarding=onboarding, foto=foto)
 
     # Solo al cruzar de "no completo" a "completo" -- si no, cada punto
     # marcado de la checklist avisaría por separado.
