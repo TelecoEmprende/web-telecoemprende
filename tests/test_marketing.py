@@ -948,6 +948,26 @@ class SlackTestCase(MarketingTestCase):
 
         self.assertEqual(self.enviados, [])
 
+    def test_comentar_una_tarea_avisa_a_slack(self):
+        self.login()
+        task_id = self.client.post(
+            "/api/marketing/tasks",
+            json={
+                "titulo": "Guion del reel", "instrucciones": "Ver notas.",
+                "responsables": ["diego@telecoemprende.es"],
+            },
+        ).get_json()["task"]["id"]
+        self.enviados.clear()
+
+        self.client.post(
+            f"/api/marketing/tasks/{task_id}/comments", json={"texto": "Falta el CTA."}
+        )
+
+        self.assertEqual(len(self.enviados), 1)
+        self.assertIn("Guion del reel", self.enviados[0])
+        self.assertIn("diego", self.enviados[0])
+        self.assertIn("Falta el CTA.", self.enviados[0])
+
     def test_si_slack_falla_la_tarea_se_crea_igual(self):
         def explota(texto):
             raise urllib.error.URLError("slack caído")
@@ -964,6 +984,40 @@ class SlackTestCase(MarketingTestCase):
         marketing_api_slack.enviar = lambda texto: True
         tareas = self.client.get("/api/marketing/tasks").get_json()["tasks"]
         self.assertEqual([t["titulo"] for t in tareas], ["Guion del reel"])
+
+    def test_completar_el_onboarding_avisa_a_slack(self):
+        self.login()
+        self.seed_acceso("hugo@telecoemprende.es", "x", ["marketing"])
+
+        # A medio checklist no avisa todavía.
+        self.client.put(
+            "/api/marketing/miembros/ficha",
+            json={"email": "hugo@telecoemprende.es", "onboarding": {"slack": True, "drive": False}},
+        )
+        self.assertEqual(self.enviados, [])
+
+        self.client.put(
+            "/api/marketing/miembros/ficha",
+            json={"email": "hugo@telecoemprende.es", "onboarding": {"slack": True, "drive": True}},
+        )
+        self.assertEqual(len(self.enviados), 1)
+        self.assertIn("hugo", self.enviados[0])
+        self.assertIn("marketing", self.enviados[0])
+
+    def test_reguardar_el_onboarding_completo_no_vuelve_a_avisar(self):
+        self.login()
+        self.seed_acceso("hugo@telecoemprende.es", "x", ["marketing"])
+        self.client.put(
+            "/api/marketing/miembros/ficha",
+            json={"email": "hugo@telecoemprende.es", "onboarding": {"slack": True}},
+        )
+        self.enviados.clear()
+
+        self.client.put(
+            "/api/marketing/miembros/ficha",
+            json={"email": "hugo@telecoemprende.es", "onboarding": {"slack": True}},
+        )
+        self.assertEqual(self.enviados, [])
 
 
 class FichaMiembroTestCase(MarketingTestCase):
