@@ -79,6 +79,11 @@ export function apiDepto(depto: Team) {
 
     createTask: (datos: Partial<Task>) => post<{ ok: true; task: Task }>("/tasks", datos),
 
+    /** Una tarea entera por id. El calendario solo tiene de ella un resumen
+     *  (`CalendarioItem`), y el diálogo de edición necesita el resto. */
+    getTask: (id: number) =>
+      apiRequest<{ ok: true; task: Task }>(`${BASE}/tasks/${id}`),
+
     updateTask: (id: number, datos: Partial<Task>) => put<ApiResult>(`/tasks/${id}`, datos),
 
     deleteTask: (id: number) => del(`/tasks/${id}`),

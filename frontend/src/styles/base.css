@@ -30,6 +30,20 @@ html {
     transition-property: opacity, color, background-color, border-color, box-shadow, filter !important;
     transition-duration: 0.15s !important;
     animation-iteration-count: 1 !important;
+
+    /* Los diálogos y menús de /equipo no entran con una transición sino con
+       los @keyframes de tw-animate-css, que esta regla no alcanza: son
+       `animation`. En vez de matarlos (que dejaría los modales apareciendo de
+       golpe), se anulan las variables de las que sale el movimiento. El
+       desvanecido sobrevive, que es lo que dice que algo ha pasado. */
+    --tw-enter-scale: 1;
+    --tw-exit-scale: 1;
+    --tw-enter-translate-x: 0;
+    --tw-enter-translate-y: 0;
+    --tw-exit-translate-x: 0;
+    --tw-exit-translate-y: 0;
+    --tw-enter-rotate: 0;
+    --tw-exit-rotate: 0;
   }
 }
 
