@@ -70,7 +70,12 @@ export function DeptoDashboard({
           />
         ) : null}
         {seccion === "calendario" ? (
-          <CalendarPanel teams={teams} onAbrirCampaign={onAbrirCampaign} />
+          <CalendarPanel
+            teams={teams}
+            vpDe={vpDe}
+            puedeAsignarEnTodo={puedeAsignarEnTodo}
+            onAbrirCampaign={onAbrirCampaign}
+          />
         ) : null}
         {seccion === "miembros" ? <MembersPanel /> : null}
         {seccion === "recursos" ? <RecursosPanel /> : null}

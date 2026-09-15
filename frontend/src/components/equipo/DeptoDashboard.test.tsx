@@ -22,6 +22,7 @@ const duplicateCampaign = vi.fn();
 const getTaskComments = vi.fn();
 const createTaskComment = vi.fn();
 const getCalendarioEquipo = vi.fn();
+const getTask = vi.fn();
 
 // El módulo ya no exporta funciones sueltas sino una factoría por
 // departamento (Marketing y Eventos comparten paneles). `apiDepto` guarda el
@@ -36,6 +37,7 @@ vi.mock("../../api/marketing", () => ({
       getCampaigns: (...args: unknown[]) => getCampaigns(...args),
       getCampaign: (...args: unknown[]) => getCampaign(...args),
       getTasks: (...args: unknown[]) => getTasks(...args),
+      getTask: (...args: unknown[]) => getTask(...args),
       getTasksArchivadas: (...args: unknown[]) => getTasksArchivadas(...args),
       getCalendario: (...args: unknown[]) => getCalendario(...args),
       getMiembros: (...args: unknown[]) => getMiembros(...args),
@@ -152,6 +154,7 @@ describe("/equipo — panel de Marketing", () => {
     teamsDeSesion = ["marketing"];
     vpDeSesion = ["marketing"];
     deptosPedidos.length = 0;
+    getTask.mockReset().mockResolvedValue({ ok: true, task: TAREA });
     getCampaigns.mockReset().mockResolvedValue({ ok: true, campaigns: [] });
     getCampaign.mockReset();
     getTasks.mockReset().mockResolvedValue({ ok: true, tasks: [], usuario: YO });
@@ -455,6 +458,114 @@ describe("/equipo — panel de Marketing", () => {
     );
   });
 
+  it("tocar una tarea del calendario abre su diálogo, no una ficha debajo", async () => {
+    // El calendario solo trae un resumen (`CalendarioItem`); el diálogo de
+    // edición necesita la tarea entera, así que se pide por id.
+    getCalendarioEquipo.mockResolvedValue({
+      ok: true,
+      desde: "2026-09-01",
+      hasta: "2026-09-30",
+      items: [
+        {
+          origen: "task",
+          id: 7,
+          titulo: "Escribir guion",
+          fecha: "2026-09-15",
+          estado: "pendiente",
+          campaign_id: null,
+          detalle: "alta",
+          prioridad: "alta",
+          padre: null,
+          responsables: [],
+          hora: null,
+          departamento: "marketing",
+        },
+      ],
+    });
+    getTask.mockResolvedValue({
+      ok: true,
+      task: { ...TAREA, id: 7, titulo: "Escribir guion", instrucciones: "Ver notas." },
+    });
+
+    await renderMarketing();
+    await userEvent.click(screen.getByRole("button", { name: "Calendario" }));
+
+    await userEvent.click(await screen.findByRole("button", { name: /Escribir guion/ }));
+
+    await waitFor(() => expect(getTask).toHaveBeenCalledWith(7));
+    // Lo que distingue al diálogo de la ficha de resumen: se puede editar.
+    expect(await screen.findByLabelText("Instrucciones")).toBeInTheDocument();
+  });
+
+  it("el diálogo de la tarea abre antes de que llegue la red, no después", async () => {
+    getCalendarioEquipo.mockResolvedValue({
+      ok: true,
+      desde: "2026-09-01",
+      hasta: "2026-09-30",
+      items: [
+        {
+          origen: "task", id: 7, titulo: "Escribir guion", fecha: "2026-09-15",
+          estado: "pendiente", campaign_id: null, detalle: "alta", prioridad: "alta",
+          padre: null, responsables: [], hora: null, departamento: "marketing",
+        },
+      ],
+    });
+    // La tarea entera no llega hasta que este test lo diga.
+    let resolver: (v: unknown) => void = () => {};
+    getTask.mockReturnValue(new Promise((r) => { resolver = r; }));
+
+    await renderMarketing();
+    await userEvent.click(screen.getByRole("button", { name: "Calendario" }));
+    await userEvent.click(await screen.findByRole("button", { name: /Escribir guion/ }));
+
+    // Con la petición todavía en vuelo ya hay diálogo, con el título que el
+    // calendario ya sabía y un esqueleto en lugar del formulario.
+    const dialogo = await screen.findByRole("dialog");
+    expect(dialogo).toHaveTextContent("Escribir guion");
+    expect(within(dialogo).getByRole("status", { name: "Cargando" })).toBeInTheDocument();
+    expect(within(dialogo).queryByLabelText("Instrucciones")).not.toBeInTheDocument();
+
+    resolver({
+      ok: true,
+      task: { ...TAREA, id: 7, titulo: "Escribir guion", instrucciones: "Ver notas." },
+    });
+
+    // Y al llegar, el formulario sustituye al esqueleto sin cerrar nada.
+    expect(await screen.findByLabelText("Instrucciones")).toHaveValue("Ver notas.");
+  });
+
+  it("un evento del club abre la ficha de resumen, que tampoco va debajo", async () => {
+    getCalendarioEquipo.mockResolvedValue({
+      ok: true,
+      desde: "2026-09-01",
+      hasta: "2026-09-30",
+      items: [
+        {
+          origen: "club",
+          id: 3,
+          titulo: "Conversaciones alumni",
+          fecha: "2026-09-15",
+          estado: "",
+          campaign_id: null,
+          detalle: "Charla con antiguos del club",
+          prioridad: null,
+          padre: null,
+          responsables: [],
+          hora: "18:30",
+          departamento: null,
+        },
+      ],
+    });
+
+    await renderMarketing();
+    await userEvent.click(screen.getByRole("button", { name: "Calendario" }));
+    await userEvent.click(await screen.findByRole("button", { name: /Conversaciones alumni/ }));
+
+    // No tiene diálogo propio: se queda en el resumen, pero en un modal.
+    expect(await screen.findByRole("dialog")).toHaveTextContent("Evento del club");
+    expect(getTask).not.toHaveBeenCalled();
+  });
+
   it("la vista semana pide un rango de 7 días y pinta 7 celdas", async () => {
     await renderMarketing();
     await userEvent.click(screen.getByRole("button", { name: "Calendario" }));
@@ -755,6 +866,16 @@ describe("/equipo — panel de Marketing", () => {
         },
       ],
     });
+    // Tocar una tarea del calendario abre su diálogo, y para eso se pide
+    // entera: la campaña de la que cuelga sale de aquí, no del resumen.
+    getTask.mockResolvedValue({
+      ok: true,
+      task: {
+        ...TAREA, id: 9, titulo: "Reservar la sala",
+        departamento: "eventos", campaign_id: 5, content_id: null,
+        content_titulo: null, campaign_nombre: "Semana de bienvenida",
+      },
+    });
     getCampaign.mockResolvedValue({
       ok: true,
       campaign: {
@@ -784,6 +905,7 @@ describe("/equipo — panel de Eventos", () => {
     teamsDeSesion = ["eventos"];
     vpDeSesion = ["eventos"];
     deptosPedidos.length = 0;
+    getTask.mockReset().mockResolvedValue({ ok: true, task: TAREA });
     getCampaigns.mockReset().mockResolvedValue({ ok: true, campaigns: [] });
     getCampaign.mockReset();
     getTasks.mockReset().mockResolvedValue({ ok: true, tasks: [], usuario: YO });
