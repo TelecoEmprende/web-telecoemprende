@@ -1,3 +1,4 @@
+import base64
 import os
 import unittest
 from datetime import date, timedelta
@@ -699,6 +700,134 @@ class TaskAsignacionTests(MarketingTestCase):
         )
         mudada = self.client.get(f"/api/eventos/tasks/{task['id']}").get_json()["task"]
         self.assertIsNone(mudada["campaign_id"])
+
+
+class CalendarioCruzadoTestCase(MarketingTestCase):
+    """`/api/equipo/calendario-equipo`, el que pinta el panel Calendario de
+    /equipo. Lo que se comprueba aquí es que los eventos del club (los que
+    pone /admin: charlas de alumni, ferias...) salgan ahí y no solo en "Mi
+    semana", que era donde vivían."""
+
+    def setUp(self):
+        super().setUp()
+        self.login(email="marketing@example.com")
+        conn = equipo_service._get_connection()
+        with conn.cursor() as cur:
+            cur.execute("DELETE FROM calendario_eventos")
+            cur.execute(
+                "INSERT INTO calendario_eventos (titulo, descripcion, fecha, hora)"
+                " VALUES (%s, %s, %s, %s)",
+                ("Conversaciones alumni", "Charla con antiguos del club", date.today(), "18:30"),
+            )
+        conn.commit()
+        conn.close()
+
+    def _items(self, departamentos=None):
+        hoy = date.today().isoformat()
+        qs = f"?desde={hoy}&hasta={hoy}"
+        if departamentos:
+            qs += f"&departamentos={departamentos}"
+        respuesta = self.client.get(f"/api/equipo/calendario-equipo{qs}")
+        self.assertEqual(respuesta.status_code, 200, respuesta.get_json())
+        return respuesta.get_json()["items"]
+
+    def test_el_evento_del_club_sale_en_el_calendario(self):
+        club = [i for i in self._items() if i["origen"] == "club"]
+        self.assertEqual(len(club), 1)
+        self.assertEqual(club[0]["titulo"], "Conversaciones alumni")
+        self.assertEqual(club[0]["hora"], "18:30")
+        self.assertEqual(club[0]["detalle"], "Charla con antiguos del club")
+
+    def test_no_es_de_ningun_departamento(self):
+        # Sin departamento el frontend no le pinta color de capa ni lo cuela
+        # en el de nadie (ver `botonEvento` en CalendarPanel).
+        club = next(i for i in self._items() if i["origen"] == "club")
+        self.assertIsNone(club["departamento"])
+
+    def test_sale_aunque_la_vista_este_filtrada_a_un_departamento(self):
+        # Es del club entero: filtrar capas no debería esconderlo.
+        titulos = [i["titulo"] for i in self._items("eventos") if i["origen"] == "club"]
+        self.assertEqual(titulos, ["Conversaciones alumni"])
+
+    def test_sigue_trayendo_las_tareas_del_departamento(self):
+        self.client.post(
+            "/api/marketing/tasks",
+            json={
+                "titulo": "Escribir guion",
+                "instrucciones": "Ver notas.",
+                "deadline": date.today().isoformat(),
+            },
+        )
+        origenes = {i["origen"] for i in self._items("marketing")}
+        self.assertIn("task", origenes)
+        self.assertIn("club", origenes)
+
+
+class FotoPerfilTestCase(MarketingTestCase):
+    """La foto de perfil la cambia cada cual la suya, y acaba en un `src` que
+    se le sirve a todo el club: la forma se valida en servidor."""
+
+    JPEG = "data:image/jpeg;base64," + base64.b64encode(b"no-es-un-jpeg-real").decode()
+
+    def setUp(self):
+        super().setUp()
+        self.login(email="marketing@example.com")
+
+    def _put(self, email, foto):
+        return self.client.put(
+            "/api/marketing/miembros/ficha", json={"email": email, "foto": foto}
+        )
+
+    def test_cambia_su_propia_foto_y_sale_en_el_directorio(self):
+        respuesta = self._put("marketing@example.com", self.JPEG)
+        self.assertEqual(respuesta.status_code, 200, respuesta.get_json())
+
+        miembros = self.client.get("/api/marketing/miembros").get_json()["miembros"]
+        self.assertEqual(miembros[0]["foto"], self.JPEG)
+
+    def test_vaciarla_devuelve_a_la_foto_por_defecto(self):
+        self._put("marketing@example.com", self.JPEG)
+        self.assertEqual(self._put("marketing@example.com", "").status_code, 200)
+
+        miembros = self.client.get("/api/marketing/miembros").get_json()["miembros"]
+        self.assertEqual(miembros[0]["foto"], "")
+
+    def test_no_puede_cambiar_la_foto_de_otra_persona(self):
+        self.seed_acceso(email="otra@example.com")
+        # Sin cargo ni admin: la ficha de otra persona se puede leer, su cara no.
+        self.client.post("/api/equipo/logout")
+        self.login(email="raso@example.com", vp_de=[])
+
+        respuesta = self._put("otra@example.com", self.JPEG)
+        self.assertEqual(respuesta.status_code, 403)
+
+    def test_rechaza_lo_que_no_sea_una_imagen(self):
+        # Un data:text/html colado aquí sería un problema de quien lo mira, no
+        # de quien lo sube.
+        html = "data:text/html;base64," + base64.b64encode(b"<script>").decode()
+        self.assertEqual(self._put("marketing@example.com", html).status_code, 400)
+
+    def test_rechaza_una_foto_demasiado_grande(self):
+        enorme = "data:image/jpeg;base64," + "A" * 300_001
+        self.assertEqual(self._put("marketing@example.com", enorme).status_code, 400)
+
+    def test_rechaza_base64_roto(self):
+        self.assertEqual(
+            self._put("marketing@example.com", "data:image/png;base64,@@@@").status_code,
+            400,
+        )
+
+    def test_la_ficha_dice_si_es_la_tuya(self):
+        mia = self.client.get(
+            "/api/marketing/miembros/ficha?email=marketing@example.com"
+        ).get_json()["ficha"]
+        self.assertTrue(mia["es_tu_ficha"])
+
+        self.seed_acceso(email="otra@example.com")
+        suya = self.client.get(
+            "/api/marketing/miembros/ficha?email=otra@example.com"
+        ).get_json()["ficha"]
+        self.assertFalse(suya["es_tu_ficha"])
 
 
 class CalendarioTests(MarketingTestCase):

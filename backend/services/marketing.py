@@ -794,7 +794,17 @@ def calendario_equipo(desde: date, hasta: date, departamentos: list[str]) -> lis
     """Como `calendario()`, pero de varios departamentos a la vez y con
     `departamento` en cada fila -- para la lectura cruzada de `/equipo`
     (ver `GET /api/equipo/calendario-equipo`), que no está atada a un solo
-    blueprint y por tanto no tiene un `departamento_actual()` que usar."""
+    blueprint y por tanto no tiene un `departamento_actual()` que usar.
+
+    Incluye además los eventos del club puestos desde /admin, que no son de
+    ningún departamento y por tanto salen siempre."""
+    # `calendario_eventos` la crea `init_equipo_db`, no `init_marketing_db`:
+    # sin esto, un despliegue nuevo se encontraría un 500 aquí según qué ruta
+    # se visitara primero (mismo motivo que el init de registros en
+    # `requiere_equipo`).
+    from backend.services.equipo import init_equipo_db
+
+    init_equipo_db()
     with _get_connection() as conn:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute(
@@ -832,6 +842,21 @@ def calendario_equipo(desde: date, hasta: date, departamentos: list[str]) -> lis
                     FROM reuniones r
                     WHERE r.fecha BETWEEN %(desde)s AND %(hasta)s
                       AND r.departamento = ANY(%(departamentos)s)
+                    UNION ALL
+                    -- Los eventos que pone el club desde /admin (charlas de
+                    -- alumni, feria, asambleas...). Sin filtro de
+                    -- departamento a propósito: son del club entero, así que
+                    -- salen aunque la vista esté filtrada a uno solo -- por
+                    -- eso `departamento` viaja NULL y no se les pinta color
+                    -- de departamento (ver `botonEvento` en CalendarPanel).
+                    SELECT 'club' AS origen, e.id, e.titulo,
+                           e.fecha AS fecha, '' AS estado,
+                           NULL::integer AS campaign_id, e.descripcion AS detalle,
+                           NULL AS prioridad, NULL AS padre,
+                           e.confirmados AS responsables, NULLIF(e.hora, '') AS hora,
+                           NULL::varchar AS departamento
+                    FROM calendario_eventos e
+                    WHERE e.fecha BETWEEN %(desde)s AND %(hasta)s
                 ) x
                 ORDER BY fecha,
                          CASE prioridad

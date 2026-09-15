@@ -85,6 +85,16 @@ def _crear_tablas_equipo():
             # así la ficha de alguien no se rompe si a su mentor se le da de
             # baja el acceso. Lo asigna admin (ver `EquipoAccesosPanel`), no
             # el propio departamento (`actualizar_perfil`).
+            # Foto de perfil propia, como data URL (`data:image/jpeg;base64,...`).
+            # Va en la fila y no en un blob store porque la imagen llega ya
+            # reducida a 256px desde el navegador (~15 KB) y la CSP del sitio
+            # ya permite `data:` en img-src -- montar almacenamiento aparte
+            # para eso sería más infraestructura que foto. Vacía = se usa la
+            # que hay en `public/equipo-*.jpg` (ver `Avatares.tsx`).
+            cur.execute("""
+                ALTER TABLE equipo_accesos
+                ADD COLUMN IF NOT EXISTS foto TEXT NOT NULL DEFAULT ''
+            """)
             cur.execute("""
                 ALTER TABLE equipo_accesos
                 ADD COLUMN IF NOT EXISTS mentor_email VARCHAR(120) NOT NULL DEFAULT ''
@@ -216,7 +226,7 @@ def listar_equipo_accesos() -> list[dict]:
             cur.execute(
                 """
                 SELECT id, email, equipos, vp_de, cargo, activo, created_at,
-                       tags, notas, nombre, onboarding, mentor_email
+                       tags, notas, nombre, onboarding, mentor_email, foto
                 FROM equipo_accesos ORDER BY email
                 """
             )
@@ -236,6 +246,7 @@ def listar_equipo_accesos() -> list[dict]:
             "nombre": f[9],
             "onboarding": f[10],
             "mentor_email": f[11],
+            "foto": f[12],
         }
         for f in filas
     ]
@@ -583,6 +594,7 @@ def actualizar_perfil(
     tags: list[str] | None = None,
     notas: str | None = None,
     onboarding: dict | None = None,
+    foto: str | None = None,
 ) -> bool:
     """Etiquetas de habilidad, nota y checklist de onboarding de una persona.
 
@@ -604,6 +616,11 @@ def actualizar_perfil(
         # el objeto entero, no un parche.
         campos.append("onboarding = %s")
         valores.append(Json(onboarding))
+    if foto is not None:
+        # "" borra la foto propia y devuelve a la de `public/`, que es la
+        # única forma de deshacer una subida.
+        campos.append("foto = %s")
+        valores.append(foto)
 
     if not campos:
         return False
