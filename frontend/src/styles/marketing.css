@@ -877,6 +877,14 @@
   color: var(--color-noche);
 }
 
+/* Los eventos del club (los que pone /admin) no son de ningún departamento,
+   así que llevan la cuarta cara de la marca -- ámbar, la única libre entre las
+   tres que ya usan los departamentos. */
+.mkt-evento-club-react {
+  background: rgba(var(--color-chispa-rgb), 0.22);
+  color: var(--color-noche);
+}
+
 .mkt-leyenda-react {
   display: flex;
   gap: 10px;

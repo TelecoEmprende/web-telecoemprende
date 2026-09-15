@@ -143,7 +143,10 @@ export type CampaignDetalle = Campaign & {
 };
 
 export type CalendarioItem = {
-  origen: "task" | "content" | "reunion";
+  /** "club" son los eventos que pone /admin para todo el club (charlas de
+   *  alumni, feria...): no son de ningún departamento, así que llegan con
+   *  `departamento` vacío y salen esté filtrada la vista a lo que sea. */
+  origen: "task" | "content" | "reunion" | "club";
   id: number;
   titulo: string;
   fecha: string;
@@ -156,7 +159,8 @@ export type CalendarioItem = {
   responsables: string[];
   /** "HH:MM", o null si es de día completo (publicaciones siempre lo son). */
   hora: string | null;
-  /** Solo en la lectura cruzada entre departamentos (`getCalendarioEquipo`). */
+  /** Solo en la lectura cruzada entre departamentos (`getCalendarioEquipo`),
+   *  y vacío en los eventos del club, que no son de ninguno. */
   departamento?: string;
 };
 

@@ -702,6 +702,67 @@ class TaskAsignacionTests(MarketingTestCase):
         self.assertIsNone(mudada["campaign_id"])
 
 
+class CalendarioCruzadoTestCase(MarketingTestCase):
+    """`/api/equipo/calendario-equipo`, el que pinta el panel Calendario de
+    /equipo. Lo que se comprueba aquí es que los eventos del club (los que
+    pone /admin: charlas de alumni, ferias...) salgan ahí y no solo en "Mi
+    semana", que era donde vivían."""
+
+    def setUp(self):
+        super().setUp()
+        self.login(email="marketing@example.com")
+        conn = equipo_service._get_connection()
+        with conn.cursor() as cur:
+            cur.execute("DELETE FROM calendario_eventos")
+            cur.execute(
+                "INSERT INTO calendario_eventos (titulo, descripcion, fecha, hora)"
+                " VALUES (%s, %s, %s, %s)",
+                ("Conversaciones alumni", "Charla con antiguos del club", date.today(), "18:30"),
+            )
+        conn.commit()
+        conn.close()
+
+    def _items(self, departamentos=None):
+        hoy = date.today().isoformat()
+        qs = f"?desde={hoy}&hasta={hoy}"
+        if departamentos:
+            qs += f"&departamentos={departamentos}"
+        respuesta = self.client.get(f"/api/equipo/calendario-equipo{qs}")
+        self.assertEqual(respuesta.status_code, 200, respuesta.get_json())
+        return respuesta.get_json()["items"]
+
+    def test_el_evento_del_club_sale_en_el_calendario(self):
+        club = [i for i in self._items() if i["origen"] == "club"]
+        self.assertEqual(len(club), 1)
+        self.assertEqual(club[0]["titulo"], "Conversaciones alumni")
+        self.assertEqual(club[0]["hora"], "18:30")
+        self.assertEqual(club[0]["detalle"], "Charla con antiguos del club")
+
+    def test_no_es_de_ningun_departamento(self):
+        # Sin departamento el frontend no le pinta color de capa ni lo cuela
+        # en el de nadie (ver `botonEvento` en CalendarPanel).
+        club = next(i for i in self._items() if i["origen"] == "club")
+        self.assertIsNone(club["departamento"])
+
+    def test_sale_aunque_la_vista_este_filtrada_a_un_departamento(self):
+        # Es del club entero: filtrar capas no debería esconderlo.
+        titulos = [i["titulo"] for i in self._items("eventos") if i["origen"] == "club"]
+        self.assertEqual(titulos, ["Conversaciones alumni"])
+
+    def test_sigue_trayendo_las_tareas_del_departamento(self):
+        self.client.post(
+            "/api/marketing/tasks",
+            json={
+                "titulo": "Escribir guion",
+                "instrucciones": "Ver notas.",
+                "deadline": date.today().isoformat(),
+            },
+        )
+        origenes = {i["origen"] for i in self._items("marketing")}
+        self.assertIn("task", origenes)
+        self.assertIn("club", origenes)
+
+
 class FotoPerfilTestCase(MarketingTestCase):
     """La foto de perfil la cambia cada cual la suya, y acaba en un `src` que
     se le sirve a todo el club: la forma se valida en servidor."""
