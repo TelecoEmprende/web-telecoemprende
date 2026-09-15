@@ -44,6 +44,11 @@ type Props = {
    *  persona puede darla de alta (ver `TasksPanel`). Con menos de dos no se
    *  enseña el selector, que no habría nada que elegir. */
   deptosDisponibles?: Team[];
+  /** Saltar al proyecto del que cuelga. Lo pasa quien tenga a dónde saltar
+   *  -- el calendario, que antes ofrecía ese salto desde su ficha de resumen
+   *  y lo habría perdido al abrir este diálogo en su lugar. Sin esta prop no
+   *  se enseña el botón: desde el tablero de Tareas ya se está en el sitio. */
+  onAbrirCampaign?: (campaignId: number, departamento: Team) => void;
 };
 
 function comoLineas(valores: string[]) {
@@ -66,7 +71,7 @@ function desdeLineas(texto: string) {
  */
 export function TaskDialog({
   task, onCerrar, onGuardado, etiquetasExistentes = [], puedeAsignar = true,
-  deptosDisponibles = [],
+  deptosDisponibles = [], onAbrirCampaign,
 }: Props) {
   const { deleteTask, getTaskComments, createTaskComment, updateTask } = useApi();
   const directorio = useDirectorio();
@@ -185,6 +190,17 @@ export function TaskDialog({
           <DialogDescription>
             {task.content_titulo ?? task.campaign_nombre ?? "Tarea suelta"}
           </DialogDescription>
+          {onAbrirCampaign && task.campaign_id !== null ? (
+            <button
+              type="button"
+              className="mkt-btn-mini-react mkt-dialogo-ir-react"
+              onClick={() =>
+                onAbrirCampaign(task.campaign_id as number, task.departamento as Team)
+              }
+            >
+              Ver campaña →
+            </button>
+          ) : null}
         </DialogHeader>
 
         {error ? <AlertBanner variant="error" message={error} /> : null}
