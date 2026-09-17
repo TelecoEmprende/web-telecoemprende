@@ -53,6 +53,12 @@ RESEND_FROM_NAME = os.environ.get("RESEND_FROM_NAME", "TelecoEmprende")
 # resto sigue funcionando igual (ver services/slack.py).
 SLACK_WEBHOOK_URL = os.environ.get("SLACK_WEBHOOK_URL", "")
 
+# Bot de Slack que responde dudas (Events API + Web API, distinto del
+# Incoming Webhook de arriba). Sin estas dos no se registra ninguna ruta útil
+# -- ver api/slack_bot.py.
+SLACK_BOT_TOKEN = os.environ.get("SLACK_BOT_TOKEN", "")
+SLACK_SIGNING_SECRET = os.environ.get("SLACK_SIGNING_SECRET", "")
+
 # Secreto que Vercel Cron manda como "Authorization: Bearer <esto>" al avisar
 # de deadlines de mañana (ver vercel.json > crons y api/cron.py). Vacío en
 # local a propósito: sin él, esa ruta rechaza cualquier petición.
