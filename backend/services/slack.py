@@ -11,7 +11,7 @@ import logging
 import urllib.error
 import urllib.request
 
-from backend.config import SLACK_WEBHOOK_URL
+from backend.config import SLACK_BOT_TOKEN, SLACK_WEBHOOK_URL
 
 logger = logging.getLogger("telecoemprende.slack")
 
@@ -45,6 +45,33 @@ def enviar(texto: str) -> bool:
             return True
     except (urllib.error.URLError, urllib.error.HTTPError, OSError) as exc:
         logger.error("fallo enviando aviso a Slack: %s", exc)
+        return False
+
+
+def responder_en_hilo(canal: str, hilo: str, texto: str) -> bool:
+    """Contesta en un canal/hilo concreto vía Web API (`chat.postMessage`),
+    a diferencia de `enviar` que solo publica en el canal fijo del webhook.
+    La usa el bot de dudas -- ver `api/slack_bot.py`."""
+    if not SLACK_BOT_TOKEN:
+        return False
+
+    peticion = urllib.request.Request(
+        "https://slack.com/api/chat.postMessage",
+        data=json.dumps({"channel": canal, "thread_ts": hilo, "text": texto}).encode("utf-8"),
+        headers={
+            "Content-Type": "application/json; charset=utf-8",
+            "Authorization": f"Bearer {SLACK_BOT_TOKEN}",
+        },
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(peticion, timeout=10) as resp:
+            data = json.loads(resp.read())
+            if not data.get("ok"):
+                logger.error("chat.postMessage rechazado: %s", data.get("error"))
+            return bool(data.get("ok"))
+    except (urllib.error.URLError, urllib.error.HTTPError, OSError) as exc:
+        logger.error("fallo respondiendo en Slack: %s", exc)
         return False
 
 
