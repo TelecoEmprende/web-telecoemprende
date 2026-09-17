@@ -9,6 +9,7 @@ from backend.config import (
     ESTADOS_VALIDOS,
     EQUIPOS_VALIDOS,
     LOGIN_BLOCK_WINDOW_SECONDS,
+    MAX_DNI_LEN,
     MAX_EMAIL_LEN,
     MAX_LOGIN_ATTEMPTS_PER_WINDOW,
     MAX_NOMBRE_EQUIPO_LEN,
@@ -28,6 +29,7 @@ from backend.services.equipo import (
     crear_evento_calendario,
     eliminar_equipo_acceso,
     eliminar_evento_calendario,
+    generar_pdf_equipo_en_memoria,
     init_equipo_db,
     listar_equipo_accesos,
     listar_eventos_calendario,
@@ -504,6 +506,8 @@ def api_admin_actualizar_equipo(acceso_id: int):
     activo = payload.get("activo")
     password = str(payload.get("password", "")) or None
     nombre = payload.get("nombre")
+    dni = payload.get("dni")
+    correo_personal = payload.get("correo_personal")
 
     # La combinación equipos/vp_de/cargo la valida el servicio contra la fila ya
     # guardada (aquí solo se ven los campos que llegan en la petición).
@@ -529,6 +533,16 @@ def api_admin_actualizar_equipo(acceso_id: int):
         if len(nombre) > MAX_NOMBRE_EQUIPO_LEN:
             return jsonify(build_response(False, "El nombre supera la longitud permitida.")), 400
 
+    if dni is not None:
+        dni = limpiar_texto(str(dni))
+        if len(dni) > MAX_DNI_LEN:
+            return jsonify(build_response(False, "El DNI supera la longitud permitida.")), 400
+
+    if correo_personal is not None:
+        correo_personal = limpiar_texto(str(correo_personal))
+        if len(correo_personal) > MAX_EMAIL_LEN:
+            return jsonify(build_response(False, "El correo personal supera la longitud permitida.")), 400
+
     if actualizar_equipo_acceso(
         acceso_id,
         equipos=equipos,
@@ -537,11 +551,26 @@ def api_admin_actualizar_equipo(acceso_id: int):
         activo=activo,
         password=password,
         nombre=nombre,
+        dni=dni,
+        correo_personal=correo_personal,
     ):
         logger.info("admin actualiza acceso equipo id=%s", acceso_id)
         return jsonify(build_response(True, "Acceso actualizado.")), 200
 
     return jsonify(build_response(False, "Acceso no encontrado, o equipos/vp_de/cargo no válidos.")), 404
+
+
+@admin_api.route("/equipo/pdf", methods=["GET"])
+def api_admin_equipo_pdf():
+    if not is_admin_authenticated():
+        return access_denied_response("No autorizado.", 401)
+
+    return send_file(
+        generar_pdf_equipo_en_memoria(),
+        as_attachment=True,
+        download_name="miembros_equipo.pdf",
+        mimetype="application/pdf",
+    )
 
 
 @admin_api.route("/equipo/<int:acceso_id>", methods=["DELETE"])

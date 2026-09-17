@@ -1,4 +1,7 @@
+from io import BytesIO
+
 import psycopg2
+from fpdf import FPDF
 from flask import session
 from psycopg2.extras import Json
 from werkzeug.security import check_password_hash, generate_password_hash
@@ -79,6 +82,17 @@ def _crear_tablas_equipo():
             cur.execute("""
                 ALTER TABLE equipo_accesos
                 ADD COLUMN IF NOT EXISTS onboarding JSONB NOT NULL DEFAULT '{}'::jsonb
+            """)
+            # DNI/NIE/pasaporte y correo personal: los rellena admin a mano
+            # (no forman parte del alta ni del login), para tener con qué
+            # identificar a la persona una vez pierda el correo de la UPM.
+            cur.execute("""
+                ALTER TABLE equipo_accesos
+                ADD COLUMN IF NOT EXISTS dni VARCHAR(20) NOT NULL DEFAULT ''
+            """)
+            cur.execute("""
+                ALTER TABLE equipo_accesos
+                ADD COLUMN IF NOT EXISTS correo_personal VARCHAR(120) NOT NULL DEFAULT ''
             """)
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS calendario_eventos (
@@ -163,7 +177,7 @@ def listar_equipo_accesos() -> list[dict]:
             cur.execute(
                 """
                 SELECT id, email, equipos, vp_de, cargo, activo, created_at,
-                       tags, notas, nombre, onboarding
+                       tags, notas, nombre, onboarding, dni, correo_personal
                 FROM equipo_accesos ORDER BY email
                 """
             )
@@ -182,9 +196,50 @@ def listar_equipo_accesos() -> list[dict]:
             "notas": f[8],
             "nombre": f[9],
             "onboarding": f[10],
+            "dni": f[11],
+            "correo_personal": f[12],
         }
         for f in filas
     ]
+
+
+def generar_pdf_equipo_en_memoria() -> BytesIO:
+    """Listado de todos los accesos de equipo en PDF, para imprimir o
+    archivar (p. ej. registro de socios) -- ver `api/admin.py`."""
+    accesos = listar_equipo_accesos()
+
+    pdf = FPDF(orientation="L", unit="mm", format="A4")
+    pdf.set_auto_page_break(auto=True, margin=12)
+    pdf.add_page()
+    pdf.set_font("Helvetica", "B", 14)
+    pdf.cell(0, 10, "TelecoEmprende -- Miembros del equipo", new_x="LMARGIN", new_y="NEXT")
+
+    columnas = [
+        ("Nombre", 40), ("Email", 55), ("DNI", 25), ("Correo personal", 55),
+        ("Equipos", 45), ("Cargo", 25), ("Activo", 15),
+    ]
+    pdf.set_font("Helvetica", "B", 9)
+    for titulo, ancho in columnas:
+        pdf.cell(ancho, 8, titulo, border=1)
+    pdf.ln()
+
+    pdf.set_font("Helvetica", "", 9)
+    for acceso in accesos:
+        valores = [
+            acceso["nombre"] or "-",
+            acceso["email"],
+            acceso["dni"] or "-",
+            acceso["correo_personal"] or "-",
+            ", ".join(acceso["equipos"]) or "-",
+            acceso["cargo"] or "-",
+            "Sí" if acceso["activo"] else "No",
+        ]
+        for (_, ancho), valor in zip(columnas, valores):
+            texto = valor.encode("latin-1", "replace").decode("latin-1")
+            pdf.cell(ancho, 7, texto, border=1)
+        pdf.ln()
+
+    return BytesIO(bytes(pdf.output()))
 
 
 def miembros_activos(equipo: str) -> list[dict]:
@@ -298,6 +353,8 @@ def actualizar_equipo_acceso(
     activo: bool | None = None,
     password: str | None = None,
     nombre: str | None = None,
+    dni: str | None = None,
+    correo_personal: str | None = None,
 ) -> bool:
     """Actualiza solo los campos que se pasan. Devuelve False si el id no existe
     o si equipos/vp_de/cargo no son válidos.
@@ -352,6 +409,12 @@ def actualizar_equipo_acceso(
     if nombre is not None:
         campos.append("nombre = %s")
         valores.append(nombre.strip())
+    if dni is not None:
+        campos.append("dni = %s")
+        valores.append(dni.strip())
+    if correo_personal is not None:
+        campos.append("correo_personal = %s")
+        valores.append(correo_personal.strip().lower())
 
     if not campos:
         return False

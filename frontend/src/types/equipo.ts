@@ -25,6 +25,8 @@ export type EquipoAcceso = {
   activo: boolean;
   created_at: string;
   nombre: string;
+  dni: string;
+  correo_personal: string;
 };
 
 export type EventoCalendario = {

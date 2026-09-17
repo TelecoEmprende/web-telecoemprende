@@ -95,6 +95,8 @@ export function updateEquipoAcceso(
     activo?: boolean;
     password?: string;
     nombre?: string;
+    dni?: string;
+    correo_personal?: string;
   },
 ) {
   return apiRequest<ApiResult>(`/api/admin/equipo/${id}`, {
