@@ -661,13 +661,18 @@ def crear_task(**campos) -> dict | None:
     return _serializar(nueva)
 
 
-def actualizar_task(task_id: int, departamento: str, **campos) -> bool:
+def actualizar_task(task_id: int, departamento_actual: str, **campos) -> bool:
+    """`departamento_actual` es el departamento donde vive la fila ahora (para
+    el WHERE); si se está moviendo la tarea, el destino va en
+    `campos["departamento"]` -- distinto nombre a propósito, porque
+    `**campos` puede traer una clave `"departamento"` y no puede chocar con
+    un parámetro posicional del mismo nombre (`TypeError: multiple values`)."""
     permitidos = (
         "titulo", "descripcion", "instrucciones", "estado", "prioridad", "deadline",
         "hora", "responsables", "tags", "checklist", "enlaces", "completado_en",
         "departamento", "campaign_id", "content_id",
     )
-    if campos.get("departamento") not in (None, departamento):
+    if campos.get("departamento") not in (None, departamento_actual):
         # La campaña/contenido de los que cuelga son del departamento viejo
         # (`crear_task` lo exige), así que al mudarse se queda suelta en vez
         # de colgando de algo que ya no se ve desde su tablero.
@@ -679,13 +684,13 @@ def actualizar_task(task_id: int, departamento: str, **campos) -> bool:
         # aunque no haya cambiado (ver TaskDialog.tsx) -- solo se toca
         # `completado_en` cuando de verdad se entra o se sale de 'acabado',
         # nunca en un guardado que la deja igual.
-        anterior = obtener_task(task_id, departamento)
+        anterior = obtener_task(task_id, departamento_actual)
         ya_acabada = anterior is not None and anterior["estado"] == "acabado"
         if campos["estado"] == "acabado" and not ya_acabada:
             campos = dict(campos, completado_en=datetime.now())
         elif campos["estado"] != "acabado" and ya_acabada:
             campos = dict(campos, completado_en=None)
-    return _actualizar("tasks", task_id, permitidos, campos, departamento)
+    return _actualizar("tasks", task_id, permitidos, campos, departamento_actual)
 
 
 def eliminar_task(task_id: int, departamento: str) -> bool:

@@ -267,6 +267,36 @@ export function EquipoAccesosPanel() {
     }
   }
 
+  async function handleDniChange(acceso: EquipoAcceso, dni: string) {
+    if (dni === acceso.dni) return;
+    try {
+      const response = await updateEquipoAcceso(acceso.id, { dni });
+      if (response.ok) {
+        setAccesos((prev) => prev.map((a) => (a.id === acceso.id ? { ...a, dni } : a)));
+      }
+    } catch (error) {
+      const apiError = error as ApiFailure;
+      setMessageVariant("error");
+      setMessage(apiError.message || "No se pudo actualizar el acceso.");
+    }
+  }
+
+  async function handleCorreoPersonalChange(acceso: EquipoAcceso, correo_personal: string) {
+    if (correo_personal === acceso.correo_personal) return;
+    try {
+      const response = await updateEquipoAcceso(acceso.id, { correo_personal });
+      if (response.ok) {
+        setAccesos((prev) =>
+          prev.map((a) => (a.id === acceso.id ? { ...a, correo_personal } : a)),
+        );
+      }
+    } catch (error) {
+      const apiError = error as ApiFailure;
+      setMessageVariant("error");
+      setMessage(apiError.message || "No se pudo actualizar el acceso.");
+    }
+  }
+
   async function handleToggleActivo(acceso: EquipoAcceso) {
     try {
       const response = await updateEquipoAcceso(acceso.id, { activo: !acceso.activo });
@@ -297,11 +327,18 @@ export function EquipoAccesosPanel() {
 
   return (
     <section className="admin-card-react equipo-accesos-panel-react shadcn-scope">
-      <h2>Accesos de equipo (/equipo)</h2>
-      <p>
-        Quien tenga el equipo <strong>Ingeniería</strong> también recibe acceso a este panel
-        de administración al iniciar sesión en /equipo.
-      </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2>Accesos de equipo (/equipo)</h2>
+          <p>
+            Quien tenga el equipo <strong>Ingeniería</strong> también recibe acceso a este panel
+            de administración al iniciar sesión en /equipo.
+          </p>
+        </div>
+        <Button type="button" variant="outline" size="sm" asChild>
+          <a href="/api/admin/equipo/pdf">Descargar PDF</a>
+        </Button>
+      </div>
 
       {message ? <AlertBanner variant={messageVariant} message={message} /> : null}
 
@@ -314,6 +351,8 @@ export function EquipoAccesosPanel() {
               <tr className="text-left text-muted-foreground">
                 <th className="px-2 font-medium">Nombre</th>
                 <th className="px-2 font-medium">Email</th>
+                <th className="px-2 font-medium">DNI</th>
+                <th className="px-2 font-medium">Correo personal</th>
                 <th className="px-2 font-medium">Equipos</th>
                 <th className="px-2 font-medium">VP de</th>
                 <th className="px-2 font-medium">Cargo</th>
@@ -340,6 +379,24 @@ export function EquipoAccesosPanel() {
                         {acceso.cargo === "presidente" ? "Presidente" : "Board"}
                       </Badge>
                     ) : null}
+                  </td>
+                  <td className="p-2">
+                    <Input
+                      defaultValue={acceso.dni}
+                      placeholder="Sin rellenar"
+                      className="h-8 w-28"
+                      onBlur={(event) => void handleDniChange(acceso, event.target.value.trim())}
+                    />
+                  </td>
+                  <td className="p-2">
+                    <Input
+                      defaultValue={acceso.correo_personal}
+                      placeholder="Sin rellenar"
+                      className="h-8 w-44"
+                      onBlur={(event) =>
+                        void handleCorreoPersonalChange(acceso, event.target.value.trim())
+                      }
+                    />
                   </td>
                   <td className="p-2">
                     <EquiposCheckboxes
@@ -421,7 +478,7 @@ export function EquipoAccesosPanel() {
               ))}
               {accesos.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="p-2 text-muted-foreground">
+                  <td colSpan={10} className="p-2 text-muted-foreground">
                     Todavía no hay accesos de equipo dados de alta.
                   </td>
                 </tr>

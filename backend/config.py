@@ -20,6 +20,10 @@ MAX_NIVEL_LEN = 20
 MAX_EMAIL_LEN = 120
 MAX_TELEFONO_LEN = 20
 MAX_DRIVE_LINK_LEN = 300
+# DNI/NIE/pasaporte de un miembro del equipo (ver services/equipo.py): texto
+# libre, sin formato fijo -- hay colaboradores externos con pasaporte, no
+# solo DNI español.
+MAX_DNI_LEN = 20
 UPM_EMAIL_DOMAINS = ("alumnos.upm.es", "upm.es")
 
 EVENTOS_VALIDOS = {

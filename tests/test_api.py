@@ -876,6 +876,23 @@ class ApiTestCase(unittest.TestCase):
         self.assertEqual(self.client.put("/api/admin/equipo/1", json={}).status_code, 401)
         self.assertEqual(self.client.delete("/api/admin/equipo/1").status_code, 401)
 
+    def test_admin_equipo_pdf_requires_auth_and_returns_file_when_authenticated(self):
+        unauthorized = self.client.get("/api/admin/equipo/pdf")
+        self.assertEqual(unauthorized.status_code, 401)
+
+        self.seed_equipo(email="pdf@example.com")
+        self.login()
+        authorized = self.client.get("/api/admin/equipo/pdf")
+
+        self.assertEqual(authorized.status_code, 200)
+        self.assertEqual(authorized.mimetype, "application/pdf")
+        self.assertIn(
+            "attachment; filename=miembros_equipo.pdf",
+            authorized.headers["Content-Disposition"],
+        )
+        self.assertTrue(authorized.data.startswith(b"%PDF"))
+        authorized.close()
+
     def test_admin_equipo_crud_flow(self):
         self.login()
 
@@ -892,7 +909,12 @@ class ApiTestCase(unittest.TestCase):
 
         update = self.client.put(
             f"/api/admin/equipo/{acceso_id}",
-            json={"equipos": ["eventos", "marketing"], "activo": False},
+            json={
+                "equipos": ["eventos", "marketing"],
+                "activo": False,
+                "dni": "12345678Z",
+                "correo_personal": "nueva.personal@gmail.com",
+            },
         )
         self.assertEqual(update.status_code, 200)
 
@@ -900,6 +922,8 @@ class ApiTestCase(unittest.TestCase):
         actualizado = next(a for a in listado_tras_update if a["id"] == acceso_id)
         self.assertEqual(sorted(actualizado["equipos"]), ["eventos", "marketing"])
         self.assertFalse(actualizado["activo"])
+        self.assertEqual(actualizado["dni"], "12345678Z")
+        self.assertEqual(actualizado["correo_personal"], "nueva.personal@gmail.com")
 
         delete = self.client.delete(f"/api/admin/equipo/{acceso_id}")
         self.assertEqual(delete.status_code, 200)
