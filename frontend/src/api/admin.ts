@@ -96,6 +96,8 @@ export function updateEquipoAcceso(
     activo?: boolean;
     password?: string;
     nombre?: string;
+    dni?: string;
+    correo_personal?: string;
     mentor_email?: string;
   },
 ) {
