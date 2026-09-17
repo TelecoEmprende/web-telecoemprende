@@ -5,6 +5,7 @@ from flask import Blueprint, jsonify, request, session
 
 from backend.api.admin import _validar_evento_calendario
 from backend.config import (
+    CARGOS_VALIDOS,
     EQUIPOS_VALIDOS,
     LOGIN_BLOCK_WINDOW_SECONDS,
     MAX_EMAIL_LEN,
@@ -13,16 +14,25 @@ from backend.config import (
 from backend.schemas import build_response
 from backend.services.admin import is_admin_authenticated
 from backend.services.equipo import (
+    confirmar_evento_calendario,
     crear_evento_calendario,
     equipo_session_info,
     init_equipo_db,
     is_equipo_authenticated,
+    listar_directorio_club,
     listar_eventos_calendario,
     login_equipo,
     logout_equipo,
+    marcar_asistio_evento,
     registrar_equipo_acceso,
 )
-from backend.services.marketing import calendario_equipo, init_marketing_db, mis_tareas
+from backend.services.marketing import (
+    calendario_equipo,
+    init_marketing_db,
+    metricas_club,
+    mis_campanas,
+    mis_tareas,
+)
 from backend.services.security import demasiadas_peticiones, limpiar_texto, obtener_ip_real
 
 logger = logging.getLogger("telecoemprende.equipo")
@@ -38,6 +48,19 @@ def _puede_editar_calendario_club() -> bool:
     return is_admin_authenticated() or (
         is_equipo_authenticated() and len(equipo_session_info()["vp_de"]) > 0
     )
+
+
+def _es_board_o_vp() -> bool:
+    """Board del club (cargo de dirección) o VP de cualquier departamento, o
+    admin. Igual que `_puede_editar_calendario_club` pero sumando el cargo:
+    las métricas las ve quien decide sobre el club entero, no solo quien
+    edita el calendario."""
+    if is_admin_authenticated():
+        return True
+    if not is_equipo_authenticated():
+        return False
+    sesion = equipo_session_info()
+    return sesion["cargo"] in CARGOS_VALIDOS or len(sesion["vp_de"]) > 0
 
 
 @equipo_api.route("/login", methods=["POST"])
@@ -136,6 +159,16 @@ def api_equipo_session():
     return jsonify({"ok": True, "authenticated": authenticated, **info}), 200
 
 
+@equipo_api.route("/directorio", methods=["GET"])
+def api_equipo_directorio():
+    """Quién es quién del club entero -- para el widget de "Mi semana".
+    Cualquiera con sesión de equipo, no solo board/VP: es un directorio, no
+    datos de rendimiento (eso es `/metricas` y `/miembros/salud`)."""
+    if not is_equipo_authenticated() and not is_admin_authenticated():
+        return jsonify(build_response(False, "No autorizado.")), 401
+    return jsonify({"ok": True, "miembros": listar_directorio_club()}), 200
+
+
 @equipo_api.route("/calendario", methods=["GET"])
 def api_equipo_calendario():
     if not is_equipo_authenticated():
@@ -166,6 +199,44 @@ def api_equipo_crear_calendario():
     )
     logger.info("equipo crea evento calendario id=%s", evento["id"])
     return jsonify(build_response(True, "Evento creado.", evento=evento)), 201
+
+
+@equipo_api.route("/calendario/<int:evento_id>/confirmar", methods=["POST"])
+def api_equipo_confirmar_evento(evento_id: int):
+    """"Voy" / "no voy" de la propia persona -- cualquiera con sesión de
+    equipo, sobre sí mismo (no hay `email` en el payload a propósito)."""
+    if not is_equipo_authenticated():
+        return jsonify(build_response(False, "No autorizado.")), 401
+
+    init_equipo_db()
+    payload = request.get_json(silent=True) or {}
+    confirmar = bool(payload.get("confirmar", True))
+    email = session.get("equipo_email", "")
+
+    if not confirmar_evento_calendario(evento_id, email, confirmar):
+        return jsonify(build_response(False, "Evento no encontrado.")), 404
+    return jsonify(build_response(True, "Confirmación actualizada.")), 200
+
+
+@equipo_api.route("/calendario/<int:evento_id>/checkin", methods=["POST"])
+def api_equipo_checkin_evento(evento_id: int):
+    """Check-in el día del evento: lo marca quien gestiona la puerta (VP de
+    cualquier departamento, o admin), no la propia persona -- mismo criterio
+    que añadir un evento (`_puede_editar_calendario_club`)."""
+    if not _puede_editar_calendario_club():
+        return jsonify(build_response(False, "No autorizado.")), 401
+
+    init_equipo_db()
+    payload = request.get_json(silent=True) or {}
+    email = limpiar_texto(str(payload.get("email", ""))).lower()
+    asistio = bool(payload.get("asistio", True))
+
+    if not email or "@" not in email:
+        return jsonify(build_response(False, "Introduce un email válido.")), 400
+
+    if not marcar_asistio_evento(evento_id, email, asistio):
+        return jsonify(build_response(False, "Evento no encontrado.")), 404
+    return jsonify(build_response(True, "Asistencia actualizada.")), 200
 
 
 @equipo_api.route("/calendario-equipo", methods=["GET"])
@@ -223,3 +294,37 @@ def api_equipo_mis_tareas():
     init_marketing_db()
     email = session.get("equipo_email", "")
     return jsonify({"ok": True, "tareas": mis_tareas(email)}), 200
+
+
+@equipo_api.route("/mis-proyectos", methods=["GET"])
+def api_equipo_mis_proyectos():
+    """Campañas (proyectos) de cualquier departamento donde la persona tiene
+    una tarea, con su progreso -- mismo criterio cruzado que `/mis-tareas`."""
+    if not is_equipo_authenticated():
+        return jsonify(build_response(False, "No autorizado.")), 401
+
+    init_marketing_db()
+    email = session.get("equipo_email", "")
+    return jsonify({"ok": True, "proyectos": mis_campanas(email)}), 200
+
+
+@equipo_api.route("/metricas", methods=["GET"])
+def api_equipo_metricas():
+    """Salud del club entero para el board: mismo semáforo que la de cada
+    departamento, cruzando los tres, más productividad por persona. Ver
+    `metricas_club` -- gated a board/VP, igual que `/api/marketing/miembros/
+    salud` en cada departamento por separado."""
+    if not is_equipo_authenticated() and not is_admin_authenticated():
+        return jsonify(build_response(False, "No autorizado.")), 401
+    if not _es_board_o_vp():
+        return jsonify(build_response(False, "No autorizado.")), 403
+
+    init_marketing_db()
+    init_equipo_db()
+    try:
+        dias = int(request.args.get("dias", "30"))
+    except ValueError:
+        dias = 30
+    dias = max(7, min(dias, 180))
+
+    return jsonify({"ok": True, "metricas": metricas_club(dias)}), 200

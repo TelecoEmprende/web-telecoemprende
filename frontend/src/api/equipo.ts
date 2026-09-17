@@ -4,9 +4,10 @@ import type {
   EquipoLoginResponse,
   EquipoSessionResponse,
   EventoCalendario,
+  MiembroDirectorio,
   Team,
 } from "../types/equipo";
-import type { CalendarioItem, Task } from "../types/marketing";
+import type { CalendarioItem, MetricasClub, ProyectoResumen, Task } from "../types/marketing";
 
 export function loginEquipo(email: string, password: string) {
   return apiRequest<EquipoLoginResponse>("/api/equipo/login", {
@@ -31,6 +32,12 @@ export function logoutEquipo() {
 
 export function getEquipoSession() {
   return apiRequest<EquipoSessionResponse>("/api/equipo/session");
+}
+
+/** "Quién es quién": el club entero, no solo el departamento desde el que se
+ *  mira. Cualquiera con sesión de equipo puede pedirlo (ver el backend). */
+export function getDirectorioClub() {
+  return apiRequest<ApiResult & { miembros: MiembroDirectorio[] }>("/api/equipo/directorio");
 }
 
 export function getEquipoCalendario() {
@@ -62,4 +69,35 @@ export function getCalendarioEquipo(desde: string, hasta: string, departamentos?
 
 export function getMisTareas() {
   return apiRequest<ApiResult & { tareas: Task[] }>("/api/equipo/mis-tareas");
+}
+
+/** Campañas (proyectos) de cualquier departamento donde la persona tiene una
+ *  tarea, con su progreso -- para "Mis proyectos" en Mi semana. */
+export function getMisProyectos() {
+  return apiRequest<ApiResult & { proyectos: ProyectoResumen[] }>("/api/equipo/mis-proyectos");
+}
+
+/** "Voy" / "no voy" de la propia persona a un evento del club. */
+export function confirmarEventoCalendario(eventoId: number, confirmar = true) {
+  return apiRequest<ApiResult>(`/api/equipo/calendario/${eventoId}/confirmar`, {
+    method: "POST",
+    body: JSON.stringify({ confirmar }),
+  });
+}
+
+/** Check-in el día del evento -- solo VP de cualquier departamento o admin
+ *  (ver `_puede_editar_calendario_club` en el backend). */
+export function checkinEventoCalendario(eventoId: number, email: string, asistio = true) {
+  return apiRequest<ApiResult>(`/api/equipo/calendario/${eventoId}/checkin`, {
+    method: "POST",
+    body: JSON.stringify({ email, asistio }),
+  });
+}
+
+/** Solo board/VP (ver `_es_board_o_vp` en el backend) -- 403 para cualquier
+ *  otra persona. `MetricasPanel` no la llama si la sesión no cumple. */
+export function getMetricas(diasPeriodo = 30) {
+  return apiRequest<ApiResult & { metricas: MetricasClub }>(
+    `/api/equipo/metricas?dias=${diasPeriodo}`,
+  );
 }

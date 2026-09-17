@@ -42,10 +42,13 @@ class CronTests(unittest.TestCase):
 
         conn = equipo_service._get_connection()
         with conn.cursor() as cur:
+            # vp_de = equipos: crear tareas ahora exige VP/board (ver
+            # `_puede_asignar_tareas`), y este test ejercita la creación en
+            # sí, no ese límite de permisos.
             cur.execute(
-                "INSERT INTO equipo_accesos (email, password_hash, equipos)"
-                " VALUES (%s, %s, %s)",
-                ("marketing@example.com", generate_password_hash("x"), ["marketing"]),
+                "INSERT INTO equipo_accesos (email, password_hash, equipos, vp_de)"
+                " VALUES (%s, %s, %s, %s)",
+                ("marketing@example.com", generate_password_hash("x"), ["marketing"], ["marketing"]),
             )
         conn.commit()
         conn.close()
@@ -56,7 +59,11 @@ class CronTests(unittest.TestCase):
     def crear_tarea(self, titulo, deadline, estado="pendiente", departamento="marketing"):
         ruta = "/api/marketing" if departamento == "marketing" else f"/api/{departamento}"
         respuesta = self.client.post(
-            f"{ruta}/tasks", json={"titulo": titulo, "deadline": deadline, "estado": estado}
+            f"{ruta}/tasks",
+            json={
+                "titulo": titulo, "instrucciones": "Ver notas.",
+                "deadline": deadline, "estado": estado,
+            },
         )
         return respuesta.get_json()["task"]
 
@@ -101,6 +108,40 @@ class CronTests(unittest.TestCase):
         self.assertEqual(respuesta.status_code, 200)
         self.assertEqual(respuesta.get_json()["tareas"], 0)
         aviso.assert_called_once_with([])
+
+    def test_un_departamento_que_falla_no_bloquea_a_los_demas(self):
+        """Un fallo (p. ej. de base de datos) calculando la salud de un
+        departamento no debe impedir que se avise al resto -- ver
+        `api_resumen_equipo`."""
+        conn = equipo_service._get_connection()
+        with conn.cursor() as cur:
+            cur.execute(
+                "INSERT INTO equipo_accesos (email, password_hash, equipos)"
+                " VALUES (%s, %s, %s)",
+                ("eventos@example.com", generate_password_hash("x"), ["eventos"]),
+            )
+        conn.commit()
+        conn.close()
+
+        real_salud_equipo = marketing_service.salud_equipo
+
+        def salud_que_falla_en_eventos(departamento):
+            if departamento == "eventos":
+                raise RuntimeError("boom")
+            return real_salud_equipo(departamento)
+
+        with patch(
+            "backend.api.cron.salud_equipo", side_effect=salud_que_falla_en_eventos
+        ), patch("backend.api.cron.resumen_salud_equipo", return_value=True):
+            respuesta = self.client.post(
+                "/api/cron/resumen-equipo",
+                headers={"Authorization": "Bearer test-cron-secret"},
+            )
+
+        self.assertEqual(respuesta.status_code, 200)
+        enviados = respuesta.get_json()["enviados"]
+        self.assertIn("marketing", enviados)
+        self.assertNotIn("eventos", enviados)
 
 
 if __name__ == "__main__":

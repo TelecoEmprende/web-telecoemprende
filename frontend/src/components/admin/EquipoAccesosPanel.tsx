@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 
 import {
@@ -127,6 +127,16 @@ export function EquipoAccesosPanel() {
   const [nuevosEquipos, setNuevosEquipos] = useState<Team[]>([]);
   const [nuevoVpDe, setNuevoVpDe] = useState<Team[]>([]);
   const [nuevoCargo, setNuevoCargo] = useState<Cargo>("");
+  const [nuevoMentor, setNuevoMentor] = useState("");
+
+  // El prellenado desde una candidatura aceptada (ver comentario arriba)
+  // puede apuntar a un email que ya tiene acceso -- sin este aviso, "Crear
+  // acceso" lo intenta igual y el único feedback es el 400 genérico del
+  // backend en vez de decir dónde está ya la persona.
+  const accesoExistente = useMemo(
+    () => accesos.find((a) => a.email.trim().toLowerCase() === nuevoEmail.trim().toLowerCase()),
+    [accesos, nuevoEmail],
+  );
 
   async function cargar() {
     setIsLoading(true);
@@ -161,6 +171,7 @@ export function EquipoAccesosPanel() {
         nuevoVpDe,
         nuevoCargo,
         nuevoNombre,
+        nuevoMentor,
       );
       if (response.ok) {
         setMessageVariant("success");
@@ -171,6 +182,7 @@ export function EquipoAccesosPanel() {
         setNuevosEquipos([]);
         setNuevoVpDe([]);
         setNuevoCargo("");
+        setNuevoMentor("");
         await cargar();
       }
     } catch (error) {
@@ -218,6 +230,21 @@ export function EquipoAccesosPanel() {
       const response = await updateEquipoAcceso(acceso.id, { cargo });
       if (response.ok) {
         setAccesos((prev) => prev.map((a) => (a.id === acceso.id ? { ...a, cargo } : a)));
+      }
+    } catch (error) {
+      const apiError = error as ApiFailure;
+      setMessageVariant("error");
+      setMessage(apiError.message || "No se pudo actualizar el acceso.");
+    }
+  }
+
+  async function handleMentorChange(acceso: EquipoAcceso, mentorEmail: string) {
+    try {
+      const response = await updateEquipoAcceso(acceso.id, { mentor_email: mentorEmail });
+      if (response.ok) {
+        setAccesos((prev) =>
+          prev.map((a) => (a.id === acceso.id ? { ...a, mentor_email: mentorEmail } : a)),
+        );
       }
     } catch (error) {
       const apiError = error as ApiFailure;
@@ -329,6 +356,7 @@ export function EquipoAccesosPanel() {
                 <th className="px-2 font-medium">Equipos</th>
                 <th className="px-2 font-medium">VP de</th>
                 <th className="px-2 font-medium">Cargo</th>
+                <th className="px-2 font-medium">Mentor</th>
                 <th className="px-2 font-medium">Activo</th>
                 <th className="px-2"></th>
               </tr>
@@ -405,6 +433,28 @@ export function EquipoAccesosPanel() {
                     </Select>
                   </td>
                   <td className="p-2">
+                    <Select
+                      value={acceso.mentor_email || "none"}
+                      onValueChange={(value) =>
+                        void handleMentorChange(acceso, value === "none" ? "" : value)
+                      }
+                    >
+                      <SelectTrigger size="sm">
+                        <SelectValue placeholder="Sin mentor" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Sin mentor</SelectItem>
+                        {accesos
+                          .filter((otro) => otro.id !== acceso.id)
+                          .map((otro) => (
+                            <SelectItem key={otro.id} value={otro.email}>
+                              {otro.nombre || otro.email}
+                            </SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
+                  </td>
+                  <td className="p-2">
                     <Button
                       type="button"
                       variant="outline"
@@ -428,7 +478,7 @@ export function EquipoAccesosPanel() {
               ))}
               {accesos.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="p-2 text-muted-foreground">
+                  <td colSpan={10} className="p-2 text-muted-foreground">
                     Todavía no hay accesos de equipo dados de alta.
                   </td>
                 </tr>
@@ -460,6 +510,12 @@ export function EquipoAccesosPanel() {
               onChange={(event) => setNuevoEmail(event.target.value)}
               required
             />
+            {accesoExistente ? (
+              <p className="text-sm text-[var(--color-error-text)]">
+                Ya hay un acceso con ese email{accesoExistente.nombre ? ` (${accesoExistente.nombre})` : ""}
+                . Edítalo en la tabla de arriba en vez de crear uno nuevo.
+              </p>
+            ) : null}
           </div>
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="nuevo-equipo-password">Contraseña</Label>
@@ -489,26 +545,52 @@ export function EquipoAccesosPanel() {
           />
         </div>
 
-        <div className="flex flex-col gap-1.5 sm:w-56">
-          <Label>Cargo</Label>
-          <Select
-            value={nuevoCargo || "none"}
-            onValueChange={(value) => setNuevoCargo(value === "none" ? "" : (value as Cargo))}
-          >
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {CARGOS.map((cargo) => (
-                <SelectItem key={cargo.value || "none"} value={cargo.value || "none"}>
-                  {cargo.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="flex flex-col gap-1.5">
+            <Label>Cargo</Label>
+            <Select
+              value={nuevoCargo || "none"}
+              onValueChange={(value) => setNuevoCargo(value === "none" ? "" : (value as Cargo))}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {CARGOS.map((cargo) => (
+                  <SelectItem key={cargo.value || "none"} value={cargo.value || "none"}>
+                    {cargo.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <Label>Mentor</Label>
+            <Select
+              value={nuevoMentor || "none"}
+              onValueChange={(value) => setNuevoMentor(value === "none" ? "" : value)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Sin mentor" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Sin mentor</SelectItem>
+                {accesos.map((acceso) => (
+                  <SelectItem key={acceso.id} value={acceso.email}>
+                    {acceso.nombre || acceso.email}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
-        <Button type="submit" disabled={isSaving || nuevosEquipos.length === 0} className="sm:w-fit">
+        <Button
+          type="submit"
+          disabled={isSaving || nuevosEquipos.length === 0 || !!accesoExistente}
+          className="sm:w-fit"
+        >
           {isSaving ? "Creando..." : "Crear acceso"}
         </Button>
       </form>

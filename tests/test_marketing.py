@@ -1,3 +1,4 @@
+import base64
 import os
 import unittest
 from datetime import date, timedelta
@@ -46,20 +47,33 @@ class MarketingTestCase(unittest.TestCase):
         self.client = app.app.test_client()
 
     def seed_acceso(self, email="marketing@example.com", password="test-equipo",
-                    equipos=None):
+                    equipos=None, vp_de=None, cargo=""):
+        equipos = equipos or ["marketing"]
+        # VP de todos sus equipos por defecto: la mayoría de estos tests
+        # ejercitan el CRUD de un departamento (crear tareas incluido, que
+        # ahora exige VP/board -- ver `_puede_asignar_tareas`), no los
+        # límites de permisos en sí -- eso lo cubre `AutorizacionTests` y
+        # `TaskAsignacionTests` pasando `vp_de=[]` explícitamente.
+        vp_de = equipos if vp_de is None else vp_de
         conn = equipo_service._get_connection()
         with conn.cursor() as cur:
             cur.execute(
-                "INSERT INTO equipo_accesos (email, password_hash, equipos)"
-                " VALUES (%s, %s, %s)",
-                (email, generate_password_hash(password), equipos or ["marketing"]),
+                "INSERT INTO equipo_accesos (email, password_hash, equipos, vp_de, cargo)"
+                " VALUES (%s, %s, %s, %s, %s)",
+                (
+                    email,
+                    generate_password_hash(password),
+                    equipos,
+                    vp_de,
+                    cargo,
+                ),
             )
         conn.commit()
         conn.close()
 
     def login(self, email="marketing@example.com", password="test-equipo",
-              equipos=None):
-        self.seed_acceso(email, password, equipos)
+              equipos=None, vp_de=None, cargo=""):
+        self.seed_acceso(email, password, equipos, vp_de, cargo)
         respuesta = self.client.post(
             "/api/equipo/login", json={"email": email, "password": password}
         )
@@ -97,6 +111,7 @@ class AutorizacionTests(MarketingTestCase):
         ("PUT", "/api/marketing/contents/1"),
         ("DELETE", "/api/marketing/contents/1"),
         ("GET", "/api/marketing/tasks"),
+        ("GET", "/api/marketing/tasks/archivadas"),
         ("POST", "/api/marketing/tasks"),
         ("GET", "/api/marketing/tasks/1"),
         ("PUT", "/api/marketing/tasks/1"),
@@ -180,7 +195,7 @@ class CampaignTests(MarketingTestCase):
         content = self.crear_content(campaign["id"])
         self.client.post(
             "/api/marketing/tasks",
-            json={"titulo": "Escribir guion", "content_id": content["id"]},
+            json={"titulo": "Escribir guion", "instrucciones": "Ver notas.", "content_id": content["id"]},
         )
 
         detalle = self.client.get(f"/api/marketing/campaigns/{campaign['id']}").get_json()
@@ -206,7 +221,7 @@ class CampaignTests(MarketingTestCase):
         content = self.crear_content(campaign["id"])
         self.client.post(
             "/api/marketing/tasks",
-            json={"titulo": "Grabar", "content_id": content["id"]},
+            json={"titulo": "Grabar", "instrucciones": "Ver notas.", "content_id": content["id"]},
         )
 
         respuesta = self.client.delete(f"/api/marketing/campaigns/{campaign['id']}")
@@ -233,14 +248,18 @@ class CampaignTests(MarketingTestCase):
         self.client.post(
             "/api/marketing/tasks",
             json={
-                "titulo": "Escribir guion", "content_id": content["id"], "estado": "acabado",
+                "titulo": "Escribir guion", "instrucciones": "Ver notas.",
+                "content_id": content["id"], "estado": "acabado",
                 "deadline": "2026-10-01",
                 "checklist": [{"texto": "Revisar ortografía", "hecho": True}],
             },
         )
         self.client.post(
             "/api/marketing/tasks",
-            json={"titulo": "Reservar sala", "campaign_id": campaign["id"], "estado": "acabado"},
+            json={
+                "titulo": "Reservar sala", "instrucciones": "Ver notas.",
+                "campaign_id": campaign["id"], "estado": "acabado",
+            },
         )
 
         respuesta = self.client.post(f"/api/marketing/campaigns/{campaign['id']}/duplicar")
@@ -330,11 +349,14 @@ class ContentTests(MarketingTestCase):
         content = self.crear_content(self.campaign["id"])
         pendiente = self.client.post(
             "/api/marketing/tasks",
-            json={"titulo": "Grabar", "content_id": content["id"]},
+            json={"titulo": "Grabar", "instrucciones": "Ver notas.", "content_id": content["id"]},
         ).get_json()["task"]
         ya_acabada = self.client.post(
             "/api/marketing/tasks",
-            json={"titulo": "Guion", "content_id": content["id"], "estado": "acabado"},
+            json={
+                "titulo": "Guion", "instrucciones": "Ver notas.",
+                "content_id": content["id"], "estado": "acabado",
+            },
         ).get_json()["task"]
 
         respuesta = self.client.put(
@@ -351,7 +373,7 @@ class ContentTests(MarketingTestCase):
         content = self.crear_content(self.campaign["id"])
         tarea = self.client.post(
             "/api/marketing/tasks",
-            json={"titulo": "Grabar", "content_id": content["id"]},
+            json={"titulo": "Grabar", "instrucciones": "Ver notas.", "content_id": content["id"]},
         ).get_json()["task"]
 
         self.client.put(
@@ -424,7 +446,8 @@ class TaskTests(MarketingTestCase):
 
     def crear_task(self, **campos):
         respuesta = self.client.post(
-            "/api/marketing/tasks", json={"titulo": "Escribir guion", **campos}
+            "/api/marketing/tasks",
+            json={"titulo": "Escribir guion", "instrucciones": "Ver notas.", **campos},
         )
         self.assertEqual(respuesta.status_code, 201, respuesta.get_json())
         return respuesta.get_json()["task"]
@@ -512,7 +535,8 @@ class TaskTests(MarketingTestCase):
 
     def test_content_inexistente_da_404(self):
         respuesta = self.client.post(
-            "/api/marketing/tasks", json={"titulo": "X", "content_id": 9999}
+            "/api/marketing/tasks",
+            json={"titulo": "X", "instrucciones": "Ver notas.", "content_id": 9999},
         )
         self.assertEqual(respuesta.status_code, 404)
 
@@ -540,6 +564,272 @@ class TaskTests(MarketingTestCase):
             self.client.get(f"/api/marketing/tasks/{task['id']}").status_code, 404
         )
 
+    def _marcar_acabada_hace(self, task_id, dias):
+        """Simula que se cerró hace `dias` días -- `completado_en` lo pone el
+        propio servicio al pasar a 'acabado' (ver `actualizar_task`), así que
+        aquí solo se retrasa ese reloj para probar el corte de un día."""
+        self.client.put(f"/api/marketing/tasks/{task_id}", json={"estado": "acabado"})
+        conn = marketing_service._get_connection()
+        with conn.cursor() as cur:
+            cur.execute(
+                "UPDATE tasks SET completado_en = NOW() - %s::interval WHERE id = %s",
+                (f"{dias} days", task_id),
+            )
+            conn.commit()
+
+    def test_acabada_hace_mas_de_un_dia_sale_del_tablero(self):
+        task = self.crear_task()
+        self._marcar_acabada_hace(task["id"], 2)
+
+        tablero = self.client.get("/api/marketing/tasks").get_json()["tasks"]
+        self.assertNotIn(task["id"], [t["id"] for t in tablero])
+
+    def test_acabada_hace_menos_de_un_dia_se_queda_en_el_tablero(self):
+        task = self.crear_task()
+        self._marcar_acabada_hace(task["id"], 0)
+
+        tablero = self.client.get("/api/marketing/tasks").get_json()["tasks"]
+        self.assertIn(task["id"], [t["id"] for t in tablero])
+
+    def test_archivadas_solo_enseña_las_de_mas_de_un_dia(self):
+        reciente = self.crear_task(titulo="Reciente")
+        self._marcar_acabada_hace(reciente["id"], 0)
+        vieja = self.crear_task(titulo="Vieja")
+        self._marcar_acabada_hace(vieja["id"], 5)
+
+        archivadas = self.client.get("/api/marketing/tasks/archivadas").get_json()["tasks"]
+        ids = [t["id"] for t in archivadas]
+        self.assertIn(vieja["id"], ids)
+        self.assertNotIn(reciente["id"], ids)
+
+    def test_archivar_no_borra_la_tarea(self):
+        task = self.crear_task()
+        self._marcar_acabada_hace(task["id"], 3)
+
+        # Sigue accesible por su ficha aunque ya no salga en el tablero: no
+        # se ha borrado, solo se ha dejado de enseñar en el día a día.
+        detalle = self.client.get(f"/api/marketing/tasks/{task['id']}")
+        self.assertEqual(detalle.status_code, 200)
+        self.assertEqual(detalle.get_json()["task"]["estado"], "acabado")
+
+
+class TaskAsignacionTests(MarketingTestCase):
+    """Solo board y VPs asignan tareas (ver docs/CLAUDE.md) -- un miembro
+    raso puede seguir moviendo su propia tarea de estado, pero no crear
+    tareas nuevas ni reasignar el responsable de una ya existente."""
+
+    def crear_task_directo(self, **campos):
+        return self.client.post(
+            "/api/marketing/tasks",
+            json={"titulo": "Escribir guion", "instrucciones": "Ver notas.", **campos},
+        )
+
+    def test_miembro_raso_no_puede_crear_tareas(self):
+        self.login(vp_de=[])
+        respuesta = self.crear_task_directo()
+        self.assertEqual(respuesta.status_code, 403)
+
+    def test_vp_puede_crear_tareas(self):
+        self.login(vp_de=["marketing"])
+        self.assertEqual(self.crear_task_directo().status_code, 201)
+
+    def test_board_puede_crear_tareas_sin_ser_vp(self):
+        self.login(vp_de=[], cargo="boardmember")
+        self.assertEqual(self.crear_task_directo().status_code, 201)
+
+    def test_instrucciones_obligatorias(self):
+        self.login(vp_de=["marketing"])
+        respuesta = self.client.post(
+            "/api/marketing/tasks", json={"titulo": "Escribir guion"}
+        )
+        self.assertEqual(respuesta.status_code, 400)
+
+    def test_miembro_raso_puede_mover_su_propia_tarea_de_estado(self):
+        self.login(vp_de=["marketing"])
+        task = self.crear_task_directo().get_json()["task"]
+
+        self.client.post("/api/equipo/logout")
+        self.login(email="raso@example.com", vp_de=[])
+        respuesta = self.client.put(
+            f"/api/marketing/tasks/{task['id']}", json={"estado": "en_progreso"}
+        )
+        self.assertEqual(respuesta.status_code, 200)
+
+    def test_miembro_raso_no_puede_reasignar_el_responsable(self):
+        self.login(vp_de=["marketing"])
+        task = self.crear_task_directo(responsables=["raso@example.com"]).get_json()["task"]
+
+        self.client.post("/api/equipo/logout")
+        self.login(email="raso@example.com", vp_de=[])
+        respuesta = self.client.put(
+            f"/api/marketing/tasks/{task['id']}", json={"responsables": ["otro@example.com"]}
+        )
+        self.assertEqual(respuesta.status_code, 403)
+
+    def test_vp_de_los_dos_mueve_la_tarea_de_departamento(self):
+        self.login(equipos=["marketing", "eventos"], vp_de=["marketing", "eventos"])
+        task = self.crear_task_directo().get_json()["task"]
+
+        respuesta = self.client.put(
+            f"/api/marketing/tasks/{task['id']}", json={"departamento": "eventos"}
+        )
+        self.assertEqual(respuesta.status_code, 200, respuesta.get_json())
+
+        # Ya no está en el tablero de Marketing, sí en el de Eventos.
+        marketing = self.client.get("/api/marketing/tasks").get_json()["tasks"]
+        eventos = self.client.get("/api/eventos/tasks").get_json()["tasks"]
+        self.assertEqual([t["id"] for t in marketing], [])
+        self.assertEqual([t["id"] for t in eventos], [task["id"]])
+
+    def test_mover_a_un_departamento_donde_no_asigna_da_403(self):
+        self.login(equipos=["marketing", "eventos"], vp_de=["marketing"])
+        task = self.crear_task_directo().get_json()["task"]
+
+        respuesta = self.client.put(
+            f"/api/marketing/tasks/{task['id']}", json={"departamento": "eventos"}
+        )
+        self.assertEqual(respuesta.status_code, 403)
+
+    def test_mudarse_de_departamento_suelta_la_campana_del_viejo(self):
+        self.login(equipos=["marketing", "eventos"], vp_de=["marketing", "eventos"])
+        campaign = self.crear_campaign()
+        task = self.crear_task_directo(campaign_id=campaign["id"]).get_json()["task"]
+        self.assertEqual(task["campaign_id"], campaign["id"])
+
+        self.client.put(
+            f"/api/marketing/tasks/{task['id']}", json={"departamento": "eventos"}
+        )
+        mudada = self.client.get(f"/api/eventos/tasks/{task['id']}").get_json()["task"]
+        self.assertIsNone(mudada["campaign_id"])
+
+
+class CalendarioCruzadoTestCase(MarketingTestCase):
+    """`/api/equipo/calendario-equipo`, el que pinta el panel Calendario de
+    /equipo. Lo que se comprueba aquí es que los eventos del club (los que
+    pone /admin: charlas de alumni, ferias...) salgan ahí y no solo en "Mi
+    semana", que era donde vivían."""
+
+    def setUp(self):
+        super().setUp()
+        self.login(email="marketing@example.com")
+        conn = equipo_service._get_connection()
+        with conn.cursor() as cur:
+            cur.execute("DELETE FROM calendario_eventos")
+            cur.execute(
+                "INSERT INTO calendario_eventos (titulo, descripcion, fecha, hora)"
+                " VALUES (%s, %s, %s, %s)",
+                ("Conversaciones alumni", "Charla con antiguos del club", date.today(), "18:30"),
+            )
+        conn.commit()
+        conn.close()
+
+    def _items(self, departamentos=None):
+        hoy = date.today().isoformat()
+        qs = f"?desde={hoy}&hasta={hoy}"
+        if departamentos:
+            qs += f"&departamentos={departamentos}"
+        respuesta = self.client.get(f"/api/equipo/calendario-equipo{qs}")
+        self.assertEqual(respuesta.status_code, 200, respuesta.get_json())
+        return respuesta.get_json()["items"]
+
+    def test_el_evento_del_club_sale_en_el_calendario(self):
+        club = [i for i in self._items() if i["origen"] == "club"]
+        self.assertEqual(len(club), 1)
+        self.assertEqual(club[0]["titulo"], "Conversaciones alumni")
+        self.assertEqual(club[0]["hora"], "18:30")
+        self.assertEqual(club[0]["detalle"], "Charla con antiguos del club")
+
+    def test_no_es_de_ningun_departamento(self):
+        # Sin departamento el frontend no le pinta color de capa ni lo cuela
+        # en el de nadie (ver `botonEvento` en CalendarPanel).
+        club = next(i for i in self._items() if i["origen"] == "club")
+        self.assertIsNone(club["departamento"])
+
+    def test_sale_aunque_la_vista_este_filtrada_a_un_departamento(self):
+        # Es del club entero: filtrar capas no debería esconderlo.
+        titulos = [i["titulo"] for i in self._items("eventos") if i["origen"] == "club"]
+        self.assertEqual(titulos, ["Conversaciones alumni"])
+
+    def test_sigue_trayendo_las_tareas_del_departamento(self):
+        self.client.post(
+            "/api/marketing/tasks",
+            json={
+                "titulo": "Escribir guion",
+                "instrucciones": "Ver notas.",
+                "deadline": date.today().isoformat(),
+            },
+        )
+        origenes = {i["origen"] for i in self._items("marketing")}
+        self.assertIn("task", origenes)
+        self.assertIn("club", origenes)
+
+
+class FotoPerfilTestCase(MarketingTestCase):
+    """La foto de perfil la cambia cada cual la suya, y acaba en un `src` que
+    se le sirve a todo el club: la forma se valida en servidor."""
+
+    JPEG = "data:image/jpeg;base64," + base64.b64encode(b"no-es-un-jpeg-real").decode()
+
+    def setUp(self):
+        super().setUp()
+        self.login(email="marketing@example.com")
+
+    def _put(self, email, foto):
+        return self.client.put(
+            "/api/marketing/miembros/ficha", json={"email": email, "foto": foto}
+        )
+
+    def test_cambia_su_propia_foto_y_sale_en_el_directorio(self):
+        respuesta = self._put("marketing@example.com", self.JPEG)
+        self.assertEqual(respuesta.status_code, 200, respuesta.get_json())
+
+        miembros = self.client.get("/api/marketing/miembros").get_json()["miembros"]
+        self.assertEqual(miembros[0]["foto"], self.JPEG)
+
+    def test_vaciarla_devuelve_a_la_foto_por_defecto(self):
+        self._put("marketing@example.com", self.JPEG)
+        self.assertEqual(self._put("marketing@example.com", "").status_code, 200)
+
+        miembros = self.client.get("/api/marketing/miembros").get_json()["miembros"]
+        self.assertEqual(miembros[0]["foto"], "")
+
+    def test_no_puede_cambiar_la_foto_de_otra_persona(self):
+        self.seed_acceso(email="otra@example.com")
+        # Sin cargo ni admin: la ficha de otra persona se puede leer, su cara no.
+        self.client.post("/api/equipo/logout")
+        self.login(email="raso@example.com", vp_de=[])
+
+        respuesta = self._put("otra@example.com", self.JPEG)
+        self.assertEqual(respuesta.status_code, 403)
+
+    def test_rechaza_lo_que_no_sea_una_imagen(self):
+        # Un data:text/html colado aquí sería un problema de quien lo mira, no
+        # de quien lo sube.
+        html = "data:text/html;base64," + base64.b64encode(b"<script>").decode()
+        self.assertEqual(self._put("marketing@example.com", html).status_code, 400)
+
+    def test_rechaza_una_foto_demasiado_grande(self):
+        enorme = "data:image/jpeg;base64," + "A" * 300_001
+        self.assertEqual(self._put("marketing@example.com", enorme).status_code, 400)
+
+    def test_rechaza_base64_roto(self):
+        self.assertEqual(
+            self._put("marketing@example.com", "data:image/png;base64,@@@@").status_code,
+            400,
+        )
+
+    def test_la_ficha_dice_si_es_la_tuya(self):
+        mia = self.client.get(
+            "/api/marketing/miembros/ficha?email=marketing@example.com"
+        ).get_json()["ficha"]
+        self.assertTrue(mia["es_tu_ficha"])
+
+        self.seed_acceso(email="otra@example.com")
+        suya = self.client.get(
+            "/api/marketing/miembros/ficha?email=otra@example.com"
+        ).get_json()["ficha"]
+        self.assertFalse(suya["es_tu_ficha"])
+
 
 class CalendarioTests(MarketingTestCase):
     def setUp(self):
@@ -551,7 +841,7 @@ class CalendarioTests(MarketingTestCase):
         self.crear_content(self.campaign["id"], fecha_publicacion="2026-10-15")
         self.client.post(
             "/api/marketing/tasks",
-            json={"titulo": "Grabar", "deadline": "2026-10-10",
+            json={"titulo": "Grabar", "instrucciones": "Ver notas.", "deadline": "2026-10-10",
                   "campaign_id": self.campaign["id"]},
         )
 
@@ -576,7 +866,8 @@ class CalendarioTests(MarketingTestCase):
 
         self.client.post(
             "/api/marketing/tasks",
-            json={"titulo": "Grabar", "deadline": "2026-10-10", "hora": "10:00",
+            json={"titulo": "Grabar", "instrucciones": "Ver notas.",
+                  "deadline": "2026-10-10", "hora": "10:00",
                   "campaign_id": self.campaign["id"]},
         )
 
@@ -663,7 +954,10 @@ class AislamientoDepartamentoTestCase(MarketingTestCase):
 
     def test_eventos_no_ve_las_tareas_de_marketing(self):
         self.login(equipos=["marketing", "eventos"])
-        self.client.post("/api/marketing/tasks", json={"titulo": "Guion del reel"})
+        self.client.post(
+            "/api/marketing/tasks",
+            json={"titulo": "Guion del reel", "instrucciones": "Ver notas."},
+        )
 
         respuesta = self.client.get("/api/eventos/tasks")
         self.assertEqual(respuesta.status_code, 200)
@@ -671,7 +965,10 @@ class AislamientoDepartamentoTestCase(MarketingTestCase):
 
     def test_la_tarea_creada_en_eventos_es_de_eventos(self):
         self.login(equipos=["marketing", "eventos"])
-        crear = self.client.post("/api/eventos/tasks", json={"titulo": "Reservar sala"})
+        crear = self.client.post(
+            "/api/eventos/tasks",
+            json={"titulo": "Reservar sala", "instrucciones": "Ver notas."},
+        )
         self.assertEqual(crear.status_code, 201, crear.get_json())
         self.assertEqual(crear.get_json()["task"]["departamento"], "eventos")
 
@@ -682,7 +979,7 @@ class AislamientoDepartamentoTestCase(MarketingTestCase):
     def test_no_se_edita_una_tarea_de_otro_departamento_por_id(self):
         self.login(equipos=["marketing", "eventos"])
         task_id = self.client.post(
-            "/api/marketing/tasks", json={"titulo": "Guion del reel"}
+            "/api/marketing/tasks", json={"titulo": "Guion del reel", "instrucciones": "Ver notas."}
         ).get_json()["task"]["id"]
 
         # Mismo id, misma sesión, pero por la ruta del otro departamento.
@@ -707,7 +1004,7 @@ class AislamientoDepartamentoTestCase(MarketingTestCase):
 
         respuesta = self.client.post(
             "/api/eventos/tasks",
-            json={"titulo": "Colada", "campaign_id": campaign_id},
+            json={"titulo": "Colada", "instrucciones": "Ver notas.", "campaign_id": campaign_id},
         )
         self.assertEqual(respuesta.status_code, 404)
 
@@ -747,7 +1044,10 @@ class SlackTestCase(MarketingTestCase):
         self.login()
         self.client.post(
             "/api/marketing/tasks",
-            json={"titulo": "Guion del reel", "responsables": ["diego@telecoemprende.es"]},
+            json={
+                "titulo": "Guion del reel", "instrucciones": "Ver notas.",
+                "responsables": ["diego@telecoemprende.es"],
+            },
         )
 
         self.assertEqual(len(self.enviados), 1)
@@ -758,7 +1058,7 @@ class SlackTestCase(MarketingTestCase):
     def test_cambiar_de_estado_avisa_a_slack(self):
         self.login()
         task_id = self.client.post(
-            "/api/marketing/tasks", json={"titulo": "Guion del reel"}
+            "/api/marketing/tasks", json={"titulo": "Guion del reel", "instrucciones": "Ver notas."}
         ).get_json()["task"]["id"]
         self.enviados.clear()
 
@@ -770,13 +1070,33 @@ class SlackTestCase(MarketingTestCase):
     def test_editar_sin_tocar_el_estado_no_avisa(self):
         self.login()
         task_id = self.client.post(
-            "/api/marketing/tasks", json={"titulo": "Guion del reel"}
+            "/api/marketing/tasks", json={"titulo": "Guion del reel", "instrucciones": "Ver notas."}
         ).get_json()["task"]["id"]
         self.enviados.clear()
 
         self.client.put(f"/api/marketing/tasks/{task_id}", json={"titulo": "Otro guion"})
 
         self.assertEqual(self.enviados, [])
+
+    def test_comentar_una_tarea_avisa_a_slack(self):
+        self.login()
+        task_id = self.client.post(
+            "/api/marketing/tasks",
+            json={
+                "titulo": "Guion del reel", "instrucciones": "Ver notas.",
+                "responsables": ["diego@telecoemprende.es"],
+            },
+        ).get_json()["task"]["id"]
+        self.enviados.clear()
+
+        self.client.post(
+            f"/api/marketing/tasks/{task_id}/comments", json={"texto": "Falta el CTA."}
+        )
+
+        self.assertEqual(len(self.enviados), 1)
+        self.assertIn("Guion del reel", self.enviados[0])
+        self.assertIn("diego", self.enviados[0])
+        self.assertIn("Falta el CTA.", self.enviados[0])
 
     def test_si_slack_falla_la_tarea_se_crea_igual(self):
         def explota(texto):
@@ -788,12 +1108,46 @@ class SlackTestCase(MarketingTestCase):
         # `enviar` traga sus propios errores, así que el fallo real que se
         # simula aquí es el peor caso: que se escape una excepción.
         with self.assertRaises(urllib.error.URLError):
-            self.client.post("/api/marketing/tasks", json={"titulo": "Guion del reel"})
+            self.client.post("/api/marketing/tasks", json={"titulo": "Guion del reel", "instrucciones": "Ver notas."})
 
         # Y aun así la tarea quedó escrita: el aviso va después del INSERT.
         marketing_api_slack.enviar = lambda texto: True
         tareas = self.client.get("/api/marketing/tasks").get_json()["tasks"]
         self.assertEqual([t["titulo"] for t in tareas], ["Guion del reel"])
+
+    def test_completar_el_onboarding_avisa_a_slack(self):
+        self.login()
+        self.seed_acceso("hugo@telecoemprende.es", "x", ["marketing"])
+
+        # A medio checklist no avisa todavía.
+        self.client.put(
+            "/api/marketing/miembros/ficha",
+            json={"email": "hugo@telecoemprende.es", "onboarding": {"slack": True, "drive": False}},
+        )
+        self.assertEqual(self.enviados, [])
+
+        self.client.put(
+            "/api/marketing/miembros/ficha",
+            json={"email": "hugo@telecoemprende.es", "onboarding": {"slack": True, "drive": True}},
+        )
+        self.assertEqual(len(self.enviados), 1)
+        self.assertIn("hugo", self.enviados[0])
+        self.assertIn("marketing", self.enviados[0])
+
+    def test_reguardar_el_onboarding_completo_no_vuelve_a_avisar(self):
+        self.login()
+        self.seed_acceso("hugo@telecoemprende.es", "x", ["marketing"])
+        self.client.put(
+            "/api/marketing/miembros/ficha",
+            json={"email": "hugo@telecoemprende.es", "onboarding": {"slack": True}},
+        )
+        self.enviados.clear()
+
+        self.client.put(
+            "/api/marketing/miembros/ficha",
+            json={"email": "hugo@telecoemprende.es", "onboarding": {"slack": True}},
+        )
+        self.assertEqual(self.enviados, [])
 
 
 class FichaMiembroTestCase(MarketingTestCase):
@@ -805,11 +1159,17 @@ class FichaMiembroTestCase(MarketingTestCase):
 
         self.client.post(
             "/api/marketing/tasks",
-            json={"titulo": "Guion", "responsables": ["hugo@telecoemprende.es"]},
+            json={
+                "titulo": "Guion", "instrucciones": "Ver notas.",
+                "responsables": ["hugo@telecoemprende.es"],
+            },
         )
         acabada = self.client.post(
             "/api/marketing/tasks",
-            json={"titulo": "Reel", "responsables": ["hugo@telecoemprende.es"]},
+            json={
+                "titulo": "Reel", "instrucciones": "Ver notas.",
+                "responsables": ["hugo@telecoemprende.es"],
+            },
         ).get_json()["task"]["id"]
         self.client.put(f"/api/marketing/tasks/{acabada}", json={"estado": "acabado"})
 
@@ -823,7 +1183,10 @@ class FichaMiembroTestCase(MarketingTestCase):
         self.seed_acceso("hugo@telecoemprende.es", "x", ["marketing", "eventos"])
         self.client.post(
             "/api/eventos/tasks",
-            json={"titulo": "Montaje", "responsables": ["hugo@telecoemprende.es"]},
+            json={
+                "titulo": "Montaje", "instrucciones": "Ver notas.",
+                "responsables": ["hugo@telecoemprende.es"],
+            },
         )
 
         en_marketing = self.client.get("/api/marketing/miembros").get_json()["miembros"]
@@ -842,6 +1205,7 @@ class FichaMiembroTestCase(MarketingTestCase):
             "/api/marketing/tasks",
             json={
                 "titulo": "Guion del reel",
+                "instrucciones": "Ver notas.",
                 "campaign_id": campaign_id,
                 "responsables": ["hugo@telecoemprende.es"],
             },
@@ -925,7 +1289,10 @@ class SaludEquipoTestCase(MarketingTestCase):
         for i in range(4):
             self.client.post(
                 "/api/marketing/tasks",
-                json={"titulo": f"Tarea {i}", "responsables": ["cargado@telecoemprende.es"]},
+                json={
+                    "titulo": f"Tarea {i}", "instrucciones": "Ver notas.",
+                    "responsables": ["cargado@telecoemprende.es"],
+                },
             )
 
         salud = marketing_service.salud_equipo("marketing")
@@ -942,7 +1309,10 @@ class SaludEquipoTestCase(MarketingTestCase):
         self.seed_acceso("dormido@telecoemprende.es", "x", ["marketing"])
         self.client.post(
             "/api/marketing/tasks",
-            json={"titulo": "Tarea vieja", "responsables": ["dormido@telecoemprende.es"]},
+            json={
+                "titulo": "Tarea vieja", "instrucciones": "Ver notas.",
+                "responsables": ["dormido@telecoemprende.es"],
+            },
         )
         self._fijar_updated_at("Tarea vieja", 20)
 
@@ -965,12 +1335,14 @@ class SaludEquipoTestCase(MarketingTestCase):
         ayer = (date.today() - timedelta(days=1)).isoformat()
 
         a_tiempo_id = self.client.post(
-            "/api/marketing/tasks", json={"titulo": "A tiempo", "deadline": hoy}
+            "/api/marketing/tasks",
+            json={"titulo": "A tiempo", "instrucciones": "Ver notas.", "deadline": hoy},
         ).get_json()["task"]["id"]
         self.client.put(f"/api/marketing/tasks/{a_tiempo_id}", json={"estado": "acabado"})
 
         tarde_id = self.client.post(
-            "/api/marketing/tasks", json={"titulo": "Tarde", "deadline": ayer}
+            "/api/marketing/tasks",
+            json={"titulo": "Tarde", "instrucciones": "Ver notas.", "deadline": ayer},
         ).get_json()["task"]["id"]
         self.client.put(f"/api/marketing/tasks/{tarde_id}", json={"estado": "acabado"})
 
@@ -978,12 +1350,72 @@ class SaludEquipoTestCase(MarketingTestCase):
         # ayer, acabada hoy): 50%.
         self.assertEqual(marketing_service.salud_equipo("marketing")["pct_a_tiempo"], 50)
 
-    def test_ruta_salud_devuelve_total_del_departamento(self):
+    def test_editar_una_tarea_ya_acabada_no_cambia_si_fue_a_tiempo(self):
+        """`updated_at` se mueve con cualquier edición posterior a que la
+        tarea se completara (retocar la checklist, el título...). Antes era
+        lo único que usaba `pct_a_tiempo`, así que una tarea a tiempo podía
+        pasar a contar como tardía por una edición sin relación con el plazo."""
         self.login()
+        hoy = date.today().isoformat()
+
+        task_id = self.client.post(
+            "/api/marketing/tasks",
+            json={"titulo": "Reel", "instrucciones": "Ver notas.", "deadline": hoy},
+        ).get_json()["task"]["id"]
+        self.client.put(f"/api/marketing/tasks/{task_id}", json={"estado": "acabado"})
+
+        # Una edición posterior (título, checklist...) que no toca el estado
+        # -- simulada tocando `updated_at` directamente, ya que en el test
+        # ocurre en el mismo instante real que la línea de arriba.
+        conn = marketing_service._get_connection()
+        with conn.cursor() as cur:
+            cur.execute(
+                "UPDATE tasks SET updated_at = NOW() + interval '5 days' WHERE id = %s",
+                (task_id,),
+            )
+        conn.commit()
+        conn.close()
+
+        self.assertEqual(marketing_service.salud_equipo("marketing")["pct_a_tiempo"], 100)
+
+    def test_reenviar_el_mismo_estado_no_reinicia_completado_en(self):
+        """El diálogo de edición reenvía `estado` sin cambios en cada
+        guardado (ver TaskDialog.tsx) -- eso no debe correr la fecha de
+        cierre real cada vez que se retoca otra cosa de una tarea acabada."""
+        self.login()
+        task_id = self.client.post(
+            "/api/marketing/tasks", json={"titulo": "Reel", "instrucciones": "Ver notas."}
+        ).get_json()["task"]["id"]
+
+        marketing_service.actualizar_task(task_id, "marketing", estado="acabado")
+        primero = marketing_service.obtener_task(task_id, "marketing")["completado_en"]
+
+        marketing_service.actualizar_task(
+            task_id, "marketing", estado="acabado", titulo="Reel editado"
+        )
+        segundo = marketing_service.obtener_task(task_id, "marketing")["completado_en"]
+
+        self.assertEqual(primero, segundo)
+
+    def test_ruta_salud_devuelve_total_del_departamento(self):
+        self.login(vp_de=["marketing"])
         self.seed_acceso("otro@telecoemprende.es", "x", ["marketing"])
         respuesta = self.client.get("/api/marketing/miembros/salud")
         self.assertEqual(respuesta.status_code, 200)
         self.assertEqual(respuesta.get_json()["salud"]["total"], 2)
+
+    def test_ruta_salud_rechaza_a_quien_no_es_board_ni_vp(self):
+        """La puntuación de participación no se le enseña al miembro raso: solo
+        VP del departamento, board o admin (evita competición entre
+        compañeros, ver `metricas_club`)."""
+        self.login(vp_de=[])
+        respuesta = self.client.get("/api/marketing/miembros/salud")
+        self.assertEqual(respuesta.status_code, 403)
+
+    def test_ruta_salud_acepta_a_board(self):
+        self.login(cargo="boardmember")
+        respuesta = self.client.get("/api/marketing/miembros/salud")
+        self.assertEqual(respuesta.status_code, 200)
 
 
 class OnboardingTestCase(MarketingTestCase):

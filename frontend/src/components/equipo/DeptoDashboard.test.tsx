@@ -9,6 +9,7 @@ import type { Prioridad, Task, TaskEstado } from "../../types/marketing";
 const getCampaigns = vi.fn();
 const getCampaign = vi.fn();
 const getTasks = vi.fn();
+const getTasksArchivadas = vi.fn();
 const getCalendario = vi.fn();
 const getMiembros = vi.fn();
 const updateTask = vi.fn();
@@ -21,6 +22,7 @@ const duplicateCampaign = vi.fn();
 const getTaskComments = vi.fn();
 const createTaskComment = vi.fn();
 const getCalendarioEquipo = vi.fn();
+const getTask = vi.fn();
 
 // El módulo ya no exporta funciones sueltas sino una factoría por
 // departamento (Marketing y Eventos comparten paneles). `apiDepto` guarda el
@@ -35,6 +37,8 @@ vi.mock("../../api/marketing", () => ({
       getCampaigns: (...args: unknown[]) => getCampaigns(...args),
       getCampaign: (...args: unknown[]) => getCampaign(...args),
       getTasks: (...args: unknown[]) => getTasks(...args),
+      getTask: (...args: unknown[]) => getTask(...args),
+      getTasksArchivadas: (...args: unknown[]) => getTasksArchivadas(...args),
       getCalendario: (...args: unknown[]) => getCalendario(...args),
       getMiembros: (...args: unknown[]) => getMiembros(...args),
       updateTask: (...args: unknown[]) => updateTask(...args),
@@ -66,6 +70,10 @@ vi.mock("../../api/marketing", () => ({
 // test hace peticiones de verdad contra jsdom. Los equipos son mutables porque
 // el sidebar sale de la sesión: quien es de Eventos ve otras secciones.
 let teamsDeSesion = ["marketing"];
+// VP de sus propios equipos por defecto: crear/reasignar tareas ahora exige
+// serlo (ver `_puede_asignar_tareas` en el backend), y la mayoría de estos
+// tests ejercitan ese flujo, no el límite de permisos en sí.
+let vpDeSesion = ["marketing"];
 
 vi.mock("../../api/equipo", () => ({
   getEquipoSession: () =>
@@ -73,14 +81,19 @@ vi.mock("../../api/equipo", () => ({
       ok: true,
       authenticated: true,
       teams: teamsDeSesion,
-      vp_de: [],
+      vp_de: vpDeSesion,
       cargo: "",
       nombre: "",
+      mentor_email: "",
     }),
   getEquipoCalendario: () => Promise.resolve({ ok: true, eventos: [] }),
   getCalendarioEquipo: (...args: unknown[]) => getCalendarioEquipo(...args),
   createEquipoCalendarioEvento: vi.fn(),
   getMisTareas: () => Promise.resolve({ ok: true, tareas: [] }),
+  getMisProyectos: () => Promise.resolve({ ok: true, proyectos: [] }),
+  getDirectorioClub: () => Promise.resolve({ ok: true, miembros: [] }),
+  confirmarEventoCalendario: vi.fn(),
+  checkinEventoCalendario: vi.fn(),
   logoutEquipo: () => Promise.resolve({ ok: true }),
   loginEquipo: vi.fn(),
 }));
@@ -102,6 +115,7 @@ const TAREA = {
   content_id: 1,
   titulo: "Escribir guion",
   descripcion: "",
+  instrucciones: "Ver notas.",
   estado: "pendiente" as TaskEstado,
   prioridad: "media" as Prioridad,
   deadline: enDias(2),
@@ -113,6 +127,7 @@ const TAREA = {
   creado_por: YO,
   created_at: "2026-09-06T10:00:00",
   updated_at: "2026-09-06T10:00:00",
+  completado_en: null,
   content_titulo: "Reel: cómo empezar a invertir",
   campaign_nombre: "Cómo empezar a invertir",
 };
@@ -121,25 +136,29 @@ function tareas(...lista: Partial<Task>[]): Task[] {
   return lista.map((t, i) => ({ ...TAREA, id: i + 1, ...t }));
 }
 
-/** Monta /equipo entero (el sidebar y la navegación son suyos, no del panel
- *  de Marketing) y entra en el resumen del departamento: la página abre en el
- *  inicio del club, que es lo común a todo el mundo. */
+/** Monta /equipo entero. El sidebar es plano (una entrada por panel, no una
+ *  por departamento, ver `EquipoSidebar.tsx`): abre en "Mi semana", que es lo
+ *  común a todo el mundo, sin ningún "Resumen" de departamento que tocar
+ *  antes. */
 async function renderMarketing() {
   render(
     <MemoryRouter>
       <EquipoPage />
     </MemoryRouter>,
   );
-  await userEvent.click(await screen.findByRole("button", { name: "Resumen" }));
+  await screen.findByText(/tarea vence|tareas vencen|ninguna tarea vence/);
 }
 
 describe("/equipo — panel de Marketing", () => {
   beforeEach(() => {
     teamsDeSesion = ["marketing"];
+    vpDeSesion = ["marketing"];
     deptosPedidos.length = 0;
+    getTask.mockReset().mockResolvedValue({ ok: true, task: TAREA });
     getCampaigns.mockReset().mockResolvedValue({ ok: true, campaigns: [] });
     getCampaign.mockReset();
     getTasks.mockReset().mockResolvedValue({ ok: true, tasks: [], usuario: YO });
+    getTasksArchivadas.mockReset().mockResolvedValue({ ok: true, tasks: [] });
     getCalendario
       .mockReset()
       .mockResolvedValue({ ok: true, desde: "", hasta: "", items: [] });
@@ -165,57 +184,136 @@ describe("/equipo — panel de Marketing", () => {
       .mockResolvedValue({ ok: true, desde: "", hasta: "", items: [] });
   });
 
-  it("abre en el resumen, no en el listado de miembros", async () => {
-    getTasks.mockResolvedValue({ ok: true, tasks: tareas({}), usuario: YO });
-
-    await renderMarketing();
-
-    // La pregunta con la que entra el usuario, no la estructura de los datos.
-    expect(await screen.findByText(/cosa pendiente|cosas pendientes/)).toBeInTheDocument();
-    // El resumen de campañas en marcha sí es parte de Home. Miembros (el
-    // directorio de nombres reales, ver `DirectorioProvider`) se pide una vez
-    // por departamento para toda la sesión, no solo al entrar al panel de
-    // Miembros -- por eso sí se ha llamado, aunque no se vea la lista.
-    expect(getCampaigns).toHaveBeenCalled();
-    expect(getMiembros).toHaveBeenCalled();
-  });
-
-  it("separa lo vencido y ordena lo demás por día en el timeline", async () => {
+  it("carga las tareas al ir al tablero y las coloca en su columna", async () => {
     getTasks.mockResolvedValue({
       ok: true,
       usuario: YO,
-      tasks: tareas(
-        { titulo: "Grabar", deadline: enDias(-3) },
-        { titulo: "Editar", deadline: enDias(0) },
-        { titulo: "Revisar", deadline: enDias(4) },
-      ),
+      tasks: tareas({ titulo: "Escribir guion" }, { titulo: "Grabar", estado: "acabado" }),
     });
 
     await renderMarketing();
+    await userEvent.click(screen.getByRole("button", { name: "Tareas" }));
 
-    // Vencidas sigue siendo su propio grupo, con encabezado real.
-    expect(await screen.findByRole("heading", { name: /Vencidas/ })).toBeInTheDocument();
-    expect(screen.getByText(/1 ya vencida/)).toBeInTheDocument();
-    // El resto se agrupa por día en el timeline, no por "próximos 7 días".
-    // ("Hoy" sale dos veces: la etiqueta del día y la fecha de la propia
-    // tarea de ese día.)
-    expect(screen.getAllByText("Hoy").length).toBeGreaterThan(0);
-    expect(screen.getByText("Editar")).toBeInTheDocument();
-    expect(screen.getByText("Revisar")).toBeInTheDocument();
+    // Las tarjetas son botones que abren la tarea en grande, estilo Trello.
+    expect(await screen.findByRole("button", { name: /Escribir guion/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Grabar/ })).toBeInTheDocument();
   });
 
-  it("cada tarea dice de qué contenido cuelga", async () => {
+  it("'Completadas' enseña el historial en vez del tablero", async () => {
+    getTasks.mockResolvedValue({
+      ok: true,
+      usuario: YO,
+      tasks: tareas({ titulo: "Escribir guion" }),
+    });
+    getTasksArchivadas.mockResolvedValue({
+      ok: true,
+      tasks: tareas({
+        titulo: "Grabar hace una semana",
+        estado: "acabado",
+        completado_en: "2026-08-30T10:00:00",
+      }),
+    });
+
+    await renderMarketing();
+    await userEvent.click(screen.getByRole("button", { name: "Tareas" }));
+    expect(await screen.findByRole("button", { name: /Escribir guion/ })).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "Completadas" }));
+
+    // El tablero desaparece (ya no está "Escribir guion") y aparece el
+    // historial pedido aparte, no un filtro sobre las mismas tareas.
+    expect(await screen.findByRole("button", { name: /Grabar hace una semana/ })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Escribir guion/ })).not.toBeInTheDocument();
+    expect(getTasksArchivadas).toHaveBeenCalled();
+  });
+
+  it("cada tarjeta dice de qué campaña cuelga", async () => {
     getTasks.mockResolvedValue({ ok: true, tasks: tareas({}), usuario: YO });
 
     await renderMarketing();
+    await userEvent.click(screen.getByRole("button", { name: "Tareas" }));
 
-    // Sin esto el usuario ve cuatro filas llamadas "Guion" sin saber de cuál.
+    // Sin esto el tablero enseña cuatro tarjetas llamadas "Guion" sin decir
+    // de cuál reel es cada una.
     expect(
       await screen.findByText("Reel: cómo empezar a invertir"),
     ).toBeInTheDocument();
   });
 
-  it("'Solo lo mío' filtra por responsable", async () => {
+  it("un miembro raso (no VP) no ve el botón de crear tarea", async () => {
+    vpDeSesion = [];
+
+    await renderMarketing();
+    await userEvent.click(screen.getByRole("button", { name: "Tareas" }));
+
+    expect(screen.queryByRole("button", { name: "+ Nueva tarea" })).not.toBeInTheDocument();
+  });
+
+  it("ingeniería asigna en todo el club aunque no sea VP de nada ni tenga cargo", async () => {
+    // El backend ya la trata como superusuaria: entrar en /equipo estando en
+    // ingeniería da sesión de /admin, y `_puede_asignar_tareas` deja pasar a
+    // cualquiera que la tenga. La interfaz miraba solo el cargo, así que le
+    // escondía permisos que el servidor sí le daba.
+    teamsDeSesion = ["ingenieria"];
+    vpDeSesion = [];
+
+    await renderMarketing();
+    await userEvent.click(screen.getByRole("button", { name: "Tareas" }));
+    await userEvent.click(screen.getByRole("button", { name: "+ Nueva tarea" }));
+
+    // Los tres departamentos del club, no solo el suyo.
+    expect(screen.getByLabelText("Crear en Marketing")).toBeInTheDocument();
+    expect(screen.getByLabelText("Crear en Eventos")).toBeInTheDocument();
+    expect(screen.getByLabelText("Crear en Ingeniería")).toBeInTheDocument();
+  });
+
+  it("VP de varios departamentos elige a cuál va la tarea nueva, aunque la vista esté filtrada a uno solo", async () => {
+    // Por defecto la vista arranca filtrada al primero de sus departamentos
+    // (ver `EquipoPage.tsx`), sin tocar el filtro de la barra -- el selector
+    // de "Nueva tarea" tiene que salir igual, con los DOS departamentos.
+    teamsDeSesion = ["marketing", "ingenieria"];
+    vpDeSesion = ["marketing", "ingenieria"];
+
+    await renderMarketing();
+    await userEvent.click(screen.getByRole("button", { name: "Tareas" }));
+    await userEvent.click(screen.getByRole("button", { name: "+ Nueva tarea" }));
+
+    await userEvent.click(screen.getByLabelText("Crear en Marketing"));
+    await userEvent.click(screen.getByLabelText("Crear en Ingeniería"));
+    await userEvent.type(screen.getByLabelText("Título"), "Preparar taller");
+    await userEvent.type(screen.getByLabelText("Instrucciones"), "Ver notas.");
+    await userEvent.click(screen.getByRole("button", { name: "Crear tarea" }));
+
+    await waitFor(() =>
+      expect(createTask).toHaveBeenCalledWith(
+        expect.objectContaining({ titulo: "Preparar taller" }),
+      ),
+    );
+    // Se creó en el departamento elegido en el selector, no en el que estaba
+    // filtrado en la vista.
+    expect(deptosPedidos.at(-1)).toBe("ingenieria");
+  });
+
+  it("una tarea nueva puede ir a varios departamentos a la vez", async () => {
+    teamsDeSesion = ["marketing", "ingenieria"];
+    vpDeSesion = ["marketing", "ingenieria"];
+
+    await renderMarketing();
+    await userEvent.click(screen.getByRole("button", { name: "Tareas" }));
+    await userEvent.click(screen.getByRole("button", { name: "+ Nueva tarea" }));
+
+    // Marketing ya viene marcado; se añade Ingeniería sin quitarlo.
+    await userEvent.click(screen.getByLabelText("Crear en Ingeniería"));
+    await userEvent.type(screen.getByLabelText("Título"), "Preparar taller");
+    await userEvent.type(screen.getByLabelText("Instrucciones"), "Ver notas.");
+    await userEvent.click(screen.getByRole("button", { name: "Crear tarea" }));
+
+    await waitFor(() => expect(createTask).toHaveBeenCalledTimes(2));
+    // Una copia en cada tablero: cada departamento tiene su propia fila.
+    expect(deptosPedidos.slice(-2).sort()).toEqual(["ingenieria", "marketing"]);
+  });
+
+  it("'Solo lo mío' filtra el tablero por responsable", async () => {
     getTasks.mockResolvedValue({
       ok: true,
       usuario: YO,
@@ -226,66 +324,13 @@ describe("/equipo — panel de Marketing", () => {
     });
 
     await renderMarketing();
-    expect(await screen.findByText("De otra persona")).toBeInTheDocument();
-
-    await userEvent.click(screen.getAllByLabelText(/Solo lo mío/i)[0]);
-
-    expect(screen.getByText("Lo mío")).toBeInTheDocument();
-    expect(screen.queryByText("De otra persona")).not.toBeInTheDocument();
-  });
-
-  it("dice qué falta para publicar un contenido", async () => {
-    getTasks.mockResolvedValue({
-      ok: true,
-      usuario: YO,
-      tasks: tareas(
-        { content_id: 7, estado: "pendiente" },
-        { content_id: 7, estado: "acabado" },
-      ),
-    });
-    getCalendario.mockResolvedValue({
-      ok: true,
-      desde: "",
-      hasta: "",
-      items: [
-        {
-          origen: "content",
-          id: 7,
-          titulo: "Reel: cómo empezar a invertir",
-          fecha: enDias(3),
-          estado: "en_diseno",
-          campaign_id: 1,
-          detalle: "instagram",
-          prioridad: null,
-          padre: "Cómo empezar a invertir",
-        },
-      ],
-    });
-
-    await renderMarketing();
-
-    // La publicación aparece como hito en su día del timeline, no en una
-    // lista aparte. (El texto se repite: también es el "padre" de sus
-    // propias tareas en la misma pantalla.)
-    await screen.findByText("Falta 1 tarea");
-    expect(screen.getAllByText("Reel: cómo empezar a invertir").length).toBeGreaterThan(0);
-  });
-
-  it("carga las tareas al ir al tablero y las coloca en su columna", async () => {
-    getTasks.mockResolvedValue({
-      ok: true,
-      usuario: YO,
-      tasks: tareas({ titulo: "Escribir guion" }, { titulo: "Grabar", estado: "acabado" }),
-    });
-
-    await renderMarketing();
-    await screen.findByText(/cosa pendiente|cosas pendientes/);
-
     await userEvent.click(screen.getByRole("button", { name: "Tareas" }));
+    expect(await screen.findByRole("button", { name: /De otra persona/ })).toBeInTheDocument();
 
-    // Las tarjetas son botones que abren la tarea en grande, estilo Trello.
-    expect(await screen.findByRole("button", { name: /Escribir guion/ })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Grabar/ })).toBeInTheDocument();
+    await userEvent.click(screen.getByLabelText(/Solo lo mío/i));
+
+    expect(screen.getByRole("button", { name: /Lo mío/ })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /De otra persona/ })).not.toBeInTheDocument();
   });
 
   it("el buscador filtra el tablero por título", async () => {
@@ -346,21 +391,20 @@ describe("/equipo — panel de Marketing", () => {
     await waitFor(() => expect(updateTask).toHaveBeenCalledWith(1, { estado: "pendiente" }));
   });
 
-  it("al pulsar una tarea se abre en grande con su contenido", async () => {
+  it("al pulsar una tarea se abre en grande con sus instrucciones", async () => {
     getTasks.mockResolvedValue({ ok: true, tasks: tareas({}), usuario: YO });
 
     await renderMarketing();
-    await screen.findByText(/cosa pendiente|cosas pendientes/);
     await userEvent.click(screen.getByRole("button", { name: "Tareas" }));
 
     await userEvent.click(
       await screen.findByRole("button", { name: /Escribir guion/ }),
     );
 
-    // Antes solo se podía cambiar estado o borrar; ahora se edita todo.
     const dialogo = await screen.findByRole("dialog");
     expect(within(dialogo).getByLabelText("Título")).toHaveValue("Escribir guion");
     expect(within(dialogo).getByLabelText("Descripción")).toBeInTheDocument();
+    expect(within(dialogo).getByLabelText("Instrucciones")).toHaveValue("Ver notas.");
     expect(within(dialogo).getByLabelText("Estado")).toHaveValue("pendiente");
   });
 
@@ -369,7 +413,6 @@ describe("/equipo — panel de Marketing", () => {
     const confirmSpy = vi.spyOn(window, "confirm");
 
     await renderMarketing();
-    await screen.findByText(/cosa pendiente|cosas pendientes/);
     await userEvent.click(screen.getByRole("button", { name: "Tareas" }));
     await userEvent.click(
       await screen.findByRole("button", { name: /Escribir guion/ }),
@@ -391,7 +434,7 @@ describe("/equipo — panel de Marketing", () => {
     });
 
     await renderMarketing();
-    await screen.findByText(/cosa pendiente|cosas pendientes/);
+    await userEvent.click(screen.getByRole("button", { name: "Tareas" }));
 
     // La foto se deduce del email contra las imágenes de public/.
     const avatares = await screen.findAllByLabelText(/Responsables:/);
@@ -400,8 +443,6 @@ describe("/equipo — panel de Marketing", () => {
 
   it("el calendario deja crear una tarea desde un día", async () => {
     await renderMarketing();
-    await screen.findByText(/Nada pendiente/);
-
     await userEvent.click(screen.getByRole("button", { name: "Calendario" }));
 
     const dia = await screen.findByRole("button", { name: /^Añadir tarea el 15 de/ });
@@ -417,9 +458,116 @@ describe("/equipo — panel de Marketing", () => {
     );
   });
 
+  it("tocar una tarea del calendario abre su diálogo, no una ficha debajo", async () => {
+    // El calendario solo trae un resumen (`CalendarioItem`); el diálogo de
+    // edición necesita la tarea entera, así que se pide por id.
+    getCalendarioEquipo.mockResolvedValue({
+      ok: true,
+      desde: "2026-09-01",
+      hasta: "2026-09-30",
+      items: [
+        {
+          origen: "task",
+          id: 7,
+          titulo: "Escribir guion",
+          fecha: "2026-09-15",
+          estado: "pendiente",
+          campaign_id: null,
+          detalle: "alta",
+          prioridad: "alta",
+          padre: null,
+          responsables: [],
+          hora: null,
+          departamento: "marketing",
+        },
+      ],
+    });
+    getTask.mockResolvedValue({
+      ok: true,
+      task: { ...TAREA, id: 7, titulo: "Escribir guion", instrucciones: "Ver notas." },
+    });
+
+    await renderMarketing();
+    await userEvent.click(screen.getByRole("button", { name: "Calendario" }));
+
+    await userEvent.click(await screen.findByRole("button", { name: /Escribir guion/ }));
+
+    await waitFor(() => expect(getTask).toHaveBeenCalledWith(7));
+    // Lo que distingue al diálogo de la ficha de resumen: se puede editar.
+    expect(await screen.findByLabelText("Instrucciones")).toBeInTheDocument();
+  });
+
+  it("el diálogo de la tarea abre antes de que llegue la red, no después", async () => {
+    getCalendarioEquipo.mockResolvedValue({
+      ok: true,
+      desde: "2026-09-01",
+      hasta: "2026-09-30",
+      items: [
+        {
+          origen: "task", id: 7, titulo: "Escribir guion", fecha: "2026-09-15",
+          estado: "pendiente", campaign_id: null, detalle: "alta", prioridad: "alta",
+          padre: null, responsables: [], hora: null, departamento: "marketing",
+        },
+      ],
+    });
+    // La tarea entera no llega hasta que este test lo diga.
+    let resolver: (v: unknown) => void = () => {};
+    getTask.mockReturnValue(new Promise((r) => { resolver = r; }));
+
+    await renderMarketing();
+    await userEvent.click(screen.getByRole("button", { name: "Calendario" }));
+    await userEvent.click(await screen.findByRole("button", { name: /Escribir guion/ }));
+
+    // Con la petición todavía en vuelo ya hay diálogo, con el título que el
+    // calendario ya sabía y un esqueleto en lugar del formulario.
+    const dialogo = await screen.findByRole("dialog");
+    expect(dialogo).toHaveTextContent("Escribir guion");
+    expect(within(dialogo).getByRole("status", { name: "Cargando" })).toBeInTheDocument();
+    expect(within(dialogo).queryByLabelText("Instrucciones")).not.toBeInTheDocument();
+
+    resolver({
+      ok: true,
+      task: { ...TAREA, id: 7, titulo: "Escribir guion", instrucciones: "Ver notas." },
+    });
+
+    // Y al llegar, el formulario sustituye al esqueleto sin cerrar nada.
+    expect(await screen.findByLabelText("Instrucciones")).toHaveValue("Ver notas.");
+  });
+
+  it("un evento del club abre la ficha de resumen, que tampoco va debajo", async () => {
+    getCalendarioEquipo.mockResolvedValue({
+      ok: true,
+      desde: "2026-09-01",
+      hasta: "2026-09-30",
+      items: [
+        {
+          origen: "club",
+          id: 3,
+          titulo: "Conversaciones alumni",
+          fecha: "2026-09-15",
+          estado: "",
+          campaign_id: null,
+          detalle: "Charla con antiguos del club",
+          prioridad: null,
+          padre: null,
+          responsables: [],
+          hora: "18:30",
+          departamento: null,
+        },
+      ],
+    });
+
+    await renderMarketing();
+    await userEvent.click(screen.getByRole("button", { name: "Calendario" }));
+    await userEvent.click(await screen.findByRole("button", { name: /Conversaciones alumni/ }));
+
+    // No tiene diálogo propio: se queda en el resumen, pero en un modal.
+    expect(await screen.findByRole("dialog")).toHaveTextContent("Evento del club");
+    expect(getTask).not.toHaveBeenCalled();
+  });
+
   it("la vista semana pide un rango de 7 días y pinta 7 celdas", async () => {
     await renderMarketing();
-    await screen.findByText(/Nada pendiente/);
     await userEvent.click(screen.getByRole("button", { name: "Calendario" }));
     await screen.findByRole("button", { name: /^Añadir tarea el 15 de/ });
 
@@ -454,8 +602,6 @@ describe("/equipo — panel de Marketing", () => {
     });
 
     await renderMarketing();
-    await screen.findByText(/Nada pendiente/);
-
     await userEvent.click(screen.getByRole("button", { name: "Miembros" }));
 
     expect(
@@ -483,7 +629,6 @@ describe("/equipo — panel de Marketing", () => {
     });
 
     await renderMarketing();
-    await screen.findByText(/Nada pendiente/);
     await userEvent.click(screen.getByRole("button", { name: "Miembros" }));
 
     await screen.findByText("Abril");
@@ -509,7 +654,6 @@ describe("/equipo — panel de Marketing", () => {
     });
 
     await renderMarketing();
-    await screen.findByText(/Nada pendiente/);
     await userEvent.click(screen.getByRole("button", { name: "Miembros" }));
     await screen.findByText("Abril");
 
@@ -539,6 +683,7 @@ describe("/equipo — panel de Marketing", () => {
         abiertas: 2,
         completadas: 12,
         campanas: 3,
+        mentor_email: "",
         actividad: [
           {
             id: 1,
@@ -552,7 +697,6 @@ describe("/equipo — panel de Marketing", () => {
     });
 
     await renderMarketing();
-    await screen.findByText(/Nada pendiente/);
     await userEvent.click(screen.getByRole("button", { name: "Miembros" }));
     await userEvent.click(await screen.findByText("Abril"));
 
@@ -570,20 +714,18 @@ describe("/equipo — panel de Marketing", () => {
       .toBeInTheDocument();
   });
 
-  it("muestra el estado vacío cuando no hay campañas", async () => {
+  it("muestra el estado vacío cuando no hay proyectos", async () => {
     await renderMarketing();
-    await screen.findByText(/Nada pendiente/);
-
-    await userEvent.click(screen.getByRole("button", { name: "Campañas" }));
+    await userEvent.click(screen.getByRole("button", { name: "Proyectos" }));
 
     expect(await screen.findByText(/Aún no hay campañas/)).toBeInTheDocument();
   });
 
-  it("duplicar una campaña la recarga y abre la copia", async () => {
+  it("duplicar un proyecto lo recarga y abre la copia", async () => {
     getCampaigns.mockResolvedValue({
       ok: true,
       campaigns: [
-        { id: 1, nombre: "Vuelta al cole", objetivo: "", total_contents: 2, total_tasks: 3, fecha: null },
+        { id: 1, nombre: "Vuelta al cole", objetivo: "", total_contents: 2, total_tasks: 3, tareas_acabadas: 1, fecha: null },
       ],
     });
     duplicateCampaign.mockResolvedValue({
@@ -600,8 +742,7 @@ describe("/equipo — panel de Marketing", () => {
     });
 
     await renderMarketing();
-    await screen.findByText(/Nada pendiente/);
-    await userEvent.click(screen.getByRole("button", { name: "Campañas" }));
+    await userEvent.click(screen.getByRole("button", { name: "Proyectos" }));
     await screen.findByText("Vuelta al cole");
 
     await userEvent.click(screen.getByRole("button", { name: "Duplicar" }));
@@ -610,7 +751,7 @@ describe("/equipo — panel de Marketing", () => {
     expect(await screen.findByRole("heading", { name: "Vuelta al cole (copia)" })).toBeInTheDocument();
   });
 
-  it("un enlace con ?campaign= abre esa campaña directamente", async () => {
+  it("un enlace con ?campaign= abre esa campaña directamente en Proyectos", async () => {
     getCampaign.mockResolvedValue({
       ok: true,
       campaign: {
@@ -624,18 +765,22 @@ describe("/equipo — panel de Marketing", () => {
         <EquipoPage />
       </MemoryRouter>,
     );
-    await userEvent.click(await screen.findByRole("button", { name: "Resumen" }));
 
     expect(await screen.findByRole("heading", { name: "Vuelta al cole" })).toBeInTheDocument();
     expect(getCampaign).toHaveBeenCalledWith(1);
+    // La navegación ya marca "Proyectos" como la sección activa.
+    const nav = screen.getByRole("navigation", { name: "Secciones de /equipo" });
+    expect(within(nav).getByRole("button", { name: "Proyectos" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
   });
 
   it("la navegación marca la pestaña activa", async () => {
     await renderMarketing();
-    await screen.findByText(/Nada pendiente/);
 
     const nav = screen.getByRole("navigation", { name: "Secciones de /equipo" });
-    expect(within(nav).getByRole("button", { name: "Resumen" })).toHaveAttribute(
+    expect(within(nav).getByRole("button", { name: "Mi semana" })).toHaveAttribute(
       "aria-current",
       "page",
     );
@@ -653,14 +798,17 @@ describe("/equipo — panel de Marketing", () => {
     await renderMarketing();
     await userEvent.click(screen.getByRole("button", { name: "Calendario" }));
 
-    // Misma comprobación que ya existe para Anuncios: la barra rotula "Club",
-    // no "Marketing", aunque la ruta cuelgue del primer departamento de la
-    // persona (ver `clubDe` en EquipoSidebar).
-    expect(document.querySelector(".workspace-barra-depto-react")?.textContent).toBe("Club");
+    // Se pide con los departamentos de la persona, no con el de la ruta: el
+    // calendario es uno solo para todo el club (ver `irA`).
+    await waitFor(() => expect(getCalendarioEquipo).toHaveBeenCalled());
+    expect(getCalendarioEquipo.mock.calls.at(-1)?.[2]).toEqual(
+      expect.arrayContaining(teamsDeSesion),
+    );
   });
 
   it("con más de un departamento, el calendario deja elegir a cuál va la tarea nueva", async () => {
     teamsDeSesion = ["marketing", "ingenieria"];
+    vpDeSesion = ["marketing", "ingenieria"];
 
     render(
       <MemoryRouter>
@@ -691,11 +839,12 @@ describe("/equipo — panel de Marketing", () => {
     expect(deptosPedidos.at(-1)).toBe("ingenieria");
   });
 
-  it("un evento de otro departamento propio abre SU campaña, no la de aquí", async () => {
-    // Ingeniería no vale para este test: no tiene panel de Campañas (ver
-    // `PANELES_POR_EQUIPO`). Marketing y Eventos sí comparten el concepto
-    // (en Eventos se llama "Eventos" en vez de "Campañas").
+  it("un evento de otro departamento propio abre SU proyecto, no el de aquí", async () => {
+    // Ingeniería no vale para este test: no tiene panel de Proyectos (ver
+    // `PANELES_POR_EQUIPO`). Marketing y Eventos sí comparten el concepto (en
+    // Eventos, la página lo titula "Eventos" en vez de "Proyectos").
     teamsDeSesion = ["marketing", "eventos"];
+    vpDeSesion = ["marketing", "eventos"];
     getCalendarioEquipo.mockResolvedValue({
       ok: true,
       desde: "",
@@ -717,6 +866,16 @@ describe("/equipo — panel de Marketing", () => {
         },
       ],
     });
+    // Tocar una tarea del calendario abre su diálogo, y para eso se pide
+    // entera: la campaña de la que cuelga sale de aquí, no del resumen.
+    getTask.mockResolvedValue({
+      ok: true,
+      task: {
+        ...TAREA, id: 9, titulo: "Reservar la sala",
+        departamento: "eventos", campaign_id: 5, content_id: null,
+        content_titulo: null, campaign_nombre: "Semana de bienvenida",
+      },
+    });
     getCampaign.mockResolvedValue({
       ok: true,
       campaign: {
@@ -725,33 +884,32 @@ describe("/equipo — panel de Marketing", () => {
       },
     });
 
-    render(
-      <MemoryRouter>
-        <EquipoPage />
-      </MemoryRouter>,
-    );
-    await userEvent.click(await screen.findByRole("button", { name: "Resumen" }));
+    await renderMarketing();
     await userEvent.click(screen.getByRole("button", { name: "Calendario" }));
 
     await userEvent.click(await screen.findByRole("button", { name: /Reservar la sala/ }));
+    await userEvent.click(await screen.findByRole("button", { name: "Ver campaña →" }));
 
     expect(
       await screen.findByRole("heading", { name: "Semana de bienvenida" }),
     ).toBeInTheDocument();
     expect(getCampaign).toHaveBeenCalledWith(5);
-    // Se remontó el dashboard en el contexto de Eventos: la barra ya no dice
-    // "Club" sino el departamento al que se saltó.
-    expect(document.querySelector(".workspace-barra-depto-react")?.textContent).toBe("Eventos");
+    // Y se pidió por la ruta de Eventos, que es de donde era el evento -- no
+    // solo por la de Marketing, que es el panel desde el que se saltó.
+    expect(deptosPedidos).toContain("eventos");
   });
 });
 
 describe("/equipo — panel de Eventos", () => {
   beforeEach(() => {
     teamsDeSesion = ["eventos"];
+    vpDeSesion = ["eventos"];
     deptosPedidos.length = 0;
+    getTask.mockReset().mockResolvedValue({ ok: true, task: TAREA });
     getCampaigns.mockReset().mockResolvedValue({ ok: true, campaigns: [] });
     getCampaign.mockReset();
     getTasks.mockReset().mockResolvedValue({ ok: true, tasks: [], usuario: YO });
+    getTasksArchivadas.mockReset().mockResolvedValue({ ok: true, tasks: [] });
     getCalendario
       .mockReset()
       .mockResolvedValue({ ok: true, desde: "", hasta: "", items: [] });
@@ -783,51 +941,54 @@ describe("/equipo — panel de Eventos", () => {
         <EquipoPage />
       </MemoryRouter>,
     );
-    await userEvent.click(await screen.findByRole("button", { name: "Resumen" }));
+    await screen.findByText(/tarea vence|tareas vencen|ninguna tarea vence/);
   }
 
-  it("Eventos tiene su navegación completa, con los nombres de Eventos", async () => {
+  it("Eventos tiene su navegación completa, con las etiquetas genéricas del sidebar", async () => {
     await renderEventos();
 
+    // El sidebar siempre usa el mismo rótulo, esté quien esté de Eventos o
+    // de Marketing: nunca dice "Gestiones"/"Eventos" -- eso, si acaso, va en
+    // el título de la página, nunca en el sidebar (ver EquipoSidebar.tsx).
     for (const panel of [
-      "Resumen", "Eventos", "Gestiones", "Calendario",
-      "Recursos", "Presupuesto", "Reuniones", "Miembros",
+      "Mi semana", "Tareas", "Proyectos", "Calendario",
+      "Recursos", "Presupuesto", "Reuniones", "Miembros", "Avisos",
     ]) {
       expect(screen.getByRole("button", { name: panel })).toBeInTheDocument();
     }
-    // En Eventos las tareas se llaman gestiones y las campañas, eventos.
-    expect(screen.queryByRole("button", { name: "Tareas" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Campañas" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Gestiones" })).not.toBeInTheDocument();
   });
 
   it("los anuncios cuelgan del club, no de un departamento", async () => {
     await renderEventos();
 
-    const anuncios = screen.getByRole("button", { name: "Anuncios" });
+    const anuncios = screen.getByRole("button", { name: "Avisos" });
     expect(anuncios).toBeInTheDocument();
 
     await userEvent.click(anuncios);
 
-    // Se abre el panel de anuncios (el h3 es el del panel; el h2 es el título
-    // que pinta la barra del shell).
+    // Se abre el panel de anuncios: el título lo pinta la barra del shell, así
+    // que lo que identifica al panel es su propia frase y su acción.
     expect(
-      await screen.findByRole("heading", { name: "Anuncios", level: 3 }),
+      await screen.findByText(/Comunicados para todo el club/),
     ).toBeInTheDocument();
     expect(listarRegistros).toHaveBeenCalledWith("anuncios");
 
-    // Y la barra lo rotula como Club, no como Eventos: el contenido es de todo
-    // el equipo aunque la ruta cuelgue de un departamento.
-    expect(document.querySelector(".workspace-barra-depto-react")?.textContent).toBe("Club");
+    // El sidebar tiene UNA entrada de Avisos, no una por departamento: el
+    // contenido es de todo el equipo aunque la ruta cuelgue de uno.
+    const navegacion = screen.getByRole("navigation", { name: "Secciones de /equipo" });
+    expect(within(navegacion).getAllByRole("button", { name: "Avisos" })).toHaveLength(1);
   });
 
   it("pide los datos al departamento de Eventos, no al de Marketing", async () => {
     await renderEventos();
+    await userEvent.click(screen.getByRole("button", { name: "Tareas" }));
 
     await waitFor(() => expect(getTasks).toHaveBeenCalled());
     expect([...new Set(deptosPedidos)]).toEqual(["eventos"]);
   });
 
-  it("el tablero de tareas de Eventos carga sus tareas", async () => {
+  it("el tablero de gestiones de Eventos carga sus tareas", async () => {
     getTasks.mockResolvedValue({
       ok: true,
       usuario: YO,
@@ -843,7 +1004,7 @@ describe("/equipo — panel de Eventos", () => {
     });
 
     await renderEventos();
-    await userEvent.click(screen.getByRole("button", { name: "Gestiones" }));
+    await userEvent.click(screen.getByRole("button", { name: "Tareas" }));
 
     expect(
       await screen.findByText("Reservar el espacio de la feria"),
@@ -853,26 +1014,42 @@ describe("/equipo — panel de Eventos", () => {
   it("quien solo es de Eventos no ve las secciones de Marketing", async () => {
     await renderEventos();
 
-    expect(screen.queryByRole("button", { name: "Campañas" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Alumni" })).not.toBeInTheDocument();
     expect(deptosPedidos).not.toContain("marketing");
   });
 
-  it("con más de un departamento, solo el primero empieza desplegado", async () => {
+  it("con más de un departamento, Proyectos junta los dos por defecto y el filtro deja acotar a uno", async () => {
     teamsDeSesion = ["marketing", "eventos"];
+    vpDeSesion = ["marketing", "eventos"];
+    getCampaigns.mockResolvedValue({ ok: true, campaigns: [] });
 
     render(
       <MemoryRouter>
         <EquipoPage />
       </MemoryRouter>,
     );
+    await screen.findByText(/tarea vence|tareas vencen|ninguna tarea vence/);
 
-    // Marketing es el primero: su "Resumen" ya se ve sin tocar nada.
-    await screen.findByRole("button", { name: "Resumen" });
-    // Eventos empieza plegado: "Gestiones" (su Tareas) no está a la vista.
-    expect(screen.queryByRole("button", { name: "Gestiones" })).not.toBeInTheDocument();
+    // Un solo "Proyectos" en el sidebar, no uno por departamento; el título
+    // de la página es siempre el mismo rótulo genérico, nunca cambia con el
+    // filtro (ver docs/CLAUDE.md).
+    await userEvent.click(screen.getByRole("button", { name: "Proyectos" }));
+    expect(screen.getByRole("heading", { level: 2, name: "Proyectos" })).toBeInTheDocument();
 
-    await userEvent.click(screen.getByRole("button", { name: /Sección Eventos/ }));
+    // Por defecto se ven los dos departamentos a la vez -- no hace falta
+    // elegir uno para entrar.
+    await waitFor(() => expect(deptosPedidos).toEqual(expect.arrayContaining(["marketing", "eventos"])));
 
-    expect(await screen.findByRole("button", { name: "Gestiones" })).toBeInTheDocument();
+    const selector = screen.getByRole("group", { name: "Departamentos visibles" });
+    const casillaEventos = within(selector).getByRole("checkbox", { name: "Eventos" });
+    expect(casillaEventos).toBeChecked();
+
+    // Se desmarca Eventos: el filtro se acota a solo Marketing, y el título
+    // sigue diciendo "Proyectos" -- el sidebar y el título nunca cambian.
+    deptosPedidos.length = 0;
+    await userEvent.click(casillaEventos);
+
+    expect(screen.getByRole("heading", { level: 2, name: "Proyectos" })).toBeInTheDocument();
+    await waitFor(() => expect(new Set(deptosPedidos)).toEqual(new Set(["marketing"])));
   });
 });

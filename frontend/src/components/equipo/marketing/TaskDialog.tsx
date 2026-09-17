@@ -5,6 +5,7 @@ import { useApi, useDirectorio } from "../DeptoApi";
 import { AlertBanner } from "../../feedback/AlertBanner";
 import { ContadorCaracteres } from "../../feedback/ContadorCaracteres";
 import { AdjuntosDeContent } from "./AdjuntosDeContent";
+import { Esqueleto } from "../../feedback/Esqueleto";
 import { SelectorMiembros } from "./SelectorMiembros";
 import { etiquetaDe } from "./Avatares";
 import {
@@ -15,6 +16,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import type { ApiFailure } from "../../../types/api";
+import { DEPTO_LABEL, type Team } from "../../../types/equipo";
 import {
   MAX_TEXTO_LARGO_LEN,
   MAX_TITULO_LEN,
@@ -36,6 +38,24 @@ type Props = {
   /** Para el autocompletado del campo de etiquetas -- las que ya se usan en
    *  el departamento, no una lista fija (ver `TasksPanel`/`WeekPanel`). */
   etiquetasExistentes?: string[];
+  /** Solo board y VPs reasignan (ver docs/CLAUDE.md) -- si es `false`, el
+   *  selector de responsables se enseña de solo lectura. */
+  puedeAsignar?: boolean;
+  /** Departamentos a los que se puede mudar la tarea: los mismos donde la
+   *  persona puede darla de alta (ver `TasksPanel`). Con menos de dos no se
+   *  enseña el selector, que no habría nada que elegir. */
+  deptosDisponibles?: Team[];
+  /** Saltar al proyecto del que cuelga. Lo pasa quien tenga a dónde saltar
+   *  -- el calendario, que antes ofrecía ese salto desde su ficha de resumen
+   *  y lo habría perdido al abrir este diálogo en su lugar. Sin esta prop no
+   *  se enseña el botón: desde el tablero de Tareas ya se está en el sitio. */
+  onAbrirCampaign?: (campaignId: number, departamento: Team) => void;
+  /** La tarea todavía se está pidiendo entera y `task` es solo el resumen que
+   *  tenía quien abrió el diálogo. Se enseña la cabecera con lo que ya se
+   *  sabe y un esqueleto en lugar del formulario -- abrir al instante y
+   *  rellenar es mejor que dejar el clic sin respuesta mientras va la red
+   *  (ver `abrir()` en `CalendarPanel`). */
+  cargando?: boolean;
 };
 
 function comoLineas(valores: string[]) {
@@ -56,13 +76,18 @@ function desdeLineas(texto: string) {
  * checklist, tags y enlaces se guardaban en base de datos pero no había forma
  * de tocarlos desde la interfaz. Aquí es donde se editan.
  */
-export function TaskDialog({ task, onCerrar, onGuardado, etiquetasExistentes = [] }: Props) {
+export function TaskDialog({
+  task, onCerrar, onGuardado, etiquetasExistentes = [], puedeAsignar = true,
+  deptosDisponibles = [], onAbrirCampaign, cargando = false,
+}: Props) {
   const { deleteTask, getTaskComments, createTaskComment, updateTask } = useApi();
   const directorio = useDirectorio();
 
   const [titulo, setTitulo] = useState(task.titulo);
   const [descripcion, setDescripcion] = useState(task.descripcion);
+  const [instrucciones, setInstrucciones] = useState(task.instrucciones);
   const [estado, setEstado] = useState<TaskEstado>(task.estado);
+  const [departamento, setDepartamento] = useState<Team>(task.departamento as Team);
   const [prioridad, setPrioridad] = useState<Prioridad>(task.prioridad);
   const [deadline, setDeadline] = useState(task.deadline ?? "");
   const [hora, setHora] = useState(task.hora);
@@ -81,6 +106,7 @@ export function TaskDialog({ task, onCerrar, onGuardado, etiquetasExistentes = [
   const [enviandoComentario, setEnviandoComentario] = useState(false);
 
   useEffect(() => {
+    if (cargando) return;
     let activo = true;
     void getTaskComments(task.id)
       .then((r) => activo && setComentarios(r.comments))
@@ -90,7 +116,7 @@ export function TaskDialog({ task, onCerrar, onGuardado, etiquetasExistentes = [
     return () => {
       activo = false;
     };
-  }, [task.id, getTaskComments]);
+  }, [task.id, getTaskComments, cargando]);
 
   async function enviarComentario(event: FormEvent) {
     event.preventDefault();
@@ -125,6 +151,10 @@ export function TaskDialog({ task, onCerrar, onGuardado, etiquetasExistentes = [
       setError("El título es obligatorio.");
       return;
     }
+    if (!instrucciones.trim()) {
+      setError("Las instrucciones son obligatorias.");
+      return;
+    }
 
     setIsSaving(true);
     setError(null);
@@ -133,6 +163,7 @@ export function TaskDialog({ task, onCerrar, onGuardado, etiquetasExistentes = [
       await updateTask(task.id, {
         titulo,
         descripcion,
+        instrucciones,
         estado,
         prioridad,
         deadline: deadline || null,
@@ -141,6 +172,7 @@ export function TaskDialog({ task, onCerrar, onGuardado, etiquetasExistentes = [
         tags: tags.split(",").map((t) => t.trim()).filter(Boolean),
         enlaces: desdeLineas(enlaces),
         checklist,
+        ...(departamento !== task.departamento ? { departamento } : {}),
       });
       onGuardado();
     } catch (err) {
@@ -166,10 +198,24 @@ export function TaskDialog({ task, onCerrar, onGuardado, etiquetasExistentes = [
           <DialogDescription>
             {task.content_titulo ?? task.campaign_nombre ?? "Tarea suelta"}
           </DialogDescription>
+          {onAbrirCampaign && task.campaign_id !== null ? (
+            <button
+              type="button"
+              className="mkt-btn-mini-react mkt-dialogo-ir-react"
+              onClick={() =>
+                onAbrirCampaign(task.campaign_id as number, task.departamento as Team)
+              }
+            >
+              Ver campaña →
+            </button>
+          ) : null}
         </DialogHeader>
 
         {error ? <AlertBanner variant="error" message={error} /> : null}
 
+        {cargando ? (
+          <Esqueleto filas={4} alto={56} />
+        ) : (
         <form className="mkt-form-react mkt-form-dialogo-react" onSubmit={guardar}>
           <div className="field-group-react">
             <label htmlFor="td-titulo">Título</label>
@@ -193,6 +239,42 @@ export function TaskDialog({ task, onCerrar, onGuardado, etiquetasExistentes = [
             />
             <ContadorCaracteres valor={descripcion} maximo={MAX_TEXTO_LARGO_LEN} />
           </div>
+
+          <div className="field-group-react">
+            <label htmlFor="td-instrucciones">Instrucciones</label>
+            <textarea
+              id="td-instrucciones"
+              rows={3}
+              required
+              value={instrucciones}
+              placeholder="Cómo se hace: a quién se escribe, qué plantilla se usa..."
+              onChange={(event) => setInstrucciones(event.target.value)}
+            />
+            <ContadorCaracteres valor={instrucciones} maximo={MAX_TEXTO_LARGO_LEN} />
+          </div>
+
+          {puedeAsignar && deptosDisponibles.length > 1 ? (
+            <div className="field-group-react">
+              <label htmlFor="td-depto">Departamento</label>
+              <select
+                id="td-depto"
+                value={departamento}
+                onChange={(event) => setDepartamento(event.target.value as Team)}
+              >
+                {deptosDisponibles.map((d) => (
+                  <option key={d} value={d}>
+                    {DEPTO_LABEL[d]}
+                  </option>
+                ))}
+              </select>
+              {departamento !== task.departamento ? (
+                <p className="mkt-meta-react">
+                  Al guardar deja de colgar de su campaña o contenido: son de{" "}
+                  {DEPTO_LABEL[task.departamento as Team]}.
+                </p>
+              ) : null}
+            </div>
+          ) : null}
 
           <div className="mkt-form-fila-react">
             <div className="field-group-react">
@@ -314,11 +396,21 @@ export function TaskDialog({ task, onCerrar, onGuardado, etiquetasExistentes = [
 
           <div className="field-group-react">
             <label htmlFor="td-responsables">Responsables</label>
-            <SelectorMiembros
-              id="td-responsables"
-              seleccionados={responsables}
-              onCambiar={setResponsables}
-            />
+            {puedeAsignar ? (
+              <SelectorMiembros
+                id="td-responsables"
+                seleccionados={responsables}
+                onCambiar={setResponsables}
+                deptos={[departamento]}
+              />
+            ) : (
+              <p className="mkt-meta-react">
+                {responsables.length > 0
+                  ? responsables.map((email) => etiquetaDe(email, directorio[email])).join(", ")
+                  : "Sin asignar"}
+                {" · solo board y VPs reasignan"}
+              </p>
+            )}
           </div>
 
           <div className="field-group-react">
@@ -434,6 +526,7 @@ export function TaskDialog({ task, onCerrar, onGuardado, etiquetasExistentes = [
             )}
           </div>
         </form>
+        )}
       </DialogContent>
     </Dialog>
   );

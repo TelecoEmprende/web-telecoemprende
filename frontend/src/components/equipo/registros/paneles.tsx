@@ -61,7 +61,6 @@ export function RecursosPanel() {
   return (
     <RegistrosPanel
       recurso="recursos"
-      titulo="Recursos y documentación"
       descripcion="Los archivos y enlaces del departamento, en un sitio en vez de repartidos por chats."
       vacio="Todavía no hay ningún recurso. Añade el primero: el plano del espacio, la carpeta de Drive, la plantilla de cartelería..."
       etiquetaNuevo="Nuevo recurso"
@@ -157,7 +156,6 @@ export function PresupuestoPanel() {
   return (
     <RegistrosPanel
       recurso="presupuesto"
-      titulo="Presupuesto"
       descripcion="Partidas del departamento: qué se va a gastar, qué entra y qué está ya pagado."
       vacio="Sin partidas todavía. Añade la primera y los totales aparecen solos."
       etiquetaNuevo="Nueva partida"
@@ -210,7 +208,6 @@ export function AnunciosPanel() {
   return (
     <RegistrosPanel
       recurso="anuncios"
-      titulo="Anuncios"
       descripcion="Comunicados para todo el club. Se ven desde cualquier departamento, no solo desde este."
       vacio="No hay anuncios. El primero que publiques lo verá todo el equipo al entrar."
       etiquetaNuevo="Nuevo anuncio"
@@ -260,7 +257,6 @@ export function ReunionesPanel() {
   return (
     <RegistrosPanel
       recurso="reuniones"
-      titulo="Reuniones"
       descripcion="Convocatorias, objetivo y acta. Lo que se acordó queda escrito donde se puede buscar."
       vacio="Sin reuniones apuntadas todavía."
       etiquetaNuevo="Nueva reunión"
@@ -332,7 +328,6 @@ export function AlumniPanel() {
   return (
     <RegistrosPanel
       recurso="alumni"
-      titulo="Red Alumni"
       descripcion="Quién pasó por el club o por la escuela, dónde está ahora y por dónde va la conversación."
       vacio="La red está vacía. Empieza por quien ya conocéis: es más fácil que se apunte quien ya estuvo."
       etiquetaNuevo="Nuevo contacto"

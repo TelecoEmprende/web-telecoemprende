@@ -1,3 +1,5 @@
+import type { Team } from "./equipo";
+
 export const TASK_ESTADOS = [
   "pendiente",
   "en_progreso",
@@ -61,6 +63,9 @@ export type Task = {
   content_id: number | null;
   titulo: string;
   descripcion: string;
+  /** Cómo hacerla, obligatoria al crear (ver docs/CLAUDE.md: "toda tarea
+   *  nace con instrucciones"). */
+  instrucciones: string;
   estado: TaskEstado;
   prioridad: Prioridad;
   deadline: string | null;
@@ -73,6 +78,10 @@ export type Task = {
   creado_por: string;
   created_at: string;
   updated_at: string;
+  /** Cuándo entró en 'acabado', o null si nunca ha llegado a estarlo (o si
+   *  se cerró antes de que existiera esta columna). Decide cuándo pasa al
+   *  historial de "Completadas" (ver `getTasksArchivadas`). */
+  completado_en: string | null;
   /** Sólo en el listado de tareas: de qué contenido/campaña cuelga. */
   content_titulo?: string | null;
   campaign_nombre?: string | null;
@@ -108,11 +117,24 @@ export type Campaign = {
   creado_por: string;
   created_at: string;
   updated_at: string;
+  departamento: Team;
 };
 
 export type CampaignResumen = Campaign & {
   total_contents: number;
   total_tasks: number;
+  tareas_acabadas: number;
+};
+
+/** Una fila de "Mis proyectos" en Mi semana: la campaña (que ya hace de
+ *  proyecto, ver docs/CLAUDE.md) de cualquier departamento donde la persona
+ *  tiene una tarea, con su progreso -- ver `GET /api/equipo/mis-proyectos`. */
+export type ProyectoResumen = {
+  id: number;
+  nombre: string;
+  departamento: Team;
+  total_tasks: number;
+  tareas_acabadas: number;
 };
 
 export type CampaignDetalle = Campaign & {
@@ -121,7 +143,10 @@ export type CampaignDetalle = Campaign & {
 };
 
 export type CalendarioItem = {
-  origen: "task" | "content" | "reunion";
+  /** "club" son los eventos que pone /admin para todo el club (charlas de
+   *  alumni, feria...): no son de ningún departamento, así que llegan con
+   *  `departamento` vacío y salen esté filtrada la vista a lo que sea. */
+  origen: "task" | "content" | "reunion" | "club";
   id: number;
   titulo: string;
   fecha: string;
@@ -134,7 +159,8 @@ export type CalendarioItem = {
   responsables: string[];
   /** "HH:MM", o null si es de día completo (publicaciones siempre lo son). */
   hora: string | null;
-  /** Solo en la lectura cruzada entre departamentos (`getCalendarioEquipo`). */
+  /** Solo en la lectura cruzada entre departamentos (`getCalendarioEquipo`),
+   *  y vacío en los eventos del club, que no son de ninguno. */
   departamento?: string;
 };
 
@@ -146,6 +172,9 @@ export type Miembro = {
   tags: string[];
   /** Nombre para mostrar. Vacío si todavía no se ha rellenado en /admin. */
   nombre: string;
+  /** Foto propia como data URL, o "" si no ha subido ninguna y vale la de
+   *  `public/equipo-*.jpg` (ver `Avatares.tsx`). */
+  foto: string;
   /** Tareas sin acabar en ESTE departamento. Se calcula, no se guarda. */
   abiertas: number;
 };
@@ -179,9 +208,17 @@ export type FichaMiembro = {
   abiertas: number;
   completadas: number;
   campanas: number;
+  /** Vacío si no tiene mentor asignado. Lo asigna admin, no el propio
+   *  departamento (ver `EquipoAccesosPanel`). */
+  mentor_email: string;
   actividad: ActividadMiembro[];
   /** Claves libres, ver ONBOARDING_PASOS: qué pasos ya se han marcado. */
   onboarding: Record<string, boolean>;
+  /** Foto propia (data URL), o "" si vale la de `public/equipo-*.jpg`. */
+  foto: string;
+  /** Si quien mira puede cambiar esta foto: su propia ficha, o admin. Lo
+   *  decide el servidor; aquí solo sirve para enseñar u ocultar el botón. */
+  es_tu_ficha: boolean;
 };
 
 /** Pasos del checklist de onboarding. El backend solo guarda el objeto
@@ -208,6 +245,44 @@ export type SaludEquipo = {
   /** null si no hay tareas acabadas con deadline suficientes para calcularlo. */
   pct_a_tiempo: number | null;
   miembros: MiembroSalud[];
+};
+
+/** Una fila de la tabla de productividad de `MetricasClub`: solo números
+ *  reales de `tasks` (tareas cerradas, % a tiempo, abiertas, vencidas) -- sin
+ *  puntuación inventada, ver `metricas_club` en el backend. */
+export type MiembroMetricas = {
+  email: string;
+  nombre: string;
+  equipos: Team[];
+  cargo: "" | "presidente" | "boardmember";
+  abiertas: number;
+  vencidas: number;
+  completadas_periodo: number;
+  /** null si no tiene tareas cerradas con deadline en el periodo. */
+  pct_a_tiempo_periodo: number | null;
+  dias_inactivo: number | null;
+  nivel: "rojo" | "amarillo" | "verde";
+};
+
+export type AlertaDepartamento = {
+  departamento: Team;
+  /** null si el departamento nunca ha cerrado una tarea. */
+  dias_sin_cerrar: number | null;
+};
+
+/** Salud del club entero, solo para board/VP (ver `/api/equipo/metricas`). */
+export type MetricasClub = {
+  dias_periodo: number;
+  total_activos: number;
+  sobrecargados: number;
+  inactivos: number;
+  /** null si no hay tareas cerradas con deadline en el periodo. */
+  pct_a_tiempo_club: number | null;
+  participacion_semanal: { semana: string; cerradas: number }[];
+  por_departamento: Record<Team, SaludEquipo>;
+  miembros: MiembroMetricas[];
+  alertas_inactividad: MiembroMetricas[];
+  alertas_departamento: AlertaDepartamento[];
 };
 
 /** Fechas en el formato de aquí (15 oct), no en ISO crudo. */

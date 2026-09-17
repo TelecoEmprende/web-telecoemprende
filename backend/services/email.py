@@ -78,5 +78,12 @@ def enviar_email_estado(registro: dict, estado: str) -> bool:
         with urllib.request.urlopen(request, timeout=10):
             return True
     except (urllib.error.URLError, urllib.error.HTTPError) as exc:
-        logger.error("fallo enviando email de estado a %s: %s", registro["email"], exc)
+        cuerpo = exc.read().decode("utf-8", "replace") if isinstance(exc, urllib.error.HTTPError) else ""
+        # ponytail: log temporal de diagnóstico (prefijo/longitud de la key, nunca la key
+        # entera) para un 403 que no cuadraba con la key esperada -- quitar en cuanto se
+        # confirme la causa real.
+        logger.error(
+            "fallo enviando email de estado a %s: %s | cuerpo=%s | key_prefix=%s len=%s",
+            registro["email"], exc, cuerpo, RESEND_API_KEY[:10], len(RESEND_API_KEY),
+        )
         return False

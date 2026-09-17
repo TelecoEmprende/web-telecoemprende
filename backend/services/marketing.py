@@ -12,7 +12,7 @@ desaparece de una tarea histórica si se le da de baja el acceso.
 """
 
 import json
-from datetime import date
+from datetime import date, datetime, timedelta
 
 import psycopg2
 from psycopg2.extras import RealDictCursor
@@ -119,6 +119,24 @@ def _crear_tablas_marketing():
                 ALTER TABLE tasks
                 ADD COLUMN IF NOT EXISTS hora VARCHAR(5) NOT NULL DEFAULT ''
             """)
+            # Cuándo se completó de verdad, no cuándo se tocó por última vez:
+            # `updated_at` se mueve con cualquier edición posterior (retocar el
+            # título, tildar la checklist...), así que no sirve para saber si
+            # una tarea acabó a tiempo (ver `salud_equipo`). Se rellena solo al
+            # entrar en 'acabado' -- ver `actualizar_task`.
+            cur.execute("""
+                ALTER TABLE tasks
+                ADD COLUMN IF NOT EXISTS completado_en TIMESTAMP
+            """)
+            # Toda tarea nace con instrucciones: es la regla que responde a
+            # "que todos sepan qué hacer y cómo" (ver docs/CLAUDE.md). Se
+            # exige a nivel de API (`_texto(..., obligatorio=True)` en
+            # `api_crear_task`), no aquí -- una columna NOT NULL sin default
+            # habría roto las tareas ya existentes.
+            cur.execute("""
+                ALTER TABLE tasks
+                ADD COLUMN IF NOT EXISTS instrucciones TEXT NOT NULL DEFAULT ''
+            """)
             # Archivar en vez de borrar: una campaña vieja deja de estorbar en
             # el listado sin perder su historial (contenidos, tareas, enlaces).
             cur.execute("""
@@ -172,11 +190,47 @@ def listar_campaigns(departamento: str) -> list[dict]:
                        (SELECT COUNT(*) FROM contents co WHERE co.campaign_id = c.id)
                            AS total_contents,
                        (SELECT COUNT(*) FROM tasks t WHERE t.campaign_id = c.id)
-                           AS total_tasks
+                           AS total_tasks,
+                       (SELECT COUNT(*) FROM tasks t
+                            WHERE t.campaign_id = c.id AND t.estado = 'acabado')
+                           AS tareas_acabadas
                 FROM campaigns c
                 WHERE c.departamento = %s
                 ORDER BY COALESCE(c.fecha, c.created_at::date) DESC, c.id DESC
             """, (departamento,))
+            return [_serializar(f) for f in cur.fetchall()]
+
+
+def mis_campanas(email: str) -> list[dict]:
+    """Campañas de cualquier departamento donde la persona tiene una tarea
+    asignada, con su progreso -- para "Mis proyectos" en el Inicio de
+    /equipo (mismo criterio cruzado que `mis_tareas`). "Campaña" es la
+    entidad que ya hace de proyecto (ver README de docs/CLAUDE.md); no hay
+    tabla `proyectos` aparte que mantener sincronizada con ella.
+    """
+    with _get_connection() as conn:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(
+                """
+                SELECT c.id, c.nombre, c.departamento,
+                       COUNT(t.id) AS total_tasks,
+                       COUNT(t.id) FILTER (WHERE t.estado = 'acabado') AS tareas_acabadas
+                FROM campaigns c
+                JOIN tasks t ON t.campaign_id = c.id
+                WHERE c.archivado = FALSE
+                  -- El progreso es del proyecto entero, no solo de "mis"
+                  -- tareas dentro de él (por eso el JOIN cuenta todas las de
+                  -- la campaña) -- la persona solo decide qué campañas
+                  -- aparecen, comprobado aparte con este subquery.
+                  AND EXISTS (
+                      SELECT 1 FROM tasks t2
+                      WHERE t2.campaign_id = c.id AND %s = ANY(t2.responsables)
+                  )
+                GROUP BY c.id
+                ORDER BY c.departamento, c.nombre
+                """,
+                (email,),
+            )
             return [_serializar(f) for f in cur.fetchall()]
 
 
@@ -283,6 +337,7 @@ def duplicar_campaign(campaign_id: int, departamento: str, creado_por: str) -> d
         return {
             "titulo": tarea["titulo"],
             "descripcion": tarea["descripcion"],
+            "instrucciones": tarea["instrucciones"],
             "estado": "pendiente",
             "prioridad": tarea["prioridad"],
             "deadline": None,
@@ -437,6 +492,11 @@ def listar_tasks(departamento: str) -> list[dict]:
     Sin esto el tablero enseña cuatro filas llamadas "Guion" y tres llamadas
     "Revisión" sin decir de qué son, y quien lo mira tiene que reconstruir de
     memoria a qué reel pertenece cada una.
+
+    Una acabada hace más de un día ya no aparece aquí (ver `listar_tasks_archivadas`):
+    el tablero es para lo que todavía se está moviendo, no un archivo de todo
+    lo que se ha cerrado alguna vez. No se borra nada -- las métricas leen la
+    tabla `tasks` directamente, sin pasar por esta función.
     """
     with _get_connection() as conn:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
@@ -449,7 +509,33 @@ def listar_tasks(departamento: str) -> list[dict]:
                 LEFT JOIN contents co ON co.id = t.content_id
                 LEFT JOIN campaigns c ON c.id = t.campaign_id
                 WHERE t.departamento = %s
+                  AND NOT (t.estado = 'acabado' AND COALESCE(t.completado_en, t.updated_at) < now() - interval '1 day')
                 ORDER BY COALESCE(t.deadline, '9999-12-31'::date), t.id
+                """,
+                (departamento,),
+            )
+            return [_serializar(f) for f in cur.fetchall()]
+
+
+def listar_tasks_archivadas(departamento: str) -> list[dict]:
+    """Las tareas que `listar_tasks` ya no enseña: acabadas hace más de un
+    día. Es el historial que pide "Completadas" en el panel -- de solo
+    lectura, para consultar quién hizo qué y cuándo sin que estorbe en el
+    tablero del día a día.
+    """
+    with _get_connection() as conn:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(
+                """
+                SELECT t.*,
+                       co.titulo AS content_titulo,
+                       c.nombre AS campaign_nombre
+                FROM tasks t
+                LEFT JOIN contents co ON co.id = t.content_id
+                LEFT JOIN campaigns c ON c.id = t.campaign_id
+                WHERE t.departamento = %s
+                  AND t.estado = 'acabado' AND COALESCE(t.completado_en, t.updated_at) < now() - interval '1 day'
+                ORDER BY COALESCE(t.completado_en, t.updated_at) DESC
                 """,
                 (departamento,),
             )
@@ -546,10 +632,10 @@ def crear_task(**campos) -> dict | None:
                 """
                 INSERT INTO tasks (
                     departamento, campaign_id, content_id, titulo, descripcion,
-                    estado, prioridad, deadline, hora, responsables, tags,
-                    checklist, enlaces, creado_por
+                    instrucciones, estado, prioridad, deadline, hora,
+                    responsables, tags, checklist, enlaces, creado_por
                 )
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 RETURNING *
                 """,
                 (
@@ -558,6 +644,7 @@ def crear_task(**campos) -> dict | None:
                     content_id,
                     campos.get("titulo", ""),
                     campos.get("descripcion", ""),
+                    campos.get("instrucciones", ""),
                     campos.get("estado", "pendiente"),
                     campos.get("prioridad", "media"),
                     campos.get("deadline"),
@@ -574,14 +661,36 @@ def crear_task(**campos) -> dict | None:
     return _serializar(nueva)
 
 
-def actualizar_task(task_id: int, departamento: str, **campos) -> bool:
+def actualizar_task(task_id: int, departamento_actual: str, **campos) -> bool:
+    """`departamento_actual` es el departamento donde vive la fila ahora (para
+    el WHERE); si se está moviendo la tarea, el destino va en
+    `campos["departamento"]` -- distinto nombre a propósito, porque
+    `**campos` puede traer una clave `"departamento"` y no puede chocar con
+    un parámetro posicional del mismo nombre (`TypeError: multiple values`)."""
     permitidos = (
-        "titulo", "descripcion", "estado", "prioridad", "deadline", "hora",
-        "responsables", "tags", "checklist", "enlaces",
+        "titulo", "descripcion", "instrucciones", "estado", "prioridad", "deadline",
+        "hora", "responsables", "tags", "checklist", "enlaces", "completado_en",
+        "departamento", "campaign_id", "content_id",
     )
+    if campos.get("departamento") not in (None, departamento_actual):
+        # La campaña/contenido de los que cuelga son del departamento viejo
+        # (`crear_task` lo exige), así que al mudarse se queda suelta en vez
+        # de colgando de algo que ya no se ve desde su tablero.
+        campos = dict(campos, campaign_id=None, content_id=None)
     if "checklist" in campos:
         campos = dict(campos, checklist=json.dumps(campos["checklist"]))
-    return _actualizar("tasks", task_id, permitidos, campos, departamento)
+    if "estado" in campos:
+        # El diálogo de edición reenvía el estado tal cual en cada guardado,
+        # aunque no haya cambiado (ver TaskDialog.tsx) -- solo se toca
+        # `completado_en` cuando de verdad se entra o se sale de 'acabado',
+        # nunca en un guardado que la deja igual.
+        anterior = obtener_task(task_id, departamento_actual)
+        ya_acabada = anterior is not None and anterior["estado"] == "acabado"
+        if campos["estado"] == "acabado" and not ya_acabada:
+            campos = dict(campos, completado_en=datetime.now())
+        elif campos["estado"] != "acabado" and ya_acabada:
+            campos = dict(campos, completado_en=None)
+    return _actualizar("tasks", task_id, permitidos, campos, departamento_actual)
 
 
 def eliminar_task(task_id: int, departamento: str) -> bool:
@@ -690,7 +799,17 @@ def calendario_equipo(desde: date, hasta: date, departamentos: list[str]) -> lis
     """Como `calendario()`, pero de varios departamentos a la vez y con
     `departamento` en cada fila -- para la lectura cruzada de `/equipo`
     (ver `GET /api/equipo/calendario-equipo`), que no está atada a un solo
-    blueprint y por tanto no tiene un `departamento_actual()` que usar."""
+    blueprint y por tanto no tiene un `departamento_actual()` que usar.
+
+    Incluye además los eventos del club puestos desde /admin, que no son de
+    ningún departamento y por tanto salen siempre."""
+    # `calendario_eventos` la crea `init_equipo_db`, no `init_marketing_db`:
+    # sin esto, un despliegue nuevo se encontraría un 500 aquí según qué ruta
+    # se visitara primero (mismo motivo que el init de registros en
+    # `requiere_equipo`).
+    from backend.services.equipo import init_equipo_db
+
+    init_equipo_db()
     with _get_connection() as conn:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute(
@@ -728,6 +847,21 @@ def calendario_equipo(desde: date, hasta: date, departamentos: list[str]) -> lis
                     FROM reuniones r
                     WHERE r.fecha BETWEEN %(desde)s AND %(hasta)s
                       AND r.departamento = ANY(%(departamentos)s)
+                    UNION ALL
+                    -- Los eventos que pone el club desde /admin (charlas de
+                    -- alumni, feria, asambleas...). Sin filtro de
+                    -- departamento a propósito: son del club entero, así que
+                    -- salen aunque la vista esté filtrada a uno solo -- por
+                    -- eso `departamento` viaja NULL y no se les pinta color
+                    -- de departamento (ver `botonEvento` en CalendarPanel).
+                    SELECT 'club' AS origen, e.id, e.titulo,
+                           e.fecha AS fecha, '' AS estado,
+                           NULL::integer AS campaign_id, e.descripcion AS detalle,
+                           NULL AS prioridad, NULL AS padre,
+                           e.confirmados AS responsables, NULLIF(e.hora, '') AS hora,
+                           NULL::varchar AS departamento
+                    FROM calendario_eventos e
+                    WHERE e.fecha BETWEEN %(desde)s AND %(hasta)s
                 ) x
                 ORDER BY fecha,
                          CASE prioridad
@@ -925,7 +1059,9 @@ def salud_equipo(departamento: str) -> dict:
 
             cur.execute(
                 """
-                SELECT COUNT(*) FILTER (WHERE updated_at::date <= deadline), COUNT(*)
+                SELECT COUNT(*) FILTER (
+                           WHERE COALESCE(completado_en, updated_at)::date <= deadline
+                       ), COUNT(*)
                 FROM tasks
                 WHERE departamento = %s AND estado = 'acabado' AND deadline IS NOT NULL
                 """,
@@ -971,4 +1107,203 @@ def salud_equipo(departamento: str) -> dict:
         "inactivos": inactivos,
         "pct_a_tiempo": pct_a_tiempo,
         "miembros": miembros,
+    }
+
+
+def metricas_club(dias_periodo: int = 30) -> dict:
+    """Salud del club para el board: el mismo semáforo que `salud_equipo`,
+    cruzando los tres departamentos, más productividad por persona.
+
+    Productividad = lo que ya hay en `tasks`, nada nuevo que mantener:
+    tareas cerradas en el periodo, % de esas a tiempo, abiertas y vencidas
+    ahora mismo. Sin tabla de puntos -- un número inventado no es más fácil
+    de entender que cuatro reales, y estos se pueden auditar volviendo a la
+    tarea que los generó. "Altas del curso" sigue sin salir de aquí: el
+    flujo de solicitud (`registrations`) no tiene un límite de curso claro
+    que contar, y un 0 fingido sería peor que no enseñar la tarjeta.
+    """
+    from backend.config import EQUIPOS_VALIDOS
+    from backend.services.equipo import init_equipo_db, listar_equipo_accesos
+
+    init_equipo_db()
+    activos = [a for a in listar_equipo_accesos() if a["activo"]]
+
+    hoy = date.today()
+    desde_periodo = hoy - timedelta(days=dias_periodo)
+
+    # Asistencia media de los eventos del club ya celebrados en el periodo --
+    # sale del check-in real (`calendario_eventos.asistio`), no de quién dijo
+    # que iba a venir. `init_equipo_db()` ya se llamó arriba (misma conexión
+    # a la tabla que crea `calendario_eventos`).
+    with _get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT AVG(COALESCE(array_length(asistio, 1), 0))
+                FROM calendario_eventos
+                WHERE fecha BETWEEN %s AND %s
+                """,
+                (desde_periodo, hoy),
+            )
+            promedio = cur.fetchone()[0]
+    asistencia_media = round(float(promedio)) if promedio is not None else None
+
+    with _get_connection() as conn:
+        with conn.cursor() as cur:
+            # Última actividad por persona, en cualquier departamento (no
+            # solo uno, a diferencia de `salud_equipo`).
+            cur.execute(
+                """
+                SELECT responsable, MAX(updated_at)
+                FROM tasks, unnest(responsables) AS responsable
+                GROUP BY responsable
+                """
+            )
+            ultima_actividad = dict(cur.fetchall())
+
+            # Carga actual: abiertas y, de esas, vencidas.
+            cur.execute(
+                """
+                SELECT responsable,
+                       COUNT(*) FILTER (WHERE estado <> 'acabado') AS abiertas,
+                       COUNT(*) FILTER (
+                           WHERE estado <> 'acabado' AND deadline IS NOT NULL AND deadline < %s
+                       ) AS vencidas
+                FROM tasks, unnest(responsables) AS responsable
+                GROUP BY responsable
+                """,
+                (hoy,),
+            )
+            carga = {fila[0]: {"abiertas": fila[1], "vencidas": fila[2]} for fila in cur.fetchall()}
+
+            # Cerradas en el periodo y qué fracción a tiempo.
+            cur.execute(
+                """
+                SELECT responsable,
+                       COUNT(*) AS completadas,
+                       COUNT(*) FILTER (
+                           WHERE deadline IS NOT NULL
+                             AND COALESCE(completado_en, updated_at)::date <= deadline
+                       ) AS a_tiempo,
+                       COUNT(*) FILTER (WHERE deadline IS NOT NULL) AS con_deadline
+                FROM tasks, unnest(responsables) AS responsable
+                WHERE estado = 'acabado' AND COALESCE(completado_en, updated_at) >= %s
+                GROUP BY responsable
+                """,
+                (desde_periodo,),
+            )
+            productividad = {
+                fila[0]: {
+                    "completadas": fila[1],
+                    "pct_a_tiempo": round(100 * fila[2] / fila[3]) if fila[3] else None,
+                }
+                for fila in cur.fetchall()
+            }
+
+            # Club entero: cuántas cerradas a tiempo del total con plazo, en
+            # el periodo -- el mismo cálculo que `pct_a_tiempo` de arriba
+            # pero sin agrupar por persona.
+            cur.execute(
+                """
+                SELECT
+                    COUNT(*) FILTER (
+                        WHERE COALESCE(completado_en, updated_at)::date <= deadline
+                    ),
+                    COUNT(*)
+                FROM tasks
+                WHERE estado = 'acabado' AND deadline IS NOT NULL
+                      AND COALESCE(completado_en, updated_at) >= %s
+                """,
+                (desde_periodo,),
+            )
+            a_tiempo_club, con_deadline_club = cur.fetchone()
+
+            # Participación semana a semana: tareas cerradas por semana, ocho
+            # semanas atrás. Es un dato real (nadie lo teclea) y de un vistazo
+            # se ve si el club está parado o en marcha.
+            cur.execute(
+                """
+                SELECT date_trunc('week', COALESCE(completado_en, updated_at))::date AS semana, COUNT(*)
+                FROM tasks
+                WHERE estado = 'acabado' AND COALESCE(completado_en, updated_at) >= %s
+                GROUP BY semana ORDER BY semana
+                """,
+                (hoy - timedelta(weeks=8),),
+            )
+            participacion_semanal = [
+                {"semana": fila[0].isoformat(), "cerradas": fila[1]} for fila in cur.fetchall()
+            ]
+
+            # Último cierre por departamento, para la alerta de "lleva N días
+            # sin cerrar nada".
+            cur.execute(
+                """
+                SELECT departamento, MAX(COALESCE(completado_en, updated_at))
+                FROM tasks WHERE estado = 'acabado'
+                GROUP BY departamento
+                """
+            )
+            ultimo_cierre_depto = dict(cur.fetchall())
+
+    miembros = []
+    for acceso in activos:
+        email = acceso["email"]
+        ultima = ultima_actividad.get(email)
+        dias_inactivo = (hoy - ultima.date()).days if ultima is not None else None
+        abiertas = carga.get(email, {}).get("abiertas", 0)
+        vencidas = carga.get(email, {}).get("vencidas", 0)
+        prod = productividad.get(email, {"completadas": 0, "pct_a_tiempo": None})
+
+        # Mismo umbral que `salud_equipo`: no se inventa uno nuevo para el
+        # club entero.
+        rojo = abiertas >= 4 or (dias_inactivo is not None and dias_inactivo >= 15)
+        nivel = "rojo" if rojo else ("amarillo" if abiertas >= 2 else "verde")
+
+        miembros.append({
+            "email": email,
+            "nombre": acceso["nombre"],
+            "equipos": acceso["equipos"],
+            "cargo": acceso["cargo"],
+            "abiertas": abiertas,
+            "vencidas": vencidas,
+            "completadas_periodo": prod["completadas"],
+            "pct_a_tiempo_periodo": prod["pct_a_tiempo"],
+            "dias_inactivo": dias_inactivo,
+            "nivel": nivel,
+        })
+
+    # Quien más ha cerrado primero dentro de cada semáforo: la tabla se lee
+    # de arriba abajo como "a quién mirar primero", no alfabética.
+    orden_nivel = {"rojo": 0, "amarillo": 1, "verde": 2}
+    miembros.sort(key=lambda m: (orden_nivel[m["nivel"]], -m["completadas_periodo"]))
+
+    por_departamento = {depto: salud_equipo(depto) for depto in sorted(EQUIPOS_VALIDOS)}
+
+    alertas_inactividad = sorted(
+        (m for m in miembros if m["nivel"] == "rojo"),
+        key=lambda m: -(m["dias_inactivo"] or 0),
+    )[:10]
+
+    alertas_departamento = [
+        {"departamento": depto, "dias_sin_cerrar": dias}
+        for depto in sorted(EQUIPOS_VALIDOS)
+        for ultimo in [ultimo_cierre_depto.get(depto)]
+        for dias in [(hoy - ultimo.date()).days if ultimo is not None else None]
+        if dias is None or dias >= 10
+    ]
+
+    return {
+        "dias_periodo": dias_periodo,
+        "total_activos": len(activos),
+        "sobrecargados": sum(1 for m in miembros if m["abiertas"] >= 4),
+        "inactivos": sum(1 for m in miembros if m["dias_inactivo"] is not None and m["dias_inactivo"] >= 15),
+        "pct_a_tiempo_club": (
+            round(100 * a_tiempo_club / con_deadline_club) if con_deadline_club else None
+        ),
+        "asistencia_media": asistencia_media,
+        "participacion_semanal": participacion_semanal,
+        "por_departamento": por_departamento,
+        "miembros": miembros,
+        "alertas_inactividad": alertas_inactividad,
+        "alertas_departamento": alertas_departamento,
     }

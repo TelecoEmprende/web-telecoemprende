@@ -11,6 +11,8 @@ pertenecer al departamento de la ruta -- comprobado en servidor, nunca
 confiando en que el frontend haya escondido el botón.
 """
 
+import base64
+import binascii
 import logging
 import re
 from datetime import date, datetime, timedelta
@@ -19,6 +21,7 @@ from functools import wraps
 from flask import Blueprint, jsonify, request
 
 from backend.config import (
+    CARGOS_VALIDOS,
     CONTENT_ESTADOS,
     MAX_COMENTARIO_LEN,
     MAX_ENLACES,
@@ -31,7 +34,12 @@ from backend.config import (
 from backend.schemas import build_response
 from backend.services.admin import is_admin_authenticated
 from backend.services.equipo import equipo_session_info, is_equipo_authenticated
-from backend.services.slack import tarea_cambia_estado, tarea_creada
+from backend.services.slack import (
+    onboarding_completado,
+    tarea_cambia_estado,
+    tarea_comentada,
+    tarea_creada,
+)
 from backend.services.marketing import (
     actualizar_campaign,
     carga_por_miembro,
@@ -51,6 +59,7 @@ from backend.services.marketing import (
     listar_campaigns,
     listar_task_comments,
     listar_tasks,
+    listar_tasks_archivadas,
     obtener_campaign,
     obtener_content,
     obtener_task,
@@ -96,6 +105,8 @@ _DEPARTAMENTO_POR_BLUEPRINT = {
     "eventos_api": "eventos",
     "ingenieria_api": "ingenieria",
 }
+
+DEPARTAMENTOS = tuple(_DEPARTAMENTO_POR_BLUEPRINT.values())
 
 marketing_api = Blueprint("marketing_api", __name__, url_prefix="/api/marketing")
 
@@ -217,10 +228,53 @@ def _checklist(datos: dict) -> list[dict]:
     return items
 
 
+# Formatos que acepta una foto de perfil. La imagen llega ya reducida desde el
+# navegador; el límite de aquí es la última red, no la primera.
+_FOTO_RE = re.compile(r"^data:image/(jpeg|png|webp);base64,[A-Za-z0-9+/]+={0,2}$")
+MAX_FOTO_LEN = 300_000  # ~220 KB de imagen; 256px en JPEG son unos 15 KB.
+
+
+def _foto(datos: dict) -> str:
+    """Data URL de la foto de perfil, o "" para volver a la de `public/`.
+
+    Se valida la forma entera (prefijo + base64 decodificable) en vez de
+    confiar en el navegador: esto acaba en un `src` que se le sirve a todo el
+    club, así que un `data:text/html` colado aquí sería un problema de otros,
+    no de quien lo sube.
+    """
+    valor = str(datos.get("foto") or "").strip()
+    if not valor:
+        return ""
+    if len(valor) > MAX_FOTO_LEN:
+        raise DatosInvalidos("La foto es demasiado grande. Prueba con una más pequeña.")
+    if not _FOTO_RE.match(valor):
+        raise DatosInvalidos("La foto debe ser un JPEG, PNG o WEBP.")
+    try:
+        base64.b64decode(valor.split(",", 1)[1], validate=True)
+    except (ValueError, binascii.Error):
+        raise DatosInvalidos("La foto no se ha subido entera. Vuelve a intentarlo.") from None
+    return valor
+
+
 def _autor() -> str:
     from flask import session
 
     return session.get("equipo_email", "admin")
+
+
+def _puede_asignar_tareas(departamento: str | None = None) -> bool:
+    """Solo board y VPs del departamento asignan (ver docs/CLAUDE.md) --
+    mismo criterio que `/miembros/salud`, no uno nuevo.
+
+    `departamento` sirve para preguntar por uno distinto al de la ruta: mover
+    una tarea a otro departamento exige poder asignar en los dos, y el de
+    destino no es el que sirvió la petición.
+    """
+    if is_admin_authenticated():
+        return True
+    sesion = equipo_session_info()
+    depto = departamento or departamento_actual()
+    return sesion["cargo"] in CARGOS_VALIDOS or depto in sesion["vp_de"]
 
 
 # --------------------------------------------------------------------------
@@ -390,9 +444,21 @@ def api_listar_tasks():
     }), 200
 
 
+@marketing_api.route("/tasks/archivadas", methods=["GET"])
+@requiere_equipo
+def api_listar_tasks_archivadas():
+    return jsonify({
+        "ok": True,
+        "tasks": listar_tasks_archivadas(departamento_actual()),
+    }), 200
+
+
 @marketing_api.route("/tasks", methods=["POST"])
 @requiere_equipo
 def api_crear_task():
+    if not _puede_asignar_tareas():
+        return jsonify(build_response(False, "Solo board y VPs pueden asignar tareas.")), 403
+
     datos = _payload()
 
     def id_opcional(clave):
@@ -410,6 +476,10 @@ def api_crear_task():
         titulo=_texto(datos, "titulo", obligatorio=True),
         descripcion=_texto(
             datos, "descripcion", maximo=MAX_TEXTO_LARGO_LEN, multilinea=True
+        ),
+        instrucciones=_texto(
+            datos, "instrucciones", obligatorio=True,
+            maximo=MAX_TEXTO_LARGO_LEN, multilinea=True,
         ),
         estado=_opcion(datos, "estado", TASK_ESTADOS, "pendiente"),
         prioridad=_opcion(datos, "prioridad", TASK_PRIORIDADES, "media"),
@@ -449,6 +519,11 @@ def api_actualizar_task(task_id: int):
         campos["descripcion"] = _texto(
             datos, "descripcion", maximo=MAX_TEXTO_LARGO_LEN, multilinea=True
         )
+    if "instrucciones" in datos:
+        campos["instrucciones"] = _texto(
+            datos, "instrucciones", obligatorio=True,
+            maximo=MAX_TEXTO_LARGO_LEN, multilinea=True,
+        )
     if "estado" in datos:
         campos["estado"] = _opcion(datos, "estado", TASK_ESTADOS, "pendiente")
     if "prioridad" in datos:
@@ -458,13 +533,39 @@ def api_actualizar_task(task_id: int):
     if "hora" in datos:
         campos["hora"] = _texto(datos, "hora", maximo=5)
     if "responsables" in datos:
-        campos["responsables"] = _lista_textos(datos, "responsables", MAX_RESPONSABLES)
+        nuevos = _lista_textos(datos, "responsables", MAX_RESPONSABLES)
+        # Reasignar (cambiar quién es responsable) es "asignar" igual que
+        # crear la tarea -- solo board/VP. El propio responsable sigue
+        # pudiendo mover su tarea de estado o tocar su checklist sin pasar
+        # por aquí (el diálogo reenvía `responsables` sin cambios en ese
+        # guardado; por eso se compara contra lo guardado, no solo la
+        # presencia de la clave).
+        anterior = obtener_task(task_id, departamento_actual())
+        if (
+            anterior is not None
+            and sorted(nuevos) != sorted(anterior["responsables"])
+            and not _puede_asignar_tareas()
+        ):
+            return jsonify(build_response(False, "Solo board y VPs pueden reasignar tareas.")), 403
+        campos["responsables"] = nuevos
     if "tags" in datos:
         campos["tags"] = _lista_textos(datos, "tags", MAX_RESPONSABLES)
     if "checklist" in datos:
         campos["checklist"] = _checklist(datos)
     if "enlaces" in datos:
         campos["enlaces"] = _lista_textos(datos, "enlaces", MAX_ENLACES)
+    if "departamento" in datos:
+        # Mover una tarea de departamento es asignarla igual que crearla, y
+        # hay que poder hacerlo en los dos: en el de origen para sacarla y en
+        # el de destino para meterla. La ruta sigue siendo la del de origen
+        # (es donde vive la fila ahora mismo).
+        destino = _opcion(datos, "departamento", DEPARTAMENTOS, departamento_actual())
+        if destino != departamento_actual():
+            if not _puede_asignar_tareas() or not _puede_asignar_tareas(destino):
+                return jsonify(build_response(
+                    False, "Solo board y VPs pueden mover tareas de departamento."
+                )), 403
+            campos["departamento"] = destino
 
     if not actualizar_task(task_id, departamento_actual(), **campos):
         return jsonify(build_response(False, "Tarea no encontrada o sin cambios.")), 404
@@ -504,7 +605,8 @@ def api_listar_task_comments(task_id: int):
 @marketing_api.route("/tasks/<int:task_id>/comments", methods=["POST"])
 @requiere_equipo
 def api_crear_task_comment(task_id: int):
-    if obtener_task(task_id, departamento_actual()) is None:
+    tarea = obtener_task(task_id, departamento_actual())
+    if tarea is None:
         return jsonify(build_response(False, "Tarea no encontrada.")), 404
 
     datos = _payload()
@@ -513,6 +615,7 @@ def api_crear_task_comment(task_id: int):
     )
     comentario = crear_task_comment(task_id, _autor(), texto)
     logger.info("marketing crea comentario task_id=%s", task_id)
+    tarea_comentada(tarea, texto, departamento_actual(), _autor())
     return jsonify(build_response(True, "Comentario añadido.", comment=comentario)), 201
 
 
@@ -567,6 +670,7 @@ def api_miembros():
             "activo": a["activo"],
             "tags": a["tags"],
             "nombre": a["nombre"],
+            "foto": a["foto"],
             "abiertas": carga.get(a["email"], 0),
         }
         for a in miembros_activos(depto)
@@ -577,9 +681,27 @@ def api_miembros():
 @marketing_api.route("/miembros/salud", methods=["GET"])
 @requiere_equipo
 def api_miembros_salud():
-    """Semáforo de carga/inactividad/plazos del departamento -- para el panel
-    de salud del VP, no para el directorio general (ver `/miembros`)."""
+    """Semáforo de carga/inactividad/plazos del departamento -- para VP y
+    board, no para el miembro raso: la puntuación de participación no se le
+    enseña, para no meter competición entre compañeros (mismo criterio que
+    `/api/equipo/metricas`). No es tampoco el directorio general (`/miembros`)."""
+    sesion = equipo_session_info()
+    autorizado = (
+        is_admin_authenticated()
+        or sesion["cargo"] in CARGOS_VALIDOS
+        or departamento_actual() in sesion["vp_de"]
+    )
+    if not autorizado:
+        return jsonify(build_response(False, "No autorizado.")), 403
     return jsonify({"ok": True, "salud": salud_equipo(departamento_actual())}), 200
+
+
+def _es_mi_ficha(email: str) -> bool:
+    """La foto de perfil la cambia cada cual la suya. Admin también, para poder
+    quitar una que no debería estar ahí."""
+    from flask import session
+
+    return is_admin_authenticated() or session.get("equipo_email", "") == email
 
 
 def _miembro_del_departamento(email: str) -> dict | None:
@@ -619,6 +741,11 @@ def api_ficha_miembro():
         nombre=acceso["nombre"],
         onboarding=acceso["onboarding"],
         desde=acceso["created_at"],
+        mentor_email=acceso["mentor_email"],
+        foto=acceso["foto"],
+        # Quién puede cambiar esta foto lo decide el servidor, no el frontend
+        # (que solo lo usa para enseñar u ocultar el botón).
+        es_tu_ficha=_es_mi_ficha(email),
     )
     return jsonify({"ok": True, "ficha": ficha}), 200
 
@@ -632,7 +759,8 @@ def api_actualizar_ficha_miembro():
 
     datos = _payload()
     email = _texto(datos, "email", obligatorio=True).lower()
-    if _miembro_del_departamento(email) is None:
+    anterior = _miembro_del_departamento(email)
+    if anterior is None:
         return jsonify(build_response(False, "Miembro no encontrado.")), 404
 
     tags = (
@@ -652,8 +780,24 @@ def api_actualizar_ficha_miembro():
             raise DatosInvalidos("'onboarding' admite como mucho 20 claves.")
         onboarding = {str(k): bool(v) for k, v in onboarding.items()}
 
-    if tags is None and notas is None and onboarding is None:
+    foto = None
+    if "foto" in datos:
+        if not _es_mi_ficha(email):
+            return jsonify(build_response(False, "Solo puedes cambiar tu propia foto.")), 403
+        foto = _foto(datos)
+
+    if tags is None and notas is None and onboarding is None and foto is None:
         raise DatosInvalidos("No hay nada que actualizar.")
 
-    actualizar_perfil(email, tags=tags, notas=notas, onboarding=onboarding)
+    actualizar_perfil(email, tags=tags, notas=notas, onboarding=onboarding, foto=foto)
+
+    # Solo al cruzar de "no completo" a "completo" -- si no, cada punto
+    # marcado de la checklist avisaría por separado.
+    def _completo(o):
+        return bool(o) and all(o.values())
+
+    if onboarding is not None and _completo(onboarding) and not _completo(anterior["onboarding"]):
+        onboarding_completado(
+            anterior["nombre"] or email, departamento_actual(), anterior["mentor_email"]
+        )
     return jsonify(build_response(True, "Ficha actualizada.")), 200

@@ -71,7 +71,18 @@ export function apiDepto(depto: Team) {
     getTasks: () =>
       apiRequest<{ ok: true; tasks: Task[]; usuario: string }>(`${BASE}/tasks`),
 
+    /** Acabadas hace más de un día: no salen de `getTasks` (ver
+     *  `listar_tasks` en el backend), pero siguen existiendo para consultar
+     *  el historial -- no se borran, las métricas las necesitan. */
+    getTasksArchivadas: () =>
+      apiRequest<{ ok: true; tasks: Task[] }>(`${BASE}/tasks/archivadas`),
+
     createTask: (datos: Partial<Task>) => post<{ ok: true; task: Task }>("/tasks", datos),
+
+    /** Una tarea entera por id. El calendario solo tiene de ella un resumen
+     *  (`CalendarioItem`), y el diálogo de edición necesita el resto. */
+    getTask: (id: number) =>
+      apiRequest<{ ok: true; task: Task }>(`${BASE}/tasks/${id}`),
 
     updateTask: (id: number, datos: Partial<Task>) => put<ApiResult>(`/tasks/${id}`, datos),
 
@@ -99,7 +110,13 @@ export function apiDepto(depto: Team) {
 
     updateFichaMiembro: (
       email: string,
-      datos: { tags?: string[]; notas?: string; onboarding?: Record<string, boolean> },
+      datos: {
+        tags?: string[];
+        notas?: string;
+        onboarding?: Record<string, boolean>;
+        /** Data URL ya reducida (ver `utils/imagen.ts`); "" borra la propia. */
+        foto?: string;
+      },
     ) => put<ApiResult>("/miembros/ficha", { email, ...datos }),
 
     getSalud: () => apiRequest<{ ok: true; salud: SaludEquipo }>(`${BASE}/miembros/salud`),

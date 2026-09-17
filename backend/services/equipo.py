@@ -94,6 +94,25 @@ def _crear_tablas_equipo():
                 ALTER TABLE equipo_accesos
                 ADD COLUMN IF NOT EXISTS correo_personal VARCHAR(120) NOT NULL DEFAULT ''
             """)
+            # Mentor de un nuevo miembro: email de otro acceso, sin FK por el
+            # mismo motivo que `responsables` en tasks (ver marketing.py) --
+            # así la ficha de alguien no se rompe si a su mentor se le da de
+            # baja el acceso. Lo asigna admin (ver `EquipoAccesosPanel`), no
+            # el propio departamento (`actualizar_perfil`).
+            # Foto de perfil propia, como data URL (`data:image/jpeg;base64,...`).
+            # Va en la fila y no en un blob store porque la imagen llega ya
+            # reducida a 256px desde el navegador (~15 KB) y la CSP del sitio
+            # ya permite `data:` en img-src -- montar almacenamiento aparte
+            # para eso sería más infraestructura que foto. Vacía = se usa la
+            # que hay en `public/equipo-*.jpg` (ver `Avatares.tsx`).
+            cur.execute("""
+                ALTER TABLE equipo_accesos
+                ADD COLUMN IF NOT EXISTS foto TEXT NOT NULL DEFAULT ''
+            """)
+            cur.execute("""
+                ALTER TABLE equipo_accesos
+                ADD COLUMN IF NOT EXISTS mentor_email VARCHAR(120) NOT NULL DEFAULT ''
+            """)
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS calendario_eventos (
                     id SERIAL PRIMARY KEY,
@@ -104,7 +123,45 @@ def _crear_tablas_equipo():
                     created_at TIMESTAMP NOT NULL DEFAULT NOW()
                 )
             """)
+            # Confirmación previa ("Voy") y check-in real el día del evento --
+            # dos listas de email porque son dos hechos distintos (ver
+            # `metricas_club`: la asistencia real es la que alimenta la
+            # métrica, no quien dijo que iba a venir).
+            cur.execute("""
+                ALTER TABLE calendario_eventos
+                ADD COLUMN IF NOT EXISTS confirmados TEXT[] NOT NULL DEFAULT '{}'
+            """)
+            cur.execute("""
+                ALTER TABLE calendario_eventos
+                ADD COLUMN IF NOT EXISTS asistio TEXT[] NOT NULL DEFAULT '{}'
+            """)
         conn.commit()
+
+
+def listar_directorio_club() -> list[dict]:
+    """Quién es quién del club entero, para el widget de "Mi semana" -- solo
+    lo básico (nombre, equipos, cargo, mentor). Nada de notas ni onboarding,
+    que son privados (ver `listar_equipo_accesos`, la versión completa de
+    /admin). El mentor sí viaja aquí: no es un dato privado y es lo que deja
+    a "Mi semana" enseñar "Mi mentora" y "Tutoriza a" sin una ruta aparte.
+    """
+    with _get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT email, equipos, vp_de, cargo, nombre, mentor_email
+                FROM equipo_accesos WHERE activo = TRUE ORDER BY nombre, email
+                """
+            )
+            filas = cur.fetchall()
+
+    return [
+        {
+            "email": f[0], "equipos": f[1], "vp_de": f[2], "cargo": f[3],
+            "nombre": f[4], "mentor_email": f[5],
+        }
+        for f in filas
+    ]
 
 
 def _tiene_permisos_admin(equipos: list[str], cargo: str) -> bool:
@@ -117,7 +174,7 @@ def login_equipo(email: str, password: str) -> dict | None:
         with conn.cursor() as cur:
             cur.execute(
                 """
-                SELECT password_hash, equipos, vp_de, cargo, nombre
+                SELECT password_hash, equipos, vp_de, cargo, nombre, mentor_email
                 FROM equipo_accesos WHERE email = %s AND activo = TRUE
                 """,
                 (email,),
@@ -134,6 +191,7 @@ def login_equipo(email: str, password: str) -> dict | None:
     vp_de = [e for e in row[2] if e in equipos]
     cargo = row[3] if row[3] in CARGOS_VALIDOS else ""
     nombre = row[4]
+    mentor_email = row[5]
 
     # session.clear() por higiene ante fijación de sesión (mismo criterio que
     # login_admin).
@@ -144,12 +202,16 @@ def login_equipo(email: str, password: str) -> dict | None:
     session["equipo_vp_de"] = vp_de
     session["equipo_cargo"] = cargo
     session["equipo_nombre"] = nombre
+    session["equipo_mentor_email"] = mentor_email
     # Ingeniería, presidencia y board reciben también sesión de /admin:
     # reutiliza la misma clave de sesión que usa login_admin, así
     # is_admin_authenticated() funciona igual venga de /admin o de /equipo.
     if _tiene_permisos_admin(equipos, cargo):
         session["admin_auth"] = True
-    return {"teams": equipos, "vp_de": vp_de, "cargo": cargo, "nombre": nombre}
+    return {
+        "teams": equipos, "vp_de": vp_de, "cargo": cargo, "nombre": nombre,
+        "mentor_email": mentor_email,
+    }
 
 
 def is_equipo_authenticated() -> bool:
@@ -163,6 +225,7 @@ def equipo_session_info() -> dict:
         "cargo": session.get("equipo_cargo", ""),
         "email": session.get("equipo_email", ""),
         "nombre": session.get("equipo_nombre", ""),
+        "mentor_email": session.get("equipo_mentor_email", ""),
     }
 
 
@@ -177,7 +240,8 @@ def listar_equipo_accesos() -> list[dict]:
             cur.execute(
                 """
                 SELECT id, email, equipos, vp_de, cargo, activo, created_at,
-                       tags, notas, nombre, onboarding, dni, correo_personal
+                       tags, notas, nombre, onboarding, dni, correo_personal,
+                       mentor_email, foto
                 FROM equipo_accesos ORDER BY email
                 """
             )
@@ -198,6 +262,8 @@ def listar_equipo_accesos() -> list[dict]:
             "onboarding": f[10],
             "dni": f[11],
             "correo_personal": f[12],
+            "mentor_email": f[13],
+            "foto": f[14],
         }
         for f in filas
     ]
@@ -273,6 +339,7 @@ def crear_equipo_acceso(
     vp_de: list[str] | None = None,
     cargo: str = "",
     nombre: str = "",
+    mentor_email: str = "",
 ) -> dict | None:
     """Devuelve None si el email ya existe o si equipos/vp_de/cargo no son válidos."""
     email = email.strip().lower()
@@ -280,6 +347,7 @@ def crear_equipo_acceso(
     vp_de = sorted(set(vp_de or []))
     cargo = cargo or ""
     nombre = (nombre or "").strip()
+    mentor_email = (mentor_email or "").strip().lower()
 
     if not _acceso_valido(equipos, vp_de, cargo):
         return None
@@ -292,11 +360,12 @@ def crear_equipo_acceso(
 
             cur.execute(
                 """
-                INSERT INTO equipo_accesos (email, password_hash, equipos, vp_de, cargo, nombre)
-                VALUES (%s, %s, %s, %s, %s, %s)
-                RETURNING id, email, equipos, vp_de, cargo, activo, created_at, nombre
+                INSERT INTO equipo_accesos
+                    (email, password_hash, equipos, vp_de, cargo, nombre, mentor_email)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
+                RETURNING id, email, equipos, vp_de, cargo, activo, created_at, nombre, mentor_email
                 """,
-                (email, generate_password_hash(password), equipos, vp_de, cargo, nombre),
+                (email, generate_password_hash(password), equipos, vp_de, cargo, nombre, mentor_email),
             )
             fila = cur.fetchone()
         conn.commit()
@@ -310,6 +379,7 @@ def crear_equipo_acceso(
         "activo": fila[5],
         "created_at": fila[6].isoformat(),
         "nombre": fila[7],
+        "mentor_email": fila[8],
     }
 
 
@@ -355,6 +425,7 @@ def actualizar_equipo_acceso(
     nombre: str | None = None,
     dni: str | None = None,
     correo_personal: str | None = None,
+    mentor_email: str | None = None,
 ) -> bool:
     """Actualiza solo los campos que se pasan. Devuelve False si el id no existe
     o si equipos/vp_de/cargo no son válidos.
@@ -415,6 +486,9 @@ def actualizar_equipo_acceso(
     if correo_personal is not None:
         campos.append("correo_personal = %s")
         valores.append(correo_personal.strip().lower())
+    if mentor_email is not None:
+        campos.append("mentor_email = %s")
+        valores.append(mentor_email.strip().lower())
 
     if not campos:
         return False
@@ -452,7 +526,7 @@ def listar_eventos_calendario() -> list[dict]:
         with conn.cursor() as cur:
             cur.execute(
                 """
-                SELECT id, titulo, descripcion, fecha, hora
+                SELECT id, titulo, descripcion, fecha, hora, confirmados, asistio
                 FROM calendario_eventos ORDER BY fecha, hora
                 """
             )
@@ -465,9 +539,64 @@ def listar_eventos_calendario() -> list[dict]:
             "descripcion": f[2],
             "fecha": f[3].isoformat(),
             "hora": f[4],
+            "confirmados": f[5],
+            "asistio": f[6],
         }
         for f in filas
     ]
+
+
+def confirmar_evento_calendario(evento_id: int, email: str, confirmar: bool) -> bool:
+    """"Voy" / "no voy" de la propia persona a un evento del club. Un TEXT[]
+    con array_append/array_remove en vez de una tabla de asistencia aparte:
+    es la misma cardinalidad que `reuniones.asistentes`, que ya vive así."""
+    email = email.strip().lower()
+    operacion = "array_append" if confirmar else "array_remove"
+    with _get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                f"""
+                UPDATE calendario_eventos
+                SET confirmados = {operacion}(array_remove(confirmados, %s), %s)
+                WHERE id = %s
+                """
+                if confirmar
+                else f"""
+                UPDATE calendario_eventos SET confirmados = {operacion}(confirmados, %s)
+                WHERE id = %s
+                """,
+                (email, email, evento_id) if confirmar else (email, evento_id),
+            )
+            actualizado = cur.rowcount > 0
+        conn.commit()
+    return actualizado
+
+
+def marcar_asistio_evento(evento_id: int, email: str, asistio: bool) -> bool:
+    """Check-in real el día del evento -- lo marca quien gestiona la puerta
+    (VP/admin, ver `_puede_editar_calendario_club`), no la propia persona.
+    Alimenta `metricas_club` ("asistencia media"), a diferencia de
+    `confirmados`, que es solo la intención previa."""
+    email = email.strip().lower()
+    operacion = "array_append" if asistio else "array_remove"
+    with _get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                f"""
+                UPDATE calendario_eventos
+                SET asistio = {operacion}(array_remove(asistio, %s), %s)
+                WHERE id = %s
+                """
+                if asistio
+                else f"""
+                UPDATE calendario_eventos SET asistio = {operacion}(asistio, %s)
+                WHERE id = %s
+                """,
+                (email, email, evento_id) if asistio else (email, evento_id),
+            )
+            actualizado = cur.rowcount > 0
+        conn.commit()
+    return actualizado
 
 
 
@@ -529,6 +658,7 @@ def actualizar_perfil(
     tags: list[str] | None = None,
     notas: str | None = None,
     onboarding: dict | None = None,
+    foto: str | None = None,
 ) -> bool:
     """Etiquetas de habilidad, nota y checklist de onboarding de una persona.
 
@@ -550,6 +680,11 @@ def actualizar_perfil(
         # el objeto entero, no un parche.
         campos.append("onboarding = %s")
         valores.append(Json(onboarding))
+    if foto is not None:
+        # "" borra la foto propia y devuelve a la de `public/`, que es la
+        # única forma de deshacer una subida.
+        campos.append("foto = %s")
+        valores.append(foto)
 
     if not campos:
         return False

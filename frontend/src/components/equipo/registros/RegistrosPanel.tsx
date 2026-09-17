@@ -23,7 +23,6 @@ import {
 
 type Props = {
   recurso: Recurso;
-  titulo: string;
   /** Una línea explicando para qué sirve la pestaña. */
   descripcion: string;
   vacio: string;
@@ -63,7 +62,6 @@ function valorInicial(campo: CampoSpec, registro: Registro | null): string {
  */
 export function RegistrosPanel({
   recurso,
-  titulo,
   descripcion,
   vacio,
   campos,
@@ -115,14 +113,13 @@ export function RegistrosPanel({
     <section className="mkt-panel-react">
       {error ? <AlertBanner variant="error" message={error} /> : null}
 
-      <header className="mkt-panel-header-react">
-        <div>
-          <h3>{titulo}</h3>
-          <p className="mkt-meta-react">{descripcion}</p>
-        </div>
+      {/* Sin repetir el título: ya lo pinta la barra del shell. Aquí solo la
+          frase que explica de qué va el panel. */}
+      <header className="crm-cabecera-react">
+        <p className="crm-s">{descripcion}</p>
         <button
           type="button"
-          className="mkt-btn-mini-react"
+          className="crm-btn"
           onClick={() => setCreando(true)}
         >
           <Plus aria-hidden="true" /> {etiquetaNuevo}
