@@ -423,7 +423,8 @@
   border-radius: 999px;
   background: var(--color-orange);
   transform-origin: left;
-  transition: transform var(--dur-menu) var(--ease-out);
+  /* Sin `transition`: la barra la anima motion (ver `movimiento.tsx`) y las
+     dos capas peleándose por `transform` dejaban el avance a medio camino. */
 }
 
 /* Métricas (`MetricasPanel.tsx`) reutiliza esta misma barra pero en Azul TE,

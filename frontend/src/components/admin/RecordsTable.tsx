@@ -1,8 +1,10 @@
+import { motion } from "motion/react";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Check, Pencil, Trash2, UserPlus } from "lucide-react";
 
 import { deleteRegistration, updateRegistrationEstado } from "../../api/admin";
+import { useEntradaDeFila } from "../movimiento";
 import type { Estado, Registro } from "../../types/admin";
 import type { ApiFailure } from "../../types/api";
 import {
@@ -60,6 +62,8 @@ function EstadoBadge({ registro }: { registro: Registro }) {
 }
 
 export function RecordsTable({ registros, onUpdate, onDelete, onEstadoChange }: RecordsTableProps) {
+  // `false`: son <tr>, ahí solo se atenúa la opacidad (ver `useEntradaDeFila`).
+  const entradaFila = useEntradaDeFila(false);
   const [editando, setEditando] = useState<Registro | null>(null);
   const [changingEstadoId, setChangingEstadoId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -156,8 +160,12 @@ export function RecordsTable({ registros, onUpdate, onDelete, onEstadoChange }: 
           </tr>
         </thead>
         <tbody>
-          {registros.map((registro) => (
-            <tr key={registro.id} className="hover:bg-[var(--color-paper)]">
+          {registros.map((registro, indice) => (
+            <motion.tr
+              key={registro.id}
+              className="hover:bg-[var(--color-paper)]"
+              {...entradaFila(indice)}
+            >
               <td className={TD}>{registro.nombre}</td>
               <td className={TD}>{registro.apellidos}</td>
               <td className={TD_ANCHA}>{registro.escuela || "—"}</td>
@@ -241,7 +249,7 @@ export function RecordsTable({ registros, onUpdate, onDelete, onEstadoChange }: 
                   <Trash2 size={15} strokeWidth={1.75} />
                 </Button>
               </td>
-            </tr>
+            </motion.tr>
           ))}
         </tbody>
       </table>

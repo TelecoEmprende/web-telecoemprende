@@ -15,6 +15,7 @@ import {
 import { EquipoLoginForm, type ModoAcceso } from "../components/equipo/EquipoLoginForm";
 import { DeptoDashboard } from "../components/equipo/DeptoDashboard";
 import { MetricasPanel } from "../components/equipo/MetricasPanel";
+import { PanelAnimado } from "../components/movimiento";
 import type { ApiFailure } from "../types/api";
 import type { Cargo, Team } from "../types/equipo";
 
@@ -274,6 +275,7 @@ export function EquipoPage() {
           </header>
 
           <div className="workspace-contenido-react">
+            <PanelAnimado llave={seccion}>
             {seccion === "club" ? (
               <CalendarioEquipo onIrA={setSeccion} />
             ) : null}
@@ -295,6 +297,7 @@ export function EquipoPage() {
                 puedeAsignarEnTodo={tieneAccesoAdmin}
               />
             ) : null}
+            </PanelAnimado>
           </div>
         </main>
       </SidebarProvider>

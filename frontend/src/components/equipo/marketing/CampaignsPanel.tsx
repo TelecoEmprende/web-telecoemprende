@@ -1,3 +1,4 @@
+import { motion, useReducedMotion } from "motion/react";
 import { FormEvent, useCallback, useEffect, useState } from "react";
 
 import { apiDepto } from "../../../api/marketing";
@@ -7,6 +8,8 @@ import { Esqueleto } from "../../feedback/Esqueleto";
 import { AdjuntosDeContent } from "./AdjuntosDeContent";
 import { ContentEditor } from "./ContentEditor";
 import { Badge } from "@/components/ui/badge";
+import { useEntradaDeFila } from "../../movimiento";
+import { SPRING_DEFAULT } from "@/components/smoothui/lib/animation";
 import type { ApiFailure } from "../../../types/api";
 import type { Team } from "../../../types/equipo";
 import {
@@ -36,6 +39,7 @@ function mensajeDeError(error: unknown, porDefecto: string) {
 
 /** Barra de progreso de una campaña: cuántas de sus tareas están acabadas. */
 function ProgresoCampaign({ tareas }: { tareas: Task[] }) {
+  const menos = useReducedMotion();
   if (tareas.length === 0) return null;
 
   const acabadas = tareas.filter((t) => t.estado === "acabado").length;
@@ -44,7 +48,11 @@ function ProgresoCampaign({ tareas }: { tareas: Task[] }) {
   return (
     <div className="mkt-progreso-react">
       <div className="mkt-progreso-barra-react" aria-hidden="true">
-        <span style={{ transform: `scaleX(${porcentaje / 100})` }} />
+        <motion.span
+          initial={{ transform: "scaleX(0)" }}
+          animate={{ transform: `scaleX(${porcentaje / 100})` }}
+          transition={menos ? { duration: 0 } : SPRING_DEFAULT}
+        />
       </div>
       <span className="mkt-progreso-texto-react">
         {acabadas === tareas.length
@@ -165,6 +173,8 @@ type Props = {
 };
 
 export function CampaignsPanel({ deptos, campaignInicial, onCampaignAbierta }: Props) {
+  const menosMovimiento = useReducedMotion();
+  const entradaFila = useEntradaDeFila();
   const [campaigns, setCampaigns] = useState<CampaignResumen[]>([]);
   const [deptoNuevaCampaign, setDeptoNuevaCampaign] = useState<Team>(deptos[0]);
   const [detalle, setDetalle] = useState<CampaignDetalle | null>(null);
@@ -561,8 +571,12 @@ export function CampaignsPanel({ deptos, campaignInicial, onCampaignAbierta }: P
           </p>
         ) : (
           <div className="mkt-contents-react">
-            {detalle.contents.map((content) => (
-              <article key={content.id} className="mkt-content-card-react">
+            {detalle.contents.map((content, indice) => (
+              <motion.article
+                key={content.id}
+                className="mkt-content-card-react"
+                {...entradaFila(indice)}
+              >
                 <header>
                   <div>
                     <h4>{content.titulo}</h4>
@@ -643,7 +657,7 @@ export function CampaignsPanel({ deptos, campaignInicial, onCampaignAbierta }: P
                   onToggle={(task) => void alternarTarea(task)}
                   onAñadir={(titulo) => void añadirTarea(content.id, titulo)}
                 />
-              </article>
+              </motion.article>
             ))}
           </div>
         )}
@@ -825,8 +839,8 @@ export function CampaignsPanel({ deptos, campaignInicial, onCampaignAbierta }: P
         </p>
       ) : (
         <ul className="mkt-campaigns-react">
-          {visibles.map((campaign) => (
-            <li key={campaign.id}>
+          {visibles.map((campaign, indice) => (
+            <motion.li key={campaign.id} {...entradaFila(indice)}>
               <button
                 type="button"
                 className="mkt-campaign-card-react"
@@ -853,10 +867,12 @@ export function CampaignsPanel({ deptos, campaignInicial, onCampaignAbierta }: P
                 {campaign.total_tasks > 0 ? (
                   <span className="crm-campaign-progreso-react">
                     <span className="crm-bar" aria-hidden="true">
-                      <i
-                        style={{
-                          width: `${Math.round((campaign.tareas_acabadas / campaign.total_tasks) * 100)}%`,
+                      <motion.i
+                        initial={{ transform: "scaleX(0)" }}
+                        animate={{
+                          transform: `scaleX(${campaign.tareas_acabadas / campaign.total_tasks})`,
                         }}
+                        transition={menosMovimiento ? { duration: 0 } : SPRING_DEFAULT}
                       />
                     </span>
                     <span className="crm-s">
@@ -873,7 +889,7 @@ export function CampaignsPanel({ deptos, campaignInicial, onCampaignAbierta }: P
               >
                 {duplicando === campaign.id ? "Duplicando..." : "Duplicar"}
               </button>
-            </li>
+            </motion.li>
           ))}
         </ul>
       )}

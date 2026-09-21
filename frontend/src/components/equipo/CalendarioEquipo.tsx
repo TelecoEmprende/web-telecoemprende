@@ -1,3 +1,4 @@
+import { motion, useReducedMotion } from "motion/react";
 import { FormEvent, useMemo, useState, useEffect } from "react";
 
 import {
@@ -15,6 +16,8 @@ import type { Seccion } from "./EquipoSidebar";
 import { DeptoProvider } from "./DeptoApi";
 import { AvatarResponsable, etiquetaDe } from "./marketing/Avatares";
 import { TaskDialog } from "./marketing/TaskDialog";
+import { useEntradaDeFila } from "../movimiento";
+import { DURATION, EASE_OUT } from "@/components/smoothui/lib/animation";
 import type { ApiFailure } from "../../types/api";
 import type { EventoCalendario, MiembroDirectorio, Team } from "../../types/equipo";
 import { textoDe, type Registro } from "../../types/registros";
@@ -145,6 +148,8 @@ type Props = {
 };
 
 export function CalendarioEquipo({ onIrA }: Props) {
+  const menosMovimiento = useReducedMotion();
+  const entradaFila = useEntradaDeFila();
   const [eventos, setEventos] = useState<EventoCalendario[]>([]);
   const [tareas, setTareas] = useState<Task[]>([]);
   const [nombre, setNombre] = useState("");
@@ -458,7 +463,7 @@ export function CalendarioEquipo({ onIrA }: Props) {
               </p>
             ) : (
               <div>
-                {tareasVisibles.map((tarea) => {
+                {tareasVisibles.map((tarea, indice) => {
                   const otros = tarea.responsables
                     .filter((r) => r !== email)
                     .map((r) => etiquetaDe(r, undefined));
@@ -466,9 +471,10 @@ export function CalendarioEquipo({ onIrA }: Props) {
                   const hecha = tarea.estado === "acabado";
                   const vencida = dias !== null && dias < 0 && !hecha;
                   return (
-                    <div
+                    <motion.div
                       key={`${tarea.departamento}-${tarea.id}`}
                       className={`crm-row${hecha ? " crm-row-apagada-react" : ""}`}
+                      {...entradaFila(indice)}
                     >
                       <input
                         type="checkbox"
@@ -508,7 +514,7 @@ export function CalendarioEquipo({ onIrA }: Props) {
                           {cuandoTarea(tarea.deadline)}
                         </span>
                       )}
-                    </div>
+                    </motion.div>
                   );
                 })}
               </div>
@@ -568,13 +574,13 @@ export function CalendarioEquipo({ onIrA }: Props) {
               <p className="crm-s">No tienes tareas en ningún proyecto ahora mismo.</p>
             ) : (
               <div className="crm-pila-react">
-                {proyectos.map((proyecto) => {
+                {proyectos.map((proyecto, indice) => {
                   const porcentaje =
                     proyecto.total_tasks === 0
                       ? 0
                       : Math.round((proyecto.tareas_acabadas / proyecto.total_tasks) * 100);
                   return (
-                    <div key={proyecto.id}>
+                    <motion.div key={proyecto.id} {...entradaFila(indice)}>
                       <div className="crm-cabecera-react">
                         <div className="crm-t">
                           {proyecto.nombre}{" "}
@@ -585,9 +591,17 @@ export function CalendarioEquipo({ onIrA }: Props) {
                         <div className="crm-s">{porcentaje}%</div>
                       </div>
                       <div className="crm-bar" style={{ marginTop: 7 }} aria-hidden="true">
-                        <i style={{ width: `${porcentaje}%` }} />
+                        <motion.i
+                          initial={{ transform: "scaleX(0)" }}
+                          animate={{ transform: `scaleX(${porcentaje / 100})` }}
+                          transition={
+                            menosMovimiento
+                              ? { duration: 0 }
+                              : { duration: DURATION.slow, ease: EASE_OUT }
+                          }
+                        />
                       </div>
-                    </div>
+                    </motion.div>
                   );
                 })}
               </div>
@@ -670,10 +684,10 @@ export function CalendarioEquipo({ onIrA }: Props) {
               </p>
             ) : (
               <div>
-                {proximos.map((evento) => {
+                {proximos.map((evento, indice) => {
                   const voy = evento.confirmados.includes(email);
                   return (
-                    <div key={evento.id}>
+                    <motion.div key={evento.id} {...entradaFila(indice)}>
                       <div className="crm-row">
                         <div className="crm-row-cuerpo-react">
                           <div className="crm-t">{evento.titulo}</div>
@@ -715,7 +729,7 @@ export function CalendarioEquipo({ onIrA }: Props) {
                           })}
                         </div>
                       ) : null}
-                    </div>
+                    </motion.div>
                   );
                 })}
               </div>
