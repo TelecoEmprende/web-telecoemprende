@@ -1,3 +1,4 @@
+import { motion } from "motion/react";
 import { FormEvent, ReactNode, useCallback, useEffect, useState } from "react";
 import { Pencil, Plus, Trash2 } from "lucide-react";
 
@@ -5,6 +6,7 @@ import { useApi } from "../DeptoApi";
 import { AlertBanner } from "../../feedback/AlertBanner";
 import { Esqueleto } from "../../feedback/Esqueleto";
 import { SelectorMiembros } from "../marketing/SelectorMiembros";
+import { useEntradaDeFila } from "../../movimiento";
 import {
   Dialog,
   DialogContent,
@@ -70,6 +72,7 @@ export function RegistrosPanel({
   cabecera,
 }: Props) {
   const { listarRegistros, crearRegistro, actualizarRegistro, eliminarRegistro } = useApi();
+  const entradaFila = useEntradaDeFila();
 
   const [registros, setRegistros] = useState<Registro[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -132,10 +135,10 @@ export function RegistrosPanel({
         <p className="mkt-vacio-react">{vacio}</p>
       ) : (
         <ul className="reg-lista-react">
-          {registros.map((registro) => {
+          {registros.map((registro, indice) => {
             const resumen = fila(registro);
             return (
-              <li key={registro.id} className="reg-item-react">
+              <motion.li key={registro.id} className="reg-item-react" {...entradaFila(indice)}>
                 <div className="reg-item-cabecera-react">
                   <div className="reg-item-texto-react">
                     <p className="reg-item-titulo-react">{resumen.titulo}</p>
@@ -194,7 +197,7 @@ export function RegistrosPanel({
                     </button>
                   </p>
                 ) : null}
-              </li>
+              </motion.li>
             );
           })}
         </ul>

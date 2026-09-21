@@ -2,6 +2,8 @@ import { ClipboardCopy, Search } from "lucide-react";
 
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
+import { motion, useReducedMotion } from "motion/react";
+import { SPRING_DEFAULT } from "@/components/smoothui/lib/animation";
 
 const EVENTO_LABELS: Record<string, string> = {
   "telecoemprende-2026-27": "Telecomprende inscripciones 26-27",
@@ -96,17 +98,12 @@ export function AdminToolbar({
       </div>
 
       <div className="flex flex-wrap gap-2" role="tablist" aria-label="Evento">
-        <EventoTab
-          activo={eventoActivo === ""}
-          onClick={() => onEventoChange("")}
-          label="Todos los eventos"
-        />
-        {eventos.map((ev) => (
+        {["", ...eventos].map((ev) => (
           <EventoTab
             key={ev}
             activo={eventoActivo === ev}
             onClick={() => onEventoChange(ev)}
-            label={eventoLabel(ev)}
+            label={ev === "" ? "Todos los eventos" : eventoLabel(ev)}
           />
         ))}
       </div>
@@ -114,6 +111,9 @@ export function AdminToolbar({
   );
 }
 
+/** Misma pastilla que las pestañas de estado (`EstadoTabs`), incluido el
+ *  relleno que se desliza de una a otra: las dos filas viven una encima de
+ *  la otra en la misma pantalla y tenían que seguir pareciéndose. */
 function EventoTab({
   activo,
   label,
@@ -123,19 +123,28 @@ function EventoTab({
   label: string;
   onClick: () => void;
 }) {
+  const menos = useReducedMotion();
   return (
     <button
       type="button"
       role="tab"
       aria-selected={activo}
-      className={`cursor-pointer rounded-full border px-4 py-2.5 text-sm font-bold ${
+      className={`relative cursor-pointer rounded-full border px-4 py-2.5 text-sm font-bold ${
         activo
-          ? "border-[var(--color-navy)] bg-[var(--color-navy)] text-white"
+          ? "border-[var(--color-navy)] text-white"
           : "border-[var(--color-paper-line)] bg-white text-muted-foreground"
       }`}
       onClick={onClick}
     >
-      {label}
+      {activo ? (
+        <motion.span
+          layoutId="evento-activo"
+          aria-hidden="true"
+          className="absolute inset-0 rounded-full bg-[var(--color-navy)]"
+          transition={menos ? { duration: 0 } : SPRING_DEFAULT}
+        />
+      ) : null}
+      <span className="relative">{label}</span>
     </button>
   );
 }

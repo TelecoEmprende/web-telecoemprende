@@ -1045,11 +1045,17 @@ a.crm-tag:focus-visible,
   overflow: hidden;
 }
 
+/* Igual que `.mkt-progreso-barra-react span`: la barra ocupa el ancho entero y
+   lo que se mueve es `scaleX`, no `width` -- un `transform` no releva el
+   layout en cada fotograma. Quien la anima es motion (ver `movimiento.tsx`),
+   por eso aquí no hay `transition`. */
 .crm-bar i {
   display: block;
+  width: 100%;
   height: 100%;
   border-radius: 999px;
   background: var(--color-azul);
+  transform-origin: left;
 }
 
 /* ---------- Rejillas de la pantalla ---------- */

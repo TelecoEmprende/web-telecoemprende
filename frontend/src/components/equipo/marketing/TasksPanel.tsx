@@ -1,3 +1,4 @@
+import { motion } from "motion/react";
 import { FormEvent, useEffect, useRef, useState } from "react";
 
 import { AvataresDeResponsables } from "./Avatares";
@@ -9,6 +10,7 @@ import { AlertBanner } from "../../feedback/AlertBanner";
 import { ContadorCaracteres } from "../../feedback/ContadorCaracteres";
 import { Esqueleto } from "../../feedback/Esqueleto";
 import { Badge } from "@/components/ui/badge";
+import { Contador, useEntradaDeFila } from "../../movimiento";
 import type { ApiFailure } from "../../../types/api";
 import { DEPTO_LABEL, TEAMS, type Team } from "../../../types/equipo";
 import {
@@ -80,6 +82,7 @@ type Props = {
  */
 export function TasksPanel({ deptos, teams, vpDe, puedeAsignarEnTodo }: Props) {
   const directorio = useDirectorio();
+  const entradaTarjeta = useEntradaDeFila();
 
   const [tasks, setTasks] = useState<Task[]>([]);
   const [usuario, setUsuario] = useState("");
@@ -438,40 +441,45 @@ export function TasksPanel({ deptos, teams, vpDe, puedeAsignarEnTodo }: Props) {
           </p>
         ) : (
           <div className="mkt-archivadas-lista-react">
-            {archivadasVisibles.map((task) => (
-              <button
-                key={`${task.departamento}-${task.id}`}
-                type="button"
-                className="mkt-task-card-react"
-                onClick={() => setAbierta(task)}
-              >
-                {variosDeptos ? (
-                  <span className="mkt-etiquetas-react">
-                    <span className={`crm-tag ${DEPTO_TAG[task.departamento] ?? ""}`}>
-                      {DEPTO_LABEL[task.departamento as Team]}
+            {archivadasVisibles.map((task, indice) => (
+              // Envuelta por lo mismo que la del tablero: `.mkt-task-card-react`
+              // tiene `transform` en su `:hover`, y si motion le escribe un
+              // `transform` inline a la propia tarjeta ese hover deja de verse
+              // para siempre. Anima el envoltorio, la tarjeta se queda quieta.
+              <motion.div key={`${task.departamento}-${task.id}`} {...entradaTarjeta(indice)}>
+                <button
+                  type="button"
+                  className="mkt-task-card-react"
+                  onClick={() => setAbierta(task)}
+                >
+                  {variosDeptos ? (
+                    <span className="mkt-etiquetas-react">
+                      <span className={`crm-tag ${DEPTO_TAG[task.departamento] ?? ""}`}>
+                        {DEPTO_LABEL[task.departamento as Team]}
+                      </span>
                     </span>
-                  </span>
-                ) : null}
+                  ) : null}
 
-                {task.content_titulo || task.campaign_nombre ? (
-                  <span className="mkt-task-padre-react">
-                    {task.content_titulo ?? task.campaign_nombre}
-                  </span>
-                ) : null}
+                  {task.content_titulo || task.campaign_nombre ? (
+                    <span className="mkt-task-padre-react">
+                      {task.content_titulo ?? task.campaign_nombre}
+                    </span>
+                  ) : null}
 
-                <span className="mkt-task-titulo-react">{task.titulo}</span>
+                  <span className="mkt-task-titulo-react">{task.titulo}</span>
 
-                <span className="mkt-task-pie-react">
-                  <span className="crm-s">
-                    Acabada el {formatearFecha(task.completado_en?.slice(0, 10) ?? null, true)}
+                  <span className="mkt-task-pie-react">
+                    <span className="crm-s">
+                      Acabada el {formatearFecha(task.completado_en?.slice(0, 10) ?? null, true)}
+                    </span>
+                    <AvataresDeResponsables
+                      responsables={task.responsables}
+                      directorio={directorio}
+                      maximo={3}
+                    />
                   </span>
-                  <AvataresDeResponsables
-                    responsables={task.responsables}
-                    directorio={directorio}
-                    maximo={3}
-                  />
-                </span>
-              </button>
+                </button>
+              </motion.div>
             ))}
           </div>
         )
@@ -527,91 +535,97 @@ export function TasksPanel({ deptos, teams, vpDe, puedeAsignarEnTodo }: Props) {
               <h4>
                 {TASK_ESTADO_LABEL[estado]}
                 <Badge variant="outline" className="mkt-contador-react">
-                  {columna.length}
+                  <Contador valor={columna.length} />
                 </Badge>
               </h4>
 
               {columna.length === 0 ? (
                 <p className="mkt-vacio-inline-react">Nada aquí.</p>
               ) : (
-                columna.map((task) => {
+                columna.map((task, indice) => {
                   const dias = diasHasta(task.deadline);
                   const vencida = dias !== null && dias < 0 && task.estado !== "acabado";
                   const hechos = task.checklist.filter((i) => i.hecho).length;
 
                   return (
-                    <button
-                      key={`${task.departamento}-${task.id}`}
-                      type="button"
-                      className={`mkt-task-card-react${arrastrando?.id === task.id ? " mkt-task-card-arrastrando-react" : ""}`}
-                      draggable
-                      onDragStart={(event) => {
-                        event.dataTransfer.setData(TASK_MIME, String(task.id));
-                        event.dataTransfer.effectAllowed = "move";
-                        setArrastrando(task);
-                      }}
-                      onDragEnd={() => {
-                        setArrastrando(null);
-                        setSobreColumna(null);
-                      }}
-                      onClick={() => setAbierta(task)}
-                    >
-                      {variosDeptos ? (
-                        <span className="mkt-etiquetas-react">
-                          <span className={`crm-tag ${DEPTO_TAG[task.departamento] ?? ""}`}>
-                            {DEPTO_LABEL[task.departamento as Team]}
+                    // El envoltorio existe porque `motion.button` se queda con
+                    // `onDragStart`/`onDragEnd` para su propio sistema de
+                    // arrastre y nunca llegan al DOM: el tablero usa el drag
+                    // nativo del navegador, así que anima el envoltorio y la
+                    // tarjeta se queda siendo un <button> normal.
+                    <motion.div key={`${task.departamento}-${task.id}`} {...entradaTarjeta(indice)}>
+                      <button
+                        type="button"
+                        className={`mkt-task-card-react${arrastrando?.id === task.id ? " mkt-task-card-arrastrando-react" : ""}`}
+                        draggable
+                        onDragStart={(event) => {
+                          event.dataTransfer.setData(TASK_MIME, String(task.id));
+                          event.dataTransfer.effectAllowed = "move";
+                          setArrastrando(task);
+                        }}
+                        onDragEnd={() => {
+                          setArrastrando(null);
+                          setSobreColumna(null);
+                        }}
+                        onClick={() => setAbierta(task)}
+                      >
+                        {variosDeptos ? (
+                          <span className="mkt-etiquetas-react">
+                            <span className={`crm-tag ${DEPTO_TAG[task.departamento] ?? ""}`}>
+                              {DEPTO_LABEL[task.departamento as Team]}
+                            </span>
                           </span>
+                        ) : null}
+
+                        {task.tags.length > 0 ? (
+                          <span className="mkt-etiquetas-react">
+                            {task.tags.map((tag) => (
+                              <Badge key={tag} variant="secondary">
+                                {tag}
+                              </Badge>
+                            ))}
+                          </span>
+                        ) : null}
+
+                        {task.content_titulo || task.campaign_nombre ? (
+                          <span className="mkt-task-padre-react">
+                            {task.content_titulo ?? task.campaign_nombre}
+                          </span>
+                        ) : null}
+
+                        <span className="mkt-task-titulo-react">{task.titulo}</span>
+
+                        <span className="mkt-task-pie-react">
+                          <span className="mkt-task-senales-react">
+                            {task.prioridad !== "media" ? (
+                              <span
+                                className={`crm-tag${task.prioridad === "alta" ? " crm-tag-ambar-react" : ""}`}
+                              >
+                                {PRIORIDAD_LABEL[task.prioridad]}
+                              </span>
+                            ) : null}
+                            {task.deadline ? (
+                              <span
+                                className={`mkt-fecha-react${vencida ? " mkt-vencida-react" : ""}`}
+                              >
+                                {formatearFecha(task.deadline)}
+                              </span>
+                            ) : null}
+                            {task.checklist.length > 0 ? (
+                              <span className="mkt-fecha-react">
+                                {hechos}/{task.checklist.length}
+                              </span>
+                            ) : null}
+                          </span>
+
+                          <AvataresDeResponsables
+                            responsables={task.responsables}
+                            directorio={directorio}
+                            maximo={3}
+                          />
                         </span>
-                      ) : null}
-
-                      {task.tags.length > 0 ? (
-                        <span className="mkt-etiquetas-react">
-                          {task.tags.map((tag) => (
-                            <Badge key={tag} variant="secondary">
-                              {tag}
-                            </Badge>
-                          ))}
-                        </span>
-                      ) : null}
-
-                      {task.content_titulo || task.campaign_nombre ? (
-                        <span className="mkt-task-padre-react">
-                          {task.content_titulo ?? task.campaign_nombre}
-                        </span>
-                      ) : null}
-
-                      <span className="mkt-task-titulo-react">{task.titulo}</span>
-
-                      <span className="mkt-task-pie-react">
-                        <span className="mkt-task-senales-react">
-                          {task.prioridad !== "media" ? (
-                            <span
-                              className={`crm-tag${task.prioridad === "alta" ? " crm-tag-ambar-react" : ""}`}
-                            >
-                              {PRIORIDAD_LABEL[task.prioridad]}
-                            </span>
-                          ) : null}
-                          {task.deadline ? (
-                            <span
-                              className={`mkt-fecha-react${vencida ? " mkt-vencida-react" : ""}`}
-                            >
-                              {formatearFecha(task.deadline)}
-                            </span>
-                          ) : null}
-                          {task.checklist.length > 0 ? (
-                            <span className="mkt-fecha-react">
-                              {hechos}/{task.checklist.length}
-                            </span>
-                          ) : null}
-                        </span>
-
-                        <AvataresDeResponsables
-                          responsables={task.responsables}
-                          directorio={directorio}
-                          maximo={3}
-                        />
-                      </span>
-                    </button>
+                      </button>
+                    </motion.div>
                   );
                 })
               )}
