@@ -205,4 +205,7 @@ def internal_error(_error):
 
 if __name__ == "__main__":
     crear_excel_si_no_existe()
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    # El 5000 lo ocupa el "AirPlay Receiver" de macOS en algunos equipos; con
+    # PORT se levanta en otro sitio sin tocar ajustes del sistema (el proxy del
+    # dev server de Vite se apunta con VITE_API_PROXY, ver vite.config.ts).
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)), debug=True)
