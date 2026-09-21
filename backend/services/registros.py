@@ -1,8 +1,9 @@
-"""Registros del workspace: recursos, presupuesto, anuncios, reuniones, alumni.
+"""Registros del workspace: recursos, presupuesto, anuncios, reuniones, alumni
+y, para Ingeniería, decisiones técnicas y servicios.
 
-Las cinco cosas son la misma operación (listar, crear, editar, borrar filas de
+Todas son la misma operación (listar, crear, editar, borrar filas de
 una tabla, casi siempre acotadas a un departamento) sobre esquemas distintos.
-En vez de escribir cinco CRUD idénticos, cada entidad se describe con una
+En vez de escribir un CRUD idéntico por entidad, cada una se describe con una
 `Tabla` y comparte estas funciones.
 
 Deliberadamente NO es un almacén genérico tipo clave/valor: cada tabla tiene
@@ -76,10 +77,27 @@ ALUMNI = Tabla(
     orden="nombre",
 )
 
+DECISIONES = Tabla(
+    nombre="decisiones",
+    columnas=("titulo", "estado", "fecha", "contexto", "decision"),
+    orden="COALESCE(fecha, created_at::date) DESC, id DESC",
+)
+
+SERVICIOS = Tabla(
+    nombre="servicios",
+    columnas=("nombre", "tipo", "url", "responsables", "renovacion", "estado", "notas"),
+    orden="nombre",
+)
+
 RECURSO_TIPOS = ("documento", "enlace", "carpeta", "plantilla", "otro")
 PRESUPUESTO_TIPOS = ("gasto", "ingreso")
 PRESUPUESTO_ESTADOS = ("previsto", "aprobado", "pagado", "cancelado")
 ALUMNI_ESTADOS = ("pendiente", "contactado", "en_conversacion", "colabora", "descartado")
+DECISION_ESTADOS = ("propuesta", "aceptada", "descartada", "reemplazada")
+SERVICIO_TIPOS = (
+    "alojamiento", "base_datos", "dominio", "correo", "codigo", "mensajeria", "otro",
+)
+SERVICIO_ESTADOS = ("activo", "pendiente", "baja")
 
 
 def init_registros_db():
@@ -175,7 +193,37 @@ def _crear_tablas_registros():
                     updated_at TIMESTAMP NOT NULL DEFAULT NOW()
                 )
             """)
-            for tabla in (RECURSOS, PRESUPUESTO, REUNIONES, ALUMNI):
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS decisiones (
+                    id SERIAL PRIMARY KEY,
+                    departamento VARCHAR(20) NOT NULL,
+                    titulo VARCHAR(160) NOT NULL,
+                    estado VARCHAR(20) NOT NULL DEFAULT 'propuesta',
+                    fecha DATE,
+                    contexto TEXT NOT NULL DEFAULT '',
+                    decision TEXT NOT NULL DEFAULT '',
+                    creado_por VARCHAR(120) NOT NULL DEFAULT '',
+                    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+                    updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+                )
+            """)
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS servicios (
+                    id SERIAL PRIMARY KEY,
+                    departamento VARCHAR(20) NOT NULL,
+                    nombre VARCHAR(120) NOT NULL,
+                    tipo VARCHAR(20) NOT NULL DEFAULT 'otro',
+                    url TEXT NOT NULL DEFAULT '',
+                    responsables TEXT[] NOT NULL DEFAULT '{}',
+                    renovacion DATE,
+                    estado VARCHAR(20) NOT NULL DEFAULT 'activo',
+                    notas TEXT NOT NULL DEFAULT '',
+                    creado_por VARCHAR(120) NOT NULL DEFAULT '',
+                    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+                    updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+                )
+            """)
+            for tabla in (RECURSOS, PRESUPUESTO, REUNIONES, ALUMNI, DECISIONES, SERVICIOS):
                 cur.execute(
                     f"CREATE INDEX IF NOT EXISTS {tabla.nombre}_depto_idx"
                     f" ON {tabla.nombre} (departamento)"

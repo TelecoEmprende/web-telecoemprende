@@ -2819,7 +2819,9 @@ button.mkt-evento-react {
 }
 
 .reg-estado-pagado-react,
-.reg-estado-colabora-react {
+.reg-estado-colabora-react,
+.reg-estado-aceptada-react,
+.reg-estado-activo-react {
   background: var(--color-success-bg);
   color: var(--color-success-text);
 }
@@ -2827,10 +2829,19 @@ button.mkt-evento-react {
 /* Cancelado y descartado en gris: siguen en la lista como registro, pero no
    deben llamar la atención como si estuvieran vivos. */
 .reg-estado-cancelado-react,
-.reg-estado-descartado-react {
+.reg-estado-descartado-react,
+.reg-estado-descartada-react,
+.reg-estado-reemplazada-react,
+.reg-estado-baja-react {
   background: rgba(var(--color-azul-rgb), 0.2);
   color: var(--color-text-muted);
   text-decoration: line-through;
+}
+
+/* Una renovación que ya ha pasado: en rojo, no en el ámbar de "se acerca". */
+.reg-estado-caducado-react {
+  background: var(--color-error-bg);
+  color: var(--color-error-text);
 }
 
 .reg-fijado-react {

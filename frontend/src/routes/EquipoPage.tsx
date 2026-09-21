@@ -21,6 +21,7 @@ import type { Cargo, Team } from "../types/equipo";
 
 const PANELES: Panel[] = [
   "tareas", "campanas", "miembros", "recursos", "presupuesto", "reuniones", "alumni",
+  "plataforma", "decisiones", "servicios",
 ];
 
 function esPanel(seccion: Seccion): seccion is Panel {
