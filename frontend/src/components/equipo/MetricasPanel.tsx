@@ -1,9 +1,12 @@
+import { motion, useReducedMotion } from "motion/react";
 import { useEffect, useState } from "react";
 
 import { getMetricas } from "../../api/equipo";
 import { AlertBanner } from "../feedback/AlertBanner";
 import { Esqueleto } from "../feedback/Esqueleto";
 import { AvatarResponsable, etiquetaDe } from "./marketing/Avatares";
+import { Contador, FilaAnimada } from "../movimiento";
+import { SPRING_DEFAULT } from "@/components/smoothui/lib/animation";
 import type { ApiFailure } from "../../types/api";
 import type { Team } from "../../types/equipo";
 import type { MetricasClub, MiembroMetricas } from "../../types/marketing";
@@ -37,6 +40,7 @@ function ordenSemana(iso: string) {
  * en "Mi semana". Todo sale de tareas reales; no hay puntuación inventada.
  */
 export function MetricasPanel() {
+  const menos = useReducedMotion();
   const [metricas, setMetricas] = useState<MetricasClub | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -76,23 +80,24 @@ export function MetricasPanel() {
       <div className="mkt-tiles-react">
         <div className="crm-c mkt-tile-react">
           <p className="crm-k">Miembros activos</p>
-          <span className="mkt-tile-numero-react">{metricas.total_activos}</span>
+          <Contador valor={metricas.total_activos} className="mkt-tile-numero-react" />
         </div>
         <div className={`crm-c mkt-tile-react${metricas.sobrecargados > 0 ? " mkt-tile-alerta-react" : ""}`}>
           <p className="crm-k">Sobrecargados</p>
-          <span className="mkt-tile-numero-react">{metricas.sobrecargados}</span>
+          <Contador valor={metricas.sobrecargados} className="mkt-tile-numero-react" />
         </div>
         <div className={`crm-c mkt-tile-react${metricas.inactivos > 0 ? " mkt-tile-alerta-react" : ""}`}>
           <p className="crm-k">Sin tarea hace +15 días</p>
-          <span className="mkt-tile-numero-react">{metricas.inactivos}</span>
+          <Contador valor={metricas.inactivos} className="mkt-tile-numero-react" />
         </div>
         <div className="crm-c mkt-tile-react">
           <p className="crm-k">
             {metricas.pct_a_tiempo_club === null ? "Sin datos suficientes" : "Tareas a tiempo"}
           </p>
-          <span className="mkt-tile-numero-react">
-            {metricas.pct_a_tiempo_club === null ? "—" : `${metricas.pct_a_tiempo_club}%`}
-          </span>
+          <Contador
+            valor={metricas.pct_a_tiempo_club === null ? "—" : `${metricas.pct_a_tiempo_club}%`}
+            className="mkt-tile-numero-react"
+          />
         </div>
       </div>
 
@@ -100,8 +105,8 @@ export function MetricasPanel() {
         <div className="crm-c mkt-grupo-react">
           <h4 className="mkt-grupo-titulo-react">Alertas</h4>
           <ul className="mkt-miembros-react">
-            {metricas.alertas_inactividad.map((m) => (
-              <li key={m.email}>
+            {metricas.alertas_inactividad.map((m, indice) => (
+              <FilaAnimada key={m.email} como="li" indice={indice}>
                 <span className="mkt-miembro-react">
                   <AvatarResponsable email={m.email} nombre={m.nombre} />
                   <span className="mkt-miembro-datos-react">
@@ -113,10 +118,10 @@ export function MetricasPanel() {
                     </span>
                   </span>
                 </span>
-              </li>
+              </FilaAnimada>
             ))}
-            {metricas.alertas_departamento.map((a) => (
-              <li key={a.departamento}>
+            {metricas.alertas_departamento.map((a, indice) => (
+              <FilaAnimada key={a.departamento} como="li" indice={indice}>
                 <span className="mkt-miembro-react">
                   <span className="mkt-miembro-datos-react">
                     <span className="mkt-miembro-nombre-react">{DEPTO_LABEL[a.departamento]}</span>
@@ -127,7 +132,7 @@ export function MetricasPanel() {
                     </span>
                   </span>
                 </span>
-              </li>
+              </FilaAnimada>
             ))}
           </ul>
         </div>
@@ -144,9 +149,13 @@ export function MetricasPanel() {
                 {DEPTO_LABEL[depto]}
               </span>
               <div className="mkt-progreso-barra-react" aria-hidden="true">
-                <span style={{ transform: `scaleX(${pct / 100})` }} />
+                <motion.span
+                  initial={{ transform: "scaleX(0)" }}
+                  animate={{ transform: `scaleX(${pct / 100})` }}
+                  transition={menos ? { duration: 0 } : SPRING_DEFAULT}
+                />
               </div>
-              <span className="mkt-progreso-texto-react">{pct}%</span>
+              <Contador valor={`${pct}%`} className="mkt-progreso-texto-react" />
             </div>
           );
         })}
@@ -165,9 +174,13 @@ export function MetricasPanel() {
                 {ordenSemana(s.semana)}
               </span>
               <div className="mkt-progreso-barra-react" aria-hidden="true">
-                <span style={{ transform: `scaleX(${s.cerradas / maxSemanal})` }} />
+                <motion.span
+                  initial={{ transform: "scaleX(0)" }}
+                  animate={{ transform: `scaleX(${s.cerradas / maxSemanal})` }}
+                  transition={menos ? { duration: 0 } : SPRING_DEFAULT}
+                />
               </div>
-              <span className="mkt-progreso-texto-react">{s.cerradas}</span>
+              <Contador valor={s.cerradas} className="mkt-progreso-texto-react" />
             </div>
           ))}
         </div>
@@ -179,8 +192,8 @@ export function MetricasPanel() {
           <p className="mkt-vacio-react">No hay miembros activos todavía.</p>
         ) : (
           <ul className="mkt-miembros-react">
-            {metricas.miembros.map((m) => (
-              <li key={m.email}>
+            {metricas.miembros.map((m, indice) => (
+              <FilaAnimada key={m.email} como="li" indice={indice}>
                 <span className="mkt-miembro-react">
                   <AvatarResponsable email={m.email} nombre={m.nombre} />
                   <span className="mkt-miembro-datos-react">
@@ -199,7 +212,7 @@ export function MetricasPanel() {
                     {m.nivel === "verde" ? "Al día" : m.nivel === "amarillo" ? "Vigilar" : "Atención"}
                   </span>
                 </span>
-              </li>
+              </FilaAnimada>
             ))}
           </ul>
         )}

@@ -1,3 +1,4 @@
+import { motion } from "motion/react";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 
@@ -8,6 +9,7 @@ import {
   updateEquipoAcceso,
 } from "../../api/admin";
 import { AlertBanner } from "../feedback/AlertBanner";
+import { useEntradaDeFila } from "../movimiento";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
 import { Checkbox } from "../ui/checkbox";
@@ -110,6 +112,7 @@ function VpDeCheckboxes({
 }
 
 export function EquipoAccesosPanel() {
+  const entradaFila = useEntradaDeFila(false);
   const [searchParams] = useSearchParams();
   const [accesos, setAccesos] = useState<EquipoAcceso[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -323,8 +326,12 @@ export function EquipoAccesosPanel() {
               </tr>
             </thead>
             <tbody>
-              {accesos.map((acceso) => (
-                <tr key={acceso.id} className="rounded-lg bg-card align-top ring-1 ring-foreground/10">
+              {accesos.map((acceso, indice) => (
+                <motion.tr
+                  key={acceso.id}
+                  className="rounded-lg bg-card align-top ring-1 ring-foreground/10"
+                  {...entradaFila(indice)}
+                >
                   <td className="p-2">
                     <Input
                       defaultValue={acceso.nombre}
@@ -417,7 +424,7 @@ export function EquipoAccesosPanel() {
                       Eliminar
                     </Button>
                   </td>
-                </tr>
+                </motion.tr>
               ))}
               {accesos.length === 0 ? (
                 <tr>
