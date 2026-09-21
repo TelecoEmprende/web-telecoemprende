@@ -1,5 +1,8 @@
+import { motion, useReducedMotion } from "motion/react";
 import { useMemo, type ReactNode } from "react";
 
+import { Contador, FilaAnimada } from "../movimiento";
+import { EASE_OUT, SPRING_DEFAULT } from "@/components/smoothui/lib/animation";
 import type { Registro } from "../../types/admin";
 
 type AdminStatsProps = {
@@ -42,9 +45,10 @@ function StatCard({
 }) {
   return (
     <div className={`flex flex-col gap-1 rounded-[18px] border px-[18px] py-4 ${className}`}>
-      <span className={`text-[1.7rem] font-bold tracking-[-0.03em] ${valueClassName}`}>
-        {value}
-      </span>
+      <Contador
+        valor={value}
+        className={`text-[1.7rem] font-bold tracking-[-0.03em] ${valueClassName}`}
+      />
       <span className="text-[0.82rem] font-bold text-muted-foreground">{label}</span>
     </div>
   );
@@ -60,24 +64,30 @@ function ChartCard({ title, children }: { title: string; children: ReactNode }) 
 }
 
 function Breakdown({ filas, total }: { filas: [string, number][]; total: number }) {
+  const menos = useReducedMotion();
   return (
     <ul className="flex list-none flex-col gap-2.5 p-0">
-      {filas.map(([nombre, count]) => (
-        <li
+      {filas.map(([nombre, count], indice) => (
+        <FilaAnimada
           key={nombre}
+          como="li"
+          indice={indice}
           className="grid grid-cols-[minmax(110px,1.3fr)_minmax(50px,1fr)_28px] items-center gap-2.5 text-[0.86rem]"
         >
           <span className="overflow-hidden text-ellipsis whitespace-nowrap font-bold text-foreground">
             {nombre}
           </span>
           <span className="h-2 overflow-hidden rounded-full bg-[var(--color-paper-line)]">
-            <span
-              className="block h-full rounded-full bg-[var(--color-navy)]"
-              style={{ width: `${porcentaje(count, total)}%` }}
+            <motion.span
+              className="block h-full origin-left rounded-full bg-[var(--color-navy)]"
+              style={{ width: "100%" }}
+              initial={{ transform: "scaleX(0)" }}
+              animate={{ transform: `scaleX(${porcentaje(count, total) / 100})` }}
+              transition={menos ? { duration: 0 } : SPRING_DEFAULT}
             />
           </span>
-          <span className="text-right font-bold text-muted-foreground">{count}</span>
-        </li>
+          <Contador valor={count} className="text-right font-bold text-muted-foreground" />
+        </FilaAnimada>
       ))}
     </ul>
   );
@@ -89,6 +99,7 @@ function Breakdown({ filas, total }: { filas: [string, number][]; total: number 
  * sirve igual para cualquier evento futuro sin tocar este componente.
  */
 export function AdminStats({ registros }: AdminStatsProps) {
+  const menosMovimiento = useReducedMotion();
   const total = registros.length;
 
   const porEstado = useMemo(() => {
@@ -158,12 +169,23 @@ export function AdminStats({ registros }: AdminStatsProps) {
             role="img"
             aria-label={`Solicitudes por día, del ${porDia[0]?.[0]} al ${porDia[porDia.length - 1]?.[0]}`}
           >
-            {porDia.map(([dia, count]) => (
-              <span
+            {porDia.map(([dia, count], indice) => (
+              <motion.span
                 key={dia}
-                className="min-w-2 flex-[0_0_8px] rounded-t-[3px] bg-gradient-to-b from-[var(--color-orange)] to-[var(--color-gold)]"
+                className="min-w-2 flex-[0_0_8px] origin-bottom rounded-t-[3px] bg-gradient-to-b from-[var(--color-orange)] to-[var(--color-gold)]"
                 style={{ height: `${Math.max(6, (count / maxDia) * 100)}%` }}
                 title={`${dia}: ${count}`}
+                initial={{ transform: "scaleY(0)" }}
+                animate={{ transform: "scaleY(1)" }}
+                transition={
+                  menosMovimiento
+                    ? { duration: 0 }
+                    : {
+                        duration: 0.3,
+                        ease: EASE_OUT,
+                        delay: Math.min(indice * 0.012, 0.25),
+                      }
+                }
               />
             ))}
           </div>

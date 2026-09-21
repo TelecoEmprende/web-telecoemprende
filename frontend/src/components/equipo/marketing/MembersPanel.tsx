@@ -1,3 +1,4 @@
+import { motion } from "motion/react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Check, Copy, Mail } from "lucide-react";
 
@@ -6,6 +7,7 @@ import { AlertBanner } from "../../feedback/AlertBanner";
 import { Esqueleto } from "../../feedback/Esqueleto";
 import { AvatarResponsable, etiquetaDe, nivelCarga, type NivelCarga } from "./Avatares";
 import { MemberDialog } from "./MemberDialog";
+import { useEntradaDeFila } from "../../movimiento";
 import type { ApiFailure } from "../../../types/api";
 import type { Miembro } from "../../../types/marketing";
 
@@ -39,6 +41,7 @@ function Carga({ abiertas }: { abiertas: number }) {
 }
 
 export function MembersPanel() {
+  const entradaFila = useEntradaDeFila();
   const { getMiembros } = useApi();
   const depto = useDepto();
 
@@ -161,8 +164,12 @@ export function MembersPanel() {
             <span>Actividad</span>
           </div>
           <ul className="mkt-miembros-react mkt-directorio-react">
-          {visibles.map((miembro) => (
-            <li key={miembro.email} className="mkt-miembro-fila-react">
+          {visibles.map((miembro, indice) => (
+            <motion.li
+              key={miembro.email}
+              className="mkt-miembro-fila-react"
+              {...entradaFila(indice)}
+            >
               <button
                 type="button"
                 className="mkt-miembro-react"
@@ -218,7 +225,7 @@ export function MembersPanel() {
                   <span className="sr-only">Enviar email</span>
                 </a>
               </span>
-            </li>
+            </motion.li>
           ))}
           </ul>
           </div>

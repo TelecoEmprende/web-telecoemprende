@@ -5,6 +5,7 @@ import { getAdminSession, loginAdmin, logoutAdmin } from "../../api/admin";
 import { AdminLoginForm } from "../../components/admin/AdminLoginForm";
 import { AlertBanner } from "../../components/feedback/AlertBanner";
 import { Header } from "../../components/layout/Header";
+import { PanelAnimado } from "../../components/movimiento";
 import { SidebarProvider, SidebarTrigger } from "../../components/ui/sidebar";
 import type { ApiFailure } from "../../types/api";
 import { AdminSidebar, tituloDe } from "./AdminSidebar";
@@ -139,7 +140,9 @@ export function AdminLayout() {
 
           <div className="workspace-contenido-react">
             {aviso ? <AlertBanner variant={aviso.variant} message={aviso.message} /> : null}
-            <Outlet context={{ avisar, avisarError } satisfies AdminContexto} />
+            <PanelAnimado llave={pathname}>
+              <Outlet context={{ avisar, avisarError } satisfies AdminContexto} />
+            </PanelAnimado>
           </div>
         </main>
       </SidebarProvider>
