@@ -12,7 +12,12 @@ import type {
   TaskComment,
 } from "../types/marketing";
 import type { Team } from "../types/equipo";
-import type { Recurso, Registro, ResumenPresupuesto } from "../types/registros";
+import type {
+  EstadoPlataforma,
+  Recurso,
+  Registro,
+  ResumenPresupuesto,
+} from "../types/registros";
 
 /**
  * Cliente del workspace de un departamento.
@@ -121,8 +126,8 @@ export function apiDepto(depto: Team) {
 
     getSalud: () => apiRequest<{ ok: true; salud: SaludEquipo }>(`${BASE}/miembros/salud`),
 
-    // --- Registros (recursos, presupuesto, anuncios, reuniones, alumni) ---
-    // Un solo juego de métodos para las cinco: el backend las sirve con el
+    // --- Registros (recursos, presupuesto, anuncios, reuniones, alumni...) ---
+    // Un solo juego de métodos para todos: el backend los sirve con el
     // mismo CRUD y solo cambian los campos que se le mandan.
 
     listarRegistros: (recurso: Recurso) =>
@@ -138,6 +143,9 @@ export function apiDepto(depto: Team) {
 
     getResumenPresupuesto: () =>
       apiRequest<{ ok: true; resumen: ResumenPresupuesto }>(`${BASE}/presupuesto/resumen`),
+
+    // Solo responde en /api/ingenieria: para los otros dos departamentos es 404.
+    getPlataforma: () => apiRequest<{ ok: true } & EstadoPlataforma>(`${BASE}/plataforma`),
   };
 }
 

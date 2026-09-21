@@ -1,10 +1,18 @@
-/** Registros del workspace: recursos, presupuesto, anuncios, reuniones, alumni.
+/** Registros del workspace: recursos, presupuesto, anuncios, reuniones, alumni
+ *  y, de Ingeniería, decisiones técnicas y servicios.
  *
- *  Las cinco comparten CRUD en el backend (`services/registros.py`) y aquí
+ *  Comparten CRUD en el backend (`services/registros.py`) y aquí
  *  comparten panel, así que lo único propio de cada una es qué campos tiene.
  */
 
-export type Recurso = "recursos" | "presupuesto" | "anuncios" | "reuniones" | "alumni";
+export type Recurso =
+  | "recursos"
+  | "presupuesto"
+  | "anuncios"
+  | "reuniones"
+  | "alumni"
+  | "decisiones"
+  | "servicios";
 
 /** Una fila cualquiera. Los campos concretos los declara cada `CampoSpec`. */
 export type Registro = {
@@ -45,6 +53,24 @@ export type ResumenPresupuesto = {
   ingresos: string;
   pagado: string;
   balance: string;
+};
+
+/** Lo que dice `GET /api/ingenieria/plataforma`: solo sí/no y datos públicos
+ *  del despliegue, nunca el valor de una clave. */
+export type EstadoPlataforma = {
+  /** production / preview / development, o "local" fuera de Vercel. */
+  entorno: string;
+  /** Los 7 primeros caracteres del commit desplegado, o "" en local. */
+  commit: string;
+  rama: string;
+  base_de_datos: { ok: boolean; ms: number | null };
+  integraciones: {
+    nombre: string;
+    variable: string;
+    configurada: boolean;
+    /** Qué deja de funcionar si falta. */
+    efecto: string;
+  }[];
 };
 
 /** Importe en texto (viene así del backend para no perder exactitud). */
