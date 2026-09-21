@@ -4,6 +4,10 @@ export type Team = "marketing" | "eventos" | "ingenieria";
  *  puede asignar en cualquiera, esté o no dado de alta ahí. */
 export const TEAMS: Team[] = ["marketing", "eventos", "ingenieria"];
 
+/** El repositorio de la web (público). De aquí cuelgan los enlaces de
+ *  Ingeniería en el sidebar y el commit desplegado en "Plataforma". */
+export const GITHUB_REPO = "https://github.com/TelecoEmprende/web-telecoemprende";
+
 export const DEPTO_LABEL: Record<Team, string> = {
   marketing: "Marketing",
   eventos: "Eventos",

@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useApi, useDirectorio } from "../DeptoApi";
 import { RegistrosPanel } from "./RegistrosPanel";
 import { AvataresDeResponsables } from "../marketing/Avatares";
-import { formatearFecha, haceCuanto } from "../../../types/marketing";
+import { diasHasta, formatearFecha, haceCuanto } from "../../../types/marketing";
 import {
   formatearEuros,
   listaDe,
@@ -348,6 +348,202 @@ export function AlumniPanel() {
           ),
           derecha: <Enlace url={textoDe(r, "linkedin")} texto="LinkedIn" />,
           cuerpo: textoDe(r, "notas") ? <p>{textoDe(r, "notas")}</p> : null,
+        };
+      }}
+    />
+  );
+}
+
+// --------------------------------------------------------------------------
+// Decisiones técnicas (Ingeniería)
+// --------------------------------------------------------------------------
+
+const CAMPOS_DECISIONES: readonly CampoSpec[] = [
+  { clave: "titulo", etiqueta: "Título", tipo: "texto", requerido: true, esTitulo: true },
+  {
+    clave: "estado",
+    etiqueta: "Estado",
+    tipo: "opcion",
+    opciones: [
+      { valor: "propuesta", etiqueta: "Propuesta" },
+      { valor: "aceptada", etiqueta: "Aceptada" },
+      { valor: "descartada", etiqueta: "Descartada" },
+      { valor: "reemplazada", etiqueta: "Reemplazada" },
+    ],
+    ayuda: "Reemplazada: una decisión posterior la deja sin efecto.",
+  },
+  { clave: "fecha", etiqueta: "Fecha", tipo: "fecha" },
+  {
+    clave: "contexto",
+    etiqueta: "Contexto",
+    tipo: "parrafo",
+    ayuda: "El problema y las alternativas que se barajaron.",
+  },
+  {
+    clave: "decision",
+    etiqueta: "Decisión y motivos",
+    tipo: "parrafo",
+    ayuda: "Lo que habrá que saber dentro de un año, cuando ya no esté quien lo decidió.",
+  },
+];
+
+export function DecisionesPanel() {
+  return (
+    <RegistrosPanel
+      recurso="decisiones"
+      descripcion="Qué se decidió en lo técnico y por qué. Cuando cambie el equipo, esto evita rehacer la discusión desde cero."
+      vacio="Sin decisiones apuntadas. Empieza por las gordas: dónde está alojada la web, la base de datos, por qué Flask."
+      etiquetaNuevo="Nueva decisión"
+      campos={CAMPOS_DECISIONES}
+      fila={(r) => {
+        const estado = textoDe(r, "estado");
+        const contexto = textoDe(r, "contexto");
+        const decision = textoDe(r, "decision");
+        return {
+          titulo: textoDe(r, "titulo"),
+          meta: textoDe(r, "fecha") ? formatearFecha(textoDe(r, "fecha"), true) : "Sin fecha",
+          badges: (
+            <span className="mkt-tags-react">
+              <span className={`reg-estado-react reg-estado-${estado}-react`}>
+                {etiqueta(CAMPOS_DECISIONES, "estado", estado)}
+              </span>
+            </span>
+          ),
+          cuerpo:
+            contexto || decision ? (
+              <>
+                {contexto ? (
+                  <p className="reg-cuerpo-largo-react">
+                    <b>Contexto:</b> {contexto}
+                  </p>
+                ) : null}
+                {decision ? (
+                  <p className="reg-cuerpo-largo-react">
+                    <b>Decisión:</b> {decision}
+                  </p>
+                ) : null}
+              </>
+            ) : null,
+        };
+      }}
+    />
+  );
+}
+
+// --------------------------------------------------------------------------
+// Servicios e infraestructura (Ingeniería)
+// --------------------------------------------------------------------------
+
+const CAMPOS_SERVICIOS: readonly CampoSpec[] = [
+  { clave: "nombre", etiqueta: "Servicio", tipo: "texto", requerido: true, esTitulo: true },
+  {
+    clave: "tipo",
+    etiqueta: "Tipo",
+    tipo: "opcion",
+    opciones: [
+      { valor: "alojamiento", etiqueta: "Alojamiento" },
+      { valor: "base_datos", etiqueta: "Base de datos" },
+      { valor: "dominio", etiqueta: "Dominio / DNS" },
+      { valor: "correo", etiqueta: "Correo" },
+      { valor: "codigo", etiqueta: "Código" },
+      { valor: "mensajeria", etiqueta: "Mensajería" },
+      { valor: "otro", etiqueta: "Otro" },
+    ],
+  },
+  {
+    clave: "estado",
+    etiqueta: "Estado",
+    tipo: "opcion",
+    opciones: [
+      { valor: "activo", etiqueta: "Activo" },
+      { valor: "pendiente", etiqueta: "Pendiente de configurar" },
+      { valor: "baja", etiqueta: "Dado de baja" },
+    ],
+  },
+  {
+    clave: "url",
+    etiqueta: "Panel",
+    tipo: "url",
+    ayuda: "Donde se gestiona: el dashboard, no la web pública.",
+  },
+  {
+    clave: "responsables",
+    etiqueta: "Responsables",
+    tipo: "miembros",
+    ayuda: "Quién tiene el acceso y sabe tocarlo.",
+  },
+  {
+    clave: "renovacion",
+    etiqueta: "Renovación",
+    tipo: "fecha",
+    ayuda: "Dominios y planes de pago: el día en que caducan.",
+  },
+  {
+    clave: "notas",
+    etiqueta: "Notas",
+    tipo: "parrafo",
+    ayuda: "Qué hay ahí y qué hay que saber. Nunca pegues aquí contraseñas ni claves.",
+  },
+];
+
+/** Días de margen para avisar de una renovación. Un dominio que caduca sin
+ *  que nadie se entere es el clásico de los clubes.
+ *  ponytail: el aviso solo se ve al abrir el panel; si nadie lo abre no sirve
+ *  de nada. Cuando pese, engancharlo a `backend/api/cron.py` (ya avisa a Slack). */
+const AVISO_RENOVACION_DIAS = 30;
+
+export function ServiciosPanel() {
+  const directorio = useDirectorio();
+  return (
+    <RegistrosPanel
+      recurso="servicios"
+      descripcion="Dónde vive cada cosa, quién tiene la llave y cuándo caduca. Sin contraseñas: eso va al gestor del equipo."
+      vacio="Sin servicios apuntados. Empieza por lo que ya usáis: Vercel, Supabase, el dominio, Resend, Slack."
+      etiquetaNuevo="Nuevo servicio"
+      campos={CAMPOS_SERVICIOS}
+      fila={(r) => {
+        const estado = textoDe(r, "estado");
+        const responsables = listaDe(r, "responsables");
+        const renovacion = textoDe(r, "renovacion");
+        const dias = diasHasta(renovacion || null);
+        const vigilar = estado !== "baja" && dias !== null && dias <= AVISO_RENOVACION_DIAS;
+        return {
+          titulo: textoDe(r, "nombre"),
+          meta: [
+            etiqueta(CAMPOS_SERVICIOS, "tipo", textoDe(r, "tipo")),
+            renovacion ? `renueva ${formatearFecha(renovacion, true)}` : "",
+          ]
+            .filter(Boolean)
+            .join(" · "),
+          badges: (
+            <span className="mkt-tags-react">
+              <span className={`reg-estado-react reg-estado-${estado}-react`}>
+                {etiqueta(CAMPOS_SERVICIOS, "estado", estado)}
+              </span>
+              {vigilar ? (
+                <span
+                  className={`reg-estado-react${dias < 0 ? " reg-estado-caducado-react" : ""}`}
+                >
+                  {dias < 0
+                    ? "Caducado"
+                    : dias === 0
+                      ? "Renueva hoy"
+                      : `Renueva en ${dias} d`}
+                </span>
+              ) : null}
+            </span>
+          ),
+          derecha: (
+            <>
+              {responsables.length > 0 ? (
+                <AvataresDeResponsables responsables={responsables} directorio={directorio} />
+              ) : null}
+              <Enlace url={textoDe(r, "url")} texto="Panel" />
+            </>
+          ),
+          cuerpo: textoDe(r, "notas") ? (
+            <p className="reg-cuerpo-largo-react">{textoDe(r, "notas")}</p>
+          ) : null,
         };
       }}
     />

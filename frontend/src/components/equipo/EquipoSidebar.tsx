@@ -1,15 +1,19 @@
 import type { LucideIcon } from "lucide-react";
 import {
+  Activity,
   BarChart3,
   CalendarDays,
   ExternalLink,
   FolderOpen,
+  GitBranch,
   Handshake,
   Home,
   KanbanSquare,
   LogOut,
   Megaphone,
   Megaphone as Anuncio,
+  ScrollText,
+  ServerCog,
   Settings,
   Users,
   Users2,
@@ -31,7 +35,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { AvatarResponsable, etiquetaDe } from "./marketing/Avatares";
-import type { Cargo, Team } from "../../types/equipo";
+import { GITHUB_REPO, type Cargo, type Team } from "../../types/equipo";
 
 /** Una entrada de la navegación: un panel, no un par departamento+panel. Antes
  *  cada departamento repetía su propio "Tareas"/"Campañas"/"Miembros" en el
@@ -47,19 +51,24 @@ export type Panel =
   | "recursos"
   | "presupuesto"
   | "reuniones"
-  | "alumni";
+  | "alumni"
+  | "plataforma"
+  | "decisiones"
+  | "servicios";
 
 export type Seccion = "club" | "metricas" | "calendario" | "anuncios" | Panel;
 
 /** Qué panel tiene cada departamento. Los tres comparten Tareas, Recursos y
  *  Miembros; Campañas es de Marketing/Eventos (Ingeniería no tiene, ver
- *  `docs/CLAUDE.md`); Presupuesto es de quien mueve dinero (Eventos) y Alumni
- *  de Ingeniería. Esto decide qué panel aparece (`seccionesDe`) y qué
+ *  `docs/CLAUDE.md`); Presupuesto es de quien mueve dinero (Eventos) y Alumni,
+ *  Plataforma, Servicios y Decisiones de Ingeniería. Esto decide qué panel aparece (`seccionesDe`) y qué
  *  departamentos ofrece el filtro dentro de cada uno (`equiposConPanel`). */
 const PANELES_POR_EQUIPO: Record<Team, Panel[]> = {
   marketing: ["campanas", "tareas", "recursos", "miembros"],
   eventos: ["campanas", "tareas", "recursos", "presupuesto", "reuniones", "miembros"],
-  ingenieria: ["tareas", "alumni", "reuniones", "recursos", "miembros"],
+  ingenieria: [
+    "tareas", "plataforma", "servicios", "decisiones", "alumni", "reuniones", "recursos", "miembros",
+  ],
 };
 
 const ICONO: Record<Panel, LucideIcon> = {
@@ -70,6 +79,9 @@ const ICONO: Record<Panel, LucideIcon> = {
   presupuesto: Wallet,
   reuniones: Users2,
   alumni: Handshake,
+  plataforma: Activity,
+  decisiones: ScrollText,
+  servicios: ServerCog,
 };
 
 /** Etiqueta del panel en el sidebar: siempre la misma, para todo el mundo,
@@ -85,6 +97,9 @@ const ETIQUETA_PANEL: Record<Panel, string> = {
   presupuesto: "Presupuesto",
   reuniones: "Reuniones",
   alumni: "Red Alumni",
+  plataforma: "Plataforma",
+  decisiones: "Decisiones",
+  servicios: "Servicios",
 };
 
 /** Qué departamentos de la persona tienen este panel -- para el filtro
@@ -117,6 +132,9 @@ export function seccionesDe(teams: Team[]): Item[] {
     ...item("recursos"),
     ...item("reuniones"),
     ...item("alumni"),
+    ...item("plataforma"),
+    ...item("servicios"),
+    ...item("decisiones"),
   ];
 }
 
@@ -279,6 +297,17 @@ export function EquipoSidebar({
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
+          {teams.includes("ingenieria") ? (
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild tooltip={ayuda("GitHub")}>
+                <a href={GITHUB_REPO} target="_blank" rel="noreferrer noopener">
+                  <GitBranch />
+                  <span>GitHub</span>
+                  <span className="sr-only">(se abre en otra pestaña)</span>
+                </a>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          ) : null}
           <SidebarMenuItem>
             <SidebarMenuButton
               tooltip={ayuda("Cerrar sesión")}

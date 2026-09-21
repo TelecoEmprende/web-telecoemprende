@@ -5,7 +5,8 @@ así que heredan su autorización y su `departamento_actual()` sin montar un
 sistema aparte.
 
 Cada entidad declara qué campos acepta y cómo se validan; el CRUD en sí lo
-resuelve `_montar_rutas`, que es la misma para las cinco.
+resuelve `_montar_rutas`, que es la misma para todas. Aquí cuelga también
+`/plataforma`, que no es un registro pero comparte blueprint y autorización.
 """
 
 from flask import jsonify, request
@@ -22,9 +23,24 @@ from backend.api.marketing import (
     marketing_api,
     requiere_equipo,
 )
-from backend.config import MAX_ENLACES, MAX_TEXTO_LARGO_LEN, MAX_TITULO_LEN
+from backend.config import (
+    MAX_ENLACES,
+    MAX_RESPONSABLES,
+    MAX_TEXTO_LARGO_LEN,
+    MAX_TITULO_LEN,
+)
 from backend.schemas import build_response
 from backend.services import registros as reg
+from backend.services.plataforma import estado_plataforma
+
+
+def _url(datos: dict, clave: str) -> str:
+    """Enlace http(s), o vacío. Lo que acaba en un `<a href>` no puede ser un
+    `javascript:` ni un `data:` guardado por alguien del equipo."""
+    valor = _texto(datos, clave, maximo=600)
+    if valor and not valor.lower().startswith(("http://", "https://")):
+        raise DatosInvalidos(f"'{clave}' tiene que empezar por http:// o https://.")
+    return valor
 
 
 def _importe(datos: dict, clave: str) -> str:
@@ -54,7 +70,7 @@ def _campos_recurso(datos: dict) -> dict:
     if "tipo" in datos:
         salida["tipo"] = _opcion(datos, "tipo", reg.RECURSO_TIPOS, "enlace")
     if "url" in datos:
-        salida["url"] = _texto(datos, "url", maximo=600)
+        salida["url"] = _url(datos, "url")
     if "notas" in datos:
         salida["notas"] = _texto(datos, "notas", maximo=MAX_TEXTO_LARGO_LEN, multilinea=True)
     return salida
@@ -116,13 +132,47 @@ def _campos_alumni(datos: dict) -> dict:
     if "nombre" in datos:
         salida["nombre"] = _texto(datos, "nombre", obligatorio=True, maximo=120)
     for clave, maximo in (
-        ("promocion", 20), ("empresa", 120), ("puesto", 120),
-        ("email", 120), ("linkedin", 600),
+        ("promocion", 20), ("empresa", 120), ("puesto", 120), ("email", 120),
     ):
         if clave in datos:
             salida[clave] = _texto(datos, clave, maximo=maximo)
+    if "linkedin" in datos:
+        salida["linkedin"] = _url(datos, "linkedin")
     if "estado" in datos:
         salida["estado"] = _opcion(datos, "estado", reg.ALUMNI_ESTADOS, "pendiente")
+    if "notas" in datos:
+        salida["notas"] = _texto(datos, "notas", maximo=MAX_TEXTO_LARGO_LEN, multilinea=True)
+    return salida
+
+
+def _campos_decision(datos: dict) -> dict:
+    salida = {}
+    if "titulo" in datos:
+        salida["titulo"] = _texto(datos, "titulo", obligatorio=True, maximo=MAX_TITULO_LEN)
+    if "estado" in datos:
+        salida["estado"] = _opcion(datos, "estado", reg.DECISION_ESTADOS, "propuesta")
+    if "fecha" in datos:
+        salida["fecha"] = _fecha(datos, "fecha")
+    for clave in ("contexto", "decision"):
+        if clave in datos:
+            salida[clave] = _texto(datos, clave, maximo=MAX_TEXTO_LARGO_LEN, multilinea=True)
+    return salida
+
+
+def _campos_servicio(datos: dict) -> dict:
+    salida = {}
+    if "nombre" in datos:
+        salida["nombre"] = _texto(datos, "nombre", obligatorio=True, maximo=120)
+    if "tipo" in datos:
+        salida["tipo"] = _opcion(datos, "tipo", reg.SERVICIO_TIPOS, "otro")
+    if "url" in datos:
+        salida["url"] = _url(datos, "url")
+    if "responsables" in datos:
+        salida["responsables"] = _lista_textos(datos, "responsables", MAX_RESPONSABLES)
+    if "renovacion" in datos:
+        salida["renovacion"] = _fecha(datos, "renovacion")
+    if "estado" in datos:
+        salida["estado"] = _opcion(datos, "estado", reg.SERVICIO_ESTADOS, "activo")
     if "notas" in datos:
         salida["notas"] = _texto(datos, "notas", maximo=MAX_TEXTO_LARGO_LEN, multilinea=True)
     return salida
@@ -183,6 +233,8 @@ _montar_rutas("presupuesto", reg.PRESUPUESTO, _campos_presupuesto, "concepto")
 _montar_rutas("anuncios", reg.ANUNCIOS, _campos_anuncio, "titulo")
 _montar_rutas("reuniones", reg.REUNIONES, _campos_reunion, "titulo")
 _montar_rutas("alumni", reg.ALUMNI, _campos_alumni, "nombre")
+_montar_rutas("decisiones", reg.DECISIONES, _campos_decision, "titulo")
+_montar_rutas("servicios", reg.SERVICIOS, _campos_servicio, "nombre")
 
 
 @marketing_api.route("/presupuesto/resumen", methods=["GET"])
@@ -190,3 +242,14 @@ _montar_rutas("alumni", reg.ALUMNI, _campos_alumni, "nombre")
 def api_presupuesto_resumen():
     reg.init_registros_db()
     return jsonify({"ok": True, "resumen": reg.resumen_presupuesto(departamento_actual())}), 200
+
+
+@marketing_api.route("/plataforma", methods=["GET"])
+@requiere_equipo
+def api_plataforma():
+    """Estado del despliegue y de las integraciones. Solo Ingeniería: las
+    rutas cuelgan del blueprint de los tres departamentos, y esto no es cosa
+    de Marketing ni de Eventos."""
+    if departamento_actual() != "ingenieria":
+        return jsonify(build_response(False, "No encontrado.")), 404
+    return jsonify({"ok": True, **estado_plataforma()}), 200

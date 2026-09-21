@@ -23,6 +23,7 @@ const getTaskComments = vi.fn();
 const createTaskComment = vi.fn();
 const getCalendarioEquipo = vi.fn();
 const getTask = vi.fn();
+const getPlataforma = vi.fn();
 
 // El módulo ya no exporta funciones sueltas sino una factoría por
 // departamento (Marketing y Eventos comparten paneles). `apiDepto` guarda el
@@ -56,6 +57,7 @@ vi.mock("../../api/marketing", () => ({
       getFichaMiembro: (...args: unknown[]) => getFichaMiembro(...args),
       getSalud: (...args: unknown[]) => getSalud(...args),
       listarRegistros: (...args: unknown[]) => listarRegistros(...args),
+      getPlataforma: (...args: unknown[]) => getPlataforma(...args),
       crearRegistro: vi.fn(),
       actualizarRegistro: vi.fn(),
       eliminarRegistro: vi.fn(),
@@ -1051,5 +1053,152 @@ describe("/equipo — panel de Eventos", () => {
 
     expect(screen.getByRole("heading", { level: 2, name: "Proyectos" })).toBeInTheDocument();
     await waitFor(() => expect(new Set(deptosPedidos)).toEqual(new Set(["marketing"])));
+  });
+});
+
+const REPO = "https://github.com/TelecoEmprende/web-telecoemprende";
+
+const PLATAFORMA = {
+  ok: true,
+  entorno: "production",
+  commit: "24c1de7",
+  rama: "prod",
+  base_de_datos: { ok: true, ms: 12 },
+  integraciones: [
+    { nombre: "Sesiones", variable: "FLASK_SECRET_KEY", configurada: true, efecto: "Las sesiones se caen." },
+    { nombre: "Correo (Resend)", variable: "RESEND_API_KEY", configurada: false, efecto: "No salen los correos." },
+  ],
+};
+
+const SERVICIO = (extra: Record<string, unknown>) => ({
+  id: 1,
+  nombre: "Vercel",
+  tipo: "alojamiento",
+  url: "",
+  responsables: [],
+  renovacion: "",
+  estado: "activo",
+  notas: "",
+  creado_por: YO,
+  created_at: "2026-09-06T10:00:00",
+  updated_at: "2026-09-06T10:00:00",
+  ...extra,
+});
+
+/** Lo que devuelve `listarRegistros` para un recurso concreto y vacío para el
+ *  resto: cada panel pide el suyo y no debe ver filas de otro. */
+function registrosDe(recurso: string, filas: unknown[]) {
+  listarRegistros.mockImplementation((pedido: string) =>
+    Promise.resolve({ ok: true, [pedido]: pedido === recurso ? filas : [] }),
+  );
+}
+
+describe("/equipo — Ingeniería", () => {
+  beforeEach(() => {
+    teamsDeSesion = ["ingenieria"];
+    vpDeSesion = [];
+    deptosPedidos.length = 0;
+    getCalendarioEquipo
+      .mockReset()
+      .mockResolvedValue({ ok: true, desde: "", hasta: "", items: [] });
+    getMiembros.mockReset().mockResolvedValue({ ok: true, miembros: [] });
+    getPlataforma.mockReset().mockResolvedValue(PLATAFORMA);
+    registrosDe("", []);
+  });
+
+  it("tiene un botón de GitHub que abre el repositorio fuera y sin pasar el referer", async () => {
+    await renderMarketing();
+
+    const github = screen.getByRole("link", { name: /GitHub/ });
+    expect(github).toHaveAttribute("href", REPO);
+    expect(github).toHaveAttribute("target", "_blank");
+    expect(github.getAttribute("rel")).toMatch(/noopener/);
+    expect(github.getAttribute("rel")).toMatch(/noreferrer/);
+    // Avisa a quien lee con lector de pantalla de que sale de la página.
+    expect(github).toHaveTextContent("se abre en otra pestaña");
+  });
+
+  it("quien no es de Ingeniería no ve GitHub ni sus paneles", async () => {
+    teamsDeSesion = ["marketing"];
+    vpDeSesion = ["marketing"];
+
+    await renderMarketing();
+
+    expect(screen.queryByRole("link", { name: /GitHub/ })).not.toBeInTheDocument();
+    for (const nombre of ["Plataforma", "Servicios", "Decisiones"]) {
+      expect(screen.queryByRole("button", { name: nombre })).not.toBeInTheDocument();
+    }
+  });
+
+  it("Plataforma enseña el estado y enlaza el commit desplegado con GitHub", async () => {
+    await renderMarketing();
+    await userEvent.click(screen.getByRole("button", { name: "Plataforma" }));
+
+    const commit = await screen.findByRole("link", { name: /Ver el commit en GitHub/ });
+    expect(commit).toHaveAttribute("href", `${REPO}/commit/24c1de7`);
+    expect(screen.getByText("24c1de7")).toBeInTheDocument();
+    expect(screen.getByText("12 ms")).toBeInTheDocument();
+    // Lo que falta dice qué variable poner y qué se rompe sin ella.
+    expect(screen.getByText(/No salen los correos\. Falta RESEND_API_KEY/)).toBeInTheDocument();
+    // La ruta es de Ingeniería: la pide con su cliente, no con el de otro depto.
+    expect(deptosPedidos.at(-1)).toBe("ingenieria");
+  });
+
+  it("Plataforma dice que la base de datos no contesta, sin quedarse en OK", async () => {
+    getPlataforma.mockResolvedValue({ ...PLATAFORMA, base_de_datos: { ok: false, ms: null } });
+
+    await renderMarketing();
+    await userEvent.click(screen.getByRole("button", { name: "Plataforma" }));
+
+    expect(await screen.findByText("Sin respuesta")).toBeInTheDocument();
+  });
+
+  it("Plataforma enseña el error si la comprobación falla, en vez de dejar la pantalla vacía", async () => {
+    getPlataforma.mockRejectedValue({ message: "No autorizado." });
+
+    await renderMarketing();
+    await userEvent.click(screen.getByRole("button", { name: "Plataforma" }));
+
+    expect(await screen.findByText("No autorizado.")).toBeInTheDocument();
+  });
+
+  it("Servicios avisa de lo que caduca pronto o ya caducó, y no de lo lejano ni de lo dado de baja", async () => {
+    registrosDe("servicios", [
+      SERVICIO({ id: 1, nombre: "Dominio telecoemprende.es", renovacion: enDias(10) }),
+      SERVICIO({ id: 2, nombre: "Plan de Resend", renovacion: enDias(-3) }),
+      SERVICIO({ id: 3, nombre: "Supabase", renovacion: enDias(200) }),
+      SERVICIO({ id: 4, nombre: "Netlify viejo", renovacion: enDias(-90), estado: "baja" }),
+    ]);
+
+    await renderMarketing();
+    await userEvent.click(screen.getByRole("button", { name: "Servicios" }));
+
+    expect(await screen.findByText("Renueva en 10 d")).toBeInTheDocument();
+    expect(screen.getByText("Caducado")).toBeInTheDocument();
+    expect(screen.getAllByText(/^Renueva en|^Caducado$/)).toHaveLength(2);
+  });
+
+  it("Decisiones enseña el estado y separa el contexto de la decisión", async () => {
+    registrosDe("decisiones", [
+      {
+        id: 1,
+        titulo: "Postgres en Supabase",
+        estado: "aceptada",
+        fecha: "2026-09-01",
+        contexto: "Hacía falta una base de datos gratis.",
+        decision: "Supabase, por el plan gratuito.",
+        creado_por: YO,
+        created_at: "2026-09-06T10:00:00",
+        updated_at: "2026-09-06T10:00:00",
+      },
+    ]);
+
+    await renderMarketing();
+    await userEvent.click(screen.getByRole("button", { name: "Decisiones" }));
+
+    expect(await screen.findByText("Postgres en Supabase")).toBeInTheDocument();
+    expect(screen.getByText("Aceptada")).toBeInTheDocument();
+    expect(screen.getByText(/Hacía falta una base de datos gratis/)).toBeInTheDocument();
+    expect(screen.getByText(/Supabase, por el plan gratuito/)).toBeInTheDocument();
   });
 });
