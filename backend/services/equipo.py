@@ -1,8 +1,11 @@
+import base64
 from io import BytesIO
 
 import psycopg2
 from fpdf import FPDF
 from flask import session
+from openpyxl import Workbook
+from openpyxl.drawing.image import Image as XLImage
 from psycopg2.extras import Json
 from werkzeug.security import check_password_hash, generate_password_hash
 
@@ -12,6 +15,7 @@ from backend.config import (
     EQUIPO_CON_PERMISOS_ADMIN,
     EQUIPOS_VALIDOS,
 )
+from backend.services.registrations import _celda_segura
 
 # Hash "de relleno" para cuando el email no existe: sin esto, saltarse
 # check_password_hash en ese caso haría que la respuesta fuera más rápida
@@ -108,6 +112,12 @@ def _crear_tablas_equipo():
             cur.execute("""
                 ALTER TABLE equipo_accesos
                 ADD COLUMN IF NOT EXISTS foto TEXT NOT NULL DEFAULT ''
+            """)
+            # Apellidos aparte de `nombre` (que es el nombre para mostrar): los
+            # pide la ficha de datos personales (`/equipo/datosformulario`).
+            cur.execute("""
+                ALTER TABLE equipo_accesos
+                ADD COLUMN IF NOT EXISTS apellidos VARCHAR(80) NOT NULL DEFAULT ''
             """)
             cur.execute("""
                 ALTER TABLE equipo_accesos
@@ -241,7 +251,7 @@ def listar_equipo_accesos() -> list[dict]:
                 """
                 SELECT id, email, equipos, vp_de, cargo, activo, created_at,
                        tags, notas, nombre, onboarding, dni, correo_personal,
-                       mentor_email, foto
+                       mentor_email, foto, apellidos
                 FROM equipo_accesos ORDER BY email
                 """
             )
@@ -264,6 +274,7 @@ def listar_equipo_accesos() -> list[dict]:
             "correo_personal": f[12],
             "mentor_email": f[13],
             "foto": f[14],
+            "apellidos": f[15],
         }
         for f in filas
     ]
@@ -306,6 +317,86 @@ def generar_pdf_equipo_en_memoria() -> BytesIO:
         pdf.ln()
 
     return BytesIO(bytes(pdf.output()))
+
+
+def generar_excel_equipo_en_memoria() -> BytesIO:
+    """Datos personales de todo el equipo (lo que cada cual rellena en
+    `/equipo/datosformulario`) con sus departamentos y cargo, y la foto
+    incrustada en la última columna -- ver `api/admin.py`."""
+    accesos = listar_equipo_accesos()
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Equipo"
+    ws.append([
+        "Nombre", "Apellidos", "DNI/NIE/Pasaporte", "Correo de contacto",
+        "Email de acceso", "Departamentos", "VP de", "Cargo", "Activo", "Foto",
+    ])
+    for col, ancho in zip("ABCDEFGHIJ", (20, 25, 18, 32, 32, 30, 20, 14, 8, 12)):
+        ws.column_dimensions[col].width = ancho
+
+    for fila, a in enumerate(accesos, start=2):
+        ws.append([
+            _celda_segura(a["nombre"]),
+            _celda_segura(a["apellidos"]),
+            _celda_segura(a["dni"]),
+            _celda_segura(a["correo_personal"]),
+            _celda_segura(a["email"]),
+            ", ".join(a["equipos"]),
+            ", ".join(a["vp_de"]),
+            a["cargo"],
+            "Sí" if a["activo"] else "No",
+        ])
+        if a["foto"]:
+            # La foto ya pasó `_foto` al guardarse (data URL validado), así que
+            # aquí basta con decodificarla.
+            imagen = XLImage(BytesIO(base64.b64decode(a["foto"].split(",", 1)[1])))
+            imagen.width = imagen.height = 64
+            ws.add_image(imagen, f"J{fila}")
+            ws.row_dimensions[fila].height = 50
+
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+    return output
+
+
+def datos_formulario(email: str) -> dict | None:
+    with _get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT nombre, apellidos, dni, correo_personal, foto
+                FROM equipo_accesos WHERE email = %s
+                """,
+                (email.strip().lower(),),
+            )
+            f = cur.fetchone()
+    if f is None:
+        return None
+    return {"nombre": f[0], "apellidos": f[1], "dni": f[2], "correo": f[3], "foto": f[4]}
+
+
+def guardar_datos_formulario(
+    email: str, nombre: str, apellidos: str, dni: str, correo: str, foto: str | None
+) -> bool:
+    """Ficha que rellena la propia persona. `foto=None` deja la que ya tenía
+    (no hace falta volver a subirla para corregir un apellido)."""
+    campos = ["nombre = %s", "apellidos = %s", "dni = %s", "correo_personal = %s"]
+    valores: list = [nombre, apellidos, dni, correo]
+    if foto is not None:
+        campos.append("foto = %s")
+        valores.append(foto)
+    valores.append(email.strip().lower())
+    with _get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                f"UPDATE equipo_accesos SET {', '.join(campos)} WHERE email = %s",
+                valores,
+            )
+            actualizado = cur.rowcount > 0
+        conn.commit()
+    return actualizado
 
 
 def miembros_activos(equipo: str) -> list[dict]:

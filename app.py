@@ -112,6 +112,7 @@ def admin(_vista: str = ""):
 
 
 @app.route("/equipo", methods=["GET"])
+@app.route("/equipo/datosformulario", methods=["GET"])
 def equipo():
     return serve_frontend_index()
 
