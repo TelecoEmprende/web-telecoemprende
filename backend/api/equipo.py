@@ -1,22 +1,28 @@
 import logging
+import re
 from datetime import date, timedelta
 
 from flask import Blueprint, jsonify, request, session
 
 from backend.api.admin import _validar_evento_calendario
+from backend.api.marketing import DatosInvalidos, _foto
 from backend.config import (
     CARGOS_VALIDOS,
     EQUIPOS_VALIDOS,
     LOGIN_BLOCK_WINDOW_SECONDS,
+    MAX_DNI_LEN,
     MAX_EMAIL_LEN,
     MAX_LOGIN_ATTEMPTS_PER_WINDOW,
+    MAX_NOMBRE_EQUIPO_LEN,
 )
 from backend.schemas import build_response
 from backend.services.admin import is_admin_authenticated
 from backend.services.equipo import (
     confirmar_evento_calendario,
     crear_evento_calendario,
+    datos_formulario,
     equipo_session_info,
+    guardar_datos_formulario,
     init_equipo_db,
     is_equipo_authenticated,
     listar_directorio_club,
@@ -33,7 +39,12 @@ from backend.services.marketing import (
     mis_campanas,
     mis_tareas,
 )
-from backend.services.security import demasiadas_peticiones, limpiar_texto, obtener_ip_real
+from backend.services.security import (
+    demasiadas_peticiones,
+    email_valido,
+    limpiar_texto,
+    obtener_ip_real,
+)
 
 logger = logging.getLogger("telecoemprende.equipo")
 
@@ -328,3 +339,60 @@ def api_equipo_metricas():
     dias = max(7, min(dias, 180))
 
     return jsonify({"ok": True, "metricas": metricas_club(dias)}), 200
+
+
+# DNI, NIE o pasaporte: letras y números, sin espacios ni guiones (se quitan
+# antes de validar). No se comprueba la letra de control -- un pasaporte
+# extranjero no la tiene.
+_DOCUMENTO_RE = re.compile(rf"^[A-Z0-9]{{5,{MAX_DNI_LEN}}}$")
+
+
+@equipo_api.route("/datos-formulario", methods=["GET"])
+def api_equipo_datos_formulario():
+    """Ficha de datos personales de la propia persona (`/equipo/datosformulario`).
+    Solo la suya: el email sale de la sesión, nunca del payload."""
+    if not is_equipo_authenticated():
+        return jsonify(build_response(False, "No autorizado.")), 401
+
+    init_equipo_db()
+    email = session.get("equipo_email", "")
+    datos = datos_formulario(email)
+    if datos is None:
+        return jsonify(build_response(False, "Cuenta no encontrada.")), 404
+    return jsonify({"ok": True, "email": email, **datos}), 200
+
+
+@equipo_api.route("/datos-formulario", methods=["PUT"])
+def api_equipo_guardar_datos_formulario():
+    if not is_equipo_authenticated():
+        return jsonify(build_response(False, "No autorizado.")), 401
+
+    init_equipo_db()
+    payload = request.get_json(silent=True) or {}
+    nombre = limpiar_texto(str(payload.get("nombre", "")))
+    apellidos = limpiar_texto(str(payload.get("apellidos", "")))
+    dni = re.sub(r"[\s-]", "", str(payload.get("dni", ""))).upper()
+    correo = limpiar_texto(str(payload.get("correo", ""))).lower()
+
+    if not nombre or not apellidos:
+        return jsonify(build_response(False, "Nombre y apellidos son obligatorios.")), 400
+    if len(nombre) > MAX_NOMBRE_EQUIPO_LEN or len(apellidos) > MAX_NOMBRE_EQUIPO_LEN:
+        return jsonify(build_response(False, "Nombre o apellidos demasiado largos.")), 400
+    if not _DOCUMENTO_RE.match(dni):
+        return jsonify(build_response(False, "Introduce un DNI, NIE o pasaporte válido.")), 400
+    if not email_valido(correo) or len(correo) > MAX_EMAIL_LEN:
+        return jsonify(build_response(False, "Introduce un correo válido.")), 400
+
+    try:
+        # Sin `foto` en el payload se conserva la que ya había.
+        foto = _foto(payload) if "foto" in payload else None
+    except DatosInvalidos as error:
+        return jsonify(build_response(False, str(error))), 400
+
+    email = session.get("equipo_email", "")
+    if not guardar_datos_formulario(email, nombre, apellidos, dni, correo, foto):
+        return jsonify(build_response(False, "Cuenta no encontrada.")), 404
+    # Que el pie del sidebar enseñe ya el nombre nuevo, sin volver a entrar.
+    session["equipo_nombre"] = nombre
+    logger.info("equipo guarda datos formulario")
+    return jsonify(build_response(True, "Datos guardados. ¡Gracias!")), 200
