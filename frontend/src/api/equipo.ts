@@ -101,3 +101,24 @@ export function getMetricas(diasPeriodo = 30) {
     `/api/equipo/metricas?dias=${diasPeriodo}`,
   );
 }
+
+export type DatosFormulario = {
+  nombre: string;
+  apellidos: string;
+  dni: string;
+  correo: string;
+  foto: string;
+};
+
+/** Ficha de datos personales de la propia persona (`/equipo/datosformulario`). */
+export function getDatosFormulario() {
+  return apiRequest<ApiResult & DatosFormulario & { email: string }>("/api/equipo/datos-formulario");
+}
+
+/** Sin `foto` se conserva la que ya había guardada. */
+export function guardarDatosFormulario(datos: Omit<DatosFormulario, "foto"> & { foto?: string }) {
+  return apiRequest<ApiResult>("/api/equipo/datos-formulario", {
+    method: "PUT",
+    body: JSON.stringify(datos),
+  });
+}
