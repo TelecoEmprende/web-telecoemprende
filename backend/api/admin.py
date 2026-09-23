@@ -29,6 +29,7 @@ from backend.services.equipo import (
     crear_evento_calendario,
     eliminar_equipo_acceso,
     eliminar_evento_calendario,
+    generar_excel_equipo_en_memoria,
     generar_pdf_equipo_en_memoria,
     init_equipo_db,
     listar_equipo_accesos,
@@ -584,6 +585,20 @@ def api_admin_equipo_pdf():
         as_attachment=True,
         download_name="miembros_equipo.pdf",
         mimetype="application/pdf",
+    )
+
+
+@admin_api.route("/equipo/excel", methods=["GET"])
+def api_admin_equipo_excel():
+    if not is_admin_authenticated():
+        return access_denied_response("No autorizado.", 401)
+
+    init_equipo_db()
+    return send_file(
+        generar_excel_equipo_en_memoria(),
+        as_attachment=True,
+        download_name="datos_equipo.xlsx",
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     )
 
 

@@ -338,9 +338,15 @@ export function EquipoAccesosPanel() {
             de administración al iniciar sesión en /equipo.
           </p>
         </div>
-        <Button type="button" variant="outline" size="sm" asChild>
-          <a href="/api/admin/equipo/pdf">Descargar PDF</a>
-        </Button>
+        <div className="flex gap-2">
+          <Button type="button" variant="outline" size="sm" asChild>
+            <a href="/api/admin/equipo/pdf">Descargar PDF</a>
+          </Button>
+          {/* Datos de /equipo/datosformulario, con departamentos, cargo y foto. */}
+          <Button type="button" variant="outline" size="sm" asChild>
+            <a href="/api/admin/equipo/excel">Descargar Excel</a>
+          </Button>
+        </div>
       </div>
 
       {message ? <AlertBanner variant={messageVariant} message={message} /> : null}
