@@ -1,0 +1,660 @@
+/* /news — la semana como una agenda: hoy en una franja azul con la fecha a
+   escala de titular, los días anteriores plegados sobre papel. Colores solo
+   vía tokens.css. Prefijo nw-. */
+
+.nw {
+  --nw-nav-h: 73px; /* alto de .lp-nav: el filtro de temas se pega justo debajo */
+  background: var(--color-papel);
+  color: var(--color-text);
+}
+
+/* Los saltos (/news#noticia-<id> y la tira de días) aterrizan bajo la nav y los
+   temas, los dos sticky: 73 + 65 de alto y 12 de aire. Sustituye al 92px de base.css. */
+html:has(.nw) {
+  scroll-padding-top: 150px;
+}
+
+.nw ::selection {
+  background: var(--color-chispa);
+  color: var(--color-noche);
+}
+
+.nw :focus-visible {
+  outline: 3px solid var(--color-azul);
+  outline-offset: 3px;
+  border-radius: 6px;
+}
+
+.nw-dia--hoy :focus-visible {
+  outline-color: var(--color-chispa);
+}
+
+/* ---------- Temas ---------- */
+
+.nw-tema--inversion { --nw-tema: var(--color-impulso); }
+.nw-tema--ia { --nw-tema: var(--color-azul); }
+.nw-tema--startups { --nw-tema: var(--color-chispa); }
+.nw-tema--finanzas { --nw-tema: var(--color-noche); }
+.nw-tema--tech { --nw-tema: var(--color-azul-profundo); }
+
+.nw-temas {
+  position: sticky;
+  top: var(--nw-nav-h);
+  z-index: 40;
+  background: var(--color-papel);
+  border-bottom: 1px solid var(--color-papel-hueso);
+}
+
+.nw-temas-fila {
+  display: flex;
+  gap: 8px;
+  padding-top: 12px;
+  padding-bottom: 12px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  scroll-snap-type: x proximity;
+}
+
+.nw-temas-fila::-webkit-scrollbar {
+  display: none;
+}
+
+.nw-temas-grupo {
+  display: contents;
+}
+
+/* Tira de la semana: salta a un día y lo abre. En móvil sigue a los temas en el mismo carril. */
+.nw-semana {
+  flex: none;
+  display: flex;
+  gap: 2px;
+  margin-left: auto;
+  padding-left: 12px;
+  border-left: 1px solid var(--color-papel-hueso);
+}
+
+.nw-semana-dia {
+  min-height: 40px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: var(--radius-circle);
+  background: none;
+  color: var(--color-text-muted);
+  font: 600 0.88rem/1 var(--font-body);
+  text-transform: capitalize;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color var(--dur-fast) var(--ease-out), background-color var(--dur-fast) var(--ease-out);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .nw-semana-dia:hover {
+    background: var(--color-surface);
+    color: var(--color-azul);
+  }
+}
+
+.nw-tema-chip {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 40px;
+  padding: 0 16px;
+  border: 1px solid var(--color-papel-hueso);
+  border-radius: var(--radius-circle);
+  background: var(--color-surface);
+  color: var(--color-noche);
+  font: 600 0.92rem/1 var(--font-body);
+  cursor: pointer;
+  scroll-snap-align: start;
+  transition: background-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out),
+    transform var(--dur-press) var(--ease-out);
+}
+
+.nw-tema-chip svg {
+  color: var(--nw-tema);
+}
+
+.nw-tema-chip:active {
+  transform: scale(0.97);
+}
+
+.nw-tema-chip[aria-pressed="true"] {
+  background: var(--color-noche);
+  border-color: var(--color-noche);
+  color: var(--color-text-on-dark);
+}
+
+.nw-tema-chip[aria-pressed="true"] svg {
+  color: var(--color-chispa);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .nw-tema-chip:not([aria-pressed="true"]):hover {
+    border-color: var(--color-azul-claro);
+  }
+}
+
+/* ---------- Franja de hoy ---------- */
+
+.nw-dia--hoy {
+  position: relative;
+  overflow: hidden;
+  padding: 40px 0 72px;
+  background: var(--color-azul);
+  color: var(--color-text-on-dark);
+  isolation: isolate;
+}
+
+/* El círculo del sistema gráfico (manual v2): disco naranja con su halo azul. */
+.nw-dia--hoy::before,
+.nw-dia--hoy::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  border-radius: var(--radius-circle);
+  pointer-events: none;
+}
+
+.nw-dia--hoy::before {
+  width: 620px;
+  height: 620px;
+  top: -300px;
+  right: -210px;
+  background: color-mix(in srgb, var(--color-azul-claro) 22%, var(--color-azul));
+}
+
+.nw-dia--hoy::after {
+  width: 300px;
+  height: 300px;
+  top: -130px;
+  right: -40px;
+  background: var(--color-impulso);
+}
+
+.nw-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.nw-fecha {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: 0.28em;
+  margin: 0 0 14px;
+  font-family: var(--font-display);
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 0.01em;
+  line-height: var(--leading-display);
+  font-size: clamp(3.25rem, 10vw, 6rem);
+}
+
+.nw-fecha-rel {
+  color: var(--color-chispa);
+}
+
+.nw-lead {
+  max-width: 72ch;
+  margin: 0 0 28px;
+  font-size: 1rem;
+  line-height: var(--leading-body);
+  color: var(--color-text-on-dark-muted);
+}
+
+.nw-lead strong {
+  font-weight: 700;
+  color: var(--color-text-on-dark);
+}
+
+.nw-estado {
+  margin: 12px 0 0;
+  font-size: 1.1rem;
+  color: var(--color-text-on-dark);
+}
+
+.nw-estado p {
+  margin: 0 0 18px;
+}
+
+/* ---------- Hoja del día: filas regladas, no tarjetas ---------- */
+
+.nw-lista {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+.nw-lista > li + li {
+  border-top: 1px solid var(--color-papel-hueso);
+}
+
+.nw-noticia-boton {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+  padding: 18px 22px;
+  border: 0;
+  border-radius: var(--radius-lg);
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.nw-noticia-titular {
+  font-size: 1.06rem;
+  font-weight: 600;
+  line-height: 1.5;
+  text-wrap: pretty;
+}
+
+/* Pastilla de tema: la misma forma que los filtros, en línea con el titular. */
+.nw-tema {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-right: 4px;
+  padding: 3px 10px 3px 8px;
+  border-radius: var(--radius-circle);
+  background: color-mix(in srgb, var(--nw-tema) 12%, var(--color-surface));
+  color: var(--color-noche);
+  font: 600 0.8rem/1.25 var(--font-body);
+  vertical-align: 0.08em;
+  white-space: nowrap;
+}
+
+.nw-tema svg {
+  flex: none;
+  color: var(--nw-tema);
+}
+
+.nw-chevron {
+  flex: none;
+  color: var(--color-text-muted);
+  transition: transform 280ms var(--ease-out);
+}
+
+.nw-noticia.is-open > .nw-noticia-boton .nw-chevron,
+.nw-dia.is-open .nw-dia-boton .nw-chevron {
+  transform: rotate(180deg);
+}
+
+/* Desplegar: la fila del grid pasa de 0fr a 1fr sin animarse; lo que se anima
+   es el contenido, solo con opacity y transform (regla de movimiento del proyecto). */
+.nw-plegable {
+  display: grid;
+  grid-template-rows: 0fr;
+}
+
+.nw-plegable > div {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.nw-plegable > div > * {
+  opacity: 0;
+  transform: translateY(-6px);
+  transition: opacity 220ms var(--ease-out), transform 280ms var(--ease-out);
+}
+
+.nw-noticia.is-open > .nw-plegable,
+.nw-dia.is-open > .lp-container > .nw-plegable {
+  grid-template-rows: 1fr;
+}
+
+.nw-noticia.is-open > .nw-plegable > div > *,
+.nw-dia.is-open > .lp-container > .nw-plegable > div > * {
+  opacity: 1;
+  transform: none;
+}
+
+.nw-noticia-cuerpo {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
+  grid-template-areas:
+    "importa fuentes"
+    "paso fuentes";
+  align-items: start;
+  gap: 14px 32px;
+  padding: 0 22px 24px;
+}
+
+.nw-importa {
+  grid-area: importa;
+}
+
+.nw-paso {
+  grid-area: paso;
+}
+
+.nw-fuentes {
+  grid-area: fuentes;
+}
+
+.nw-importa,
+.nw-paso {
+  margin: 0;
+  max-width: 68ch;
+  line-height: var(--leading-body);
+}
+
+.nw-importa {
+  font-size: 1.02rem;
+}
+
+.nw-paso {
+  font-size: 0.95rem;
+  color: var(--color-text-muted);
+}
+
+.nw-importa strong {
+  font-weight: 700;
+  color: var(--color-noche);
+}
+
+.nw-paso strong {
+  font-weight: 700;
+}
+
+.nw-fuentes {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.nw-fuente {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 12px;
+  min-height: 48px;
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  background: var(--color-papel);
+  color: var(--color-text);
+  text-decoration: none;
+  transition: background-color var(--dur-fast) var(--ease-out);
+}
+
+.nw-fuente-medio {
+  font: 700 0.8rem/1.2 var(--font-body);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-azul);
+}
+
+/* Hasta dos líneas: el título de la fuente es lo que decide si abrirla. */
+.nw-fuente-titulo {
+  display: -webkit-box;
+  min-width: 0;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  font-size: 0.92rem;
+  line-height: 1.35;
+  color: var(--color-text-muted);
+}
+
+.nw-fuente svg {
+  color: var(--color-azul);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .nw-fuente:hover {
+    background: var(--color-steel-soft);
+  }
+
+  .nw-noticia-boton:hover .nw-noticia-titular {
+    color: var(--color-azul);
+  }
+
+  .nw-ver-mas:hover {
+    background: var(--color-steel-soft);
+  }
+}
+
+.nw-ver-mas {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 56px;
+  border: 0;
+  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+  background: none;
+  color: var(--color-azul);
+  font: 600 1rem/1 var(--font-body);
+  cursor: pointer;
+  transition: background-color var(--dur-fast) var(--ease-out);
+}
+
+/* ---------- Días anteriores ---------- */
+
+.nw-dia:not(.nw-dia--hoy) {
+  border-bottom: 1px solid var(--color-papel-hueso);
+}
+
+.nw-dia-titulo {
+  margin: 0;
+}
+
+.nw-dia-boton {
+  display: grid;
+  grid-template-columns: 9.5rem 1fr auto;
+  align-items: center;
+  gap: 20px;
+  width: 100%;
+  padding: 26px 0;
+  border: 0;
+  background: none;
+  color: var(--color-text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.nw-dia-fecha {
+  display: flex;
+  flex-direction: column;
+  font-family: var(--font-display);
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-display);
+  line-height: 1;
+  font-size: clamp(1.9rem, 4vw, 2.6rem);
+  color: var(--color-noche);
+}
+
+.nw-dia-fecha .nw-fecha-rel {
+  margin-bottom: 4px;
+  font-size: 0.55em;
+  color: var(--color-impulso);
+}
+
+.nw-dia-resumen {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.nw-dia-principal {
+  overflow: hidden;
+  font: 600 1.05rem/1.35 var(--font-body);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nw-dia-total {
+  font: 500 0.9rem/1.2 var(--font-body);
+  color: var(--color-text-muted);
+}
+
+/* Abierto, la noticia principal ya es la primera fila: no se repite arriba. */
+.nw-dia.is-open .nw-dia-principal {
+  display: none;
+}
+
+.nw-dia .nw-plegable .nw-lista {
+  margin-bottom: 32px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .nw-dia-boton:hover .nw-dia-principal {
+    color: var(--color-azul);
+  }
+}
+
+/* ---------- Cierre ---------- */
+
+.nw-cierre {
+  padding: 96px 0 104px;
+  background: var(--color-papel-hueso);
+}
+
+.nw-aviso {
+  max-width: 62ch;
+  margin: 0 0 48px;
+  font-size: 0.92rem;
+  line-height: var(--leading-body);
+  color: var(--color-text-muted);
+}
+
+.nw-cierre-titulo {
+  margin-top: 0;
+}
+
+.nw-cierre .lp-section-lead {
+  margin-bottom: 28px;
+}
+
+/* ---------- Bloque de la home ---------- */
+
+.nw-portada {
+  padding: 120px 0;
+  background: var(--color-papel);
+}
+
+.nw-portada-lista {
+  display: grid;
+  max-width: 52rem;
+  margin: 0 0 40px;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--color-papel-hueso);
+}
+
+.nw-portada-lista li {
+  border-bottom: 1px solid var(--color-papel-hueso);
+}
+
+.nw-portada-item {
+  display: grid;
+  gap: 8px;
+  padding: 22px 0;
+  color: var(--color-text);
+  text-decoration: none;
+}
+
+.nw-portada-titular {
+  font-size: 1.2rem;
+  font-weight: 600;
+  line-height: 1.35;
+  text-wrap: pretty;
+}
+
+.nw-portada-importa {
+  display: -webkit-box;
+  max-width: 68ch;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-height: var(--leading-body);
+  color: var(--color-text-muted);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .nw-portada-item:hover .nw-portada-titular {
+    color: var(--color-azul);
+  }
+}
+
+/* ---------- Móvil ---------- */
+
+@media (max-width: 720px) {
+  .nw {
+    --nw-nav-h: 65px;
+  }
+
+  html:has(.nw) {
+    scroll-padding-top: 142px;
+  }
+
+  .nw-dia--hoy {
+    padding: 28px 0 44px;
+  }
+
+  .nw-dia--hoy::before {
+    width: 380px;
+    height: 380px;
+    top: -210px;
+    right: -170px;
+  }
+
+  .nw-dia--hoy::after {
+    width: 170px;
+    height: 170px;
+    top: -80px;
+    right: -60px;
+  }
+
+  .nw-noticia-boton {
+    gap: 12px;
+    padding: 16px;
+  }
+
+  .nw-noticia-cuerpo {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "importa"
+      "fuentes"
+      "paso";
+    padding: 0 16px 18px;
+  }
+
+  .nw-dia-boton {
+    grid-template-columns: 5.5rem 1fr auto;
+    gap: 14px;
+    padding: 20px 0;
+  }
+
+  .nw-cierre {
+    padding: 64px 0 72px;
+  }
+
+  .nw-portada {
+    padding: 80px 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nw-plegable > div > *,
+  .nw-chevron,
+  .nw-tema-chip {
+    transition: none;
+  }
+}
