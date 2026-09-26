@@ -32,6 +32,7 @@ const SEMANA = [
 function montar(respuesta: () => Promise<Response>, ruta = "/news") {
   vi.stubGlobal("fetch", vi.fn(respuesta));
   Element.prototype.scrollIntoView = vi.fn();
+  window.scrollTo = vi.fn(); // jsdom no lo implementa
   render(
     <LanguageProvider>
       <MemoryRouter initialEntries={[ruta]}>
@@ -51,6 +52,11 @@ describe("agruparPorDia", () => {
     expect(dias.map((d) => d.fecha)).toEqual([HOY, HACE_2]);
     expect(dias[0].noticias.map((n) => n.id)).toEqual([2, 1]);
     expect(dias[1].noticias.map((n) => n.id)).toEqual([3, 4]);
+  });
+
+  it("intercala temas: la mejor de cada tema antes que la segunda de ninguno", () => {
+    const dia = [noticia(1, HOY, "inversion", 90), noticia(2, HOY, "inversion", 80), noticia(3, HOY, "ia", 10)];
+    expect(agruparPorDia(dia)[0].noticias.map((n) => n.id)).toEqual([1, 3, 2]);
   });
 
   it("filtra por tema y descarta los días que se quedan vacíos", () => {
@@ -88,6 +94,15 @@ describe("NewsPage", () => {
     const fila = await screen.findByRole("button", { name: /titular 4/i });
     expect(fila).toHaveAttribute("aria-expanded", "true");
     expect(screen.getByRole("button", { name: /titular 3.*2 noticias/i })).toHaveAttribute("aria-expanded", "true");
+    await waitFor(() => expect(Element.prototype.scrollIntoView).toHaveBeenCalled());
+  });
+
+  it("la tira de la semana abre el día pulsado y baja hasta él", async () => {
+    montar(ok(SEMANA));
+    const diaAnterior = await screen.findByRole("button", { name: /titular 3.*2 noticias/i });
+    const semana = screen.getByRole("navigation", { name: /ir a un día/i });
+    await userEvent.click(within(semana).getAllByRole("button")[1]);
+    expect(diaAnterior).toHaveAttribute("aria-expanded", "true");
     await waitFor(() => expect(Element.prototype.scrollIntoView).toHaveBeenCalled());
   });
 

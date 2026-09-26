@@ -28,7 +28,12 @@ export async function fetchNoticias(dias: number, limite: number, signal?: Abort
   return (data.noticias ?? []).filter((n) => (TEMAS as readonly string[]).includes(n.tema));
 }
 
-/** Agrupa por día (el más reciente primero) y ordena cada día por relevancia. */
+/**
+ * Agrupa por día (el más reciente primero) y ordena cada día por relevancia,
+ * intercalando temas: la mejor de cada tema, luego la segunda de cada tema...
+ * La relevancia premia los importes y, sin intercalar, el día abría con cinco
+ * rondas seguidas.
+ */
 export function agruparPorDia(noticias: Noticia[], tema: Tema | null = null): Dia[] {
   const porDia = new Map<string, Noticia[]>();
   for (const n of noticias) {
@@ -37,10 +42,12 @@ export function agruparPorDia(noticias: Noticia[], tema: Tema | null = null): Di
   }
   return [...porDia.entries()]
     .sort(([a], [b]) => b.localeCompare(a))
-    .map(([fecha, lista]) => ({
-      fecha,
-      noticias: lista.sort((a, b) => (b.relevancia ?? -1) - (a.relevancia ?? -1) || b.fuentes_count - a.fuentes_count),
-    }));
+    .map(([fecha, lista]) => {
+      lista.sort((a, b) => (b.relevancia ?? -1) - (a.relevancia ?? -1) || b.fuentes_count - a.fuentes_count);
+      const puestoEnTema: Record<string, number> = {};
+      const puesto = new Map(lista.map((n) => [n, (puestoEnTema[n.tema] = (puestoEnTema[n.tema] ?? -1) + 1)]));
+      return { fecha, noticias: lista.sort((a, b) => puesto.get(a)! - puesto.get(b)!) }; // sort estable
+    });
 }
 
 /** «Hoy», «Ayer» o nada, comparando con la fecha de hoy en UTC (el mismo corte que la API). */

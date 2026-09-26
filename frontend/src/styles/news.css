@@ -8,6 +8,12 @@
   color: var(--color-text);
 }
 
+/* Los saltos (/news#noticia-<id> y la tira de días) aterrizan bajo la nav y los
+   temas, los dos sticky: 73 + 65 de alto y 12 de aire. Sustituye al 92px de base.css. */
+html:has(.nw) {
+  scroll-padding-top: 150px;
+}
+
 .nw ::selection {
   background: var(--color-chispa);
   color: var(--color-noche);
@@ -51,6 +57,41 @@
 
 .nw-temas-fila::-webkit-scrollbar {
   display: none;
+}
+
+.nw-temas-grupo {
+  display: contents;
+}
+
+/* Tira de la semana: salta a un día y lo abre. En móvil sigue a los temas en el mismo carril. */
+.nw-semana {
+  flex: none;
+  display: flex;
+  gap: 2px;
+  margin-left: auto;
+  padding-left: 12px;
+  border-left: 1px solid var(--color-papel-hueso);
+}
+
+.nw-semana-dia {
+  min-height: 40px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: var(--radius-circle);
+  background: none;
+  color: var(--color-text-muted);
+  font: 600 0.88rem/1 var(--font-body);
+  text-transform: capitalize;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color var(--dur-fast) var(--ease-out), background-color var(--dur-fast) var(--ease-out);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .nw-semana-dia:hover {
+    background: var(--color-surface);
+    color: var(--color-azul);
+  }
 }
 
 .nw-tema-chip {
@@ -195,11 +236,6 @@
 
 .nw-lista > li + li {
   border-top: 1px solid var(--color-papel-hueso);
-}
-
-.nw-noticia {
-  /* Al llegar con /news#noticia-<id>, que la fila no quede bajo la nav y los temas. */
-  scroll-margin-top: calc(var(--nw-nav-h) + 76px);
 }
 
 .nw-noticia-boton {
@@ -562,6 +598,10 @@
 @media (max-width: 720px) {
   .nw {
     --nw-nav-h: 65px;
+  }
+
+  html:has(.nw) {
+    scroll-padding-top: 142px;
   }
 
   .nw-dia--hoy {

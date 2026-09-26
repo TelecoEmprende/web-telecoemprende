@@ -1,31 +1,30 @@
 import { useEffect, useState } from "react";
 import { ArrowRight } from "lucide-react";
 
-import { fetchNoticias, relativo, type Noticia } from "../../api/news";
+import { agruparPorDia, fetchNoticias, relativo, type Noticia } from "../../api/news";
 import { useTranslation } from "../../i18n/translations";
-import { enlaceNoticia, TemaPastilla } from "../../routes/NewsPage";
+import { DIAS, enlaceNoticia, LIMITE, TemaPastilla } from "../../routes/NewsPage";
 
-/** Las 3 noticias más relevantes del último día. Sin datos, la sección no se pinta. */
+/** Las 3 primeras del último día, en el mismo orden que el muro. Sin datos, la sección no se ve. */
 export function LatestNewsSection() {
   const { t } = useTranslation();
   const [noticias, setNoticias] = useState<Noticia[]>([]);
 
   useEffect(() => {
     const ctrl = new AbortController();
-    // La API ordena por día y relevancia: las 3 primeras son las top del último día.
-    fetchNoticias(2, 3, ctrl.signal)
-      .then((lista) => setNoticias(lista.filter((n) => n.fecha === lista[0]?.fecha)))
+    // La misma petición que /news: si luego se entra al muro, sale de la caché.
+    fetchNoticias(DIAS, LIMITE, ctrl.signal)
+      .then((lista) => setNoticias(agruparPorDia(lista)[0]?.noticias.slice(0, 3) ?? []))
       .catch(() => setNoticias([])); // la landing no depende de la API
     return () => ctrl.abort();
   }, []);
 
-  if (noticias.length === 0) return null;
-
-  const rel = relativo(noticias[0].fecha);
+  const rel = noticias[0] ? relativo(noticias[0].fecha) : null;
   const titulo = rel === "hoy" ? t.latestNews.heading : rel === "ayer" ? t.latestNews.headingAyer : t.latestNews.headingUltimo;
 
+  // La sección existe siempre (oculta sin datos) para que el menú la observe desde el principio.
   return (
-    <section className="nw-portada" id="noticias" aria-labelledby="nw-portada-titulo">
+    <section className="nw-portada" id="noticias" aria-labelledby="nw-portada-titulo" hidden={noticias.length === 0}>
       <div className="lp-container">
         <h2 id="nw-portada-titulo" className="lp-heading">{titulo}</h2>
         <p className="lp-section-lead">{t.latestNews.lead}</p>

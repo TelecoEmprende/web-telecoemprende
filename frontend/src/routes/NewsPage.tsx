@@ -7,10 +7,11 @@ import { LandingNav } from "../components/home/LandingNav";
 import { agruparPorDia, fetchNoticias, relativo, TEMAS, type Dia, type Noticia, type Tema } from "../api/news";
 import { useTranslation } from "../i18n/translations";
 
-const DIAS = 7;
+// La home pide lo mismo: la segunda petición sale de la caché HTTP (max-age=300).
+export const DIAS = 7;
 // ponytail: 100 cubre de sobra una semana (unas 30 noticias analizadas al día
 // entran recortadas por el top de 05); si el muro crece, paginar por día.
-const LIMITE = 100;
+export const LIMITE = 100;
 const VISIBLES_POR_DIA = 6;
 
 export const ICONO_TEMA: Record<Tema, LucideIcon> = {
@@ -34,6 +35,16 @@ export function NewsPage() {
   const [estado, setEstado] = useState<Estado>({ fase: "cargando" });
   const [tema, setTema] = useState<Tema | null>(null);
   const [intento, setIntento] = useState(0);
+  // `n` hace que volver a pulsar el mismo día lo reabra aunque se hubiera plegado.
+  const [salto, setSalto] = useState<Salto | null>(null);
+
+  useEffect(() => {
+    if (salto === null) return;
+    const frame = requestAnimationFrame(() =>
+      document.getElementById(`dia-${salto.fecha}`)?.scrollIntoView({ block: "start", behavior: "instant" }),
+    );
+    return () => cancelAnimationFrame(frame);
+  }, [salto]);
 
   useEffect(() => {
     if (idObjetivo === null) window.scrollTo({ top: 0, left: 0, behavior: "auto" });
@@ -74,28 +85,44 @@ export function NewsPage() {
     <div className="lp-shell">
       <LandingNav />
       <main className="nw">
-        <nav className="nw-temas" aria-label={t.news.temasLabel}>
+        <div className="nw-temas">
           <div className="lp-container nw-temas-fila">
-            <button type="button" className="nw-tema-chip" aria-pressed={tema === null} onClick={() => setTema(null)}>
-              {t.news.todas}
-            </button>
-            {TEMAS.map((id) => {
-              const Icono = ICONO_TEMA[id];
-              return (
-                <button
-                  key={id}
-                  type="button"
-                  className={`nw-tema-chip nw-tema--${id}`}
-                  aria-pressed={tema === id}
-                  onClick={() => setTema(tema === id ? null : id)}
-                >
-                  <Icono aria-hidden size={16} strokeWidth={2.25} />
-                  {t.news.temas[id]}
-                </button>
-              );
-            })}
+            <div className="nw-temas-grupo" role="group" aria-label={t.news.temasLabel}>
+              <button type="button" className="nw-tema-chip" aria-pressed={tema === null} onClick={() => setTema(null)}>
+                {t.news.todas}
+              </button>
+              {TEMAS.map((id) => {
+                const Icono = ICONO_TEMA[id];
+                return (
+                  <button
+                    key={id}
+                    type="button"
+                    className={`nw-tema-chip nw-tema--${id}`}
+                    aria-pressed={tema === id}
+                    onClick={() => setTema(tema === id ? null : id)}
+                  >
+                    <Icono aria-hidden size={16} strokeWidth={2.25} />
+                    {t.news.temas[id]}
+                  </button>
+                );
+              })}
+            </div>
+            {dias.length > 1 && (
+              <nav className="nw-semana" aria-label={t.news.semanaLabel}>
+                {dias.map((dia) => (
+                  <button
+                    key={dia.fecha}
+                    type="button"
+                    className="nw-semana-dia"
+                    onClick={() => setSalto((s) => ({ fecha: dia.fecha, n: (s?.n ?? 0) + 1 }))}
+                  >
+                    {etiquetaFecha(dia.fecha, locale, false)}
+                  </button>
+                ))}
+              </nav>
+            )}
           </div>
-        </nav>
+        </div>
 
         {estado.fase === "cargando" && (
           <Portada fecha={null} locale={locale}>
@@ -129,6 +156,7 @@ export function NewsPage() {
             primero={i === 0}
             locale={locale}
             idObjetivo={idObjetivo}
+            salto={salto}
           />
         ))}
 
@@ -148,12 +176,15 @@ export function NewsPage() {
   );
 }
 
-function etiquetaFecha(fecha: string, locale: string) {
+type Salto = { fecha: string; n: number };
+
+function etiquetaFecha(fecha: string, locale: string, conMes = true) {
   // Mediodía UTC: la fecha es un día UTC y así ninguna zona horaria la mueve de día.
   const d = new Date(`${fecha}T12:00:00Z`);
   const parte = (o: Intl.DateTimeFormatOptions) =>
     new Intl.DateTimeFormat(locale, { ...o, timeZone: "UTC" }).format(d).replace(".", "");
-  return `${parte({ weekday: "short" })} ${parte({ day: "numeric" })} ${parte({ month: "short" })}`;
+  const dia = `${parte({ weekday: "short" })} ${parte({ day: "numeric" })}`;
+  return conMes ? `${dia} ${parte({ month: "short" })}` : dia;
 }
 
 function totalNoticias(n: number, t: ReturnType<typeof useTranslation>["t"]) {
@@ -178,7 +209,7 @@ function Portada({
   const { t } = useTranslation();
   const rel = fecha ? relativo(fecha) : null;
   return (
-    <section className="nw-dia nw-dia--hoy" aria-labelledby="nw-titulo">
+    <section id={fecha ? `dia-${fecha}` : undefined} className="nw-dia nw-dia--hoy" aria-labelledby="nw-titulo">
       <div className="lp-container">
         <h1 id="nw-titulo" className="nw-fecha">
           {fecha ? (
@@ -207,15 +238,20 @@ function DiaFranja({
   primero,
   locale,
   idObjetivo,
+  salto,
 }: {
   dia: Dia;
   primero: boolean;
   locale: string;
   idObjetivo: number | null;
+  salto: Salto | null;
 }) {
   const { t } = useTranslation();
   const indiceObjetivo = idObjetivo === null ? -1 : dia.noticias.findIndex((n) => n.id === idObjetivo);
   const [abierto, setAbierto] = useState(primero || indiceObjetivo >= 0);
+  useEffect(() => {
+    if (salto?.fecha === dia.fecha) setAbierto(true);
+  }, [salto, dia.fecha]);
   const [todas, setTodas] = useState(indiceObjetivo >= VISIBLES_POR_DIA);
   const [abierta, setAbierta] = useState<number | null>(
     indiceObjetivo >= 0 ? idObjetivo : primero ? dia.noticias[0]?.id ?? null : null,
@@ -253,7 +289,7 @@ function DiaFranja({
   const principal = dia.noticias[0];
   const panelId = `nw-dia-${dia.fecha}`;
   return (
-    <section className={`nw-dia${abierto ? " is-open" : ""}`}>
+    <section id={`dia-${dia.fecha}`} className={`nw-dia${abierto ? " is-open" : ""}`}>
       <div className="lp-container">
         <h2 className="nw-dia-titulo">
           <button

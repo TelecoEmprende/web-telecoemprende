@@ -28,7 +28,8 @@ export function LandingNav() {
   useEffect(() => {
     if (!onHomePage) return;
 
-    const sectionIds = ["inicio", ...navLinks.map((link) => link.href.slice(1))];
+    // "noticias" no tiene enlace de ancla: se observa para que, sobre ella, no quede marcado Eventos.
+    const sectionIds = ["inicio", ...navLinks.map((link) => link.href.slice(1)), "noticias"];
     const sections = sectionIds
       .map((id) => document.getElementById(id))
       .filter((el): el is HTMLElement => el !== null);
