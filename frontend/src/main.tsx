@@ -15,6 +15,7 @@ import "./styles/layout.css";
 import "./styles/home.css";
 import "./styles/admin.css";
 import "./styles/landing.css";
+import "./styles/news.css";
 import "./styles/equipo.css";
 import "./styles/marketing.css";
 

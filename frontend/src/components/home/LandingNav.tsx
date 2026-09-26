@@ -81,6 +81,14 @@ export function LandingNav() {
             );
           })}
           <a
+            href="/news"
+            className={pathname === "/news" ? "is-active" : undefined}
+            aria-current={pathname === "/news" ? "page" : undefined}
+            onClick={() => setMenuOpen(false)}
+          >
+            {t.nav.noticias}
+          </a>
+          <a
             href={toAnchor("#inscripcion")}
             className="lp-nav-cta lp-nav-cta-mobile"
             onClick={() => setMenuOpen(false)}
