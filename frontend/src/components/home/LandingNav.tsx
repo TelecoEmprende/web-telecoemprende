@@ -28,7 +28,8 @@ export function LandingNav() {
   useEffect(() => {
     if (!onHomePage) return;
 
-    const sectionIds = ["inicio", ...navLinks.map((link) => link.href.slice(1))];
+    // "noticias" no tiene enlace de ancla: se observa para que, sobre ella, no quede marcado Eventos.
+    const sectionIds = ["inicio", ...navLinks.map((link) => link.href.slice(1)), "noticias"];
     const sections = sectionIds
       .map((id) => document.getElementById(id))
       .filter((el): el is HTMLElement => el !== null);
@@ -80,6 +81,14 @@ export function LandingNav() {
               </a>
             );
           })}
+          <a
+            href="/news"
+            className={pathname === "/news" ? "is-active" : undefined}
+            aria-current={pathname === "/news" ? "page" : undefined}
+            onClick={() => setMenuOpen(false)}
+          >
+            {t.nav.noticias}
+          </a>
           <a
             href={toAnchor("#inscripcion")}
             className="lp-nav-cta lp-nav-cta-mobile"

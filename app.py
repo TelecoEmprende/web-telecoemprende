@@ -87,7 +87,8 @@ def aplicar_headers_seguridad(response):
         "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
         "font-src https://fonts.gstatic.com; "
         "script-src 'self'; "
-        "connect-src 'self'; "
+        # /news lee las noticias del news-bot de su API pública (solo lectura, CORS limitado a telecoemprende.es).
+        "connect-src 'self' https://n8n.telecoemprende.es; "
         "frame-ancestors 'none';"
     )
     return response
@@ -119,6 +120,11 @@ def equipo():
 
 @app.route("/privacidad", methods=["GET"])
 def privacidad():
+    return serve_frontend_index()
+
+
+@app.route("/news", methods=["GET"])
+def news():
     return serve_frontend_index()
 
 

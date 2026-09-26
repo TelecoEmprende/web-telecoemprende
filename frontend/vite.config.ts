@@ -22,6 +22,13 @@ export default defineConfig({
         target: process.env.API_PROXY ?? "http://127.0.0.1:5000",
         changeOrigin: true,
       },
+      // La API de noticias solo acepta CORS de telecoemprende.es: en local se
+      // pide a través de este proxy (ver NEWS_API en src/api/news.ts).
+      "/noticias-api": {
+        target: "https://n8n.telecoemprende.es",
+        changeOrigin: true,
+        rewrite: (ruta) => ruta.replace(/^\/noticias-api/, "/webhook/noticias"),
+      },
     },
   },
   build: {
@@ -33,6 +40,7 @@ export default defineConfig({
         gracias: "gracias/index.html",
         charlaSantiYPablo: "charla-santi-y-pablo/index.html",
         privacidad: "privacidad/index.html",
+        news: "news/index.html",
       },
     },
   },
