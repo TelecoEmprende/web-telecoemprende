@@ -2,13 +2,16 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 
 import { enviarNotificaciones, getAdminRegistrations } from "../../api/admin";
-import { AdminStats } from "../../components/admin/AdminStats";
-import { AdminToolbar } from "../../components/admin/AdminToolbar";
-import { EstadoTabs, type EstadoFiltro } from "../../components/admin/EstadoTabs";
-import { RecordsTable } from "../../components/admin/RecordsTable";
-import { Button } from "../../components/ui/button";
+import type { ApiFailure } from "../../types/api";
 import type { Registro } from "../../types/admin";
-import { useAdmin } from "./AdminLayout";
+import { AlertBanner } from "../feedback/AlertBanner";
+import { Button } from "../ui/button";
+import { AdminStats } from "./AdminStats";
+import { AdminToolbar } from "./AdminToolbar";
+import { EstadoTabs, type EstadoFiltro } from "./EstadoTabs";
+import { RecordsTable } from "./RecordsTable";
+
+type Aviso = { variant: "info" | "success" | "error"; message: string };
 
 const ESTADOS: EstadoFiltro[] = ["todos", "pendiente", "aceptado", "rechazado", "waitlist"];
 
@@ -33,7 +36,16 @@ function coincide(registro: Registro, busqueda: string) {
 }
 
 export function InscripcionesView() {
-  const { avisar, avisarError } = useAdmin();
+  const [aviso, setAviso] = useState<Aviso | null>(null);
+  const avisar = useCallback(
+    (variant: Aviso["variant"], message: string) => setAviso({ variant, message }),
+    [],
+  );
+  const avisarError = useCallback(
+    (error: unknown, porDefecto: string) =>
+      avisar("error", (error as ApiFailure).message || porDefecto),
+    [avisar],
+  );
   const [params, setParams] = useSearchParams();
   const [registros, setRegistros] = useState<Registro[]>([]);
   const [eventos, setEventos] = useState<string[]>([]);
@@ -129,6 +141,7 @@ export function InscripcionesView() {
 
   return (
     <>
+      {aviso ? <AlertBanner variant={aviso.variant} message={aviso.message} /> : null}
       <AdminToolbar
         total={registros.length}
         mostrados={visibles.length}

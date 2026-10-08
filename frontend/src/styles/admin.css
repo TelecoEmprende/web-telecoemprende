@@ -1,17 +1,8 @@
-/* Solo el armazón de la página /admin. Los componentes de dentro
-   (toolbar, stats, tabs, tabla, login) van con Tailwind + shadcn dentro
-   de .shadcn-scope, igual que los paneles de equipo y calendario. */
-
-.admin-shell-react {
-  padding: 32px 0 48px;
-}
+/* Las vistas del grupo Admin de /equipo (inscripciones, cuentas,
+   calendario del club). Lo de dentro va con Tailwind + shadcn. */
 
 .admin-placeholder {
   margin: 0;
-}
-
-.admin-shell-react .container-react {
-  max-width: 1440px;
 }
 
 .admin-card-react {
@@ -23,10 +14,6 @@
 }
 
 @media (max-width: 720px) {
-  .admin-shell-react {
-    padding: 18px 0 32px;
-  }
-
   .admin-card-react {
     padding: 18px;
     border-radius: 24px;
@@ -43,4 +30,158 @@
 
 .equipo-accesos-panel-react {
   margin-top: 28px;
+}
+
+/* ---------- Cuentas del equipo ---------- */
+
+/* 1ª / 2ª preferencia de departamento. */
+.cuentas-ordinal-react {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 22px;
+  border-radius: 999px;
+  background: var(--color-papel);
+  color: var(--color-text-muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.cuentas-ordinal-react.is-primera {
+  background: var(--color-noche);
+  color: var(--color-text-on-dark);
+}
+
+/* La foto es el botón para cambiarla: la cámara aparece encima al pasar. */
+.cuentas-foto-react {
+  position: relative;
+  display: block;
+  border-radius: var(--radius-circle);
+  cursor: pointer;
+}
+
+.cuentas-foto-camara-react {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  border-radius: inherit;
+  background: rgba(var(--color-noche-rgb), 0.55);
+  color: var(--color-text-on-dark);
+  opacity: 0;
+  transition: opacity var(--dur-fast) var(--ease-out);
+}
+
+.cuentas-foto-camara-react svg {
+  width: 18px;
+  height: 18px;
+}
+
+.cuentas-foto-react:hover .cuentas-foto-camara-react,
+.cuentas-foto-react:focus-within .cuentas-foto-camara-react {
+  opacity: 1;
+}
+
+/* La etiqueta no es enfocable; el foco cae en el <input> oculto que la sigue. */
+.cuentas-foto-react:has(+ input:focus-visible) {
+  outline: 2px solid var(--color-azul);
+  outline-offset: 2px;
+}
+
+@media (hover: none) {
+  .cuentas-foto-camara-react {
+    inset: auto -2px -2px auto;
+    width: 22px;
+    height: 22px;
+    opacity: 1;
+  }
+
+  .cuentas-foto-camara-react svg {
+    width: 12px;
+    height: 12px;
+  }
+}
+
+.cuentas-quitar-foto-react {
+  border: 0;
+  background: transparent;
+  color: var(--color-text-muted);
+  font: inherit;
+  font-size: 0.72rem;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+
+
+/* Blanco sobre Impulso no llega a AA en texto de 12px: Noche sí. */
+.cuentas-badge-admin-react {
+  background: var(--color-noche);
+  color: var(--color-text-on-dark);
+}
+
+/* La tabla es más ancha que la pantalla: la persona se queda fija a la
+   izquierda al desplazarla, para saber siempre de quién es la fila. */
+.cuentas-fija-react {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--color-surface);
+  box-shadow: 1px 0 0 var(--color-border);
+}
+
+
+/* Cuenta sin activar (alta propia esperando departamento): resaltada. Opaco
+   (no rgba) para que la columna fija tape lo que pasa por debajo. */
+.cuentas-pendiente-react > td,
+.cuentas-pendiente-react > td.cuentas-fija-react {
+  background: color-mix(in srgb, var(--color-chispa) 12%, var(--color-surface));
+}
+
+/* Móvil: cada persona es una tarjeta en vez de una fila de 1000px que se
+   desplaza de lado. Cada celda lleva su columna como etiqueta. */
+@media (max-width: 720px) {
+  .cuentas-tabla-react,
+  .cuentas-tabla-react tbody,
+  .cuentas-tabla-react tr,
+  .cuentas-tabla-react td {
+    display: block;
+  }
+
+  .cuentas-tabla-react thead {
+    display: none;
+  }
+
+  .cuentas-tabla-react tbody > tr {
+    margin-bottom: 12px;
+    padding: 6px;
+    border-radius: var(--radius-lg);
+  }
+
+  .cuentas-tabla-react td[data-label] {
+    padding: 8px;
+  }
+
+  .cuentas-tabla-react td[data-label]:not([data-label="Persona"])::before {
+    content: attr(data-label);
+    display: block;
+    margin-bottom: 6px;
+    color: var(--color-text-muted);
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: var(--tracking-label);
+    text-transform: uppercase;
+  }
+
+  .cuentas-fija-react {
+    position: static;
+    box-shadow: none;
+  }
+
+  /* Objetivo táctil de 44px en los botones de las vistas de Admin. */
+  .admin-card-react [data-slot="button"],
+  .admin-card-react [data-slot="dialog-trigger"],
+  .admin-card-react [data-slot="select-trigger"] {
+    min-height: 44px;
+  }
 }

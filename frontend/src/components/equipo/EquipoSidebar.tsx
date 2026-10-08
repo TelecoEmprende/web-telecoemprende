@@ -2,10 +2,10 @@ import type { LucideIcon } from "lucide-react";
 import {
   BarChart3,
   CalendarDays,
+  CalendarCog,
   ChevronRight,
+  ClipboardList,
   ExternalLink,
-  FolderOpen,
-  GitBranch,
   Home,
   KanbanSquare,
   LogOut,
@@ -13,7 +13,7 @@ import {
   Megaphone as Anuncio,
   NotebookPen,
   ScrollText,
-  Settings,
+  UserCog,
   Users,
   Users2,
   Wallet,
@@ -40,10 +40,11 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar";
+import { LogoGithub } from "./LogosMarca";
 import { AvatarResponsable, etiquetaDe } from "./marketing/Avatares";
 import { getEquipoCalendario, getEventosLuma, getMisTareas } from "../../api/equipo";
 import { listarNotas } from "../../api/notas";
-import { DEPTO_LABEL, GITHUB_REPO, type Cargo, type Team } from "../../types/equipo";
+import { CARGO_LABEL, DEPTO_LABEL, GITHUB_REPO, type Cargo, type Team } from "../../types/equipo";
 
 /** El próximo evento, venga del calendario del club o de Luma. */
 type Proximo = { titulo: string; fecha: string; hora: string; url: string };
@@ -64,25 +65,25 @@ export type Panel =
   | "tareas"
   | "campanas"
   | "miembros"
-  | "recursos"
   | "presupuesto"
   | "reuniones"
   | "decisiones";
 
 export type Seccion =
-  | "club" | "notas" | "herramientas" | "metricas" | "calendario" | "anuncios" | Panel;
+  | "club" | "notas" | "herramientas" | "metricas" | "calendario" | "anuncios" | Panel
+  // Lo que antes era /admin: solo con `tieneAccesoAdmin` (Ingeniería y board).
+  | "inscripciones" | "cuentas" | "calendario-club";
 
-/** Qué panel tiene cada departamento. Los tres comparten Tareas, Recursos y
- *  Miembros; Campañas es de Marketing/Eventos (Ingeniería no tiene);
+/** Qué panel tiene cada departamento. Los tres comparten Tareas y Miembros; Campañas es de Marketing/Eventos (Ingeniería no tiene);
  *  Presupuesto es de quien mueve dinero (Eventos) y Decisiones de
  *  Ingeniería (Plataforma y Servicios viven en Herramientas). Esto decide qué panel aparece
  *  (`seccionesDe`) y qué departamentos ofrece el filtro dentro de cada uno
  *  (`equiposConPanel`). */
 const PANELES_POR_EQUIPO: Record<Team, Panel[]> = {
-  marketing: ["campanas", "tareas", "recursos", "miembros"],
-  eventos: ["campanas", "tareas", "recursos", "presupuesto", "reuniones", "miembros"],
+  marketing: ["campanas", "tareas", "miembros"],
+  eventos: ["campanas", "tareas", "presupuesto", "reuniones", "miembros"],
   ingenieria: [
-    "tareas", "decisiones", "reuniones", "recursos", "miembros",
+    "tareas", "decisiones", "reuniones", "miembros",
   ],
 };
 
@@ -90,7 +91,6 @@ const ICONO: Record<Panel, LucideIcon> = {
   campanas: Megaphone,
   tareas: KanbanSquare,
   miembros: Users,
-  recursos: FolderOpen,
   presupuesto: Wallet,
   reuniones: Users2,
   decisiones: ScrollText,
@@ -105,7 +105,6 @@ const ETIQUETA_PANEL: Record<Panel, string> = {
   campanas: "Proyectos",
   tareas: "Tareas",
   miembros: "Miembros",
-  recursos: "Recursos",
   presupuesto: "Presupuesto",
   reuniones: "Reuniones",
   decisiones: "Decisiones",
@@ -119,7 +118,7 @@ export function equiposConPanel(panel: Panel, teams: Team[]): Team[] {
 
 /** Todas las secciones visibles para esa persona, en el orden del sidebar y
  *  con su grupo: Inicio (lo personal: resumen y notas), Trabajo
- *  (tareas, proyectos, calendario), Club (gente, avisos, reuniones, recursos)
+ *  (tareas, proyectos, calendario), Club (gente, avisos, reuniones, herramientas)
  *  y Más (lo propio de un solo departamento). Métricas y Presupuesto no están
  *  aquí -- son del grupo "Admin" (ver `EquipoSidebar`). */
 export function seccionesDe(teams: Team[]): Item[] {
@@ -141,16 +140,12 @@ export function seccionesDe(teams: Team[]): Item[] {
       ? [{ id: "anuncios" as const, label: "Avisos", icono: Anuncio, grupo: "Club" as const }]
       : []),
     ...item("reuniones", "Club"),
-    ...item("recursos", "Club"),
     { id: "herramientas", label: "Herramientas", icono: Wrench, grupo: "Club" },
     ...item("decisiones", "Más"),
   ];
 }
 
-const CARGO_LABEL: Record<Exclude<Cargo, "">, string> = {
-  presidente: "Presidente",
-  boardmember: "Board member",
-};
+
 
 type Props = {
   seccion: Seccion;
@@ -203,7 +198,7 @@ export function EquipoSidebar({
   const [proximo, setProximo] = useState<Proximo | null>(null);
 
   const ayuda = (label: string) => (state === "collapsed" ? label : undefined);
-  const esBoardOVp = cargo === "presidente" || cargo === "boardmember" || vpDe.length > 0;
+  const esBoardOVp = cargo !== "" || vpDe.length > 0;
   const tienePresupuesto = equiposConPanel("presupuesto", teams).length > 0;
 
   // Los numeritos de al lado (tareas abiertas, notas) y la tarjeta del
@@ -279,6 +274,13 @@ export function EquipoSidebar({
     ...(tienePresupuesto
       ? [{ id: "presupuesto" as const, label: "Presupuesto", icono: Wallet }]
       : []),
+    ...(tieneAccesoAdmin
+      ? [
+          { id: "inscripciones" as const, label: "Inscripciones", icono: ClipboardList },
+          { id: "cuentas" as const, label: "Cuentas del equipo", icono: UserCog },
+          { id: "calendario-club" as const, label: "Calendario del club", icono: CalendarCog },
+        ]
+      : []),
   ];
 
   /** Una entrada. La píldora del activo es UNA sola (`layoutId`) que se
@@ -322,7 +324,8 @@ export function EquipoSidebar({
     >
       <SidebarHeader>
         <div className="workspace-marca-react">
-          <img src="/logo.png" alt="" className="workspace-marca-logo-react" />
+          {/* El logo en una sola tinta (Azul TE): ver `.workspace-marca-logo-react`. */}
+          <span className="workspace-marca-logo-react" aria-hidden="true" />
           <span className="workspace-marca-texto-react">
             <strong>TelecoEmprende</strong>
           </span>
@@ -382,22 +385,12 @@ export function EquipoSidebar({
               );
             })}
 
-            {itemsAdmin.length > 0 || tieneAccesoAdmin ? (
+            {itemsAdmin.length > 0 ? (
               <SidebarGroup>
                 <SidebarGroupLabel>Admin</SidebarGroupLabel>
                 <SidebarGroupContent>
                   <SidebarMenu>
                     {itemsAdmin.map(boton)}
-                    {tieneAccesoAdmin ? (
-                      <SidebarMenuItem>
-                        <SidebarMenuButton asChild tooltip={ayuda("Panel admin")} className="workspace-item-react">
-                          <Link to="/admin">
-                            <Settings />
-                            <span>Panel admin</span>
-                          </Link>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                    ) : null}
                   </SidebarMenu>
                 </SidebarGroupContent>
               </SidebarGroup>
@@ -456,7 +449,7 @@ export function EquipoSidebar({
                   className="workspace-icono-react"
                   title="GitHub"
                 >
-                  <GitBranch aria-hidden="true" />
+                  <LogoGithub />
                   <span className="sr-only">GitHub (se abre en otra pestaña)</span>
                 </a>
               ) : null}

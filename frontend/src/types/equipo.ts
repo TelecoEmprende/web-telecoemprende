@@ -13,13 +13,26 @@ export const GITHUB_REPO = "https://github.com/TelecoEmprende/web-telecoemprende
 export const SLACK_CLUB =
   "https://join.slack.com/t/telecoemprende/shared_invite/zt-492kyuq78-CJ~sB7TN5xz_j11xj1nnAw";
 
+/** La carpeta compartida de Drive del club: sustituye al antiguo panel de
+ *  Recursos, que repartía los enlaces por departamento. */
+export const DRIVE_CLUB =
+  "https://drive.google.com/drive/folders/1CkECllP_ut1MTpQSXSHhy_Cmn1ym15QX?usp=sharing";
+
 export const DEPTO_LABEL: Record<Team, string> = {
   marketing: "Marketing",
   eventos: "Eventos",
   ingenieria: "Ingeniería",
 };
 
-export type Cargo = "presidente" | "boardmember" | "";
+/** Título en el club, independiente del departamento y del permiso de admin
+ *  (`admin` en la sesión, `es_admin` en la cuenta). */
+export type Cargo = "presidente" | "vicepresidente" | "boardmember" | "";
+
+export const CARGO_LABEL: Record<Exclude<Cargo, "">, string> = {
+  presidente: "Presidente",
+  vicepresidente: "Vicepresidente",
+  boardmember: "Board member",
+};
 
 export type EquipoLoginResponse =
   | {
@@ -30,6 +43,8 @@ export type EquipoLoginResponse =
       cargo: Cargo;
       nombre: string;
       mentor_email: string;
+      /** Permiso de admin: grupo Admin del sidebar. */
+      admin: boolean;
     }
   | { ok: false; message: string };
 
@@ -42,6 +57,7 @@ export type EquipoSessionResponse = {
   email: string;
   nombre: string;
   mentor_email: string;
+  admin: boolean;
 };
 
 /** Fila del directorio del club entero ("Quién es quién") -- solo lo básico,
@@ -67,9 +83,14 @@ export type EquipoAcceso = {
   activo: boolean;
   created_at: string;
   nombre: string;
+  apellidos: string;
   dni: string;
   correo_personal: string;
   mentor_email: string;
+  /** Foto como data URL, o "" para la de `public/` (ver `Avatares.tsx`). */
+  foto: string;
+  /** Permiso de admin, aparte del departamento y del cargo. */
+  es_admin: boolean;
 };
 
 export type EventoCalendario = {

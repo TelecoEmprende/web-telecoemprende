@@ -1,8 +1,6 @@
-import { Route, Routes } from "react-router-dom";
+import { Navigate, Route, Routes } from "react-router-dom";
 
 import { LanguageProvider } from "./i18n/LanguageContext";
-import { adminRoutes } from "./routes/admin";
-import { DatosFormularioPage } from "./routes/DatosFormularioPage";
 import { EquipoPage } from "./routes/EquipoPage";
 import { NotFoundPage } from "./routes/ErrorPage";
 import { HomePage } from "./routes/HomePage";
@@ -16,9 +14,9 @@ export default function App() {
         <Route path="/" element={<HomePage />} />
         <Route path="/privacidad" element={<PrivacyPolicyPage />} />
         <Route path="/news" element={<NewsPage />} />
-        {adminRoutes}
+        {/* /admin vive ahora dentro de /equipo (grupo Admin del sidebar). */}
+        <Route path="/admin/*" element={<Navigate to="/equipo" replace />} />
         <Route path="/equipo" element={<EquipoPage />} />
-        <Route path="/equipo/datosformulario" element={<DatosFormularioPage />} />
         <Route path="*" element={<NotFoundPage />} />
       </Routes>
     </LanguageProvider>

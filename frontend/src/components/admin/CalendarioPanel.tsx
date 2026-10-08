@@ -135,8 +135,8 @@ export function CalendarioPanel() {
     <section className="admin-card-react shadcn-scope mt-7">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2>Calendario del equipo</h2>
-          <p>Eventos compartidos visibles para cualquiera con sesión en /equipo.</p>
+          {/* El título ya está en la barra superior. */}
+          <p>Eventos del club: los ve todo el equipo en su Inicio y en el Calendario.</p>
         </div>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
@@ -227,13 +227,12 @@ export function CalendarioPanel() {
                 ) : null}
               </div>
               <div className="flex gap-2">
-                <Button type="button" variant="outline" size="sm" onClick={() => abrirEditar(evento)}>
+                <Button type="button" variant="outline" onClick={() => abrirEditar(evento)}>
                   Editar
                 </Button>
                 <Button
                   type="button"
                   variant="destructive"
-                  size="sm"
                   onClick={() => setBorrando(evento)}
                 >
                   Eliminar
