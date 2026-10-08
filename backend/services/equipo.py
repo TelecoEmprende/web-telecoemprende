@@ -64,8 +64,7 @@ def _crear_tablas_equipo():
             """)
             # Perfil de la persona, no del departamento: por eso vive aquí y no
             # en una tabla de Marketing. Eventos e Ingeniería leen lo mismo sin
-            # volver a construirlo (era la decisión abierta de
-            # docs/propuesta-crm-miembros.md, resuelta por la opción B).
+            # volver a construirlo.
             cur.execute("""
                 ALTER TABLE equipo_accesos
                 ADD COLUMN IF NOT EXISTS tags TEXT[] NOT NULL DEFAULT '{}'

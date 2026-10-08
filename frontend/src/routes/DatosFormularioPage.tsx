@@ -109,7 +109,7 @@ export function DatosFormularioPage() {
 
   return (
     <div className="shadcn-scope dark equipo-shell-react bg-background font-sans text-foreground">
-      <Header teamMode />
+      <Header />
       <main className="equipo-content-react">
         {estado === "cargando" ? (
           <p className="text-center text-muted-foreground">Comprobando sesión...</p>

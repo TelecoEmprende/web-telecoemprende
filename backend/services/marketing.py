@@ -17,12 +17,7 @@ from datetime import date, datetime, timedelta
 import psycopg2
 from psycopg2.extras import RealDictCursor
 
-from backend.config import (
-    CONTENT_ESTADOS,
-    DATABASE_URL,
-    TASK_ESTADOS,
-    TASK_PRIORIDADES,
-)
+from backend.config import DATABASE_URL
 
 
 def _get_connection():
@@ -129,7 +124,7 @@ def _crear_tablas_marketing():
                 ADD COLUMN IF NOT EXISTS completado_en TIMESTAMP
             """)
             # Toda tarea nace con instrucciones: es la regla que responde a
-            # "que todos sepan qué hacer y cómo" (ver docs/CLAUDE.md). Se
+            # "que todos sepan qué hacer y cómo". Se
             # exige a nivel de API (`_texto(..., obligatorio=True)` en
             # `api_crear_task`), no aquí -- una columna NOT NULL sin default
             # habría roto las tareas ya existentes.
@@ -205,7 +200,7 @@ def mis_campanas(email: str) -> list[dict]:
     """Campañas de cualquier departamento donde la persona tiene una tarea
     asignada, con su progreso -- para "Mis proyectos" en el Inicio de
     /equipo (mismo criterio cruzado que `mis_tareas`). "Campaña" es la
-    entidad que ya hace de proyecto (ver README de docs/CLAUDE.md); no hay
+    entidad que ya hace de proyecto; no hay
     tabla `proyectos` aparte que mantener sincronizada con ella.
     """
     with _get_connection() as conn:
@@ -938,20 +933,6 @@ def _eliminar(tabla: str, fila_id: int, departamento: str) -> bool:
             eliminado = cur.rowcount > 0
         conn.commit()
     return eliminado
-
-
-# Validadores usados por la capa API. Viven aquí para que las reglas de estado
-# estén junto al modelo que las guarda, no repartidas por las rutas.
-def estado_task_valido(estado: str) -> bool:
-    return estado in TASK_ESTADOS
-
-
-def estado_content_valido(estado: str) -> bool:
-    return estado in CONTENT_ESTADOS
-
-
-def prioridad_valida(prioridad: str) -> bool:
-    return prioridad in TASK_PRIORIDADES
 
 
 # --------------------------------------------------------------------------

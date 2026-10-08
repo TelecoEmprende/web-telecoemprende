@@ -14,7 +14,7 @@ type Aviso = { variant: "info" | "success" | "error"; message: string };
 
 /** Lo único que el layout comparte con sus vistas: cómo avisar al usuario.
  *  Los datos los pide cada vista, que es la que sabe cuáles necesita. */
-export type AdminContexto = {
+type AdminContexto = {
   avisar: (variant: Aviso["variant"], message: string) => void;
   /** Traduce un fallo de la API a un aviso, con su mensaje o el de reserva. */
   avisarError: (error: unknown, porDefecto: string) => void;

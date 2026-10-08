@@ -1,9 +1,5 @@
 import type { ApiFailure } from "../types/api";
 
-type RequestOptions = RequestInit & {
-  expectJson?: boolean;
-};
-
 function resolveRequestUrl(input: string) {
   if (typeof window === "undefined") {
     return input;
@@ -14,9 +10,9 @@ function resolveRequestUrl(input: string) {
 
 export async function apiRequest<T>(
   input: string,
-  init: RequestOptions = {},
+  init: RequestInit = {},
 ): Promise<T> {
-  const { expectJson = true, headers, ...rest } = init;
+  const { headers, ...rest } = init;
   const hasBody = rest.body !== undefined;
 
   const response = await fetch(resolveRequestUrl(input), {
@@ -27,14 +23,6 @@ export async function apiRequest<T>(
       ...headers,
     },
   });
-
-  if (!expectJson) {
-    if (!response.ok) {
-      throw new Error(`Request failed with status ${response.status}`);
-    }
-
-    return response as T;
-  }
 
   if (response.status === 204) {
     return {} as T;

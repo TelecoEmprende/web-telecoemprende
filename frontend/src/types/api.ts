@@ -1,4 +1,4 @@
-export type ApiSuccess = {
+type ApiSuccess = {
   ok: true;
   message?: string;
 };

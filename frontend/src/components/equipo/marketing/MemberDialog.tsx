@@ -27,11 +27,8 @@ import {
 type Props = {
   email: string;
   /** Habilidades ya apuntadas en el departamento, para el selector -- las
-   *  calcula `MembersPanel.tsx`, que ya recorre a todos los miembros. Quien
-   *  abre la ficha sin tener esa lista a mano (p. ej. `WeekPanel.tsx`) puede
-   *  omitirla: el selector arranca vacío, pero "+ nueva habilidad" sigue
-   *  funcionando igual. */
-  habilidadesConocidas?: string[];
+   *  calcula `MembersPanel.tsx`, que ya recorre a todos los miembros. */
+  habilidadesConocidas: string[];
   onCerrar: () => void;
   /** Para refrescar el directorio cuando cambian las etiquetas o se le asigna
    *  una tarea nueva (cambia su carga). */
@@ -62,7 +59,7 @@ const VERBO_ACTIVIDAD: Record<TaskEstado, string> = {
  * etiquetas y la nota, que viven en `equipo_accesos` porque son de la persona
  * y no del departamento -- así Eventos e Ingeniería ven las mismas.
  */
-export function MemberDialog({ email, habilidadesConocidas = [], onCerrar, onGuardado }: Props) {
+export function MemberDialog({ email, habilidadesConocidas, onCerrar, onGuardado }: Props) {
   const { createTask, getCalendario, getFichaMiembro, updateFichaMiembro } = useApi();
 
   const [ficha, setFicha] = useState<FichaMiembro | null>(null);
@@ -158,7 +155,7 @@ export function MemberDialog({ email, habilidadesConocidas = [], onCerrar, onGua
       const nueva = await aAvatarCuadrado(archivo);
       await updateFichaMiembro(email, { foto: nueva });
       setFoto(nueva);
-      onGuardado?.();
+      onGuardado();
     } catch (err) {
       setError((err as ApiFailure)?.message || "No se pudo cambiar la foto.");
     } finally {
@@ -174,7 +171,7 @@ export function MemberDialog({ email, habilidadesConocidas = [], onCerrar, onGua
     try {
       await updateFichaMiembro(email, { foto: "" });
       setFoto("");
-      onGuardado?.();
+      onGuardado();
     } catch (err) {
       setError((err as ApiFailure)?.message || "No se pudo quitar la foto.");
     } finally {

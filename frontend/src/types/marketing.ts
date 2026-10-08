@@ -63,8 +63,7 @@ export type Task = {
   content_id: number | null;
   titulo: string;
   descripcion: string;
-  /** Cómo hacerla, obligatoria al crear (ver docs/CLAUDE.md: "toda tarea
-   *  nace con instrucciones"). */
+  /** Cómo hacerla, obligatoria al crear: toda tarea nace con instrucciones. */
   instrucciones: string;
   estado: TaskEstado;
   prioridad: Prioridad;
@@ -107,7 +106,7 @@ export type Content = {
   tasks: Task[];
 };
 
-export type Campaign = {
+type Campaign = {
   id: number;
   nombre: string;
   objetivo: string;
@@ -127,7 +126,7 @@ export type CampaignResumen = Campaign & {
 };
 
 /** Una fila de "Mis proyectos" en Mi semana: la campaña (que ya hace de
- *  proyecto, ver docs/CLAUDE.md) de cualquier departamento donde la persona
+ *  proyecto) de cualquier departamento donde la persona
  *  tiene una tarea, con su progreso -- ver `GET /api/equipo/mis-proyectos`. */
 export type ProyectoResumen = {
   id: number;
@@ -188,7 +187,7 @@ export type TaskComment = {
 };
 
 /** Una entrada del historial: el estado actual de una tarea suya. */
-export type ActividadMiembro = {
+type ActividadMiembro = {
   id: number;
   titulo: string;
   estado: TaskEstado;
@@ -230,7 +229,7 @@ export const ONBOARDING_PASOS = [
   { key: "primera_tarea", label: "Primera tarea asignada" },
 ] as const;
 
-export type MiembroSalud = {
+type MiembroSalud = {
   email: string;
   abiertas: number;
   /** Días desde su última tarea completada, o null si no aplica. */
@@ -264,7 +263,7 @@ export type MiembroMetricas = {
   nivel: "rojo" | "amarillo" | "verde";
 };
 
-export type AlertaDepartamento = {
+type AlertaDepartamento = {
   departamento: Team;
   /** null si el departamento nunca ha cerrado una tarea. */
   dias_sin_cerrar: number | null;

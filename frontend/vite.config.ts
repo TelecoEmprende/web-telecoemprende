@@ -37,8 +37,6 @@ export default defineConfig({
         main: "index.html",
         admin: "admin/index.html",
         equipo: "equipo/index.html",
-        gracias: "gracias/index.html",
-        charlaSantiYPablo: "charla-santi-y-pablo/index.html",
         privacidad: "privacidad/index.html",
         news: "news/index.html",
       },

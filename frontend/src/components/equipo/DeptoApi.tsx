@@ -3,8 +3,8 @@ import { createContext, useContext, useEffect, useMemo, useState, type ReactNode
 import { apiDepto, type ApiDepto } from "../../api/marketing";
 import type { Team } from "../../types/equipo";
 
-/** Departamento cuyo workspace se está pintando. Marketing y Eventos comparten
- *  paneles, y esto es lo único que los distingue. */
+/** Departamento cuyo workspace se está pintando. Los tres departamentos
+ *  comparten paneles, y esto es lo único que los distingue. */
 const DeptoContext = createContext<Team>("marketing");
 
 export const DeptoProvider = DeptoContext.Provider;

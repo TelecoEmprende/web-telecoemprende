@@ -76,10 +76,10 @@ export function createEquipoAcceso(
   email: string,
   password: string,
   equipos: Team[],
-  vp_de: Team[] = [],
-  cargo: Cargo = "",
-  nombre: string = "",
-  mentor_email: string = "",
+  vp_de: Team[],
+  cargo: Cargo,
+  nombre: string,
+  mentor_email: string,
 ) {
   return apiRequest<ApiResult & { acceso: EquipoAcceso }>("/api/admin/equipo", {
     method: "POST",

@@ -6,9 +6,7 @@ DATABASE_URL = os.environ.get(
     "postgresql://telecoemprende:telecoemprende@localhost:5432/telecoemprende",
 )
 
-MAX_REQUESTS_PER_MINUTE = 8
-BLOCK_WINDOW_SECONDS = 60
-# Login es una superficie de fuerza bruta: límite propio, más estricto que el de registro.
+# Login es una superficie de fuerza bruta: límite propio por IP.
 MAX_LOGIN_ATTEMPTS_PER_WINDOW = 5
 LOGIN_BLOCK_WINDOW_SECONDS = 300
 ADMIN_SESSION_LIFETIME_SECONDS = 4 * 60 * 60
@@ -25,11 +23,6 @@ MAX_DRIVE_LINK_LEN = 300
 # solo DNI español.
 MAX_DNI_LEN = 20
 UPM_EMAIL_DOMAINS = ("alumnos.upm.es", "upm.es")
-
-EVENTOS_VALIDOS = {
-    "charla-santi-y-pablo",
-    "telecoemprende-2026-27",
-}
 
 DEPARTAMENTOS_VALIDOS = {
     "Tech/Ingeniería",

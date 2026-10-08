@@ -166,7 +166,7 @@
   height: 17px;
 }
 
-/* El idioma y la solicitud van juntos en la esquina derecha. */
+/* El idioma y el botón de unirse van juntos en la esquina derecha. */
 .barra__acciones {
   display: flex;
   align-items: center;
@@ -222,7 +222,7 @@
    web del club (`.lp-nav-cta` en frontend/src/styles/landing.css): pastilla
    de oro y tinta encima. Redonda del todo para que no se confunda con el
    acceso activo a un departamento, que es una pastilla de tinta. */
-.barra__solicitud {
+.barra__unete {
   display: inline-flex;
   align-items: center;
   min-height: 44px;
@@ -241,7 +241,7 @@
 }
 
 @media (hover: hover) and (pointer: fine) {
-  .barra__solicitud:hover {
+  .barra__unete:hover {
     filter: brightness(1.05);
     transform: translateY(-1px);
   }
@@ -1117,16 +1117,6 @@ main > section:nth-of-type(3) {
   color: var(--tinta);
 }
 
-.pendiente {
-  margin: clamp(32px, 4vw, 52px) 0 0;
-  padding: 14px 18px;
-  border: 1px dashed var(--linea);
-  background: var(--papel-2);
-  font-size: 13.5px;
-  line-height: 1.5;
-  color: var(--texto);
-}
-
 /* --------------------------------------------------------------------------
    Visor a pantalla completa
    -------------------------------------------------------------------------- */
@@ -1451,7 +1441,7 @@ main > section:nth-of-type(3) {
 
   /* El botón se queda —es lo que se pide en esta página—, así que la barra
      sigue teniendo tres columnas y quien cede espacio es el nombre. */
-  .barra__solicitud {
+  .barra__unete {
     padding: 10px 16px;
     font-size: 13px;
   }
@@ -1624,8 +1614,8 @@ main > section:nth-of-type(3) {
  * un erasmus hasta aquí. Así que la barra pasa a dos filas.
  *
  * Y deja de ser una rejilla para pasar a ser flex: en una rejilla la columna
- * mide lo mismo en las dos filas, y el botón —"Submit your application" es
- * más largo que "Envía tu solicitud"— le robaba el ancho al nombre del club
+ * mide lo mismo en las dos filas, y el botón —más largo en un idioma que en
+ * el otro— le robaba el ancho al nombre del club
  * hasta cortarlo con puntos suspensivos.
  */
 @media (max-width: 760px) {
@@ -1675,14 +1665,14 @@ main > section:nth-of-type(3) {
   }
 
   /* Pegado a la derecha, esté o no la fila de accesos a su lado. */
-  .barra__solicitud {
+  .barra__unete {
     order: 5;
     margin-left: auto;
   }
 }
 
 @media (max-width: 560px) {
-  .barra__solicitud {
+  .barra__unete {
     padding: 10px 15px;
   }
 
@@ -1716,7 +1706,7 @@ main > section:nth-of-type(3) {
     padding: 9px;
   }
 
-  .barra__solicitud {
+  .barra__unete {
     padding: 9px 13px;
     font-size: 12.5px;
   }

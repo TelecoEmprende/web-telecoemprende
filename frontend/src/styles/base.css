@@ -80,7 +80,7 @@ p {
 
 /* Escala Anton (adaptación web de la guía v2: Display 76–168 es escala de
    cartel; en pantalla el techo son ~6rem). Estos son suelos — las clases
-   .lp-hero h1 / .lp-heading fijan el tamaño real por sección. */
+   de cada sección (.lp-heading, .in-*) fijan el tamaño real. */
 h1 {
   font-size: clamp(2.4rem, 5vw, 3.25rem);
 }

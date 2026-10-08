@@ -1,11 +1,11 @@
 // Noticias del news-bot (repo internal-tools/news-bot). La API es de solo
 // lectura y pública; la CSP la permite en connect-src (app.py y vercel.json).
-export const NEWS_API = import.meta.env.DEV ? "/noticias-api" : "https://n8n.telecoemprende.es/webhook/noticias";
+const NEWS_API = import.meta.env.DEV ? "/noticias-api" : "https://n8n.telecoemprende.es/webhook/noticias";
 
 export const TEMAS = ["inversion", "ia", "startups", "finanzas", "tech"] as const;
 export type Tema = (typeof TEMAS)[number];
 
-export type Fuente = { medio: string | null; titulo: string | null; url: string };
+type Fuente = { medio: string | null; titulo: string | null; url: string };
 
 export type Noticia = {
   id: number;

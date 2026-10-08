@@ -1,12 +1,12 @@
 # Dónde van las imágenes
 
 Deja aquí las fotos, carteles y capturas. Esta carpeta se publica tal cual: lo que
-metas en `frontend/public/img/eventos/foto.jpg` se ve en la web como `/img/eventos/foto.jpg`.
+metas en `demo/public/img/eventos/foto.jpg` se ve en la web como `/demo/img/eventos/foto.jpg`.
 
 ## Cómo añadir una imagen
 
 1. Arrastra el archivo a la subcarpeta que le toque (`tech/`, `marketing/` o `eventos/`).
-2. Abre `frontend/src/data/contenido.ts` y escribe su ruta en el departamento correspondiente.
+2. Abre `demo/src/data/contenido.ts` y escribe su ruta en el departamento correspondiente.
 3. Guarda. La web se actualiza sola, sin reiniciar nada.
 
 Mientras una imagen no exista, la página enseña un hueco gris con el nombre del archivo

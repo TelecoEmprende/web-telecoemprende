@@ -9,7 +9,7 @@ resuelve `_montar_rutas`, que es la misma para todas. Aquí cuelga también
 `/plataforma`, que no es un registro pero comparte blueprint y autorización.
 """
 
-from flask import jsonify, request
+from flask import jsonify
 
 from backend.api.marketing import (
     DatosInvalidos,

@@ -38,9 +38,9 @@ from backend.services.equipo import (
 from backend.services.registrations import (
     actualizar_estado,
     actualizar_registro,
-    crear_excel_si_no_existe,
     eliminar_registro,
     generar_excel_en_memoria,
+    init_db,
     marcar_notificado,
     obtener_eventos,
     obtener_pendientes_notificacion,
@@ -224,8 +224,6 @@ def access_denied_response(message: str, status_code: int = 401):
 
 @admin_api.route("/login", methods=["POST"])
 def api_admin_login():
-    crear_excel_si_no_existe()
-
     if not admin_password_configured():
         return (
             jsonify(build_response(
@@ -278,7 +276,7 @@ def api_admin_registrations():
     if not is_admin_authenticated():
         return access_denied_response("No autorizado.", 401)
 
-    crear_excel_si_no_existe()
+    init_db()
     evento = request.args.get("evento") or None
     registros = obtener_registros(evento)
     eventos = obtener_eventos()

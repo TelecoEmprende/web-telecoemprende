@@ -122,7 +122,7 @@ export function PlataformaPanel() {
             <h4 className="mkt-grupo-titulo-react">Integraciones</h4>
             <ul className="mkt-miembros-react">
               {integraciones.map((integracion, indice) => (
-                <FilaAnimada key={integracion.variable} como="li" indice={indice}>
+                <FilaAnimada key={integracion.variable} indice={indice}>
                   <span className="mkt-miembro-react">
                     <span className="mkt-miembro-datos-react">
                       <span className="mkt-miembro-nombre-react">{integracion.nombre}</span>
