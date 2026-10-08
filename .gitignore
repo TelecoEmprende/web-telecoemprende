@@ -12,9 +12,10 @@ __pycache__/
 *.key
 *.crt
 
-# IDE
+# IDE y sistema
 .vscode/
 .idea/
+.DS_Store
 
 # Datos locales / exportaciones
 registros_evento.xlsx

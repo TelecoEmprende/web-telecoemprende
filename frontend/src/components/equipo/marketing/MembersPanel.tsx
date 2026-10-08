@@ -9,13 +9,8 @@ import { AvatarResponsable, etiquetaDe, nivelCarga, type NivelCarga } from "./Av
 import { MemberDialog } from "./MemberDialog";
 import { useEntradaDeFila } from "../../movimiento";
 import type { ApiFailure } from "../../../types/api";
+import { DEPTO_LABEL, type Team } from "../../../types/equipo";
 import type { Miembro } from "../../../types/marketing";
-
-const TEAM_LABEL: Record<string, string> = {
-  marketing: "Marketing",
-  eventos: "Eventos",
-  ingenieria: "Ingeniería",
-};
 
 /** Color por departamento para el chip de la columna "Departamentos": mismo
  *  criterio que la agenda del club (`CalendarioEquipo`) -- naranja Marketing,
@@ -105,7 +100,7 @@ export function MembersPanel() {
       {error ? <AlertBanner variant="error" message={error} /> : null}
 
       <header className="crm-cabecera-react">
-        <h3 className="crm-h1">Miembros de {TEAM_LABEL[depto] ?? depto}</h3>
+        <h3 className="crm-h1">Miembros de {DEPTO_LABEL[depto]}</h3>
         <div className="flex flex-wrap items-center gap-3">
           {habilidades.length > 0 ? (
             <div className="crm-tags-react" role="group" aria-label="Filtrar por habilidad">
@@ -187,7 +182,7 @@ export function MembersPanel() {
                       key={equipo}
                       className={`mkt-depto-chip-react ${DEPTO_CLASE[equipo] ?? ""}`}
                     >
-                      {TEAM_LABEL[equipo] ?? equipo}
+                      {DEPTO_LABEL[equipo as Team] ?? equipo}
                     </span>
                   ))}
                 </span>

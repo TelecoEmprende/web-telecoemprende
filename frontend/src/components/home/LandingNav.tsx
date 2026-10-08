@@ -1,5 +1,8 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
+import { motion, useReducedMotion, useScroll } from "motion/react";
+
+import { SPRING_DEFAULT } from "@/components/smoothui/lib/animation";
 
 import { useLanguage } from "../../i18n/LanguageContext";
 import { useTranslation } from "../../i18n/translations";
@@ -9,6 +12,9 @@ export function LandingNav() {
   const { language, setLanguage } = useLanguage();
   const { t } = useTranslation();
   const [menuOpen, setMenuOpen] = useState(false);
+  const menos = useReducedMotion();
+  // Barra de lectura: cuánto llevas de página, pegada al borde inferior de la nav.
+  const { scrollYProgress } = useScroll();
   const onHomePage = pathname === "/";
   const toAnchor = (hash: string) => (onHomePage ? hash : `/${hash}`);
 
@@ -16,7 +22,8 @@ export function LandingNav() {
     { href: "#quienes-somos", label: t.nav.quienesSomos },
     { href: "#departamentos", label: t.nav.departamentos },
     { href: "#eventos", label: t.nav.eventos },
-    { href: "#inscripcion", label: t.nav.inscripcion },
+    { href: "#recursos", label: t.nav.recursos },
+    { href: "#equipo", label: t.nav.equipo },
   ];
 
   const [activeSection, setActiveSection] = useState("inicio");
@@ -28,8 +35,8 @@ export function LandingNav() {
   useEffect(() => {
     if (!onHomePage) return;
 
-    // "noticias" no tiene enlace de ancla: se observa para que, sobre ella, no quede marcado Eventos.
-    const sectionIds = ["inicio", ...navLinks.map((link) => link.href.slice(1)), "noticias"];
+    // "noticias" y "comunidad" no tienen enlace de ancla: se observan para que, sobre ellas, no quede marcada otra.
+    const sectionIds = ["inicio", ...navLinks.map((link) => link.href.slice(1)), "noticias", "comunidad"];
     const sections = sectionIds
       .map((id) => document.getElementById(id))
       .filter((el): el is HTMLElement => el !== null);
@@ -55,12 +62,11 @@ export function LandingNav() {
 
   return (
     <header className="lp-nav">
+      <motion.div className="lp-nav-progreso" style={{ scaleX: scrollYProgress }} aria-hidden="true" />
       <div className="lp-container lp-nav-inner">
         <a href={toAnchor("#inicio")} className="lp-nav-brand">
-          <img src="/logo.png" alt="Logo de TelecoEmprende" className="lp-nav-logo" />
-          <span className="lp-nav-name">
-            Teleco<span>Emprende</span>
-          </span>
+          <img src="/logo-blanco.png" alt="Logo de TelecoEmprende" className="lp-nav-logo" />
+          <span className="lp-nav-name">TelecoEmprende</span>
         </a>
 
         <nav
@@ -77,7 +83,9 @@ export function LandingNav() {
                 aria-current={isActive ? "location" : undefined}
                 onClick={() => setMenuOpen(false)}
               >
-                {link.label}
+                {/* Una sola pastilla que se desliza de un enlace a otro (layoutId). */}
+                {isActive && <motion.span layoutId="lp-nav-pastilla" className="lp-nav-pastilla" transition={menos ? { duration: 0 } : SPRING_DEFAULT} />}
+                <span className="lp-nav-texto">{link.label}</span>
               </a>
             );
           })}
@@ -90,7 +98,7 @@ export function LandingNav() {
             {t.nav.noticias}
           </a>
           <a
-            href={toAnchor("#inscripcion")}
+            href={toAnchor("#comunidad")}
             className="lp-nav-cta lp-nav-cta-mobile"
             onClick={() => setMenuOpen(false)}
           >
@@ -133,7 +141,7 @@ export function LandingNav() {
           <span />
         </button>
 
-        <a href={toAnchor("#inscripcion")} className="lp-nav-cta lp-nav-cta-desktop">
+        <a href={toAnchor("#comunidad")} className="lp-nav-cta lp-nav-cta-desktop">
           {t.nav.cta}
         </a>
       </div>

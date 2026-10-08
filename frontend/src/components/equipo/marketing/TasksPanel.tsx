@@ -46,7 +46,7 @@ function compararTareas(a: Task, b: Task) {
   if (a.deadline !== b.deadline) {
     if (a.deadline === null) return 1;
     if (b.deadline === null) return -1;
-    if (a.deadline !== b.deadline) return a.deadline < b.deadline ? -1 : 1;
+    return a.deadline < b.deadline ? -1 : 1;
   }
   return ORDEN_PRIORIDAD[a.prioridad] - ORDEN_PRIORIDAD[b.prioridad];
 }
@@ -77,8 +77,8 @@ type Props = {
  * Arrastrar una tarjeta cambia su estado; abrirla y elegir "Estado" en el
  * diálogo hace lo mismo y es la vía accesible por teclado -- el drag es un
  * atajo encima de eso, no lo sustituye. Solo board y VP del departamento de
- * CADA tarea pueden crearla o reasignarla (ver docs/CLAUDE.md); un miembro
- * raso sigue pudiendo mover su propia tarea de estado.
+ * CADA tarea pueden crearla o reasignarla; un miembro raso sigue pudiendo
+ * mover su propia tarea de estado.
  */
 export function TasksPanel({ deptos, teams, vpDe, puedeAsignarEnTodo }: Props) {
   const directorio = useDirectorio();

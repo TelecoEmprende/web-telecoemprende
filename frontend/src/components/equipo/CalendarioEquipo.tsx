@@ -19,7 +19,7 @@ import { TaskDialog } from "./marketing/TaskDialog";
 import { useEntradaDeFila } from "../movimiento";
 import { DURATION, EASE_OUT } from "@/components/smoothui/lib/animation";
 import type { ApiFailure } from "../../types/api";
-import type { EventoCalendario, MiembroDirectorio, Team } from "../../types/equipo";
+import { DEPTO_LABEL, type EventoCalendario, type MiembroDirectorio, type Team } from "../../types/equipo";
 import { textoDe, type Registro } from "../../types/registros";
 import {
   diasHasta,
@@ -27,12 +27,6 @@ import {
   type ProyectoResumen,
   type Task,
 } from "../../types/marketing";
-
-const DEPTO_LABEL: Record<string, string> = {
-  marketing: "Marketing",
-  eventos: "Eventos",
-  ingenieria: "Ingeniería",
-};
 
 /** Cada departamento con su cajita: Tech en azul, Marketing en ámbar y
  *  Eventos en el gris neutro del boceto -- tres tonos que se distinguen de un
@@ -202,10 +196,7 @@ export function CalendarioEquipo({ onIrA }: Props) {
         setTeams(sesion.teams);
         setVpDe(sesion.vp_de);
         setCargo(sesion.cargo);
-        // Tareas abiertas de cualquier departamento al que pertenezca -- con
-        // uno solo es lo mismo que ve en el resumen de ese departamento, pero
-        // repetirlo aquí es gratis y evita el salto raro de "aparece según
-        // cuántos equipos tengas".
+        // Tareas abiertas de cualquier departamento al que pertenezca.
         void cargarTareas();
 
         getMisProyectos()
@@ -295,8 +286,8 @@ export function CalendarioEquipo({ onIrA }: Props) {
   /** Check-in el día del evento: lo hace quien gestiona la puerta (VP de
    *  cualquier departamento o admin, mismo criterio que `puedeAnadirEvento`),
    *  marcando a cada confirmado según va llegando. Alimenta la asistencia
-   *  media de `MetricasPanel`, a diferencia de `confirmarAsistencia`, que es
-   *  solo la intención previa. */
+   *  media de `metricas_club` en el backend, a diferencia de
+   *  `confirmarAsistencia`, que es solo la intención previa. */
   async function marcarAsistio(evento: EventoCalendario, personaEmail: string, asistio: boolean) {
     try {
       await checkinEventoCalendario(evento.id, personaEmail, asistio);
@@ -503,7 +494,7 @@ export function CalendarioEquipo({ onIrA }: Props) {
                         </div>
                       </button>
                       <span className={`crm-tag ${DEPTO_TAG[tarea.departamento] ?? ""}`}>
-                        {DEPTO_LABEL[tarea.departamento] ?? tarea.departamento}
+                        {DEPTO_LABEL[tarea.departamento as Team] ?? tarea.departamento}
                       </span>
                       {hecha ? (
                         <span className="crm-tag crm-tag-verde-react">Hecho</span>

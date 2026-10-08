@@ -2,11 +2,11 @@ import { useEffect } from "react";
 
 /*
  * Lleva la página a la sección del enlace cuando se llega de fuera con un
- * ancla puesta: telecoemprende.es/#inscripcion desde la demo, desde WhatsApp
- * o desde un marcador.
+ * ancla puesta: telecoemprende.es/#eventos desde WhatsApp, desde /news o
+ * desde un marcador.
  *
  * Hace falta porque esto es una SPA. El HTML que sirve el servidor solo trae
- * `<div id="root"></div>`: cuando el navegador busca `#inscripcion`, esa
+ * `<div id="root"></div>`: cuando el navegador busca `#eventos`, esa
  * sección todavía no existe, así que se queda arriba. React la pinta un
  * instante después y el navegador ya no vuelve a intentarlo.
  *
@@ -32,7 +32,7 @@ export function useInitialHashScroll() {
      * arriba, y dejaba la página a mitad de camino. La sección se mueve
      * mucho mientras cargan las imágenes —la portada pasa de 7.200 a 9.900
      * píxeles de alto—, así que quedarse sin reintentos deja a la persona a
-     * dos mil píxeles del formulario.
+     * dos mil píxeles de la sección.
      */
     let cancelado = false;
     const cancelar = () => {

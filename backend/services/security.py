@@ -6,7 +6,6 @@ from time import time
 from flask import request
 
 from backend.config import (
-    BLOCK_WINDOW_SECONDS,
     MAX_APELLIDOS_LEN,
     MAX_DRIVE_LINK_LEN,
     MAX_EMAIL_LEN,
@@ -14,7 +13,6 @@ from backend.config import (
     MAX_ESTUDIOS_LEN,
     MAX_NIVEL_LEN,
     MAX_NOMBRE_LEN,
-    MAX_REQUESTS_PER_MINUTE,
     MAX_TELEFONO_LEN,
     UPM_EMAIL_DOMAINS,
 )
@@ -92,9 +90,9 @@ def obtener_ip_real() -> str:
 
 def demasiadas_peticiones(
     ip: str,
-    max_requests: int = MAX_REQUESTS_PER_MINUTE,
-    window_seconds: int = BLOCK_WINDOW_SECONDS,
-    bucket: str = "default",
+    max_requests: int,
+    window_seconds: int,
+    bucket: str,
 ) -> bool:
     ahora = time()
     key = f"{bucket}:{ip}"

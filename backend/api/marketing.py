@@ -63,7 +63,6 @@ from backend.services.marketing import (
     obtener_campaign,
     obtener_content,
     obtener_task,
-    salud_equipo,
 )
 
 logger = logging.getLogger("telecoemprende.marketing")
@@ -263,8 +262,7 @@ def _autor() -> str:
 
 
 def _puede_asignar_tareas(departamento: str | None = None) -> bool:
-    """Solo board y VPs del departamento asignan (ver docs/CLAUDE.md) --
-    mismo criterio que `/miembros/salud`, no uno nuevo.
+    """Solo board y VPs del departamento asignan.
 
     `departamento` sirve para preguntar por uno distinto al de la ruta: mover
     una tarea a otro departamento exige poder asignar en los dos, y el de
@@ -676,24 +674,6 @@ def api_miembros():
         for a in miembros_activos(depto)
     ]
     return jsonify({"ok": True, "miembros": miembros}), 200
-
-
-@marketing_api.route("/miembros/salud", methods=["GET"])
-@requiere_equipo
-def api_miembros_salud():
-    """Semáforo de carga/inactividad/plazos del departamento -- para VP y
-    board, no para el miembro raso: la puntuación de participación no se le
-    enseña, para no meter competición entre compañeros (mismo criterio que
-    `/api/equipo/metricas`). No es tampoco el directorio general (`/miembros`)."""
-    sesion = equipo_session_info()
-    autorizado = (
-        is_admin_authenticated()
-        or sesion["cargo"] in CARGOS_VALIDOS
-        or departamento_actual() in sesion["vp_de"]
-    )
-    if not autorizado:
-        return jsonify(build_response(False, "No autorizado.")), 403
-    return jsonify({"ok": True, "salud": salud_equipo(departamento_actual())}), 200
 
 
 def _es_mi_ficha(email: str) -> bool:

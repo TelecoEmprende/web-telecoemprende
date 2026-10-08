@@ -1,6 +1,6 @@
 ---
 name: TelecoEmprende
-description: Web del club de emprendimiento de la UPM — landing, inscripción, /news y espacio de trabajo interno (/equipo, /admin).
+description: Web del club de emprendimiento de la UPM — landing, /news y espacio de trabajo interno (/equipo, /admin).
 colors:
   azul: "#1350b8"
   azul-profundo: "#0e43a0"
@@ -101,7 +101,7 @@ components:
 
 La web aplica el Manual de Identidad Visual v2.0 (septiembre 2026) del club. Es un mundo de cartel universitario: bandas a sangre en Azul TE que alternan con secciones claras en papel, titulares en Anton siempre en mayúsculas, y un único disco naranja (el círculo del sistema gráfico) entrando por una esquina. Todo lo demás lo sostiene Inter, con texto Noche sobre Papel. El manual da una proporción de referencia por pieza: Azul 60 · Papel 22 · Impulso 10 · Chispa 5 · Noche 3.
 
-La fuente normativa es `frontend/src/styles/tokens.css`; toda hoja del sitio público (`landing.css`, `home.css`, `news.css`) consume variables de ahí. El sitio tiene tres superficies con la misma paleta: la web pública (landing, inscripción, páginas legales y de gracias, prefijo `lp-`), `/news` (prefijo `nw-`, construida dentro del mismo mundo) y el espacio de trabajo `/equipo` + `/admin`, que usa Tailwind + shadcn/ui acotado bajo `.shadcn-scope` y reasigna las variables de shadcn (`--primary`, `--background`, `--border`, `--ring`, `--radius-*`) a los tokens de `tokens.css`. Ese espacio es un sistema aparte en componentes, no en color.
+La fuente normativa es `frontend/src/styles/tokens.css`; toda hoja del sitio público (`landing.css`, `home.css`, `news.css`) consume variables de ahí. El sitio tiene tres superficies con la misma paleta: la web pública (landing y páginas legales, prefijos `lp-` e `in-`), `/news` (prefijo `nw-`, construida dentro del mismo mundo) y el espacio de trabajo `/equipo` + `/admin`, que usa Tailwind + shadcn/ui acotado bajo `.shadcn-scope` y reasigna las variables de shadcn (`--primary`, `--background`, `--border`, `--ring`, `--radius-*`) a los tokens de `tokens.css`. Ese espacio es un sistema aparte en componentes, no en color.
 
 Aviso de divergencia: la sección «Brand» del `CLAUDE.md` del repo describe la paleta v1 (tinta, ámbar, naranja, acero) y Space Grotesk como fuente de cuerpo, con departamentos Tech = acero y Eventos = ámbar. El código usa la v2 descrita aquí (Inter; Tech = Azul, Marketing = Impulso, Eventos = Noche). Manda `tokens.css`.
 
@@ -162,24 +162,24 @@ Paleta cerrada de ocho colores de marca más tres pares de estado; ningún tono 
 
 ## Layout
 
-Contenedor centrado de 1180px con 24px de margen lateral (18px en móvil). La página es una pila de bandas a sangre de ancho completo con relleno vertical generoso (92–124px en escritorio, 48–88px en móvil); el contenido vive dentro del contenedor. La navegación es sticky arriba; en /news el filtro de temas se pega justo debajo. Las rejillas de tarjetas (departamentos, requisitos, eventos) usan CSS grid y colapsan a una columna. Puntos de corte observados: 980px, 720px (el principal) y ajustes a 620/420px. Los estados hover van siempre dentro de `@media (hover: hover) and (pointer: fine)`.
+Contenedor centrado de 1180px con 24px de margen lateral (18px en móvil). La página es una pila de bandas a sangre de ancho completo con relleno vertical generoso (92–124px en escritorio, 48–88px en móvil); el contenido vive dentro del contenedor. La navegación es sticky arriba; en /news el filtro de temas se pega justo debajo. Las rejillas de tarjetas (departamentos, eventos) usan CSS grid y colapsan a una columna. Puntos de corte observados: 980px, 720px (el principal) y ajustes a 620/420px. Los estados hover van siempre dentro de `@media (hover: hover) and (pointer: fine)`.
 
 En /news la semana se lee como agenda: hoy en una franja azul con la fecha como h1; cada día es una hoja blanca con filas regladas; la noticia abierta se reparte en dos columnas en escritorio (por qué importa + qué pasó | fuentes) y en una en móvil, en orden por qué importa → fuentes → qué pasó. Los días pasados van sobre papel, plegados, con fecha, titular principal y recuento.
 
 ## Elevation & Depth
 
-Sistema mayormente plano con una sola sombra ambiental. Las tarjetas de la landing (equipo, requisitos, departamentos, gracias) flotan sobre papel con una sombra difusa en Noche; los botones son planos, sin sombra ni degradado. La profundidad principal no es sombra sino color: bandas azules frente a papel y el disco naranja detrás del contenido.
+Sistema mayormente plano con una sola sombra ambiental. Las tarjetas de la landing (equipo, departamentos) flotan sobre papel con una sombra difusa en Noche; los botones son planos, sin sombra ni degradado. La profundidad principal no es sombra sino color: bandas azules frente a papel y el disco naranja detrás del contenido.
 
 ### Shadow Vocabulary
 - **Sombra suave** (`box-shadow: 0 16px 40px rgba(17, 37, 50, 0.08)`, `--shadow-soft`): tarjetas blancas sobre papel en la landing.
-- **Anillo de foco de campo** (`box-shadow: 0 0 0 4px rgba(224, 104, 14, 0.12)`): campos del formulario en foco.
+- **Anillo de foco de campo** (`box-shadow: 0 0 0 4px rgba(224, 104, 14, 0.12)`): campos de formulario en foco.
 
 ### Named Rules
 **The Hoja sin Sombra Rule.** Las listas de /news y de la home son hojas blancas o listas sobre papel con filetes de 1px en Papel hueso; ninguna fila lleva sombra ni caja propia.
 
 ## Shapes
 
-Esquinas redondeadas en todo lo que se toca: campos y botones a 14px (`rounded.md`), hojas y paneles a 20px (`rounded.lg`), tarjetas de gracias a 28px (`rounded.xl`), y pastillas, chips y toggles completamente redondos (`rounded.circle`). La geometría gráfica del manual es el círculo: un disco sólido por pieza, en Impulso, entrando por una esquina (abajo a la derecha en el hero; arriba a la derecha con halo de Azul claro al 22% en la franja de hoy de /news).
+Esquinas redondeadas en todo lo que se toca: campos y botones a 14px (`rounded.md`), hojas y paneles a 20px (`rounded.lg`), tarjetas grandes a 28px (`rounded.xl`), y pastillas, chips y toggles completamente redondos (`rounded.circle`). La geometría gráfica del manual es el círculo: un disco sólido por pieza, en Impulso, entrando por una esquina (abajo a la derecha en el hero; arriba a la derecha con halo de Azul claro al 22% en la franja de hoy de /news).
 
 ## Components
 

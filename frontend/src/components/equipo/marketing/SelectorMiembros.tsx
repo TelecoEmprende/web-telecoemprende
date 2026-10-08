@@ -13,7 +13,6 @@ type Props = {
   id?: string;
   seleccionados: string[];
   onCambiar: (emails: string[]) => void;
-  placeholder?: string;
   /** De qué departamentos sale el roster. Por defecto, el del contexto
    *  (`useApi`); se pasa explícitamente cuando lo que se está editando no es
    *  del departamento que se está viendo -- crear una tarea para Eventos
@@ -32,7 +31,6 @@ export function SelectorMiembros({
   id,
   seleccionados,
   onCambiar,
-  placeholder = "Elegir personas...",
   deptos,
 }: Props) {
   const { getMiembros } = useApi();
@@ -78,7 +76,7 @@ export function SelectorMiembros({
       <PopoverTrigger asChild>
         <button type="button" id={id} className="mkt-selector-miembros-react">
           {seleccionados.length === 0 ? (
-            <span className="mkt-selector-placeholder-react">{placeholder}</span>
+            <span className="mkt-selector-placeholder-react">Elegir personas...</span>
           ) : (
             <span className="mkt-selector-elegidos-react">
               {seleccionados.map((email) => (

@@ -35,7 +35,7 @@ function Enlace({ url, texto }: { url: string; texto?: string }) {
 // --------------------------------------------------------------------------
 
 const CAMPOS_RECURSOS: readonly CampoSpec[] = [
-  { clave: "titulo", etiqueta: "Título", tipo: "texto", requerido: true, esTitulo: true },
+  { clave: "titulo", etiqueta: "Título", tipo: "texto", requerido: true },
   {
     clave: "tipo",
     etiqueta: "Tipo",
@@ -80,7 +80,7 @@ export function RecursosPanel() {
 // --------------------------------------------------------------------------
 
 const CAMPOS_PRESUPUESTO: readonly CampoSpec[] = [
-  { clave: "concepto", etiqueta: "Concepto", tipo: "texto", requerido: true, esTitulo: true },
+  { clave: "concepto", etiqueta: "Concepto", tipo: "texto", requerido: true },
   {
     clave: "tipo",
     etiqueta: "Tipo",
@@ -194,7 +194,7 @@ export function PresupuestoPanel() {
 // --------------------------------------------------------------------------
 
 const CAMPOS_ANUNCIOS: readonly CampoSpec[] = [
-  { clave: "titulo", etiqueta: "Título", tipo: "texto", requerido: true, esTitulo: true },
+  { clave: "titulo", etiqueta: "Título", tipo: "texto", requerido: true },
   { clave: "cuerpo", etiqueta: "Mensaje", tipo: "parrafo" },
   {
     clave: "fijado",
@@ -235,7 +235,7 @@ export function AnunciosPanel() {
 // --------------------------------------------------------------------------
 
 const CAMPOS_REUNIONES: readonly CampoSpec[] = [
-  { clave: "titulo", etiqueta: "Título", tipo: "texto", requerido: true, esTitulo: true },
+  { clave: "titulo", etiqueta: "Título", tipo: "texto", requerido: true },
   { clave: "fecha", etiqueta: "Fecha", tipo: "fecha" },
   { clave: "hora", etiqueta: "Hora", tipo: "hora" },
   {
@@ -298,7 +298,7 @@ export function ReunionesPanel() {
 // --------------------------------------------------------------------------
 
 const CAMPOS_ALUMNI: readonly CampoSpec[] = [
-  { clave: "nombre", etiqueta: "Nombre", tipo: "texto", requerido: true, esTitulo: true },
+  { clave: "nombre", etiqueta: "Nombre", tipo: "texto", requerido: true },
   { clave: "promocion", etiqueta: "Promoción", tipo: "texto", ayuda: "El año en que salió." },
   { clave: "empresa", etiqueta: "Empresa", tipo: "texto" },
   { clave: "puesto", etiqueta: "Puesto", tipo: "texto" },
@@ -359,7 +359,7 @@ export function AlumniPanel() {
 // --------------------------------------------------------------------------
 
 const CAMPOS_DECISIONES: readonly CampoSpec[] = [
-  { clave: "titulo", etiqueta: "Título", tipo: "texto", requerido: true, esTitulo: true },
+  { clave: "titulo", etiqueta: "Título", tipo: "texto", requerido: true },
   {
     clave: "estado",
     etiqueta: "Estado",
@@ -435,7 +435,7 @@ export function DecisionesPanel() {
 // --------------------------------------------------------------------------
 
 const CAMPOS_SERVICIOS: readonly CampoSpec[] = [
-  { clave: "nombre", etiqueta: "Servicio", tipo: "texto", requerido: true, esTitulo: true },
+  { clave: "nombre", etiqueta: "Servicio", tipo: "texto", requerido: true },
   {
     clave: "tipo",
     etiqueta: "Tipo",

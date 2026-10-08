@@ -677,7 +677,6 @@ span.mkt-dia-numero-react:hover {
   flex-shrink: 0;
 }
 
-
 /* Cabecera del login: la página es Azul TE, así que la barra se funde con el
    fondo — sin losa, solo un filete blanco abajo y el texto en blanco. */
 .equipo-shell-react .header-inner-react {
@@ -891,11 +890,6 @@ button.crm-row-cuerpo-react {
 .crm-tag-verde-react {
   background: var(--color-success-bg);
   color: var(--color-success-text);
-}
-
-.crm-tag-noche-react {
-  background: rgba(var(--color-noche-rgb), 0.1);
-  color: var(--color-noche);
 }
 
 /* La cajita del día en la rejilla de la semana: sí parte línea. */

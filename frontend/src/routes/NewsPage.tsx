@@ -14,7 +14,7 @@ export const DIAS = 7;
 export const LIMITE = 100;
 const VISIBLES_POR_DIA = 6;
 
-export const ICONO_TEMA: Record<Tema, LucideIcon> = {
+const ICONO_TEMA: Record<Tema, LucideIcon> = {
   inversion: Coins,
   ia: Bot,
   startups: Rocket,
@@ -165,7 +165,7 @@ export function NewsPage() {
             <p className="nw-aviso">{t.news.aviso}</p>
             <h2 className="lp-heading nw-cierre-titulo">{t.news.ctaTitulo}</h2>
             <p className="lp-section-lead">{t.news.ctaTexto}</p>
-            <a href="/#inscripcion" className="lp-btn lp-btn-gold">
+            <a href="/#comunidad" className="lp-btn lp-btn-gold">
               {t.news.ctaBoton}
             </a>
           </div>
