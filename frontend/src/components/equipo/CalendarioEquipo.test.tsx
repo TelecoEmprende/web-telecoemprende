@@ -9,13 +9,17 @@ const getMisTareas = vi.fn();
 const getMisProyectos = vi.fn();
 const getDirectorioClub = vi.fn();
 
+vi.mock("../../api/notas", () => ({
+  listarNotas: () => Promise.resolve({ ok: true, notas: [] }),
+}));
+
 vi.mock("../../api/equipo", () => ({
   getEquipoCalendario: () => getEquipoCalendario(),
   getEquipoSession: () => getEquipoSession(),
   getMisTareas: () => getMisTareas(),
   getMisProyectos: () => getMisProyectos(),
   getDirectorioClub: () => getDirectorioClub(),
-  confirmarEventoCalendario: vi.fn(),
+  getEventosLuma: () => Promise.resolve({ ok: true, calendario: "", eventos: [] }),
 }));
 
 // El aviso del board sale de los anuncios (`apiDepto(...).listarRegistros`),

@@ -79,3 +79,14 @@ export type EventoCalendario = {
    *  asistencia, a diferencia de `confirmados` (solo intención previa). */
   asistio: string[];
 };
+
+/** Un evento del calendario público de Luma (ver `services/luma.py`). */
+export type EventoLuma = {
+  id: string;
+  titulo: string;
+  /** ISO con zona (UTC). */
+  inicio: string;
+  lugar: string;
+  /** Página del evento en Luma, donde la gente se apunta. Puede venir vacía. */
+  url: string;
+};

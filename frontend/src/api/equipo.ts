@@ -4,6 +4,7 @@ import type {
   EquipoLoginResponse,
   EquipoSessionResponse,
   EventoCalendario,
+  EventoLuma,
   MiembroDirectorio,
   Team,
 } from "../types/equipo";
@@ -42,6 +43,11 @@ export function getDirectorioClub() {
 
 export function getEquipoCalendario() {
   return apiRequest<ApiResult & { eventos: EventoCalendario[] }>("/api/equipo/calendario");
+}
+
+/** Próximos eventos del calendario de Luma del club, y la URL del calendario. */
+export function getEventosLuma() {
+  return apiRequest<ApiResult & { calendario: string; eventos: EventoLuma[] }>("/api/equipo/luma");
 }
 
 /** Solo VPs (o admin) pueden llamarla -- ver `_puede_editar_calendario_club`
