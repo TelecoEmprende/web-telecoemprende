@@ -7,6 +7,7 @@ import { ContadorCaracteres } from "../../feedback/ContadorCaracteres";
 import { Esqueleto } from "../../feedback/Esqueleto";
 import { AdjuntosDeContent } from "./AdjuntosDeContent";
 import { ContentEditor } from "./ContentEditor";
+import { NotasDelProyecto } from "./NotasDelProyecto";
 import { Badge } from "@/components/ui/badge";
 import { useEntradaDeFila } from "../../movimiento";
 import { SPRING_DEFAULT } from "@/components/smoothui/lib/animation";
@@ -145,7 +146,7 @@ function EnlaceNuevo({ onAñadir }: { onAñadir: (enlace: string) => void }) {
         type="url"
         value={valor}
         placeholder="Pegar enlace del diseño, vídeo o carpeta..."
-        aria-label="Nuevo enlace del contenido"
+        aria-label="Nuevo enlace del entregable"
         onChange={(event) => setValor(event.target.value)}
       />
       <button type="submit" className="mkt-btn-mini-react" disabled={!valor.trim()}>
@@ -164,9 +165,11 @@ type Props = {
    *  quien la manda ya acota el filtro a ese departamento. */
   campaignInicial: number | null;
   onCampaignAbierta: () => void;
+  /** Abre una nota enlazada en Notas. */
+  onAbrirNota: (id: number) => void;
 };
 
-export function CampaignsPanel({ deptos, campaignInicial, onCampaignAbierta }: Props) {
+export function CampaignsPanel({ deptos, campaignInicial, onCampaignAbierta, onAbrirNota }: Props) {
   const menosMovimiento = useReducedMotion();
   const entradaFila = useEntradaDeFila();
   const [campaigns, setCampaigns] = useState<CampaignResumen[]>([]);
@@ -195,7 +198,7 @@ export function CampaignsPanel({ deptos, campaignInicial, onCampaignAbierta }: P
       setDetalle(respuesta.campaign);
       setError(null);
     } catch (err) {
-      setError(mensajeDeError(err, "No se pudo abrir la campaña."));
+      setError(mensajeDeError(err, "No se pudo abrir el proyecto."));
     }
   }, []);
 
@@ -206,7 +209,7 @@ export function CampaignsPanel({ deptos, campaignInicial, onCampaignAbierta }: P
       setCampaigns(respuestas.flatMap((r) => r.campaigns));
       setError(null);
     } catch (err) {
-      setError(mensajeDeError(err, "No se pudieron cargar las campañas."));
+      setError(mensajeDeError(err, "No se pudieron cargar los proyectos."));
     } finally {
       setIsLoading(false);
     }
@@ -252,7 +255,7 @@ export function CampaignsPanel({ deptos, campaignInicial, onCampaignAbierta }: P
       setMostrarFormulario(false);
       await cargarCampaigns();
     } catch (err) {
-      setError(mensajeDeError(err, "No se pudo crear la campaña."));
+      setError(mensajeDeError(err, "No se pudo crear el proyecto."));
     }
   }
 
@@ -271,7 +274,7 @@ export function CampaignsPanel({ deptos, campaignInicial, onCampaignAbierta }: P
       await abrir(detalle.id, detalle.departamento);
       await cargarCampaigns();
     } catch (err) {
-      setError(mensajeDeError(err, "No se pudo guardar la campaña."));
+      setError(mensajeDeError(err, "No se pudo guardar el proyecto."));
     }
   }
 
@@ -291,7 +294,7 @@ export function CampaignsPanel({ deptos, campaignInicial, onCampaignAbierta }: P
       if (detalle?.id === campaign.id) setDetalle(null);
       await cargarCampaigns();
     } catch (err) {
-      setError(mensajeDeError(err, "No se pudo eliminar la campaña."));
+      setError(mensajeDeError(err, "No se pudo eliminar el proyecto."));
     }
   }
 
@@ -315,7 +318,7 @@ export function CampaignsPanel({ deptos, campaignInicial, onCampaignAbierta }: P
       await abrir(campaign.id, campaign.departamento);
       await cargarCampaigns();
     } catch (err) {
-      setError(mensajeDeError(err, "No se pudo archivar la campaña."));
+      setError(mensajeDeError(err, "No se pudo archivar el proyecto."));
     } finally {
       setArchivando(false);
     }
@@ -328,7 +331,7 @@ export function CampaignsPanel({ deptos, campaignInicial, onCampaignAbierta }: P
       await cargarCampaigns();
       setDetalle(respuesta.campaign);
     } catch (err) {
-      setError(mensajeDeError(err, "No se pudo duplicar la campaña."));
+      setError(mensajeDeError(err, "No se pudo duplicar el proyecto."));
     } finally {
       setDuplicando(null);
     }
@@ -338,14 +341,14 @@ export function CampaignsPanel({ deptos, campaignInicial, onCampaignAbierta }: P
     if (!detalle) return;
     try {
       const respuesta = await apiDepto(detalle.departamento).createContent(detalle.id, {
-        titulo: "Contenido sin título",
+        titulo: "Entregable sin título",
       });
       await recargarDetalle();
       // Se abre el editor directamente: crear una tarjeta llamada "sin título"
       // y dejarla ahí obliga a un segundo clic que nadie quiere dar.
       setEditando(respuesta.content);
     } catch (err) {
-      setError(mensajeDeError(err, "No se pudo crear el contenido."));
+      setError(mensajeDeError(err, "No se pudo crear el entregable."));
     }
   }
 
@@ -366,7 +369,7 @@ export function CampaignsPanel({ deptos, campaignInicial, onCampaignAbierta }: P
       setConfirmandoContent(null);
       await recargarDetalle();
     } catch (err) {
-      setError(mensajeDeError(err, "No se pudo eliminar el contenido."));
+      setError(mensajeDeError(err, "No se pudo eliminar el entregable."));
     }
   }
 
@@ -437,7 +440,7 @@ export function CampaignsPanel({ deptos, campaignInicial, onCampaignAbierta }: P
           className="mkt-volver-react"
           onClick={() => setDetalle(null)}
         >
-          ← Todas las campañas
+          ← Todos los proyectos
         </button>
 
         {editandoCampaign ? (
@@ -520,7 +523,7 @@ export function CampaignsPanel({ deptos, campaignInicial, onCampaignAbierta }: P
                 className="mkt-btn-mini-react"
                 onClick={empezarAEditarCampaign}
               >
-                Editar campaña
+                Editar proyecto
               </button>
               <button
                 type="button"
@@ -550,7 +553,7 @@ export function CampaignsPanel({ deptos, campaignInicial, onCampaignAbierta }: P
                 className="mkt-btn-react"
                 onClick={() => void añadirContent()}
               >
-                + Contenido
+                + Entregable
               </button>
             </div>
           </header>
@@ -558,10 +561,18 @@ export function CampaignsPanel({ deptos, campaignInicial, onCampaignAbierta }: P
 
         <ProgresoCampaign tareas={todasLasTareas} />
 
+        <NotasDelProyecto
+          proyectoId={detalle.id}
+          proyectoNombre={detalle.nombre}
+          departamento={detalle.departamento}
+          onAbrirNota={onAbrirNota}
+        />
+
         {detalle.contents.length === 0 ? (
           <p className="mkt-vacio-react">
-            Todavía no hay contenidos. Un contenido es una pieza — un reel, un post,
-            unas stories. Las tareas para sacarlo adelante van dentro.
+            Todavía no hay entregables. Un entregable es cada cosa que sale del
+            proyecto — un reel, la reserva del aula, una funcionalidad de la web. Las
+            tareas para sacarlo adelante van dentro.
           </p>
         ) : (
           <div className="mkt-contents-react">
@@ -662,8 +673,8 @@ export function CampaignsPanel({ deptos, campaignInicial, onCampaignAbierta }: P
           <article className="mkt-content-card-react">
             <header>
               <div>
-                <h4>Tareas de la campaña</h4>
-                <p className="mkt-meta-react">No cuelgan de ningún contenido</p>
+                <h4>Tareas del proyecto</h4>
+                <p className="mkt-meta-react">No cuelgan de ningún entregable</p>
               </div>
             </header>
             <TareasDeContent
@@ -677,7 +688,7 @@ export function CampaignsPanel({ deptos, campaignInicial, onCampaignAbierta }: P
         <div className="mkt-zona-peligro-react">
           {confirmando === detalle.id ? (
             <p className="mkt-confirmar-react">
-              Se borran también {detalle.contents.length} contenidos y{" "}
+              Se borran también {detalle.contents.length} entregables y{" "}
               {todasLasTareas.length} tareas. Esto no se puede deshacer.
               <button
                 type="button"
@@ -700,7 +711,7 @@ export function CampaignsPanel({ deptos, campaignInicial, onCampaignAbierta }: P
               className="mkt-btn-borrar-react"
               onClick={() => setConfirmando(detalle.id)}
             >
-              Eliminar campaña
+              Eliminar proyecto
             </button>
           )}
         </div>
@@ -730,8 +741,8 @@ export function CampaignsPanel({ deptos, campaignInicial, onCampaignAbierta }: P
       <header className="crm-cabecera-react">
         <h3 className="crm-h1">
           {visibles.length === 0
-            ? "Sin campañas"
-            : `${visibles.length} ${visibles.length === 1 ? "campaña" : "campañas"}`}
+            ? "Sin proyectos"
+            : `${visibles.length} ${visibles.length === 1 ? "proyecto" : "proyectos"}`}
         </h3>
         <div className="crm-tags-react">
           {archivadasCount > 0 ? (
@@ -752,7 +763,7 @@ export function CampaignsPanel({ deptos, campaignInicial, onCampaignAbierta }: P
             className="crm-btn"
             onClick={() => setMostrarFormulario((abierto) => !abierto)}
           >
-            {mostrarFormulario ? "Cancelar" : "+ Nueva campaña"}
+            {mostrarFormulario ? "Cancelar" : "+ Nuevo proyecto"}
           </button>
         </div>
       </header>
@@ -820,7 +831,7 @@ export function CampaignsPanel({ deptos, campaignInicial, onCampaignAbierta }: P
             </div>
           </div>
           <button type="submit" className="mkt-btn-react" disabled={!nombre.trim()}>
-            Crear campaña
+            Crear proyecto
           </button>
         </form>
       ) : null}
@@ -828,8 +839,8 @@ export function CampaignsPanel({ deptos, campaignInicial, onCampaignAbierta }: P
       {visibles.length === 0 ? (
         <p className="mkt-vacio-react">
           {campaigns.length === 0
-            ? "Aún no hay campañas. Una campaña agrupa todo lo que se publica alrededor de una idea o un evento."
-            : "Todas las campañas están archivadas."}
+            ? "Aún no hay proyectos. Un proyecto agrupa todo lo que hace falta para sacar adelante una idea, un evento o una mejora."
+            : "Todos los proyectos están archivados."}
         </p>
       ) : (
         <ul className="mkt-campaigns-react">
@@ -855,7 +866,7 @@ export function CampaignsPanel({ deptos, campaignInicial, onCampaignAbierta }: P
                   <span className="mkt-campaign-objetivo-react">{campaign.objetivo}</span>
                 ) : null}
                 <span className="mkt-meta-react">
-                  {campaign.total_contents} contenidos · {campaign.total_tasks} tareas
+                  {campaign.total_contents} entregables · {campaign.total_tasks} tareas
                   {campaign.fecha ? ` · ${formatearFecha(campaign.fecha, true)}` : ""}
                 </span>
                 {campaign.total_tasks > 0 ? (

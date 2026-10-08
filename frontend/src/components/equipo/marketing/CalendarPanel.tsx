@@ -908,7 +908,7 @@ export function CalendarPanel({
                     setSeleccionado(null);
                   }}
                 >
-                  Ver campaña →
+                  Ver proyecto →
                 </button>
               ) : null}
             </>

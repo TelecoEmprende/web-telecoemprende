@@ -206,7 +206,7 @@ export function TaskDialog({
                 onAbrirCampaign(task.campaign_id as number, task.departamento as Team)
               }
             >
-              Ver campaña →
+              Ver proyecto →
             </button>
           ) : null}
         </DialogHeader>
@@ -269,7 +269,7 @@ export function TaskDialog({
               </select>
               {departamento !== task.departamento ? (
                 <p className="mkt-meta-react">
-                  Al guardar deja de colgar de su campaña o contenido: son de{" "}
+                  Al guardar deja de colgar de su proyecto o entregable: son de{" "}
                   {DEPTO_LABEL[task.departamento as Team]}.
                 </p>
               ) : null}

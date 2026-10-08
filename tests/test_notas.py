@@ -107,5 +107,35 @@ class NotasTestCase(unittest.TestCase):
         self.assertEqual(ana.post("/api/equipo/notas", json={"contenido": bueno}).status_code, 201)
 
 
+    def test_notas_enlazadas_a_un_proyecto(self):
+        import backend.services.marketing as marketing_service
+
+        marketing_service.init_marketing_db()
+        conn = notas_service._get_connection()
+        with conn.cursor() as cur:
+            cur.execute(
+                "INSERT INTO campaigns (nombre, departamento) VALUES ('Charla YC', 'marketing') RETURNING id"
+            )
+            proyecto = cur.fetchone()[0]
+        conn.commit()
+        conn.close()
+
+        ana = self.como("ana@example.com")
+        enlazada = ana.post(
+            "/api/equipo/notas", json={"titulo": "Guion", "contenido": [], "proyecto_id": proyecto}
+        ).get_json()["nota"]
+        ana.post("/api/equipo/notas", json={"titulo": "Suelta", "contenido": []})
+        self.assertEqual(enlazada["proyecto_id"], proyecto)
+
+        enlaces = lambda: {n["titulo"]: n["proyecto_id"] for n in ana.get("/api/equipo/notas").get_json()["notas"]}  # noqa: E731
+        self.assertEqual(enlaces(), {"Guion": proyecto, "Suelta": None})
+
+        # Un proyecto que no existe no se puede enlazar; null desenlaza.
+        malo = ana.put(f"/api/equipo/notas/{enlazada['id']}", json={"proyecto_id": 999999})
+        self.assertEqual(malo.status_code, 400)
+        ana.put(f"/api/equipo/notas/{enlazada['id']}", json={"proyecto_id": None})
+        self.assertEqual(enlaces()["Guion"], None)
+
+
 if __name__ == "__main__":
     unittest.main()
