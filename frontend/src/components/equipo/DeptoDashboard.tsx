@@ -8,14 +8,13 @@ import {
   AnunciosPanel,
   DecisionesPanel,
   PresupuestoPanel,
-  RecursosPanel,
   ReunionesPanel,
 } from "./registros/paneles";
 import type { Team } from "../../types/equipo";
 
 type Props = {
   /** Departamento primario: el que ata el contexto (`DeptoProvider`) para los
-   *  paneles que todavía no son multi-departamento (Miembros, Recursos,
+   *  paneles que todavía no son multi-departamento (Miembros,
    *  Presupuesto, Reuniones, Decisiones,
    *  Calendario, Anuncios). */
   depto: Team;
@@ -79,7 +78,6 @@ export function DeptoDashboard({
           />
         ) : null}
         {seccion === "miembros" ? <MembersPanel /> : null}
-        {seccion === "recursos" ? <RecursosPanel /> : null}
         {seccion === "presupuesto" ? <PresupuestoPanel /> : null}
         {seccion === "anuncios" ? <AnunciosPanel /> : null}
         {seccion === "reuniones" ? <ReunionesPanel /> : null}

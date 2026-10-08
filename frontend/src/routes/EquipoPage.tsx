@@ -1,9 +1,12 @@
 import { useEffect, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { ArrowLeft } from "lucide-react";
+import { Link, useSearchParams } from "react-router-dom";
 
 import { getEquipoSession, loginEquipo, logoutEquipo, registrarEquipo } from "../api/equipo";
-import { Header } from "../components/layout/Header";
 import { SidebarProvider, SidebarTrigger } from "../components/ui/sidebar";
+import { CalendarioPanel } from "../components/admin/CalendarioPanel";
+import { EquipoAccesosPanel } from "../components/admin/EquipoAccesosPanel";
+import { InscripcionesView } from "../components/admin/InscripcionesView";
 import { CalendarioEquipo } from "../components/equipo/CalendarioEquipo";
 import {
   EquipoSidebar,
@@ -22,8 +25,18 @@ import type { ApiFailure } from "../types/api";
 import { DEPTO_LABEL, type Cargo, type Team } from "../types/equipo";
 
 const PANELES: Panel[] = [
-  "tareas", "campanas", "miembros", "recursos", "presupuesto", "reuniones", "decisiones",
+  "tareas", "campanas", "miembros", "presupuesto", "reuniones", "decisiones",
 ];
+
+/** Título de la barra para las secciones del grupo Admin, que no salen de
+ *  `seccionesDe`. */
+const TITULO_ADMIN: Partial<Record<Seccion, string>> = {
+  metricas: "Métricas",
+  presupuesto: "Presupuesto",
+  inscripciones: "Inscripciones",
+  cuentas: "Cuentas del equipo",
+  "calendario-club": "Calendario del club",
+};
 
 function esPanel(seccion: Seccion): seccion is Panel {
   return (PANELES as string[]).includes(seccion);
@@ -37,6 +50,9 @@ export function EquipoPage() {
   const [teams, setTeams] = useState<Team[]>([]);
   const [vpDe, setVpDe] = useState<Team[]>([]);
   const [cargo, setCargo] = useState<Cargo>("");
+  // Permiso de admin (grupo Admin del sidebar), aparte del departamento y
+  // del cargo: lo marca otra persona con admin en Cuentas del equipo.
+  const [esAdmin, setEsAdmin] = useState(false);
   /** Quién ha entrado: el pie del sidebar lo enseña, como en el boceto. */
   const [perfil, setPerfil] = useState({ nombre: "", email: "" });
   const [loginError, setLoginError] = useState<string | null>(null);
@@ -70,6 +86,7 @@ export function EquipoPage() {
           setTeams(session.teams);
           setVpDe(session.vp_de);
           setCargo(session.cargo);
+          setEsAdmin(session.admin);
           setPerfil({ nombre: session.nombre, email: session.email });
           setDeptosFiltro(session.teams);
         }
@@ -134,6 +151,7 @@ export function EquipoPage() {
         setTeams(response.teams);
         setVpDe(response.vp_de);
         setCargo(response.cargo);
+        setEsAdmin(response.admin);
         // La respuesta del login no repite el email: es el que se acaba de
         // teclear.
         setPerfil({ nombre: response.nombre, email });
@@ -165,6 +183,7 @@ export function EquipoPage() {
       setTeams([]);
       setVpDe([]);
       setCargo("");
+      setEsAdmin(false);
       setPerfil({ nombre: "", email: "" });
       setSeccion("club");
       setDeptosFiltro([]);
@@ -186,28 +205,66 @@ export function EquipoPage() {
     setSeccion("notas");
   }
 
-  // Ingeniería y presidencia/board tienen además sesión de /admin (ver
-  // login_equipo en el backend): el sidebar les ofrece el enlace a ese panel.
-  const esBoard = cargo === "presidente" || cargo === "boardmember";
-  const tieneAccesoAdmin = teams.includes("ingenieria") || esBoard;
+  const tieneAccesoAdmin = esAdmin;
+  // Igual que `_puede_asignar_tareas` en el backend: un cargo (o admin)
+  // asigna en cualquier departamento; un VP, solo en el suyo.
+  const puedeAsignarEnTodo = esAdmin || cargo !== "";
 
   if (!isAuthenticated) {
     return (
-      <div className="shadcn-scope dark equipo-shell-react bg-background font-sans text-foreground">
-        <Header />
-        <main className="equipo-content-react">
-          {isCheckingSession ? (
-            <p className="text-center text-muted-foreground">Comprobando sesión...</p>
-          ) : (
-            <EquipoLoginForm
-              isSubmitting={isSubmitting}
-              errorMessage={loginError}
-              successMessage={registroMessage}
-              onSubmit={handleLogin}
-              onModeChange={limpiarMensajes}
-            />
-          )}
-        </main>
+      // Fuera de sesión, la portada de la web: plano Azul TE, titular Anton y
+      // el círculo Impulso entrando por la esquina (ver `.in-hero`). La carga
+      // usa la misma carcasa, así que pasar de "comprobando" al formulario no
+      // cambia de pantalla.
+      <div className="shadcn-scope acceso-react font-sans">
+        <div className="acceso-circulo-react" aria-hidden="true" />
+
+        <header className="acceso-barra-react">
+          <Link to="/" className="acceso-marca-react">
+            <img src="/logo-blanco.png" alt="" />
+            <span>TelecoEmprende</span>
+          </Link>
+          <Link to="/" className="acceso-volver-react">
+            <ArrowLeft aria-hidden="true" />
+            Volver a la web
+          </Link>
+        </header>
+
+        {isCheckingSession ? (
+          <main className="acceso-cargando-react" aria-busy="true">
+            <span className="acceso-latido-react" aria-hidden="true">
+              <img src="/logo-blanco.png" alt="" />
+            </span>
+            <p role="status">Abriendo el área del equipo…</p>
+          </main>
+        ) : (
+          <main className="acceso-main-react">
+            <div className="acceso-intro-react">
+              <p className="acceso-eyebrow-react">Área del equipo</p>
+              <h1 className="acceso-titular-react">
+                El club,
+                <br />
+                por <span className="is-chispa">dentro.</span>
+              </h1>
+              <p className="acceso-lead-react">
+                Notas, tareas, calendario y herramientas del club en un solo sitio.
+              </p>
+            </div>
+
+            {/* La entrada se anima en este contenedor, que no se desmonta: el
+                formulario y "cuenta creada" son dos <section> distintas y,
+                animadas ellas, cambiar de una a otra repetía la entrada. */}
+            <div className="acceso-tarjeta-react">
+              <EquipoLoginForm
+                isSubmitting={isSubmitting}
+                errorMessage={loginError}
+                successMessage={registroMessage}
+                onSubmit={handleLogin}
+                onModeChange={limpiarMensajes}
+              />
+            </div>
+          </main>
+        )}
       </div>
     );
   }
@@ -219,8 +276,7 @@ export function EquipoPage() {
   const seleccionEnPanel = equiposDelPanel.filter((t) => deptosFiltro.includes(t));
   const deptosDelPanel = seleccionEnPanel.length > 0 ? seleccionEnPanel : equiposDelPanel;
 
-  const titulo = seccionesDe(teams).find((s) => s.id === seccion)?.label
-    ?? (seccion === "metricas" ? "Métricas" : seccion === "presupuesto" ? "Presupuesto" : "");
+  const titulo = seccionesDe(teams).find((s) => s.id === seccion)?.label ?? TITULO_ADMIN[seccion] ?? "";
   function alternarDepto(team: Team) {
     setDeptosFiltro((actuales) => {
       const activos = equiposDelPanel.filter((t) => actuales.includes(t));
@@ -291,6 +347,11 @@ export function EquipoPage() {
             ) : null}
             {seccion === "metricas" ? <MetricasPanel /> : null}
             {seccion === "herramientas" ? <HerramientasPanel teams={teams} /> : null}
+            {/* Lo que antes era /admin. El sidebar solo ofrece estas entradas con
+                `tieneAccesoAdmin`, y el backend las vuelve a comprobar. */}
+            {tieneAccesoAdmin && seccion === "inscripciones" ? <InscripcionesView /> : null}
+            {tieneAccesoAdmin && seccion === "cuentas" ? <EquipoAccesosPanel /> : null}
+            {tieneAccesoAdmin && seccion === "calendario-club" ? <CalendarioPanel /> : null}
             {esPanel(seccion) || seccion === "calendario" || seccion === "anuncios" ? (
               // `key` para que cambiar de departamento(s) remonte el panel: si
               // no, dos conjuntos de departamentos comparten estado y el
@@ -305,7 +366,7 @@ export function EquipoPage() {
                 onCampaignAbierta={() => setCampaignInicial(null)}
                 onAbrirCampaign={abrirCampaign}
                 vpDe={vpDe}
-                puedeAsignarEnTodo={tieneAccesoAdmin}
+                puedeAsignarEnTodo={puedeAsignarEnTodo}
               />
             ) : null}
             </PanelAnimado>

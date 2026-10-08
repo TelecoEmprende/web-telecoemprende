@@ -1,24 +1,18 @@
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { MemoryRouter, Routes } from "react-router-dom";
+import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { adminRoutes } from "./index";
+import { InscripcionesView } from "./InscripcionesView";
 
-const getAdminSession = vi.fn();
 const getAdminRegistrations = vi.fn();
-const loginAdmin = vi.fn();
-const logoutAdmin = vi.fn();
 const deleteRegistration = vi.fn();
 const updateRegistration = vi.fn();
 const updateRegistrationEstado = vi.fn();
 const enviarNotificaciones = vi.fn();
 
 vi.mock("../../api/admin", () => ({
-  getAdminSession: (...args: unknown[]) => getAdminSession(...args),
   getAdminRegistrations: (...args: unknown[]) => getAdminRegistrations(...args),
-  loginAdmin: (...args: unknown[]) => loginAdmin(...args),
-  logoutAdmin: (...args: unknown[]) => logoutAdmin(...args),
   deleteRegistration: (...args: unknown[]) => deleteRegistration(...args),
   updateRegistration: (...args: unknown[]) => updateRegistration(...args),
   updateRegistrationEstado: (...args: unknown[]) => updateRegistrationEstado(...args),
@@ -53,16 +47,16 @@ const NUNEZ = {
   escuela: "ETSII",
 };
 
-function montar(ruta = "/admin/inscripciones") {
+// Vive en el grupo Admin de /equipo; la sesión la comprueba EquipoPage.
+function montar() {
   return render(
-    <MemoryRouter initialEntries={[ruta]}>
-      <Routes>{adminRoutes}</Routes>
+    <MemoryRouter initialEntries={["/equipo"]}>
+      <InscripcionesView />
     </MemoryRouter>,
   );
 }
 
-async function loginYVerTabla(registros = [REGISTRO]) {
-  getAdminSession.mockResolvedValueOnce({ ok: true, authenticated: true });
+async function verTabla(registros = [REGISTRO]) {
   getAdminRegistrations.mockResolvedValueOnce({
     ok: true,
     total: registros.length,
@@ -76,65 +70,19 @@ async function loginYVerTabla(registros = [REGISTRO]) {
   return user;
 }
 
-describe("panel /admin", () => {
+describe("Inscripciones (grupo Admin de /equipo)", () => {
   beforeEach(() => {
-    getAdminSession.mockReset();
     getAdminRegistrations.mockReset();
-    loginAdmin.mockReset();
-    logoutAdmin.mockReset();
     deleteRegistration.mockReset();
     updateRegistration.mockReset();
     updateRegistrationEstado.mockReset();
     enviarNotificaciones.mockReset();
   });
 
-  it("shows the login form when there is no authenticated session", async () => {
-    getAdminSession.mockResolvedValueOnce({ ok: true, authenticated: false });
-
-    montar();
-
-    expect(await screen.findByText("Acceso al panel")).toBeInTheDocument();
-  });
-
-  it("logs in and renders the registrations table", async () => {
-    getAdminSession.mockResolvedValueOnce({ ok: true, authenticated: false });
-    loginAdmin.mockResolvedValueOnce({ ok: true, message: "Sesión iniciada." });
-    getAdminRegistrations.mockResolvedValueOnce({
-      ok: true,
-      total: 1,
-      eventos: ["telecoemprende-2026-27"],
-      registros: [REGISTRO],
-    });
-
-    const user = userEvent.setup();
-    montar();
-
-    await user.type(await screen.findByLabelText("Contraseña"), "test-admin");
-    await user.click(screen.getByRole("button", { name: /entrar/i }));
-
-    expect(await screen.findByText("Inscripciones registradas")).toBeInTheDocument();
-    expect(await screen.findByText("juan@example.com")).toBeInTheDocument();
-    await waitFor(() => {
-      expect(getAdminRegistrations).toHaveBeenCalledTimes(1);
-    });
-  });
-
-  // El sidebar es la navegación del panel: cada vista es su propia URL.
-  it("navigates to another view from the sidebar", async () => {
-    const user = await loginYVerTabla();
-
-    await user.click(screen.getByRole("link", { name: "Accesos de equipo" }));
-
-    expect(// El h2 de la barra superior también dice "Accesos de equipo": este es el
-    // del panel, que además lleva la ruta a la que da acceso.
-    await screen.findByRole("heading", { name: "Accesos de equipo (/equipo)" })).toBeInTheDocument();
-    expect(screen.queryByText("juan@example.com")).not.toBeInTheDocument();
-  });
-
   // La búsqueda ignora tildes y mayúsculas: "nunez" tiene que encontrar a
   // "Núñez", que es como se teclea de verdad.
   it("filters rows by the search box, ignoring accents", async () => {
-    const user = await loginYVerTabla([REGISTRO, NUNEZ]);
+    const user = await verTabla([REGISTRO, NUNEZ]);
 
     await user.type(screen.getByLabelText("Buscar inscripciones"), "nunez");
 
@@ -150,7 +98,7 @@ describe("panel /admin", () => {
   // Editar dejó de ser una fila que se convierte en formulario y pasó a ser
   // una ventana: la tabla solo lee.
   it("opens the edit dialog with the row values loaded", async () => {
-    const user = await loginYVerTabla();
+    const user = await verTabla();
 
     await user.click(screen.getByTitle("Editar"));
 
@@ -163,7 +111,7 @@ describe("panel /admin", () => {
 
   it("saves the dialog and sends the changes to the API", async () => {
     updateRegistration.mockResolvedValueOnce({ ok: true });
-    const user = await loginYVerTabla();
+    const user = await verTabla();
 
     await user.click(screen.getByTitle("Editar"));
     const dialogo = await screen.findByRole("dialog");
@@ -182,7 +130,7 @@ describe("panel /admin", () => {
   });
 
   it("refuses to save with an empty required field", async () => {
-    const user = await loginYVerTabla();
+    const user = await verTabla();
 
     await user.click(screen.getByTitle("Editar"));
     const dialogo = await screen.findByRole("dialog");
@@ -197,7 +145,7 @@ describe("panel /admin", () => {
 
   it("asks for confirmation before deleting and then calls the API", async () => {
     deleteRegistration.mockResolvedValueOnce({ ok: true });
-    const user = await loginYVerTabla();
+    const user = await verTabla();
 
     await user.click(screen.getByTitle("Eliminar"));
 

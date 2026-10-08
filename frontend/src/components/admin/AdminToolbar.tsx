@@ -46,9 +46,7 @@ export function AdminToolbar({
     <div className="mb-5">
       <div className="mb-4 flex items-start justify-between gap-[18px] max-[720px]:flex-col">
         <div>
-          <h1 className="mb-1.5 text-[1.6rem] font-bold tracking-[-0.04em] max-[720px]:text-[1.4rem]">
-            Inscripciones registradas
-          </h1>
+          {/* El título ("Inscripciones") ya está en la barra superior. */}
           <p className="text-[0.92rem] leading-[1.7] text-muted-foreground">
             {mostrados === total ? (
               <>

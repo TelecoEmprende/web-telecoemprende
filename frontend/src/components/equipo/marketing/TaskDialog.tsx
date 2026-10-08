@@ -402,6 +402,7 @@ export function TaskDialog({
                 seleccionados={responsables}
                 onCambiar={setResponsables}
                 deptos={[departamento]}
+                proponer
               />
             ) : (
               <p className="mkt-meta-react">

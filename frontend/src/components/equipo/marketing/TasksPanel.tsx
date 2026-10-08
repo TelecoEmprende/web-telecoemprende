@@ -416,6 +416,7 @@ export function TasksPanel({ deptos, teams, vpDe, puedeAsignarEnTodo }: Props) {
               seleccionados={responsables}
               onCambiar={setResponsables}
               deptos={deptosNuevaTarea}
+              proponer
             />
           </div>
           <button

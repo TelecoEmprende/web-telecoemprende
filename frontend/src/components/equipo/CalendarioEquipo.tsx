@@ -858,7 +858,7 @@ export function CalendarioEquipo({ onIrA, onAbrirNota }: Props) {
         <DeptoProvider value={tareaAbierta.departamento as Team}>
           <TaskDialog
             task={tareaAbierta}
-            puedeAsignar={cargo === "presidente" || cargo === "boardmember" || vpDe.includes(tareaAbierta.departamento)}
+            puedeAsignar={cargo !== "" || vpDe.includes(tareaAbierta.departamento)}
             onCerrar={() => setTareaAbierta(null)}
             onGuardado={async () => {
               setTareaAbierta(null);

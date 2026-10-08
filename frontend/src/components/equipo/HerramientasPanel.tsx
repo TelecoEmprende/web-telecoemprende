@@ -1,21 +1,28 @@
-import type { LucideIcon } from "lucide-react";
-import { CalendarDays, ChevronRight, GitBranch, Globe, Hash, Link2, MessageCircle } from "lucide-react";
-import { useEffect, useState } from "react";
+import { ChevronRight, Link2, MessageCircle } from "lucide-react";
+import { useEffect, useState, type ComponentType } from "react";
 
 import { getAccesos } from "../../api/equipo";
 import { DeptoProvider, DirectorioProvider } from "./DeptoApi";
 import { PlataformaPanel } from "./PlataformaPanel";
 import { ServiciosPanel } from "./registros/paneles";
-import { GITHUB_REPO, SLACK_CLUB, type AccesoClub, type Team } from "../../types/equipo";
+import { LogoDrive, LogoGithub, LogoLuma, LogoSlack, LogoWhatsapp } from "./LogosMarca";
+import { DRIVE_CLUB, GITHUB_REPO, SLACK_CLUB, type AccesoClub, type Team } from "../../types/equipo";
 
-type Acceso = { clave: string; nombre: string; detalle: string; url: string; icono: LucideIcon; tono: string };
+type Icono = ComponentType<{ className?: string }>;
+type Acceso = { clave: string; nombre: string; detalle: string; url: string; icono: Icono; tono: string };
 
-/** El icono sale del enlace, no de un campo más que rellenar. */
-function iconoDe(url: string, tipo: string): LucideIcon {
-  if (/whatsapp\.com|wa\.me/.test(url)) return MessageCircle;
-  if (/slack\.com/.test(url)) return Hash;
-  if (/luma\.com|lu\.ma/.test(url)) return CalendarDays;
-  if (/github\.com/.test(url)) return GitBranch;
+/** El logo del club para el enlace a la web pública. */
+function LogoClub({ className }: { className?: string }) {
+  return <img src="/logo.png" alt="" className={className} />;
+}
+
+/** El logo sale del enlace, no de un campo más que rellenar. */
+function iconoDe(url: string, tipo: string): Icono {
+  if (/whatsapp\.com|wa\.me/.test(url)) return LogoWhatsapp;
+  if (/slack\.com/.test(url)) return LogoSlack;
+  if (/luma\.com|lu\.ma/.test(url)) return LogoLuma;
+  if (/github\.com/.test(url)) return LogoGithub;
+  if (/drive\.google\.com|docs\.google\.com/.test(url)) return LogoDrive;
   return tipo === "mensajeria" ? MessageCircle : Link2;
 }
 
@@ -32,7 +39,7 @@ type Props = { teams: Team[] };
 /**
  * Herramientas: todos los accesos del club en una pantalla.
  *
- * Arriba, para todo el mundo, los enlaces de siempre (Slack, Luma, la web) y
+ * Arriba, para todo el mundo, los enlaces de siempre (Slack, Drive, Luma, la web) y
  * los servicios que Ingeniería marca como "acceso para todo el club" -- así
  * el grupo de WhatsApp o una carpeta compartida se añaden desde Servicios,
  * sin tocar código. Debajo, solo para Ingeniería, el estado de la plataforma
@@ -60,9 +67,10 @@ export function HerramientasPanel({ teams }: Props) {
   }, []);
 
   const tarjetas: Acceso[] = [
-    { clave: "slack", nombre: "Slack del club", detalle: "Chat del equipo", url: SLACK_CLUB, icono: Hash, tono: "azul" },
+    { clave: "slack", nombre: "Slack del club", detalle: "Chat del equipo", url: SLACK_CLUB, icono: LogoSlack, tono: "azul" },
+    { clave: "drive", nombre: "Drive del club", detalle: "Archivos y documentos compartidos", url: DRIVE_CLUB, icono: LogoDrive, tono: "noche" },
     ...(luma
-      ? [{ clave: "luma", nombre: "Calendario en Luma", detalle: "Eventos y apuntarse", url: luma, icono: CalendarDays, tono: "chispa" }]
+      ? [{ clave: "luma", nombre: "Calendario en Luma", detalle: "Eventos y apuntarse", url: luma, icono: LogoLuma, tono: "chispa" }]
       : []),
     ...accesos.map((a) => ({
       clave: `servicio-${a.id}`,
@@ -72,9 +80,9 @@ export function HerramientasPanel({ teams }: Props) {
       icono: iconoDe(a.url, a.tipo),
       tono: /whatsapp\.com|wa\.me/.test(a.url) ? "impulso" : "noche",
     })),
-    { clave: "web", nombre: "telecoemprende.es", detalle: "La web pública", url: "/", icono: Globe, tono: "noche" },
+    { clave: "web", nombre: "telecoemprende.es", detalle: "La web pública", url: "/", icono: LogoClub, tono: "noche" },
     ...(esIngenieria
-      ? [{ clave: "github", nombre: "GitHub", detalle: "Repositorio de la web", url: GITHUB_REPO, icono: GitBranch, tono: "noche" }]
+      ? [{ clave: "github", nombre: "GitHub", detalle: "Repositorio de la web", url: GITHUB_REPO, icono: LogoGithub, tono: "noche" }]
       : []),
   ];
 
