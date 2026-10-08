@@ -1,6 +1,7 @@
 import { Link, useLocation } from "react-router-dom";
 
 import { useTranslation } from "../../i18n/translations";
+import { Aparece } from "../home/aparece";
 
 export function LandingFooter() {
   const { pathname } = useLocation();
@@ -28,7 +29,7 @@ export function LandingFooter() {
           <a href={toAnchor("#quienes-somos")}>{t.nav.quienesSomos}</a>
           <a href={toAnchor("#departamentos")}>{t.nav.departamentos}</a>
           <a href={toAnchor("#eventos")}>{t.nav.eventos}</a>
-          <a href={toAnchor("#inscripcion")}>{t.nav.inscripcion}</a>
+          <a href={toAnchor("#recursos")}>{t.nav.recursos}</a>
           <a href="https://alumni.etsit.upm.es/" target="_blank" rel="noreferrer">
             {t.footer.alumniLink}
           </a>
@@ -66,6 +67,13 @@ export function LandingFooter() {
 
         <p className="lp-footer-note">{t.footer.note}</p>
       </div>
+
+      {/* El nombre a lo ancho, como firma. Decorativo: el nombre ya está arriba. */}
+      <Aparece className="lp-footer-firma" como="p">
+        <span aria-hidden="true">
+          Teleco<span>Emprende</span>
+        </span>
+      </Aparece>
     </footer>
   );
 }

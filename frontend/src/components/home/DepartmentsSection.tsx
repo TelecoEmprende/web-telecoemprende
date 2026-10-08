@@ -1,13 +1,13 @@
-import { CalendarDays, Code2, Megaphone, type LucideIcon } from "lucide-react";
+import { Plus } from "lucide-react";
 
 import { useTranslation } from "../../i18n/translations";
+import { Aparece, TitularAnimado } from "./aparece";
 
 type Bilingual = { es: string; en: string };
 
 type Department = {
   /** Cada departamento tiene su color en la guía de marca (ver tokens.css). */
   depto: "tech" | "marketing" | "eventos";
-  Icon: LucideIcon;
   title: Bilingual;
   lines: [Bilingual, Bilingual, Bilingual];
 };
@@ -15,7 +15,6 @@ type Department = {
 const DEPARTMENTS: Department[] = [
   {
     depto: "tech",
-    Icon: Code2,
     title: { es: "Tech/Ingeniería", en: "Tech/Engineering" },
     lines: [
       {
@@ -34,7 +33,6 @@ const DEPARTMENTS: Department[] = [
   },
   {
     depto: "marketing",
-    Icon: Megaphone,
     title: { es: "Marketing/Comms", en: "Marketing/Comms" },
     lines: [
       {
@@ -53,7 +51,6 @@ const DEPARTMENTS: Department[] = [
   },
   {
     depto: "eventos",
-    Icon: CalendarDays,
     title: { es: "Eventos/Logística", en: "Events/Logistics" },
     lines: [
       {
@@ -76,27 +73,29 @@ export function DepartmentsSection() {
   const { t, language } = useTranslation();
 
   return (
-    <section className="lp-departments" id="departamentos">
-      <div className="lp-container">
-        <span className="lp-eyebrow">{t.departments.eyebrow}</span>
-        <h2 className="lp-heading">{t.departments.heading}</h2>
-        <p className="lp-section-lead">{t.departments.lead}</p>
+    <section className="in-seccion" id="departamentos" aria-labelledby="deptos-titulo">
+      <div className="in-wrap">
+        <Aparece como="p" className="in-etiqueta">03 — {t.departments.eyebrow}</Aparece>
+        <TitularAnimado id="deptos-titulo" texto={t.departments.heading} />
+        <Aparece como="p" className="in-lead" retraso={0.15}>{t.departments.lead}</Aparece>
 
-        <div className="lp-departments-grid">
+        {/* Acordeón nativo: teclado y lector de pantalla gratis, sin estado. */}
+        <Aparece className="in-deptos" retraso={0.2}>
           {DEPARTMENTS.map((dept) => (
-            <article className="lp-department-card" data-depto={dept.depto} key={dept.title.es}>
-              <span className="lp-department-icon" aria-hidden="true">
-                <dept.Icon size={24} strokeWidth={1.75} />
-              </span>
-              <h3>{dept.title[language]}</h3>
-              <ul className="lp-department-lines">
+            <details className="in-depto" data-depto={dept.depto} key={dept.depto}>
+              <summary>
+                <span className="in-depto-punto" aria-hidden="true" />
+                <h3>{dept.title[language]}</h3>
+                <Plus className="in-depto-mas" aria-hidden size={28} strokeWidth={1.75} />
+              </summary>
+              <ul>
                 {dept.lines.map((line) => (
                   <li key={line.es}>{line[language]}</li>
                 ))}
               </ul>
-            </article>
+            </details>
           ))}
-        </div>
+        </Aparece>
       </div>
     </section>
   );

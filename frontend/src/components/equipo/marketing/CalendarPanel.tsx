@@ -17,14 +17,8 @@ import { AvataresDeResponsables } from "./Avatares";
 import { TaskDialog } from "./TaskDialog";
 import type { ApiFailure } from "../../../types/api";
 import { formatearFecha, type CalendarioItem, type Task } from "../../../types/marketing";
-import type { Team } from "../../../types/equipo";
+import { DEPTO_LABEL, TEAMS, type Team } from "../../../types/equipo";
 
-const TODOS_LOS_DEPARTAMENTOS: Team[] = ["marketing", "eventos", "ingenieria"];
-const DEPTO_LABEL: Record<Team, string> = {
-  marketing: "Marketing",
-  eventos: "Eventos",
-  ingenieria: "Ingeniería",
-};
 /** La cajita de departamento del sistema (ver CalendarioEquipo). */
 const DEPTO_TAG: Record<string, string> = {
   ingenieria: "crm-tag-azul-react",
@@ -239,8 +233,7 @@ type Props = {
   teams: Team[];
   /** Abrir la campaña de un elemento del calendario, para que no sea un
    *  callejón sin salida: se ve algo, se toca, se llega a ello. El
-   *  departamento va aparte porque puede ser distinto del de quien mira
-   *  (ver más abajo, `esDeUnDeptoPropio`). */
+   *  departamento va aparte porque puede ser distinto del de quien mira. */
   onAbrirCampaign: (campaignId: number, departamento: Team) => void;
   /** Departamentos donde la persona es VP, y si asigna en todo el club --
    *  los mismos que usa el tablero, porque al abrir una tarea desde aquí se
@@ -270,7 +263,7 @@ export function CalendarPanel({
   // filtro encima para acotar a los que interesen (ver respuesta del equipo
   // a "¿abro visibilidad entre departamentos?").
   const [todosDepartamentos, setTodosDepartamentos] = useState(true);
-  const [deptosFiltro, setDeptosFiltro] = useState<Team[]>(TODOS_LOS_DEPARTAMENTOS);
+  const [deptosFiltro, setDeptosFiltro] = useState<Team[]>(TEAMS);
   const [diaAbierto, setDiaAbierto] = useState<string | null>(null);
   const [seleccionado, setSeleccionado] = useState<CalendarioItem | null>(null);
   // Una tarea del calendario abre el MISMO diálogo que en el tablero, no una
@@ -598,7 +591,7 @@ export function CalendarPanel({
               Club
             </span>
             {todosDepartamentos
-              ? TODOS_LOS_DEPARTAMENTOS.map((depto) => (
+              ? TEAMS.map((depto) => (
                   <button
                     key={depto}
                     type="button"
@@ -620,8 +613,6 @@ export function CalendarPanel({
         </aside>
 
         <div className="mkt-calendario-principal-react">
-      {/* La leyenda va antes de la rejilla: leerla después de haber necesitado
-          el código de color no sirve de nada. */}
       {isLoading ? (
         <Esqueleto filas={5} alto={54} />
       ) : items.length === 0 ? (
@@ -860,7 +851,7 @@ export function CalendarPanel({
             puedeAsignar={
               puedeAsignarEnTodo || vpDe.includes(tareaPedida.departamento as Team)
             }
-            deptosDisponibles={puedeAsignarEnTodo ? TODOS_LOS_DEPARTAMENTOS : vpDe}
+            deptosDisponibles={puedeAsignarEnTodo ? TEAMS : vpDe}
             onAbrirCampaign={
               // Solo si es de un departamento propio: el panel de Proyectos de
               // otro no se podría abrir (mismo criterio que la ficha de

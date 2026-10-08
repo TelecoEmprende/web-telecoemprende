@@ -1,0 +1,882 @@
+/* ============================================================
+   Home — prefijo in-*.
+   Guía de marca v2 (docs/brand-guide.html): plano Azul TE + titular Anton
+   desde el margen izquierdo + un único círculo Impulso que entra desde un
+   borde. Sin sombras ni degradados. Márgenes = 6 % del ancho, espaciado en
+   múltiplos de 8 px. Colores, solo desde tokens.css.
+   ============================================================ */
+
+.in-wrap {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding-inline: clamp(16px, 6vw, 96px);
+}
+
+/* ---------- Planos ---------- */
+
+.in-seccion {
+  --in-linea: color-mix(in srgb, var(--color-noche) 14%, transparent);
+  padding-block: clamp(80px, 12vw, 160px);
+  background: var(--color-papel);
+  color: var(--color-text);
+}
+
+.in-hueso {
+  background: var(--color-papel-hueso);
+}
+
+.in-azul {
+  --in-linea: color-mix(in srgb, var(--color-text-on-dark) 22%, transparent);
+  background: var(--color-azul);
+  color: var(--color-text-on-dark);
+}
+
+/* ---------- Tipografía ---------- */
+
+/* Etiqueta de la guía: Inter 500, 11-13 px, mayúsculas, tracking 0.14em. */
+.in-etiqueta {
+  margin: 0 0 24px;
+  font-size: 0.78rem;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-azul);
+}
+
+.in-azul .in-etiqueta {
+  color: var(--color-text-on-dark);
+}
+
+/* Titular de la guía: Anton 40-60 px. Interlineado algo más abierto que el
+   0.94 de la guía porque las tildes de la segunda línea tocan la primera. */
+.in-titular {
+  max-width: 18ch;
+  margin: 0 0 24px;
+  font-family: var(--font-display);
+  font-size: clamp(2.5rem, 5vw, 3.75rem);
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: -0.005em;
+  text-transform: uppercase;
+}
+
+/* Máscara por palabra de TitularAnimado: la palabra sube desde debajo. El
+   relleno evita que la máscara recorte la caja alta de Anton y las tildes. */
+.in-mascara {
+  display: inline-block;
+  overflow: hidden;
+  vertical-align: top;
+  padding-block: 0.08em;
+  margin-block: -0.08em;
+}
+
+.in-mascara-pieza {
+  display: inline-block;
+}
+
+.in-titular-grande {
+  font-size: clamp(3rem, 8vw, 6.5rem);
+}
+
+.in-lead {
+  max-width: 60ch;
+  margin: 0;
+  font-size: 1.125rem;
+  line-height: var(--leading-body);
+  color: var(--color-text-muted);
+}
+
+.in-azul .in-lead {
+  color: var(--color-text-on-dark);
+}
+
+/* ---------- Acciones ---------- */
+
+.in-acciones {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px 32px;
+  margin-top: 40px;
+}
+
+.in-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 56px;
+  padding: 0 24px;
+  border-radius: var(--radius-md);
+  font-size: 1.125rem; /* blanco sobre Impulso: solo ≥18 px */
+  font-weight: 600;
+  transition:
+    transform var(--dur-press) var(--ease-out),
+    background-color var(--dur-fast) var(--ease-out);
+}
+
+.in-btn:active {
+  transform: scale(0.97);
+}
+
+.in-btn-blanco {
+  background: var(--color-surface);
+  color: var(--color-noche);
+}
+
+.in-btn-blanco:hover {
+  background: var(--color-papel);
+}
+
+.in-btn-impulso {
+  background: var(--color-impulso);
+  color: var(--color-text-on-dark);
+}
+
+.in-enlace {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  font-size: 1.05rem;
+  color: var(--color-azul);
+  text-underline-offset: 6px;
+}
+
+.in-enlace-claro {
+  color: var(--color-text-on-dark);
+}
+
+.in-enlace svg,
+.in-btn svg {
+  transition: transform var(--dur-fast) var(--ease-out);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .in-enlace:hover {
+    text-decoration: underline;
+  }
+
+  .in-enlace:hover svg,
+  .in-btn:hover svg {
+    transform: translateX(3px);
+  }
+}
+
+/* ---------- Hero ---------- */
+
+.in-hero {
+  --in-circulo: min(68vw, 860px);
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  min-height: calc(100svh - 72px);
+  padding-block: clamp(48px, 6vw, 96px);
+  background: var(--color-azul);
+  color: var(--color-text-on-dark);
+}
+
+/* El círculo entra desde la esquina inferior derecha y queda detrás del texto. */
+.in-hero-circulo {
+  position: absolute;
+  right: calc(var(--in-circulo) * -0.32);
+  bottom: calc(var(--in-circulo) * -0.38);
+  width: var(--in-circulo);
+  aspect-ratio: 1;
+}
+
+/* Dos capas: la de fuera la mueve el scroll (parallax), esta la entrada. */
+.in-hero-circulo-forma {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: var(--color-impulso);
+}
+
+.in-hero-contenido {
+  position: relative;
+  width: 100%;
+}
+
+.in-pulso {
+  position: relative;
+  flex-shrink: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-chispa);
+}
+
+/* Onda que sale del punto y se apaga: "esto está vivo". */
+.in-pulso::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: inherit;
+  animation: in-pulso 2s var(--ease-out) infinite;
+}
+
+@keyframes in-pulso {
+  from {
+    opacity: 0.7;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(3);
+  }
+}
+
+/* Display de la guía: Anton 76-168 px, tracking −0.015. */
+.in-hero-titular {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: clamp(4.25rem, 8.5vw, 7.5rem);
+  font-weight: 400;
+  line-height: 0.9;
+  letter-spacing: -0.015em;
+  text-transform: uppercase;
+}
+
+/* Cada línea sube desde debajo de su máscara. El relleno vertical evita que
+   la máscara recorte la caja alta de Anton. */
+.in-hero-mascara {
+  display: block;
+  overflow: hidden;
+  padding-block: 0.04em;
+}
+
+.in-hero-linea {
+  display: block;
+}
+
+/* RotatingText (React Bits): cada palabra recorta sus letras, que entran desde
+   abajo y salen por arriba. El relleno deja sitio a la caja alta de Anton. */
+.in-rotando-palabra {
+  overflow: hidden;
+  padding-block: 0.04em;
+}
+
+.in-hero-linea.is-chispa {
+  color: var(--color-chispa); /* Chispa sobre Azul: solo ≥24 px */
+}
+
+.in-hero-lead {
+  max-width: 46ch;
+  margin: 32px 0 0;
+  font-size: clamp(1.05rem, 1.4vw, 1.25rem);
+  line-height: var(--leading-body);
+}
+
+/* ---------- 01 · El club ---------- */
+
+.in-club-intro {
+  display: grid;
+  grid-template-columns: 1.1fr 1fr;
+  gap: 32px 64px;
+  align-items: start;
+}
+
+.in-club-lead {
+  margin: 0;
+  font-size: 1.25rem;
+  line-height: var(--leading-body);
+}
+
+.in-pilares {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin: 80px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.in-pilares li {
+  padding: 32px;
+  border-radius: var(--radius-md);
+  background: var(--color-papel-hueso);
+}
+
+.in-pilar-num {
+  font-size: 0.78rem;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  color: var(--color-azul);
+}
+
+.in-pilares h3 {
+  margin: 48px 0 8px;
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.in-pilares p {
+  margin: 0;
+  line-height: var(--leading-body);
+  color: var(--color-text-muted);
+}
+
+.in-cifras {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 32px;
+  margin: 80px 0 0;
+  padding-top: 40px;
+  border-top: 1px solid var(--in-linea);
+}
+
+/* La cifra va arriba y alineada entre columnas aunque la etiqueta ocupe dos líneas. */
+.in-cifras div {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  text-align: center;
+}
+
+.in-cifras dd {
+  order: -1;
+}
+
+.in-cifras dd {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: clamp(3.5rem, 7vw, 6rem);
+  line-height: 1;
+  color: var(--color-azul);
+}
+
+.in-cifras dt {
+  font-weight: 500;
+  color: var(--color-text-muted);
+}
+
+/* ---------- 02 · Noticias ---------- */
+
+.in-etiqueta-directo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 24px;
+}
+
+.in-directo {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--color-text-muted);
+}
+
+/* Chispa no se lee sobre papel: aquí el punto vivo va en Impulso. */
+.in-directo .in-pulso {
+  background: var(--color-impulso);
+}
+
+.in-noticias {
+  margin: 48px 0 40px;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--in-linea);
+}
+
+.in-noticias li {
+  border-bottom: 1px solid var(--in-linea);
+}
+
+.in-noticia {
+  display: grid;
+  grid-template-columns: 128px 1fr auto;
+  gap: 24px;
+  align-items: start;
+  padding: 28px 0;
+  color: inherit;
+}
+
+.in-noticia-cuerpo {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.in-noticia-titular {
+  font-size: 1.25rem;
+  font-weight: 600;
+  line-height: 1.35;
+  transition: color var(--dur-fast) var(--ease-out);
+}
+
+.in-noticia-importa {
+  max-width: 70ch;
+  line-height: var(--leading-body);
+  color: var(--color-text-muted);
+}
+
+.in-noticia-flecha {
+  margin-top: 4px;
+  color: var(--color-azul);
+  transition: transform var(--dur-fast) var(--ease-out);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .in-noticia:hover .in-noticia-titular {
+    color: var(--color-azul);
+  }
+
+  .in-noticia:hover .in-noticia-flecha {
+    transform: translateX(4px);
+  }
+}
+
+/* ---------- 03 · Departamentos ---------- */
+
+.in-deptos {
+  margin-top: 56px;
+  border-top: 1px solid var(--in-linea);
+}
+
+.in-depto {
+  border-bottom: 1px solid var(--in-linea);
+  interpolate-size: allow-keywords;
+}
+
+/* Altura animada al abrir y cerrar donde el navegador lo sabe hacer
+   (::details-content); en el resto, se abre de golpe con el fundido de abajo. */
+.in-depto::details-content {
+  block-size: 0;
+  overflow: hidden;
+  transition:
+    block-size 350ms var(--ease-out),
+    content-visibility 350ms allow-discrete;
+}
+
+.in-depto[open]::details-content {
+  block-size: auto;
+}
+
+.in-depto-punto {
+  transition: transform 250ms var(--ease-out);
+}
+
+.in-depto[open] .in-depto-punto,
+.in-depto summary:hover .in-depto-punto {
+  transform: scale(1.5);
+}
+
+.in-depto[data-depto="tech"] { --in-depto: var(--color-depto-tech); }
+.in-depto[data-depto="marketing"] { --in-depto: var(--color-depto-marketing); }
+.in-depto[data-depto="eventos"] { --in-depto: var(--color-depto-eventos); }
+
+.in-depto summary {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 32px 0;
+  cursor: pointer;
+  list-style: none;
+}
+
+.in-depto summary::-webkit-details-marker {
+  display: none;
+}
+
+.in-depto-punto {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--in-depto);
+}
+
+.in-depto h3 {
+  flex: 1;
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 4.5vw, 3.5rem);
+  font-weight: 400;
+  line-height: 1;
+  text-transform: uppercase;
+  transition: transform var(--dur-menu) var(--ease-out);
+}
+
+.in-depto-mas {
+  flex-shrink: 0;
+  transition: transform 250ms var(--ease-out);
+}
+
+.in-depto[open] .in-depto-mas {
+  transform: rotate(45deg);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .in-depto summary:hover h3 {
+    transform: translateX(8px);
+  }
+}
+
+.in-depto ul {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px 40px;
+  margin: 0;
+  padding: 0 0 40px 40px;
+  list-style: none;
+}
+
+.in-depto[open] ul {
+  animation: in-aparece 300ms var(--ease-out);
+}
+
+.in-depto li {
+  line-height: var(--leading-body);
+  color: var(--color-text-muted);
+}
+
+@keyframes in-aparece {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+}
+
+/* ---------- 04 · Eventos ---------- */
+
+.in-eventos {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 56px 32px;
+  margin: 64px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* El primer evento, destacado a dos columnas; "próximo" cierra la rejilla a lo ancho. */
+.in-evento:first-child {
+  grid-column: span 2;
+}
+
+.in-evento:first-child img {
+  aspect-ratio: 16 / 9;
+}
+
+.in-evento-foto {
+  overflow: hidden;
+  border-radius: var(--radius-md);
+}
+
+.in-evento img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  transition: transform 600ms var(--ease-out);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .in-evento:hover img {
+    transform: scale(1.04);
+  }
+}
+
+.in-evento-tag {
+  margin: 20px 0 8px;
+  font-size: 0.78rem;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.in-evento h3 {
+  margin: 0 0 8px;
+  font-size: 1.35rem;
+  font-weight: 700;
+}
+
+.in-evento-texto {
+  margin: 0;
+  line-height: var(--leading-body);
+}
+
+.in-evento-proximo {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 16px;
+  padding: 32px;
+  border-radius: var(--radius-md);
+  background: var(--color-azul-profundo);
+}
+
+.in-evento-proximo .in-enlace {
+  align-self: flex-start;
+}
+
+.in-evento-proximo .in-evento-tag {
+  margin: 0;
+}
+
+.in-evento-proximo h3 {
+  font-family: var(--font-display);
+  font-size: 2rem;
+  font-weight: 400;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+/* ---------- 05 · Recursos ---------- */
+
+.in-recursos {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 32px;
+  margin: 64px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.in-recurso {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 32px;
+  border-radius: var(--radius-md);
+  background: var(--color-papel);
+  color: inherit;
+  transition: transform var(--dur-fast) var(--ease-out);
+}
+
+.in-recurso .in-evento-tag {
+  margin-top: 0;
+  color: var(--color-azul);
+}
+
+.in-recurso h3 {
+  margin: 0 0 8px;
+  font-size: 1.35rem;
+  font-weight: 700;
+}
+
+.in-recurso h3 svg {
+  margin-left: 6px;
+  vertical-align: -0.15em;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .in-recurso:hover {
+    transform: translateY(-4px);
+  }
+}
+
+.in-recurso:focus-visible {
+  outline: 2px solid var(--color-azul);
+  outline-offset: 4px;
+}
+
+/* ---------- 06 · Equipo ---------- */
+
+.in-equipo {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 48px 24px;
+  margin: 64px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.in-persona img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 5;
+  object-fit: cover;
+  border-radius: var(--radius-md);
+  filter: grayscale(1);
+  transition: filter 300ms var(--ease-out);
+}
+
+.in-persona:hover img {
+  filter: none;
+}
+
+.in-persona h3 {
+  margin: 16px 0 4px;
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.in-persona p {
+  margin: 0;
+  line-height: 1.4;
+  color: var(--color-text-muted);
+}
+
+.in-persona .in-persona-programa {
+  margin-top: 8px;
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-azul);
+}
+
+/* ---------- Cierre ---------- */
+
+.in-cierre-rejilla {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 64px;
+}
+
+/* Anillo de texto (CircularText de React Bits) alrededor de un punto Impulso. */
+.in-anillo > div {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 240px;
+  height: 240px;
+}
+
+.in-anillo .in-anillo-texto {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  color: var(--color-text-on-dark);
+}
+
+.in-anillo .in-anillo-texto span {
+  font-family: var(--font-display);
+  font-size: 1.5rem; /* Anton ≥24 px */
+  text-transform: uppercase;
+}
+
+.in-anillo-punto {
+  width: 88px;
+  height: 88px;
+  border-radius: 50%;
+  background: var(--color-impulso);
+}
+
+.in-cierre-empresas {
+  margin: 64px 0 0;
+  padding-top: 32px;
+  border-top: 1px solid var(--in-linea);
+}
+
+.in-cierre-empresas a {
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+/* ---------- Responsive ---------- */
+
+@media (max-width: 980px) {
+  .in-club-intro,
+  .in-pilares {
+    grid-template-columns: 1fr;
+  }
+
+  .in-eventos,
+  .in-recursos {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .in-equipo {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .in-cierre-rejilla {
+    grid-template-columns: 1fr;
+  }
+
+  .in-anillo {
+    order: -1;
+  }
+
+  .in-anillo > div {
+    width: 160px;
+    height: 160px;
+  }
+
+  /* Anton no baja de 24 px (guía): en pequeño, el anillo pasa a etiqueta Inter. */
+  .in-anillo .in-anillo-texto span {
+    font-family: var(--font-body);
+    font-size: 0.8rem;
+    font-weight: 500;
+  }
+
+  .in-anillo-punto {
+    width: 56px;
+    height: 56px;
+  }
+
+  .in-depto ul {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .in-hero {
+    --in-circulo: 72vw;
+    align-items: flex-start;
+    min-height: auto;
+    /* Hueco abajo para que el círculo no quede debajo del texto. */
+    padding-bottom: calc(var(--in-circulo) * 0.66);
+  }
+
+  .in-eventos,
+  .in-recursos {
+    grid-template-columns: 1fr;
+  }
+
+  .in-evento:first-child {
+    grid-column: auto;
+  }
+
+  .in-equipo {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 32px 16px;
+  }
+
+  .in-noticia {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .in-noticia-flecha {
+    display: none;
+  }
+
+  .in-depto summary {
+    gap: 16px;
+    padding: 24px 0;
+  }
+
+  .in-depto ul {
+    padding-left: 32px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .in-depto[open] ul,
+  .in-pulso::after {
+    animation: none;
+  }
+
+  .in-depto::details-content,
+  .in-depto-punto,
+  .in-evento img {
+    transition: none;
+  }
+
+  .in-depto h3,
+  .in-depto-mas,
+  .in-persona img,
+  .in-recurso {
+    transition: none;
+  }
+}

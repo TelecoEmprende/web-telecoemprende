@@ -8,14 +8,8 @@ import { AvatarResponsable, etiquetaDe } from "./marketing/Avatares";
 import { Contador, FilaAnimada } from "../movimiento";
 import { SPRING_DEFAULT } from "@/components/smoothui/lib/animation";
 import type { ApiFailure } from "../../types/api";
-import type { Team } from "../../types/equipo";
+import { DEPTO_LABEL, type Team } from "../../types/equipo";
 import type { MetricasClub, MiembroMetricas } from "../../types/marketing";
-
-const DEPTO_LABEL: Record<Team, string> = {
-  marketing: "Marketing",
-  eventos: "Eventos",
-  ingenieria: "Ingeniería",
-};
 
 /** Mismas clases que `Carga` en el directorio (`MembersPanel.tsx`): el
  *  semáforo de aquí no necesita un color nuevo, solo reutiliza libre/media/
@@ -32,12 +26,9 @@ function ordenSemana(iso: string) {
 }
 
 /**
- * Salud del club entero, para el board y los VPs de cada departamento.
- *
- * Mismo criterio que "Salud del equipo" en el resumen de cada departamento
- * (`WeekPanel`), pero cruzando los tres y con una fila por persona en vez de
- * solo el semáforo -- para eso está esta pantalla aparte y no un tile más
- * en "Mi semana". Todo sale de tareas reales; no hay puntuación inventada.
+ * Salud del club entero, para el board y los VPs de cada departamento:
+ * cruza los tres departamentos, con una fila por persona. Todo sale de
+ * tareas reales; no hay puntuación inventada.
  */
 export function MetricasPanel() {
   const menos = useReducedMotion();
@@ -106,7 +97,7 @@ export function MetricasPanel() {
           <h4 className="mkt-grupo-titulo-react">Alertas</h4>
           <ul className="mkt-miembros-react">
             {metricas.alertas_inactividad.map((m, indice) => (
-              <FilaAnimada key={m.email} como="li" indice={indice}>
+              <FilaAnimada key={m.email} indice={indice}>
                 <span className="mkt-miembro-react">
                   <AvatarResponsable email={m.email} nombre={m.nombre} />
                   <span className="mkt-miembro-datos-react">
@@ -121,7 +112,7 @@ export function MetricasPanel() {
               </FilaAnimada>
             ))}
             {metricas.alertas_departamento.map((a, indice) => (
-              <FilaAnimada key={a.departamento} como="li" indice={indice}>
+              <FilaAnimada key={a.departamento} indice={indice}>
                 <span className="mkt-miembro-react">
                   <span className="mkt-miembro-datos-react">
                     <span className="mkt-miembro-nombre-react">{DEPTO_LABEL[a.departamento]}</span>
@@ -193,7 +184,7 @@ export function MetricasPanel() {
         ) : (
           <ul className="mkt-miembros-react">
             {metricas.miembros.map((m, indice) => (
-              <FilaAnimada key={m.email} como="li" indice={indice}>
+              <FilaAnimada key={m.email} indice={indice}>
                 <span className="mkt-miembro-react">
                   <AvatarResponsable email={m.email} nombre={m.nombre} />
                   <span className="mkt-miembro-datos-react">

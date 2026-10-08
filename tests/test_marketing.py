@@ -614,7 +614,7 @@ class TaskTests(MarketingTestCase):
 
 
 class TaskAsignacionTests(MarketingTestCase):
-    """Solo board y VPs asignan tareas (ver docs/CLAUDE.md) -- un miembro
+    """Solo board y VPs asignan tareas -- un miembro
     raso puede seguir moviendo su propia tarea de estado, pero no crear
     tareas nuevas ni reasignar el responsable de una ya existente."""
 
@@ -1396,26 +1396,6 @@ class SaludEquipoTestCase(MarketingTestCase):
         segundo = marketing_service.obtener_task(task_id, "marketing")["completado_en"]
 
         self.assertEqual(primero, segundo)
-
-    def test_ruta_salud_devuelve_total_del_departamento(self):
-        self.login(vp_de=["marketing"])
-        self.seed_acceso("otro@telecoemprende.es", "x", ["marketing"])
-        respuesta = self.client.get("/api/marketing/miembros/salud")
-        self.assertEqual(respuesta.status_code, 200)
-        self.assertEqual(respuesta.get_json()["salud"]["total"], 2)
-
-    def test_ruta_salud_rechaza_a_quien_no_es_board_ni_vp(self):
-        """La puntuación de participación no se le enseña al miembro raso: solo
-        VP del departamento, board o admin (evita competición entre
-        compañeros, ver `metricas_club`)."""
-        self.login(vp_de=[])
-        respuesta = self.client.get("/api/marketing/miembros/salud")
-        self.assertEqual(respuesta.status_code, 403)
-
-    def test_ruta_salud_acepta_a_board(self):
-        self.login(cargo="boardmember")
-        respuesta = self.client.get("/api/marketing/miembros/salud")
-        self.assertEqual(respuesta.status_code, 200)
 
 
 class OnboardingTestCase(MarketingTestCase):

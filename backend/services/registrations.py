@@ -1,4 +1,3 @@
-from datetime import datetime
 from io import BytesIO
 
 import psycopg2
@@ -57,61 +56,6 @@ def init_db():
                 ALTER TABLE registrations
                 ADD COLUMN IF NOT EXISTS notificado BOOLEAN NOT NULL DEFAULT FALSE
             """)
-        conn.commit()
-
-
-def crear_excel_si_no_existe():
-    init_db()
-
-
-def email_ya_registrado(email: str, evento: str) -> bool:
-    with _get_connection() as conn:
-        with conn.cursor() as cur:
-            cur.execute(
-                "SELECT 1 FROM registrations WHERE LOWER(email) = LOWER(%s) AND evento = %s LIMIT 1",
-                (email.strip(), evento),
-            )
-            return cur.fetchone() is not None
-
-
-def guardar_registro(
-    nombre: str,
-    apellidos: str,
-    estudios: str,
-    email: str,
-    departamento: str,
-    drive_link: str,
-    acepta_privacidad: str,
-    ip: str,
-    evento: str,
-    escuela: str = "",
-    nivel: str = "",
-    telefono: str = "",
-):
-    with _get_connection() as conn:
-        with conn.cursor() as cur:
-            cur.execute(
-                """
-                INSERT INTO registrations
-                    (nombre, apellidos, estudios, email, departamento, drive_link, privacidad_aceptada, ip_registro, created_at, evento, escuela, nivel, telefono)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                """,
-                (
-                    nombre,
-                    apellidos,
-                    estudios,
-                    email.lower(),
-                    departamento,
-                    drive_link,
-                    acepta_privacidad,
-                    ip,
-                    datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                    evento,
-                    escuela,
-                    nivel,
-                    telefono,
-                ),
-            )
         conn.commit()
 
 

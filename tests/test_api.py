@@ -87,49 +87,27 @@ class ApiTestCase(unittest.TestCase):
     def equipo_login(self, email="marketing@example.com", password="test-equipo"):
         return self.client.post("/api/equipo/login", json={"email": email, "password": password})
 
-    def register(self, email="juan@alumnos.upm.es"):
-        return self.client.post(
-            "/api/registrations",
-            json={
-                "nombre": "Juan",
-                "apellidos": "Perez",
-                "escuela": "ETSIT",
-                "nivel": "Grado",
-                "estudios": "Grado - Ingenieria de Tecnologias y Servicios de Telecomunicacion",
-                "email": email,
-                "telefono": "600123456",
-                "departamento": "Tech/Ingeniería",
-                "drive_link": "https://drive.google.com/file/d/test",
-                "privacidad": True,
-                "evento": "telecoemprende-2026-27",
-                "telefono_oculto": "",
-            },
-        )
+    def register(self, email="juan@alumnos.upm.es", nombre="Juan"):
+        # El formulario público ya no existe: las inscripciones que gestiona
+        # /admin son las que quedaron en la tabla, así que se siembran a mano.
+        conn = registration_service._get_connection()
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                INSERT INTO registrations
+                    (nombre, apellidos, escuela, nivel, estudios, email, telefono,
+                     departamento, drive_link, privacidad_aceptada, ip_registro, evento)
+                VALUES (%s, 'Perez', 'ETSIT', 'Grado', 'Grado - Test', %s, '600123456',
+                        'Tech/Ingeniería', 'https://drive.google.com/file/d/test', 'Sí',
+                        '127.0.0.1', 'telecoemprende-2026-27')
+                """,
+                (nombre, email),
+            )
+        conn.commit()
+        conn.close()
 
     def login(self, password="test-admin"):
         return self.client.post("/api/admin/login", json={"password": password})
-
-    def test_registration_validation_error(self):
-        response = self.client.post(
-            "/api/registrations", json={"evento": "telecoemprende-2026-27"}
-        )
-
-        self.assertEqual(response.status_code, 400)
-        payload = response.get_json()
-        self.assertFalse(payload["ok"])
-        self.assertIn("errors", payload)
-        self.assertIn("email", payload["errors"])
-
-    def test_duplicate_email_rejected_after_successful_registration(self):
-        first = self.register()
-        duplicate = self.register()
-
-        self.assertEqual(first.status_code, 201)
-        self.assertEqual(duplicate.status_code, 409)
-        self.assertEqual(
-            duplicate.get_json()["message"],
-            "Ese correo ya está registrado.",
-        )
 
     def test_admin_session_login_and_registrations_flow(self):
         self.register()
@@ -174,17 +152,6 @@ class ApiTestCase(unittest.TestCase):
         # Un intento correcto tras agotar el cupo también debe quedar bloqueado.
         still_blocked = self.login()
         self.assertEqual(still_blocked.status_code, 429)
-
-    def test_admin_login_uses_its_own_rate_limit_bucket(self):
-        # Agotar el cupo de /api/registrations no debe bloquear el login:
-        # cada endpoint sensible tiene su propio contador por IP.
-        from backend.config import MAX_REQUESTS_PER_MINUTE
-
-        for _ in range(MAX_REQUESTS_PER_MINUTE):
-            self.register()
-
-        login = self.login()
-        self.assertEqual(login.status_code, 200)
 
     def test_admin_update_rejects_invalid_departamento(self):
         self.register()
@@ -364,23 +331,7 @@ class ApiTestCase(unittest.TestCase):
         self.assertEqual(response.status_code, 401)
 
     def test_excel_export_neutralizes_formula_injection(self):
-        self.client.post(
-            "/api/registrations",
-            json={
-                "nombre": "=cmd|'/c calc'!A1",
-                "apellidos": "Perez",
-                "escuela": "ETSIT",
-                "nivel": "Grado",
-                "estudios": "Grado - Test",
-                "email": "formula@alumnos.upm.es",
-                "telefono": "600123456",
-                "departamento": "Tech/Ingeniería",
-                "drive_link": "https://drive.google.com/file/d/formula",
-                "privacidad": True,
-                "evento": "telecoemprende-2026-27",
-                "telefono_oculto": "",
-            },
-        )
+        self.register(email="formula@alumnos.upm.es", nombre="=cmd|'/c calc'!A1")
         self.login()
 
         excel_bytes = registration_service.generar_excel_en_memoria()
