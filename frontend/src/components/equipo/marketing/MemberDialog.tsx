@@ -353,7 +353,7 @@ export function MemberDialog({ email, habilidadesConocidas, onCerrar, onGuardado
                 </div>
                 <div>
                   <dd>{ficha.campanas}</dd>
-                  <dt>Campañas</dt>
+                  <dt>Proyectos</dt>
                 </div>
               </dl>
 

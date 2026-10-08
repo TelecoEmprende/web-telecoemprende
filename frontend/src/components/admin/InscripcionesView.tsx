@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 
 import { enviarNotificaciones, getAdminRegistrations } from "../../api/admin";
+import { normalizar } from "../../utils/texto";
 import type { ApiFailure } from "../../types/api";
 import type { Registro } from "../../types/admin";
 import { AlertBanner } from "../feedback/AlertBanner";
@@ -15,13 +16,6 @@ type Aviso = { variant: "info" | "success" | "error"; message: string };
 
 const ESTADOS: EstadoFiltro[] = ["todos", "pendiente", "aceptado", "rechazado", "waitlist"];
 
-/** Minúsculas y sin tildes, para que "Nunez" encuentre a "Núñez". */
-function normalizar(texto: string) {
-  return texto
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/\p{Diacritic}/gu, "");
-}
 
 function coincide(registro: Registro, busqueda: string) {
   const campos = [

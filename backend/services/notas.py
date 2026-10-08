@@ -14,7 +14,7 @@ from psycopg2.extras import Json, RealDictCursor
 
 from backend.config import DATABASE_URL
 
-NOTA_COLUMNAS = ("titulo", "contenido", "departamento", "privada", "fijada")
+NOTA_COLUMNAS = ("titulo", "contenido", "departamento", "privada", "fijada", "proyecto_id")
 
 
 def _get_connection():
@@ -47,6 +47,10 @@ def _crear_tablas():
                     updated_at TIMESTAMP NOT NULL DEFAULT NOW()
                 )
             """)
+            # Proyecto (`campaigns.id`) al que está enlazada la nota, o NULL.
+            # Sin FK, como `responsables` en tasks: borrar un proyecto no debe
+            # tocar ni romper sus notas, que siguen en Notas sin enlace.
+            cur.execute("ALTER TABLE notas ADD COLUMN IF NOT EXISTS proyecto_id INTEGER")
         conn.commit()
 
 
@@ -196,6 +200,13 @@ def eliminar_nota(nota_id: int, yo: str, teams: list[str]) -> bool:
             eliminado = cur.rowcount > 0
         conn.commit()
     return eliminado
+
+
+def proyecto_existe(proyecto_id: int) -> bool:
+    with _get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT 1 FROM campaigns WHERE id = %s", (proyecto_id,))
+            return cur.fetchone() is not None
 
 
 def tamano_json(valor) -> int:

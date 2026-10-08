@@ -185,3 +185,59 @@
     min-height: 44px;
   }
 }
+
+/* Buscador de Cuentas: lupa dentro del campo y recuento al lado. */
+.cuentas-buscador-react {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: 460px;
+}
+
+.cuentas-buscador-react > svg {
+  position: absolute;
+  left: 12px;
+  width: 16px;
+  height: 16px;
+  color: var(--color-text-muted);
+  pointer-events: none;
+}
+
+.cuentas-buscador-react [data-slot="input"] {
+  min-height: 44px;
+  padding-left: 36px;
+}
+
+.cuentas-buscador-cuenta-react {
+  flex: none;
+  color: var(--color-text-muted);
+  font-size: 0.82rem;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- Auditoría ---------- */
+
+.auditoria-tabla-react tbody tr {
+  border-top: 1px solid var(--color-divider);
+}
+
+.auditoria-ok-react,
+.auditoria-error-react {
+  display: inline-flex;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.auditoria-ok-react {
+  background: var(--color-success-bg);
+  color: var(--color-success-text);
+}
+
+.auditoria-error-react {
+  background: var(--color-error-bg);
+  color: var(--color-error-text);
+}

@@ -720,7 +720,7 @@ describe("/equipo — panel de Marketing", () => {
     await renderMarketing();
     await userEvent.click(screen.getByRole("button", { name: "Proyectos" }));
 
-    expect(await screen.findByText(/Aún no hay campañas/)).toBeInTheDocument();
+    expect(await screen.findByText(/Aún no hay proyectos/)).toBeInTheDocument();
   });
 
   it("duplicar un proyecto lo recarga y abre la copia", async () => {
@@ -890,7 +890,7 @@ describe("/equipo — panel de Marketing", () => {
     await userEvent.click(screen.getByRole("button", { name: "Calendario" }));
 
     await userEvent.click(await screen.findByRole("button", { name: /Reservar la sala/ }));
-    await userEvent.click(await screen.findByRole("button", { name: "Ver campaña →" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Ver proyecto →" }));
 
     expect(
       await screen.findByRole("heading", { name: "Semana de bienvenida" }),
@@ -948,32 +948,13 @@ describe("/equipo — panel de Eventos", () => {
     // el título de la página, nunca en el sidebar (ver EquipoSidebar.tsx).
     for (const panel of [
       "Inicio", "Notas", "Tareas", "Proyectos", "Calendario",
-      "Herramientas", "Presupuesto", "Reuniones", "Miembros", "Avisos",
+      "Herramientas", "Presupuesto", "Reuniones", "Miembros",
     ]) {
       expect(screen.getByRole("button", { name: panel })).toBeInTheDocument();
     }
+    // Avisos ya no existe: el club se avisa por Slack.
+    expect(screen.queryByRole("button", { name: "Avisos" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Gestiones" })).not.toBeInTheDocument();
-  });
-
-  it("los anuncios cuelgan del club, no de un departamento", async () => {
-    await renderEventos();
-
-    const anuncios = screen.getByRole("button", { name: "Avisos" });
-    expect(anuncios).toBeInTheDocument();
-
-    await userEvent.click(anuncios);
-
-    // Se abre el panel de anuncios: el título lo pinta la barra del shell, así
-    // que lo que identifica al panel es su propia frase y su acción.
-    expect(
-      await screen.findByText(/Comunicados para todo el club/),
-    ).toBeInTheDocument();
-    expect(listarRegistros).toHaveBeenCalledWith("anuncios");
-
-    // El sidebar tiene UNA entrada de Avisos, no una por departamento: el
-    // contenido es de todo el equipo aunque la ruta cuelgue de uno.
-    const navegacion = screen.getByRole("navigation", { name: "Secciones de /equipo" });
-    expect(within(navegacion).getAllByRole("button", { name: "Avisos" })).toHaveLength(1);
   });
 
   it("pide los datos al departamento de Eventos, no al de Marketing", async () => {
@@ -1120,9 +1101,6 @@ describe("/equipo — Ingeniería", () => {
     await renderMarketing();
 
     expect(screen.queryByRole("link", { name: /GitHub/ })).not.toBeInTheDocument();
-    for (const nombre of ["Decisiones"]) {
-      expect(screen.queryByRole("button", { name: nombre })).not.toBeInTheDocument();
-    }
   });
 
   it("Plataforma enseña el estado y enlaza el commit desplegado con GitHub", async () => {
@@ -1175,31 +1153,5 @@ describe("/equipo — Ingeniería", () => {
     expect(await screen.findByText("Renueva en 10 d")).toBeInTheDocument();
     expect(screen.getByText("Caducado")).toBeInTheDocument();
     expect(screen.getAllByText(/^Renueva en|^Caducado$/)).toHaveLength(2);
-  });
-
-  it("Decisiones enseña el estado y separa el contexto de la decisión", async () => {
-    registrosDe("decisiones", [
-      {
-        id: 1,
-        titulo: "Postgres en Supabase",
-        estado: "aceptada",
-        fecha: "2026-09-01",
-        contexto: "Hacía falta una base de datos gratis.",
-        decision: "Supabase, por el plan gratuito.",
-        creado_por: YO,
-        created_at: "2026-09-06T10:00:00",
-        updated_at: "2026-09-06T10:00:00",
-      },
-    ]);
-
-    await renderMarketing();
-    // Los paneles de un solo departamento van en el grupo plegable "Más".
-    await userEvent.click(screen.getByRole("button", { name: "Más" }));
-    await userEvent.click(screen.getByRole("button", { name: "Decisiones" }));
-
-    expect(await screen.findByText("Postgres en Supabase")).toBeInTheDocument();
-    expect(screen.getByText("Aceptada")).toBeInTheDocument();
-    expect(screen.getByText(/Hacía falta una base de datos gratis/)).toBeInTheDocument();
-    expect(screen.getByText(/Supabase, por el plan gratuito/)).toBeInTheDocument();
   });
 });

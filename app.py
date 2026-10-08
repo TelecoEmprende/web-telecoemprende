@@ -5,7 +5,9 @@ from flask import (
     send_file,
     send_from_directory,
     abort,
+    g,
     redirect,
+    session,
 )
 import os
 import re
@@ -27,6 +29,8 @@ from backend.api.slack_bot import slack_bot_api
 import backend.api.registros  # noqa: F401
 from backend.config import ADMIN_SESSION_LIFETIME_SECONDS
 from backend.schemas import build_response
+from backend.services import auditoria
+from backend.services.security import obtener_ip_real
 
 app = Flask(__name__)
 # Vercel (y Nginx en Docker) hacen de proxy delante: sin esto, Flask no se fía
@@ -70,6 +74,25 @@ def serve_frontend_index():
         abort(503, description="Frontend build not found. Run `npm run build` in `frontend/`.")
 
     return send_file(FRONTEND_INDEX_FILE)
+
+
+@app.before_request
+def recordar_quien_actua():
+    # Antes de la ruta: el logout borra la sesión y, sin esto, su propia
+    # línea de auditoría saldría sin nombre.
+    g.auditoria_email = session.get("equipo_email", "")
+
+
+@app.after_request
+def registrar_auditoria(response):
+    if auditoria.debe_registrarse(request.method, request.path):
+        email = session.get("equipo_email") or g.get("auditoria_email", "")
+        if not email and request.path == "/api/equipo/login":
+            # Intento fallido: quién lo intentaba (solo el email, nunca la
+            # contraseña) es justo lo que interesa ver.
+            email = str((request.get_json(silent=True) or {}).get("email", ""))[:120]
+        auditoria.registrar(email, request.method, request.path, response.status_code, obtener_ip_real())
+    return response
 
 
 @app.after_request

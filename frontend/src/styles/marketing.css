@@ -2499,3 +2499,94 @@ button.mkt-evento-react {
   outline: 2px solid var(--color-azul);
   outline-offset: 2px;
 }
+
+/* ---------- Notas enlazadas a un proyecto ---------- */
+
+.proyecto-notas-lista-react {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.proyecto-notas-lista-react li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.proyecto-nota-react {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color var(--dur-fast) var(--ease-out);
+}
+
+.proyecto-nota-react > svg {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  color: var(--color-azul);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .proyecto-nota-react:hover {
+    border-color: var(--color-azul);
+  }
+}
+
+.proyecto-nota-react:focus-visible {
+  outline: 2px solid var(--color-azul);
+  outline-offset: 2px;
+}
+
+.proyecto-nota-texto-react {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.proyecto-nota-texto-react strong {
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.proyecto-nota-texto-react span {
+  overflow: hidden;
+  color: var(--color-text-muted);
+  font-size: 0.78rem;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.proyecto-notas-enlazar-react {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.proyecto-notas-enlazar-react select {
+  flex: 1;
+  min-width: 0;
+}
+
+.proyecto-notas-error-react {
+  margin: 8px 0 0;
+  color: var(--color-error-text);
+  font-size: 0.85rem;
+  font-weight: 600;
+}

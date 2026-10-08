@@ -1,4 +1,4 @@
-import { Camera, ShieldCheck } from "lucide-react";
+import { Camera, Search, ShieldCheck } from "lucide-react";
 import { motion } from "motion/react";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
@@ -35,6 +35,7 @@ import {
   SelectValue,
 } from "../ui/select";
 import { aAvatarCuadrado } from "../../utils/imagen";
+import { normalizar } from "../../utils/texto";
 import type { ApiFailure } from "../../types/api";
 import {
   CARGO_LABEL,
@@ -247,7 +248,7 @@ export function EquipoAccesosPanel() {
   // (`RecordsTable.tsx`): una candidatura aceptada trae nombre y email.
   const [nuevoEmail, setNuevoEmail] = useState(searchParams.get("email") ?? "");
   const [nuevoNombre, setNuevoNombre] = useState(searchParams.get("nombre") ?? "");
-  const [nuevosApellidos, setNuevosApellidos] = useState("");
+  const [nuevosApellidos, setNuevosApellidos] = useState(searchParams.get("apellidos") ?? "");
   const [nuevaPassword, setNuevaPassword] = useState("");
   const [nuevosEquipos, setNuevosEquipos] = useState<Team[]>([]);
   const [nuevoVpDe, setNuevoVpDe] = useState<Team[]>([]);
@@ -262,11 +263,20 @@ export function EquipoAccesosPanel() {
     [accesos, nuevoEmail],
   );
 
-  // Pendientes (sin activar) arriba: son las que piden algo a quien mira.
-  const ordenados = useMemo(
-    () => [...accesos].sort((a, b) => Number(a.activo) - Number(b.activo)),
-    [accesos],
-  );
+  const [busqueda, setBusqueda] = useState("");
+
+  // Pendientes (sin activar) arriba: son las que piden algo a quien mira. La
+  // búsqueda mira nombre, apellidos (juntos, para "ana garcia") y email,
+  // sin tildes ni mayúsculas.
+  const ordenados = useMemo(() => {
+    const q = normalizar(busqueda.trim());
+    const filtrados = q
+      ? accesos.filter((a) =>
+          normalizar(`${a.nombre} ${a.apellidos} ${a.email}`).includes(q),
+        )
+      : accesos;
+    return [...filtrados].sort((a, b) => Number(a.activo) - Number(b.activo));
+  }, [accesos, busqueda]);
 
   function avisarError(error: unknown, porDefecto: string) {
     setMessageVariant("error");
@@ -388,6 +398,22 @@ export function EquipoAccesosPanel() {
       </div>
 
       {message ? <AlertBanner variant={messageVariant} message={message} /> : null}
+
+      <div className="cuentas-buscador-react mt-4">
+        <Search aria-hidden="true" />
+        <Input
+          type="search"
+          value={busqueda}
+          onChange={(event) => setBusqueda(event.target.value)}
+          placeholder="Buscar por nombre, apellidos o email"
+          aria-label="Buscar cuentas"
+        />
+        {busqueda.trim() ? (
+          <span className="cuentas-buscador-cuenta-react" aria-live="polite">
+            {ordenados.length} de {accesos.length}
+          </span>
+        ) : null}
+      </div>
 
       {isLoading ? (
         <p>Cargando cuentas...</p>
@@ -555,10 +581,12 @@ export function EquipoAccesosPanel() {
                   </motion.tr>
                 );
               })}
-              {accesos.length === 0 ? (
+              {ordenados.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="p-2 text-muted-foreground">
-                    Todavía no hay cuentas dadas de alta.
+                    {accesos.length === 0
+                      ? "Todavía no hay cuentas dadas de alta."
+                      : `Nadie coincide con «${busqueda.trim()}».`}
                   </td>
                 </tr>
               ) : null}

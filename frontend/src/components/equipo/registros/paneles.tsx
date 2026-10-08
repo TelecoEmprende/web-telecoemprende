@@ -1,10 +1,10 @@
-import { ExternalLink, Pin } from "lucide-react";
+import { ExternalLink } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { useApi, useDirectorio } from "../DeptoApi";
 import { RegistrosPanel } from "./RegistrosPanel";
 import { AvataresDeResponsables } from "../marketing/Avatares";
-import { diasHasta, formatearFecha, haceCuanto } from "../../../types/marketing";
+import { diasHasta, formatearFecha } from "../../../types/marketing";
 import {
   formatearEuros,
   listaDe,
@@ -145,47 +145,6 @@ export function PresupuestoPanel() {
 }
 
 // --------------------------------------------------------------------------
-// Anuncios (del club entero, no de un departamento)
-// --------------------------------------------------------------------------
-
-const CAMPOS_ANUNCIOS: readonly CampoSpec[] = [
-  { clave: "titulo", etiqueta: "Título", tipo: "texto", requerido: true },
-  { clave: "cuerpo", etiqueta: "Mensaje", tipo: "parrafo" },
-  {
-    clave: "fijado",
-    etiqueta: "Fijar arriba del todo",
-    tipo: "check",
-    ayuda: "Para lo que no se puede perder entre los demás.",
-  },
-];
-
-export function AnunciosPanel() {
-  return (
-    <RegistrosPanel
-      recurso="anuncios"
-      descripcion="Comunicados para todo el club. Se ven desde cualquier departamento, no solo desde este."
-      vacio="No hay anuncios. El primero que publiques lo verá todo el equipo al entrar."
-      etiquetaNuevo="Nuevo anuncio"
-      campos={CAMPOS_ANUNCIOS}
-      fila={(r) => ({
-        titulo: textoDe(r, "titulo"),
-        meta: `${textoDe(r, "creado_por").split("@")[0] || "alguien"} · ${haceCuanto(textoDe(r, "created_at"))}`,
-        badges: r.fijado ? (
-          <span className="mkt-tags-react">
-            <span className="reg-fijado-react">
-              <Pin aria-hidden="true" /> Fijado
-            </span>
-          </span>
-        ) : null,
-        cuerpo: textoDe(r, "cuerpo") ? (
-          <p className="reg-cuerpo-largo-react">{textoDe(r, "cuerpo")}</p>
-        ) : null,
-      })}
-    />
-  );
-}
-
-// --------------------------------------------------------------------------
 // Reuniones
 // --------------------------------------------------------------------------
 
@@ -242,82 +201,6 @@ export function ReunionesPanel() {
               ) : null}
             </>
           ),
-        };
-      }}
-    />
-  );
-}
-
-// --------------------------------------------------------------------------
-// Decisiones técnicas (Ingeniería)
-// --------------------------------------------------------------------------
-
-const CAMPOS_DECISIONES: readonly CampoSpec[] = [
-  { clave: "titulo", etiqueta: "Título", tipo: "texto", requerido: true },
-  {
-    clave: "estado",
-    etiqueta: "Estado",
-    tipo: "opcion",
-    opciones: [
-      { valor: "propuesta", etiqueta: "Propuesta" },
-      { valor: "aceptada", etiqueta: "Aceptada" },
-      { valor: "descartada", etiqueta: "Descartada" },
-      { valor: "reemplazada", etiqueta: "Reemplazada" },
-    ],
-    ayuda: "Reemplazada: una decisión posterior la deja sin efecto.",
-  },
-  { clave: "fecha", etiqueta: "Fecha", tipo: "fecha" },
-  {
-    clave: "contexto",
-    etiqueta: "Contexto",
-    tipo: "parrafo",
-    ayuda: "El problema y las alternativas que se barajaron.",
-  },
-  {
-    clave: "decision",
-    etiqueta: "Decisión y motivos",
-    tipo: "parrafo",
-    ayuda: "Lo que habrá que saber dentro de un año, cuando ya no esté quien lo decidió.",
-  },
-];
-
-export function DecisionesPanel() {
-  return (
-    <RegistrosPanel
-      recurso="decisiones"
-      descripcion="Qué se decidió en lo técnico y por qué. Cuando cambie el equipo, esto evita rehacer la discusión desde cero."
-      vacio="Sin decisiones apuntadas. Empieza por las gordas: dónde está alojada la web, la base de datos, por qué Flask."
-      etiquetaNuevo="Nueva decisión"
-      campos={CAMPOS_DECISIONES}
-      fila={(r) => {
-        const estado = textoDe(r, "estado");
-        const contexto = textoDe(r, "contexto");
-        const decision = textoDe(r, "decision");
-        return {
-          titulo: textoDe(r, "titulo"),
-          meta: textoDe(r, "fecha") ? formatearFecha(textoDe(r, "fecha"), true) : "Sin fecha",
-          badges: (
-            <span className="mkt-tags-react">
-              <span className={`reg-estado-react reg-estado-${estado}-react`}>
-                {etiqueta(CAMPOS_DECISIONES, "estado", estado)}
-              </span>
-            </span>
-          ),
-          cuerpo:
-            contexto || decision ? (
-              <>
-                {contexto ? (
-                  <p className="reg-cuerpo-largo-react">
-                    <b>Contexto:</b> {contexto}
-                  </p>
-                ) : null}
-                {decision ? (
-                  <p className="reg-cuerpo-largo-react">
-                    <b>Decisión:</b> {decision}
-                  </p>
-                ) : null}
-              </>
-            ) : null,
         };
       }}
     />
