@@ -1,7 +1,8 @@
+import { ArrowRight, MailCheck } from "lucide-react";
+import { motion, useReducedMotion } from "motion/react";
 import { FormEvent, useState } from "react";
 
-import { AlertBanner } from "../feedback/AlertBanner";
-import { Button } from "../ui/button";
+import { SPRING_DEFAULT } from "@/components/smoothui/lib/animation";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 
@@ -16,18 +17,20 @@ type EquipoLoginFormProps = {
   onModeChange: () => void;
 };
 
+const MODOS: { id: ModoAcceso; label: string }[] = [
+  { id: "login", label: "Entrar" },
+  { id: "registro", label: "Crear cuenta" },
+];
+
 /**
- * Acceso a `/equipo`.
+ * La tarjeta de acceso a `/equipo`: entrar o crear cuenta, con un selector de
+ * dos posiciones y la misma píldora que se desliza en el sidebar. Tras crear
+ * la cuenta el formulario deja paso a un "cuenta creada": la persona no puede
+ * entrar hasta que un admin le dé departamento, así que no tiene sentido
+ * dejarle el botón de entrar delante.
  *
- * La tarjeta va en la paleta del área de trabajo (crema sobre el navy de la
- * página), no en la oscura de shadcn: ver `.equipo-login-react` en
- * `equipo.css`, que es donde se re-encadenan sus tokens. Input/Label/Button
- * siguen siendo de shadcn -- el foco visible y el `aria` ya están resueltos
- * ahí y no merece la pena reescribirlos.
- *
- * ponytail: el modo "registro" es temporal, mientras el equipo se da de alta.
- * Para quitarlo: borrar `modo`, el bloque del pie y la prop `onModeChange`, y
- * dejar `onSubmit` con dos argumentos.
+ * Input/Label son de shadcn (foco visible y `aria` ya resueltos); sus tokens
+ * se re-encadenan en `.equipo-login-react` (`equipo.css`).
  */
 export function EquipoLoginForm({
   isSubmitting,
@@ -39,6 +42,7 @@ export function EquipoLoginForm({
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [modo, setModo] = useState<ModoAcceso>("login");
+  const menos = useReducedMotion();
 
   const esRegistro = modo === "registro";
 
@@ -47,19 +51,64 @@ export function EquipoLoginForm({
     await onSubmit(email, password, modo);
   }
 
-  function cambiarModo() {
-    setModo(esRegistro ? "login" : "registro");
+  function cambiarModo(siguiente: ModoAcceso) {
+    if (siguiente === modo) return;
+    setModo(siguiente);
     setPassword("");
     onModeChange();
   }
 
+  if (esRegistro && successMessage) {
+    return (
+      <section className="equipo-login-react acceso-hecho-react" aria-live="polite">
+        <span className="acceso-hecho-icono-react" aria-hidden="true">
+          <MailCheck />
+        </span>
+        <h2>Cuenta creada</h2>
+        <p>
+          Un admin tiene que asignarte departamento antes de que puedas entrar. Cuando lo haga,
+          entra con <strong>{email}</strong>.
+        </p>
+        <button type="button" className="acceso-boton-react" onClick={() => cambiarModo("login")}>
+          Ir a entrar
+          <ArrowRight aria-hidden="true" />
+        </button>
+      </section>
+    );
+  }
+
   return (
-    <section className="equipo-login-react">
-      <h1>{esRegistro ? "Crear cuenta de equipo" : "Acceso equipo"}</h1>
-      <p>
+    <section className="equipo-login-react" aria-labelledby="acceso-titulo">
+      <h2 id="acceso-titulo" className="sr-only">
+        {esRegistro ? "Crear cuenta de equipo" : "Entrar al área del equipo"}
+      </h2>
+
+      <div className="acceso-modos-react" role="group" aria-label="Qué quieres hacer">
+        {MODOS.map(({ id, label }) => (
+          <button
+            key={id}
+            type="button"
+            aria-pressed={modo === id}
+            className="acceso-modo-react"
+            onClick={() => cambiarModo(id)}
+          >
+            {modo === id ? (
+              <motion.span
+                layoutId="acceso-modo-activo"
+                className="acceso-modo-pildora-react"
+                aria-hidden="true"
+                transition={menos ? { duration: 0 } : SPRING_DEFAULT}
+              />
+            ) : null}
+            <span className="acceso-modo-texto-react">{label}</span>
+          </button>
+        ))}
+      </div>
+
+      <p className="acceso-ayuda-react">
         {esRegistro
-          ? "Crea tu cuenta con el correo que uses en el club. Un admin te asignará tu departamento antes de que puedas entrar."
-          : "Inicia sesión con tu cuenta de equipo para ver tu panel."}
+          ? "Con el correo que uses en el club. Un admin te asignará departamento antes de que puedas entrar."
+          : "Con tu cuenta de equipo."}
       </p>
 
       {/* `role="alert"` para que un lector de pantalla anuncie el fallo: sin
@@ -70,10 +119,8 @@ export function EquipoLoginForm({
         </p>
       ) : null}
 
-      {successMessage ? <AlertBanner variant="success" message={successMessage} /> : null}
-
-      <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
-        <div className="flex flex-col gap-1.5">
+      <form className="acceso-form-react" onSubmit={handleSubmit}>
+        <div className="acceso-campo-react">
           <Label htmlFor="equipo-email">Email</Label>
           <Input
             type="email"
@@ -81,12 +128,13 @@ export function EquipoLoginForm({
             name="email"
             autoComplete="email"
             placeholder="tucorreo@ejemplo.com"
+            required
             value={email}
             onChange={(event) => setEmail(event.target.value)}
           />
         </div>
 
-        <div className="flex flex-col gap-1.5">
+        <div className="acceso-campo-react">
           <Label htmlFor="equipo-password">Contraseña</Label>
           <Input
             type="password"
@@ -94,13 +142,14 @@ export function EquipoLoginForm({
             name="password"
             autoComplete={esRegistro ? "new-password" : "current-password"}
             minLength={esRegistro ? 8 : undefined}
-            placeholder={esRegistro ? "Mínimo 8 caracteres" : "Contraseña"}
+            placeholder={esRegistro ? "Mínimo 8 caracteres" : "Tu contraseña"}
+            required
             value={password}
             onChange={(event) => setPassword(event.target.value)}
           />
         </div>
 
-        <Button type="submit" disabled={isSubmitting} className="mt-2">
+        <button type="submit" className="acceso-boton-react" disabled={isSubmitting}>
           {isSubmitting
             ? esRegistro
               ? "Creando..."
@@ -108,19 +157,9 @@ export function EquipoLoginForm({
             : esRegistro
               ? "Crear cuenta"
               : "Entrar"}
-        </Button>
+          {isSubmitting ? null : <ArrowRight aria-hidden="true" />}
+        </button>
       </form>
-
-      {/* `bg-transparent`: con el Preflight de Tailwind desactivado, un botón
-          sin fondo propio se queda con el gris del navegador. */}
-      <Button
-        type="button"
-        variant="link"
-        className="mt-3 bg-transparent px-0"
-        onClick={cambiarModo}
-      >
-        {esRegistro ? "Ya tengo cuenta" : "No tengo cuenta todavía"}
-      </Button>
     </section>
   );
 }
