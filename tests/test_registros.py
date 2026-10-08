@@ -337,5 +337,36 @@ class RegistrosTestCase(unittest.TestCase):
         self.assertEqual(self.client.get("/api/eventos/anuncios").status_code, 401)
 
 
+    # --- Accesos del club (Herramientas) ---
+
+    def test_accesos_solo_los_servicios_marcados_para_el_club(self):
+        self.login(equipos=("ingenieria",))
+        for nombre, url, visible in (
+            ("WhatsApp del club", "https://chat.whatsapp.com/abc", True),
+            ("Supabase", "https://supabase.com/dashboard", False),
+            ("Sin enlace", "", True),
+        ):
+            r = self.client.post(
+                "/api/ingenieria/servicios",
+                json={"nombre": nombre, "tipo": "mensajeria", "url": url, "visible_club": visible},
+            )
+            self.assertEqual(r.status_code, 201, r.get_json())
+
+        self.client.post("/api/equipo/logout")
+        conn = equipo_service._get_connection()
+        with conn.cursor() as cur:
+            cur.execute(
+                "INSERT INTO equipo_accesos (email, password_hash, equipos) VALUES (%s, %s, %s)",
+                ("mkt@example.com", generate_password_hash("pw"), ["marketing"]),
+            )
+        conn.commit()
+        conn.close()
+        self.client.post("/api/equipo/login", json={"email": "mkt@example.com", "password": "pw"})
+
+        respuesta = self.client.get("/api/equipo/accesos").get_json()
+        self.assertEqual([a["nombre"] for a in respuesta["accesos"]], ["WhatsApp del club"])
+        self.assertTrue(respuesta["luma"].startswith("https://"))
+
+
 if __name__ == "__main__":
     unittest.main()

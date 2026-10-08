@@ -175,6 +175,8 @@ def _campos_servicio(datos: dict) -> dict:
         salida["estado"] = _opcion(datos, "estado", reg.SERVICIO_ESTADOS, "activo")
     if "notas" in datos:
         salida["notas"] = _texto(datos, "notas", maximo=MAX_TEXTO_LARGO_LEN, multilinea=True)
+    if "visible_club" in datos:
+        salida["visible_club"] = bool(datos.get("visible_club"))
     return salida
 
 
