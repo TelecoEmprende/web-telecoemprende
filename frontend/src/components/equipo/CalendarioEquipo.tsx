@@ -20,7 +20,7 @@ import { listarNotas } from "../../api/notas";
 import type { NotaResumen } from "../../types/notas";
 import { DURATION, EASE_OUT } from "@/components/smoothui/lib/animation";
 import type { ApiFailure } from "../../types/api";
-import type { EventoCalendario, EventoLuma, MiembroDirectorio, Team } from "../../types/equipo";
+import { DEPTO_LABEL, type EventoCalendario, type EventoLuma, type MiembroDirectorio, type Team } from "../../types/equipo";
 import { textoDe, type Registro } from "../../types/registros";
 import {
   diasHasta,
@@ -28,12 +28,6 @@ import {
   type ProyectoResumen,
   type Task,
 } from "../../types/marketing";
-
-const DEPTO_LABEL: Record<string, string> = {
-  marketing: "Marketing",
-  eventos: "Eventos",
-  ingenieria: "Ingeniería",
-};
 
 /** Cada departamento con su cajita: Tech en azul, Marketing en ámbar y
  *  Eventos en el gris neutro del boceto -- tres tonos que se distinguen de un
@@ -224,10 +218,7 @@ export function CalendarioEquipo({ onIrA, onAbrirNota }: Props) {
         setTeams(sesion.teams);
         setVpDe(sesion.vp_de);
         setCargo(sesion.cargo);
-        // Tareas abiertas de cualquier departamento al que pertenezca -- con
-        // uno solo es lo mismo que ve en el resumen de ese departamento, pero
-        // repetirlo aquí es gratis y evita el salto raro de "aparece según
-        // cuántos equipos tengas".
+        // Tareas abiertas de cualquier departamento al que pertenezca.
         void cargarTareas();
 
         getMisProyectos()
@@ -548,7 +539,7 @@ export function CalendarioEquipo({ onIrA, onAbrirNota }: Props) {
                         </div>
                       </button>
                       <span className={`crm-tag ${DEPTO_TAG[tarea.departamento] ?? ""}`}>
-                        {DEPTO_LABEL[tarea.departamento] ?? tarea.departamento}
+                        {DEPTO_LABEL[tarea.departamento as Team] ?? tarea.departamento}
                       </span>
                       {hecha ? (
                         <span className="crm-tag crm-tag-verde-react">Hecho</span>

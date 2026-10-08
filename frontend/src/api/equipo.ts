@@ -102,10 +102,8 @@ export function checkinEventoCalendario(eventoId: number, email: string, asistio
 
 /** Solo board/VP (ver `_es_board_o_vp` en el backend) -- 403 para cualquier
  *  otra persona. `MetricasPanel` no la llama si la sesión no cumple. */
-export function getMetricas(diasPeriodo = 30) {
-  return apiRequest<ApiResult & { metricas: MetricasClub }>(
-    `/api/equipo/metricas?dias=${diasPeriodo}`,
-  );
+export function getMetricas() {
+  return apiRequest<ApiResult & { metricas: MetricasClub }>("/api/equipo/metricas?dias=30");
 }
 
 export type DatosFormulario = {

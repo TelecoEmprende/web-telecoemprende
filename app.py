@@ -24,10 +24,8 @@ from backend.api.slack_bot import slack_bot_api
 # tiene que hacerlo ANTES de registrar el blueprint -- Flask no admite rutas
 # nuevas en un blueprint ya registrado.
 import backend.api.registros  # noqa: F401
-from backend.api.public import public_api
 from backend.config import ADMIN_SESSION_LIFETIME_SECONDS
 from backend.schemas import build_response
-from backend.services.registrations import crear_excel_si_no_existe
 
 app = Flask(__name__)
 # Vercel (y Nginx en Docker) hacen de proxy delante: sin esto, Flask no se fía
@@ -35,7 +33,6 @@ app = Flask(__name__)
 # `http://` en vez de `https://` -- justo el enlace de suscripción del
 # calendario, que Google Calendar rechaza en silencio si no es https.
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
-app.register_blueprint(public_api)
 app.register_blueprint(admin_api)
 app.register_blueprint(equipo_api)
 app.register_blueprint(notas_api)
@@ -98,7 +95,6 @@ def aplicar_headers_seguridad(response):
 
 @app.route("/", methods=["GET"])
 def index():
-    crear_excel_si_no_existe()
     return serve_frontend_index()
 
 
@@ -110,7 +106,6 @@ def index():
 @app.route("/admin", methods=["GET"])
 @app.route("/admin/<any(inscripciones, equipo, calendario):_vista>", methods=["GET"])
 def admin(_vista: str = ""):
-    crear_excel_si_no_existe()
     return serve_frontend_index()
 
 
@@ -127,19 +122,6 @@ def privacidad():
 
 @app.route("/news", methods=["GET"])
 def news():
-    return serve_frontend_index()
-
-
-# Las dos rutas que faltaban del router de React: sin ellas, en local caían en
-# el 404 de Flask (en Vercel las recoge el rewrite del servicio frontend, y en
-# Docker el try_files de nginx, así que solo se notaba aquí).
-@app.route("/gracias", methods=["GET"])
-def gracias():
-    return serve_frontend_index()
-
-
-@app.route("/charla-santi-y-pablo", methods=["GET"])
-def charla_santi_y_pablo():
     return serve_frontend_index()
 
 
@@ -192,10 +174,6 @@ def error_response(status_code: int, message: str):
     if request.path.startswith("/api/"):
         return jsonify(build_response(False, message)), status_code
 
-    pagina = FRONTEND_DIST_DIR / f"{status_code}.html"
-    if pagina.exists():
-        return send_file(pagina), status_code
-
     return message, status_code
 
 
@@ -215,7 +193,6 @@ def internal_error(_error):
 
 
 if __name__ == "__main__":
-    crear_excel_si_no_existe()
     # El 5000 lo ocupa el "AirPlay Receiver" de macOS en algunos equipos; con
     # PORT se levanta en otro sitio sin tocar ajustes del sistema (el proxy del
     # dev server de Vite se apunta con VITE_API_PROXY, ver vite.config.ts).

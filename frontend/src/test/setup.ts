@@ -11,16 +11,17 @@ class ResizeObserverStub {
 }
 globalThis.ResizeObserver ??= ResizeObserverStub as unknown as typeof ResizeObserver;
 
-HTMLCanvasElement.prototype.getContext = ((() => {
-  return {
-    clearRect: () => {},
-    setTransform: () => {},
-    beginPath: () => {},
-    arc: () => {},
-    fill: () => {},
-    fillStyle: "",
-  } as unknown as CanvasRenderingContext2D;
-}) as unknown) as typeof HTMLCanvasElement.prototype.getContext;
+// Tampoco IntersectionObserver: lo usa motion (`whileInView`, `useInView`) en
+// las animaciones de scroll de la landing y en la firma del pie compartido.
+class IntersectionObserverStub {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+  takeRecords() {
+    return [];
+  }
+}
+globalThis.IntersectionObserver ??= IntersectionObserverStub as unknown as typeof IntersectionObserver;
 
 // El timeout de findBy* es de Testing Library, NO el `testTimeout` de vitest:
 // son dos relojes distintos. 1s se queda corto montando Radix en jsdom y

@@ -39,7 +39,7 @@ type Props = {
     cuerpo?: ReactNode;
   };
   /** Bloque opcional encima del listado (los totales del presupuesto). */
-  cabecera?: (registros: Registro[], recargar: () => void) => ReactNode;
+  cabecera?: (registros: Registro[]) => ReactNode;
 };
 
 function valorInicial(campo: CampoSpec, registro: Registro | null): string {
@@ -47,7 +47,7 @@ function valorInicial(campo: CampoSpec, registro: Registro | null): string {
     if (campo.tipo === "opcion") return campo.opciones?.[0]?.valor ?? "";
     return "";
   }
-  if (campo.tipo === "lista" || campo.tipo === "miembros") {
+  if (campo.tipo === "miembros") {
     return listaDe(registro, campo.clave).join("\n");
   }
   if (campo.tipo === "check") return registro[campo.clave] ? "si" : "";
@@ -57,10 +57,11 @@ function valorInicial(campo: CampoSpec, registro: Registro | null): string {
 /**
  * El listado y el formulario de una entidad del workspace.
  *
- * Recursos, presupuesto, anuncios, reuniones y alumni son la misma pantalla
- * con campos distintos: un listado, un botón de nuevo, un diálogo para crear y
- * editar, y borrar con confirmación. Se describen con `campos` en vez de
- * escribirse cinco veces, que es lo mismo que hace el backend con `Tabla`.
+ * Recursos, presupuesto, anuncios, reuniones, alumni, decisiones y servicios
+ * son la misma pantalla con campos distintos: un listado, un botón de nuevo,
+ * un diálogo para crear y editar, y borrar con confirmación. Se describen con
+ * `campos` en vez de escribirse siete veces, que es lo mismo que hace el
+ * backend con `Tabla`.
  */
 export function RegistrosPanel({
   recurso,
@@ -129,7 +130,7 @@ export function RegistrosPanel({
         </button>
       </header>
 
-      {cabecera ? cabecera(registros, () => void cargar()) : null}
+      {cabecera ? cabecera(registros) : null}
 
       {registros.length === 0 ? (
         <p className="mkt-vacio-react">{vacio}</p>
@@ -252,7 +253,7 @@ function RegistroDialog({ campos, registro, titulo, onCerrar, onGuardar }: Dialo
     const datos: Record<string, unknown> = {};
     for (const campo of campos) {
       const bruto = valores[campo.clave] ?? "";
-      if (campo.tipo === "lista" || campo.tipo === "miembros") {
+      if (campo.tipo === "miembros") {
         datos[campo.clave] = bruto
           .split("\n")
           .map((l) => l.trim())
@@ -310,10 +311,10 @@ function RegistroDialog({ campos, registro, titulo, onCerrar, onGuardar }: Dialo
                         }
                         onCambiar={(emails) => set(campo.clave, emails.join("\n"))}
                       />
-                    ) : campo.tipo === "parrafo" || campo.tipo === "lista" ? (
+                    ) : campo.tipo === "parrafo" ? (
                       <textarea
                         id={id}
-                        rows={campo.tipo === "lista" ? 3 : 4}
+                        rows={4}
                         value={valores[campo.clave] ?? ""}
                         required={campo.requerido}
                         onChange={(e) => set(campo.clave, e.target.value)}

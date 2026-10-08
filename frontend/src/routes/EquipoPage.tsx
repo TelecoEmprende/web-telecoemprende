@@ -18,7 +18,7 @@ import { MetricasPanel } from "../components/equipo/MetricasPanel";
 import { NotasPanel } from "../components/equipo/notas/NotasPanel";
 import { PanelAnimado } from "../components/movimiento";
 import type { ApiFailure } from "../types/api";
-import type { Cargo, Team } from "../types/equipo";
+import { DEPTO_LABEL, type Cargo, type Team } from "../types/equipo";
 
 const PANELES: Panel[] = [
   "tareas", "campanas", "miembros", "recursos", "presupuesto", "reuniones", "alumni",
@@ -28,12 +28,6 @@ const PANELES: Panel[] = [
 function esPanel(seccion: Seccion): seccion is Panel {
   return (PANELES as string[]).includes(seccion);
 }
-
-const TEAM_LABEL: Record<Team, string> = {
-  marketing: "Marketing",
-  eventos: "Eventos",
-  ingenieria: "Ingeniería",
-};
 
 export function EquipoPage() {
   const [isCheckingSession, setIsCheckingSession] = useState(true);
@@ -192,16 +186,15 @@ export function EquipoPage() {
     setSeccion("notas");
   }
 
-  // El equipo de ingeniería (y presidencia/board) no tiene secciones propias
-  // aquí: su acceso ya incluye sesión de /admin (ver login_equipo en el
-  // backend), así que el sidebar solo les ofrece el enlace a ese panel.
+  // Ingeniería y presidencia/board tienen además sesión de /admin (ver
+  // login_equipo en el backend): el sidebar les ofrece el enlace a ese panel.
   const esBoard = cargo === "presidente" || cargo === "boardmember";
   const tieneAccesoAdmin = teams.includes("ingenieria") || esBoard;
 
   if (!isAuthenticated) {
     return (
       <div className="shadcn-scope dark equipo-shell-react bg-background font-sans text-foreground">
-        <Header teamMode />
+        <Header />
         <main className="equipo-content-react">
           {isCheckingSession ? (
             <p className="text-center text-muted-foreground">Comprobando sesión...</p>
@@ -276,7 +269,7 @@ export function EquipoPage() {
                       checked={deptosDelPanel.includes(team)}
                       onChange={() => alternarDepto(team)}
                     />
-                    {TEAM_LABEL[team]}
+                    {DEPTO_LABEL[team]}
                   </label>
                 ))}
               </div>

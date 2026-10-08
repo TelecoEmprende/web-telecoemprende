@@ -7,7 +7,6 @@ import type {
   CampaignResumen,
   Content,
   Miembro,
-  SaludEquipo,
   Task,
   TaskComment,
 } from "../types/marketing";
@@ -22,8 +21,8 @@ import type {
 /**
  * Cliente del workspace de un departamento.
  *
- * Marketing y Eventos comparten API (el mismo blueprint registrado dos veces
- * en el backend), y lo único que las separa es el prefijo de la ruta. Por eso
+ * Los tres departamentos comparten API (el mismo blueprint registrado tres
+ * veces en el backend), y lo único que los separa es el prefijo de la ruta. Por eso
  * esto es una factoría y no un módulo de funciones sueltas: los paneles no
  * tienen que ir pasando el departamento en cada llamada, lo reciben ya atado
  * vía `useApi()` (ver `DeptoApi.tsx`).
@@ -123,8 +122,6 @@ export function apiDepto(depto: Team) {
         foto?: string;
       },
     ) => put<ApiResult>("/miembros/ficha", { email, ...datos }),
-
-    getSalud: () => apiRequest<{ ok: true; salud: SaludEquipo }>(`${BASE}/miembros/salud`),
 
     // --- Registros (recursos, presupuesto, anuncios, reuniones, alumni...) ---
     // Un solo juego de métodos para todos: el backend los sirve con el

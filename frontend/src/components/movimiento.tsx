@@ -25,7 +25,6 @@ type PanelProps = {
   /** Cambiar esto vuelve a disparar la entrada: el id de la sección abierta. */
   llave: string;
   children: ReactNode;
-  className?: string;
 };
 
 /**
@@ -37,12 +36,11 @@ type PanelProps = {
  * pulse "Tareas" no encuentre el botón de crear hasta pasado ese rato. Cambiar
  * la `llave` remonta y basta: el panel nuevo entra, el viejo se va sin más.
  */
-export function PanelAnimado({ llave, children, className }: PanelProps) {
+export function PanelAnimado({ llave, children }: PanelProps) {
   const menos = useReducedMotion();
   return (
     <motion.div
       key={llave}
-      className={className}
       initial={menos ? { opacity: 0 } : { opacity: 0, transform: "translateY(8px)" }}
       animate={{ opacity: 1, transform: "translateY(0px)" }}
       transition={{ duration: menos ? 0 : DURATION.fast, ease: EASE_OUT }}
@@ -63,7 +61,7 @@ export function useEntradaDeFila(
   desplazable = true,
 ) {
   const menos = useReducedMotion();
-  return (indice = 0) => {
+  return (indice: number) => {
     const retardo = Math.min(indice * RETARDO_POR_FILA, RETARDO_MAXIMO);
     if (menos) {
       return { initial: { opacity: 0 }, animate: { opacity: 1 }, transition: { duration: 0 } };
@@ -86,24 +84,21 @@ export function useEntradaDeFila(
 
 type FilaProps = {
   /** Posición en la lista, para escalonar la entrada. */
-  indice?: number;
-  /** El elemento real: `li` dentro de una lista, `div` en una rejilla. */
-  como?: "div" | "li";
+  indice: number;
   children: ReactNode;
   className?: string;
 };
 
 /**
- * Una tarjeta o fila de una lista: entra escalonada y se recoloca sola
- * (`layout`) cuando cambia el orden o el filtro.
+ * Un `<li>` de una lista: entra escalonado y se recoloca solo (`layout`)
+ * cuando cambia el orden o el filtro.
  */
-export function FilaAnimada({ indice = 0, como = "div", children, className }: FilaProps) {
+export function FilaAnimada({ indice, children, className }: FilaProps) {
   const entrada = useEntradaDeFila();
-  const Elemento = como === "li" ? motion.li : motion.div;
   return (
-    <Elemento className={className} {...entrada(indice)}>
+    <motion.li className={className} {...entrada(indice)}>
       {children}
-    </Elemento>
+    </motion.li>
   );
 }
 

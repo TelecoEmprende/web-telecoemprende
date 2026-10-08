@@ -43,55 +43,13 @@
   padding: 0 20px;
 }
 
-.site-header-react,
-.site-footer-react {
+.site-header-react {
   position: relative;
   z-index: 1;
-}
-
-.particle-background-shell {
-  position: fixed;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  overflow: hidden;
-  opacity: 0.92;
-}
-
-.particle-background-canvas {
-  position: absolute;
-  inset: 0;
-}
-
-.particle-background-glow {
-  position: absolute;
-  border-radius: 999px;
-  filter: blur(34px);
-  opacity: 0.5;
-}
-
-.particle-background-glow-left {
-  width: 220px;
-  height: 220px;
-  top: 120px;
-  left: -50px;
-  background: radial-gradient(circle, rgba(var(--color-chispa-rgb), 0.26), transparent 68%);
-}
-
-.particle-background-glow-right {
-  width: 260px;
-  height: 260px;
-  top: 240px;
-  right: -80px;
-  background: radial-gradient(circle, rgba(var(--color-impulso-rgb), 0.18), transparent 70%);
-}
-
-.site-header-react {
   padding-top: 20px;
 }
 
-.header-inner-react,
-.footer-inner-react {
+.header-inner-react {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -146,72 +104,6 @@
   color: var(--color-primary);
 }
 
-.public-tab-slider-react {
-  position: relative;
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  align-items: center;
-  padding: 4px;
-  gap: 4px;
-  border-radius: 999px;
-  background: rgba(var(--color-papel-hueso-rgb), 0.9);
-  border: 1px solid rgba(var(--color-papel-hueso-rgb), 0.95);
-  min-width: 240px;
-}
-
-.public-tab-slider-react::before {
-  content: "";
-  position: absolute;
-  top: 4px;
-  bottom: 4px;
-  width: calc(50% - 4px);
-  border-radius: 999px;
-  background: var(--color-impulso);
-  transition: transform 0.22s ease;
-}
-
-.public-tab-slider-evento::before {
-  transform: translateX(0);
-}
-
-.public-tab-slider-registro::before {
-  transform: translateX(100%);
-}
-
-.public-tab-slider-react a {
-  position: relative;
-  z-index: 1;
-  min-height: 44px;
-  padding: 0 18px;
-  border-radius: 999px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--color-text-muted);
-  font-weight: 700;
-  letter-spacing: -0.01em;
-  transition: color 0.18s ease;
-}
-
-.public-tab-slider-react a.active {
-  color: #fff;
-}
-
-.site-footer-react {
-  padding: 24px 0;
-}
-
-.footer-links-react {
-  display: flex;
-  gap: 18px;
-  flex-wrap: wrap;
-}
-
-.footer-links-react a {
-  color: var(--color-text-muted);
-  font-weight: 700;
-}
-
 .field-group-react {
   display: flex;
   flex-direction: column;
@@ -241,67 +133,6 @@
   box-shadow: 0 0 0 4px rgba(var(--color-impulso-rgb), 0.12);
 }
 
-/* Al enviar con varios campos mal salen cuatro o cinco a la vez: entran
-   bajando cuatro píxeles para que se vea de dónde vienen. */
-.field-error-react {
-  margin: 4px 0 0;
-  color: var(--color-error-text);
-  font-size: 0.92rem;
-  font-weight: 700;
-  transition:
-    opacity var(--dur-fast) var(--ease-out),
-    transform var(--dur-fast) var(--ease-out);
-}
-
-@starting-style {
-  .field-error-react {
-    opacity: 0;
-    transform: translateY(-4px);
-  }
-}
-
-.field-hint-react {
-  margin: 6px 0 0;
-  color: var(--color-text-muted);
-  font-size: 0.86rem;
-  line-height: 1.5;
-}
-
-.submit-btn-react {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  min-height: 56px;
-  padding: 0 22px;
-  border-radius: 16px;
-  background: var(--color-impulso);
-  color: #fff;
-  font-weight: 700;
-  border: 0;
-  cursor: pointer;
-  transition: transform var(--dur-press) ease, background var(--dur-press) ease,
-    opacity var(--dur-press) ease;
-}
-
-/* Una pantalla táctil dispara :hover al tocar y el estado se queda pegado
-   después: el movimiento del hover se reserva para quien tiene ratón. */
-@media (hover: hover) and (pointer: fine) {
-  .submit-btn-react:hover {
-    transform: translateY(-1px);
-    filter: brightness(1.02);
-  }
-}
-
-.submit-btn-react:active:not(:disabled) {
-  transform: scale(0.97);
-}
-
-.submit-btn-react:disabled {
-  cursor: wait;
-  opacity: 0.75;
-}
-
 @media (max-width: 720px) {
   .section-card {
     width: min(100% - 32px, var(--container-width));
@@ -310,6 +141,15 @@
 
   .container-react {
     padding: 0 16px;
+  }
+
+  .field-group-react {
+    margin-bottom: 14px;
+  }
+
+  .field-group-react input {
+    min-height: 56px;
+    font-size: 16px;
   }
 
   .site-header-react {
@@ -323,15 +163,11 @@
     backdrop-filter: blur(16px) saturate(135%);
   }
 
-  .header-inner-react,
-  .footer-inner-react {
+  .header-inner-react {
     flex-direction: column;
     align-items: flex-start;
     gap: 16px;
     padding: 16px;
-  }
-
-  .header-inner-react {
     position: relative;
     overflow: hidden;
     border-radius: 26px;
@@ -395,75 +231,7 @@
     justify-content: center;
   }
 
-  .public-tab-slider-react {
-    width: 100%;
-    min-width: 0;
-    padding: 5px;
-    gap: 0;
-    border-radius: 18px;
-    background:
-      linear-gradient(180deg, rgba(var(--color-papel-hueso-rgb), 0.82), rgba(var(--color-papel-hueso-rgb), 0.74));
-    border: 1px solid rgba(var(--color-papel-hueso-rgb), 0.95);
-    box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.58);
-  }
-
-  .public-tab-slider-react::before {
-    top: 5px;
-    bottom: 5px;
-    width: calc(50% - 5px);
-    border-radius: 16px;
-    background: linear-gradient(135deg, rgba(var(--color-impulso-rgb), 0.94), rgba(var(--color-chispa-rgb), 0.9));
-    box-shadow:
-      0 8px 18px rgba(var(--color-noche-rgb), 0.16),
-      inset 0 1px 0 rgba(255, 255, 255, 0.18);
-  }
-
-  .public-tab-slider-react a {
-    min-height: 48px;
-    padding: 0 12px;
-    background: transparent;
-    border: 0;
-    font-size: 0.96rem;
-    font-weight: 700;
-    letter-spacing: -0.02em;
-  }
-
   .header-nav-react a.active {
     background: rgba(var(--color-impulso-rgb), 0.1);
-  }
-
-  .public-tab-slider-react a.active {
-    background: transparent;
-    color: #fff;
-  }
-
-  .footer-links-react {
-    width: 100%;
-    gap: 10px;
-  }
-
-  .footer-links-react a {
-    min-height: 40px;
-    padding: 0 14px;
-    border-radius: 999px;
-    background: rgba(255, 255, 255, 0.8);
-    border: 1px solid rgba(var(--color-papel-hueso-rgb), 0.95);
-    display: inline-flex;
-    align-items: center;
-  }
-
-  .particle-background-glow-left {
-    width: 170px;
-    height: 170px;
-    top: 150px;
-    left: -44px;
-  }
-
-  .particle-background-glow-right {
-    width: 200px;
-    height: 200px;
-    top: 380px;
-    right: -64px;
   }
 }

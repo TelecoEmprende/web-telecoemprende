@@ -8,13 +8,13 @@ web
 
 ## Users
 
-- **Estudiantes de la UPM** (cualquier escuela) que se plantean emprender o sienten curiosidad por el ecosistema de startups. Llegan a la web para conocer el club e inscribirse.
-- **Socios del club**, que usan la web para su día a día: inscripción, `/equipo` y el muro de noticias.
+- **Estudiantes de la UPM** (cualquier escuela) que se plantean emprender o sienten curiosidad por el ecosistema de startups. Llegan a la web para conocer el club y sumarse a su comunidad.
+- **Socios del club**, que usan la web para su día a día: `/equipo` y el muro de noticias.
 - En `/news`, el uso principal es un **vistazo diario en el móvil**: llegan desde el enlace del briefing de WhatsApp, leen titulares durante 1-2 minutos y abren la fuente que les interesa (confirmado el 2026-09-25).
 
 ## Product Purpose
 
-TelecoEmprende es el club de emprendimiento nacido en la ETSIT-UPM y abierto desde el curso 2026/27 a toda la UPM. La web sirve para dar a conocer el club, gestionar las inscripciones y organizar el trabajo interno de sus equipos (`/equipo`, `/admin`).
+TelecoEmprende es el club de emprendimiento nacido en la ETSIT-UPM y abierto desde el curso 2026/27 a toda la UPM. La web sirve para dar a conocer el club y organizar el trabajo interno de sus equipos (`/equipo`, `/admin`).
 
 `/news` publica cada día las noticias de IA, finanzas, inversión, startups y tech que selecciona el news-bot del club (repositorio `internal-tools/news-bot`), con una explicación de por qué importan a alguien que emprende. Es un segundo canal del mismo briefing que llega por WhatsApp.
 
@@ -49,7 +49,7 @@ El club selecciona y explica las noticias pensando en quien está montando algo,
 - Utilidad antes que volumen: pocas noticias, bien elegidas y explicadas.
 - Siempre trazable: cada afirmación lleva a su fuente original.
 - El móvil manda: se lee en 1-2 minutos desde WhatsApp.
-- La web también es la puerta del club: quien llega por las noticias puede inscribirse.
+- La web también es la puerta del club: quien llega por las noticias puede sumarse a la comunidad del club.
 
 ## Accessibility & Inclusion
 

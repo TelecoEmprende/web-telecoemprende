@@ -28,10 +28,8 @@
   position: sticky;
   top: 0;
   z-index: 50;
-  background: rgba(var(--color-noche-rgb), 0.88);
-  backdrop-filter: blur(14px) saturate(140%);
-  -webkit-backdrop-filter: blur(14px) saturate(140%);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  /* Azul TE, como el hero: la barra y la portada son un mismo plano. */
+  background: var(--color-azul);
 }
 
 .lp-nav-inner {
@@ -52,9 +50,6 @@
 .lp-nav-logo {
   width: 40px;
   height: 40px;
-  border-radius: 10px;
-  background: #fff;
-  padding: 3px;
 }
 
 .lp-nav-name {
@@ -63,7 +58,7 @@
   font-size: 1.28rem;
   font-weight: 400;
   letter-spacing: var(--tracking-display);
-  color: var(--color-paper);
+  color: var(--color-text-on-dark);
   /* Anton hereda el interlineado del cuerpo y con su caja de glifos alta
      queda por debajo del centro junto al logo. */
   line-height: 1;
@@ -71,54 +66,51 @@
   transform: translateY(-0.045em);
 }
 
-.lp-nav-name span {
-  color: var(--color-gold);
-}
-
 .lp-nav-links {
   display: flex;
   align-items: center;
-  gap: 28px;
+  gap: 4px;
 }
 
 .lp-nav-links a {
-  color: var(--color-text-on-dark-muted);
+  position: relative;
+  padding: 8px 14px;
+  border-radius: var(--radius-circle);
+  color: var(--color-text-on-dark);
   font-weight: 600;
   font-size: 0.96rem;
-  transition: color 0.15s ease;
+  transition: background-color var(--dur-fast) var(--ease-out);
 }
 
-/* El CTA es un botón, no un enlace más del menú: mantiene su Noche sobre
-   Chispa aunque esté dentro de .lp-nav-links. */
-.lp-nav-links a.lp-nav-cta {
-  color: var(--color-noche);
+/* La pastilla de la sección activa: una sola, se desliza entre enlaces
+   (layoutId en LandingNav). Azul profundo = "capas sobre Azul TE". */
+.lp-nav-pastilla {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--color-azul-profundo);
 }
 
-.lp-nav-links a:hover {
-  color: var(--color-gold);
-}
-
-.lp-nav-links a.is-active {
-  color: var(--color-gold);
+.lp-nav-texto {
   position: relative;
 }
 
-.lp-nav-links a.is-active::after {
-  content: "";
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: -6px;
-  height: 2px;
-  border-radius: 2px;
-  background: var(--color-gold);
+/* El CTA es un botón, no un enlace más del menú: mantiene su Azul sobre
+   blanco aunque esté dentro de .lp-nav-links. */
+.lp-nav-links a.lp-nav-cta,
+.lp-nav-links a.lp-nav-cta:hover {
+  color: var(--color-azul);
+  background: var(--color-text-on-dark);
 }
 
-/* Botón pequeño de la barra: Chispa con Noche encima (8.4:1), combo "BLOQUE"
-   de la guía. Ojo con el color: `.lp-nav-links a` (más abajo) pinta los
-   enlaces del menú en azul claro y le gana en especificidad a esta clase, así
-   que dentro del menú móvil el texto salía azul claro sobre ámbar,
-   ilegible. Por eso existe la regla `.lp-nav-links a.lp-nav-cta`. */
+.lp-nav-links a:hover {
+  background: var(--color-azul-profundo);
+}
+
+/* Botón pequeño de la barra: Azul TE sobre blanco (7.3:1). Ojo con el color:
+   `.lp-nav-links a` pinta los enlaces del menú en blanco y le gana en
+   especificidad a esta clase, así que dentro del menú móvil el texto salía
+   blanco sobre blanco. Por eso existe la regla `.lp-nav-links a.lp-nav-cta`. */
 .lp-nav-cta {
   display: inline-flex;
   align-items: center;
@@ -126,8 +118,8 @@
   min-height: 42px;
   padding: 0 20px;
   border-radius: 999px;
-  background: var(--color-chispa);
-  color: var(--color-noche);
+  background: var(--color-text-on-dark);
+  color: var(--color-azul);
   font-weight: 700;
   font-size: 0.94rem;
   transition: transform var(--dur-press) ease, filter var(--dur-press) ease;
@@ -172,7 +164,7 @@
   left: 3px;
   width: calc(50% - 3px);
   border-radius: 999px;
-  background: var(--color-gold);
+  background: var(--color-text-on-dark);
   transition: transform 0.22s cubic-bezier(0.65, 0, 0.35, 1);
 }
 
@@ -205,7 +197,7 @@
 }
 
 .lp-lang-toggle button.active {
-  color: var(--color-navy);
+  color: var(--color-azul);
 }
 
 .lp-nav-toggle {
@@ -248,144 +240,6 @@
   transform: translateY(-7px) rotate(-45deg);
 }
 
-/* ---------- Hero ---------- */
-
-/* v2: un plano Azul TE y un único círculo sólido en Impulso que entra desde un
-   borde. Sin degradados detrás del texto, sin blur. */
-.lp-hero {
-  position: relative;
-  overflow: hidden;
-  background: var(--color-azul);
-  color: var(--color-text-on-dark);
-  padding: 92px 0 108px;
-}
-
-.lp-hero-glow {
-  position: absolute;
-  border-radius: 50%;
-  pointer-events: none;
-}
-
-/* El círculo del sistema: sólido, entrando por la esquina inferior derecha. */
-.lp-hero-glow-gold {
-  width: min(46vw, 520px);
-  height: min(46vw, 520px);
-  bottom: -34%;
-  right: -8%;
-  background: var(--color-impulso);
-}
-
-/* v2 admite un solo círculo por pieza. */
-.lp-hero-glow-orange {
-  display: none;
-}
-
-.lp-hero-grid {
-  position: relative;
-  display: flex;
-  justify-content: center;
-}
-
-.lp-hero-copy {
-  max-width: 760px;
-  text-align: center;
-}
-
-.lp-hero-eyebrow {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  margin: 0 0 22px;
-  padding: 9px 16px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.22);
-  color: #fff;
-  font-size: 0.82rem;
-  font-weight: 700;
-  letter-spacing: 0.09em;
-  text-transform: uppercase;
-}
-
-.lp-hero-dot {
-  position: relative;
-  width: 8px;
-  height: 8px;
-  border-radius: 999px;
-  background: var(--color-gold);
-}
-
-/* El anillo que late: un pseudo-elemento que escala y se desvanece. Antes era
-   una animación de box-shadow (repinta cada frame); transform + opacity van por
-   GPU. */
-.lp-hero-dot::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  background: rgba(var(--color-chispa-rgb), 0.5);
-  animation: lp-pulse 2.2s ease-out infinite;
-}
-
-@keyframes lp-pulse {
-  0% {
-    transform: scale(1);
-    opacity: 0.5;
-  }
-
-  70%,
-  100% {
-    transform: scale(3.25);
-    opacity: 0;
-  }
-}
-
-/* El punto late en bucle: es lo primero que hay que parar. Se queda quieto y
-   visible, que es para lo que está. */
-@media (prefers-reduced-motion: reduce) {
-  .lp-hero-dot::after {
-    animation: none;
-  }
-}
-
-.lp-hero h1 {
-  margin: 0 0 22px;
-  font-family: var(--font-display);
-  text-transform: uppercase;
-  /* Display: Anton condensada aguanta el tamaño; techo ~5.5rem (88px). */
-  font-size: clamp(2.9rem, 6.4vw, 5.5rem);
-  font-weight: 400;
-  /* En móvil el hero parte en dos o tres líneas: a 1 las mayúsculas de Anton
-     se rozan. */
-  line-height: 1.05;
-  letter-spacing: 0.012em;
-  color: var(--color-paper);
-  text-wrap: balance;
-}
-
-/* Solo el color. El marcador de rotulador que llevaba detrás se pensó para
-   una tipografía con menos mancha; con Anton el bloque competía con la propia
-   palabra, y el ámbar ya la destaca de sobra. */
-.lp-hero h1 span {
-  color: var(--color-gold);
-}
-
-.lp-hero-lead {
-  margin: 0 auto 34px;
-  max-width: 56ch;
-  font-size: 1.13rem;
-  line-height: 1.62;
-  color: var(--color-text-on-dark);
-}
-
-.lp-hero-actions {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 14px;
-  flex-wrap: wrap;
-}
-
 .lp-btn {
   display: inline-flex;
   align-items: center;
@@ -421,64 +275,6 @@
   transform: scale(0.97);
 }
 
-.lp-btn-ghost {
-  background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.5);
-  color: var(--color-text-on-dark);
-}
-
-.lp-btn-ghost:hover {
-  border-color: rgba(255, 255, 255, 0.9);
-  background: rgba(255, 255, 255, 0.1);
-}
-
-/* Una sola acción sólida por pantalla: la secundaria del hero baja a enlace
-   discreto para que el ojo vaya al botón. */
-.lp-hero-secondary {
-  display: inline-flex;
-  align-items: center;
-  min-height: 54px;
-  font-weight: 600;
-  font-size: 1rem;
-  color: var(--color-text-on-dark);
-  text-decoration: underline;
-  text-underline-offset: 4px;
-  text-decoration-color: rgba(255, 255, 255, 0.4);
-  transition: text-decoration-color var(--dur-press) ease;
-}
-
-.lp-hero-secondary:hover {
-  text-decoration-color: rgba(255, 255, 255, 0.9);
-}
-
-.lp-hero-chips {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 10px;
-  margin: 36px 0 0;
-  padding: 0;
-  list-style: none;
-}
-
-.lp-hero-chips li {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 9px 16px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  color: #fff;
-  font-weight: 600;
-  font-size: 0.92rem;
-}
-
-.lp-hero-chips svg {
-  flex-shrink: 0;
-  opacity: 0.85;
-}
-
 /* ---------- Elementos comunes de sección ---------- */
 
 .lp-eyebrow {
@@ -494,14 +290,6 @@
   font-weight: 700;
   letter-spacing: 0.09em;
   text-transform: uppercase;
-}
-
-/* Sobre azul, la Chispa como texto pequeño no llega a 4.5:1; el rótulo pasa a
-   blanco sobre un chip translúcido. */
-.lp-eyebrow-dark {
-  background: rgba(255, 255, 255, 0.1);
-  color: #fff;
-  border: 1px solid rgba(255, 255, 255, 0.22);
 }
 
 .lp-heading {
@@ -520,20 +308,12 @@
   text-wrap: balance;
 }
 
-.lp-heading-dark {
-  color: var(--color-paper);
-}
-
 .lp-section-lead {
   margin: 0;
   max-width: 66ch;
   font-size: 1.08rem;
   line-height: 1.62;
   color: var(--color-text-muted);
-}
-
-.lp-section-lead-dark {
-  color: var(--color-text-on-dark);
 }
 
 .lp-reveal-word {
@@ -545,505 +325,7 @@
   color: var(--color-navy);
 }
 
-/* ---------- Quiénes somos ---------- */
-
-.lp-about {
-  /* Menos que las demás secciones abajo: el carrusel ya termina en las
-     flechas/puntos, que pesan menos que un párrafo, y el padding-top de
-     .lp-departments se suma al de aquí sin colapsar. */
-  padding: 120px 0 48px;
-  /* Banda fría entre el hero (tinta) y Departamentos (papel): es la superficie
-     grande donde el acero hace de color, no de línea. */
-  background: var(--color-steel-soft);
-}
-
-.lp-team-carousel {
-  position: relative;
-  margin-top: 52px;
-}
-
-
-.lp-team-track {
-  display: flex;
-  gap: 26px;
-  margin: 0;
-  /* overflow-x: auto obliga al navegador a recortar también en vertical
-     (overflow-y pasa a auto), así que sin este margen la sombra de las
-     tarjetas (0 16px 40px) se corta de golpe en vez de difuminarse. */
-  padding: 0 4px 56px;
-  list-style: none;
-  overflow-x: auto;
-  overscroll-behavior-x: contain;
-  scroll-snap-type: x mandatory;
-  scroll-padding-left: 4px;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
-}
-
-.lp-team-track::-webkit-scrollbar {
-  display: none;
-}
-
-.lp-team-card {
-  position: relative;
-  flex: 0 0 clamp(228px, 24vw, 278px);
-  scroll-snap-align: start;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: 24px;
-  overflow: hidden;
-  box-shadow: var(--shadow-soft);
-}
-
-.lp-team-photo {
-  aspect-ratio: 4 / 5;
-  overflow: hidden;
-  background: var(--color-steel-tint);
-}
-
-.lp-team-photo img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: center 22%;
-}
-
-.lp-team-body {
-  padding: 20px 22px 26px;
-}
-
-.lp-team-body h3 {
-  margin: 0 0 8px;
-  font-family: var(--font-body);
-  font-size: 1.3rem;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  color: var(--color-navy);
-}
-
-.lp-team-alias {
-  margin-left: 9px;
-  color: var(--color-text-muted);
-  font-size: 0.94em;
-}
-
-.lp-team-role-slot {
-  /* Reserva sitio para tres líneas de rol (el más largo, "Miembro ·
-     Experiencia y Activaciones de Eventos", envuelve a tres en las tarjetas
-     estrechas) para que el programa y la bio empiecen a la misma altura en
-     todas las tarjetas del carrusel, tenga el rol una, dos o tres líneas. */
-  min-height: 66px;
-  margin: 2px 0 4px;
-}
-
-.lp-team-role {
-  display: inline-block;
-  padding: 3px 10px;
-  border-radius: 999px;
-  background: rgba(var(--color-impulso-rgb), 0.11);
-  color: var(--color-noche);
-  font-size: 0.76rem;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
-}
-
-.lp-team-program {
-  display: block;
-  margin: 0 0 10px;
-  color: var(--color-text-muted);
-  font-size: 0.86rem;
-  font-weight: 600;
-}
-
-.lp-team-body p {
-  margin: 0;
-  color: var(--color-text-muted);
-  font-size: 0.98rem;
-  line-height: 1.62;
-}
-
-.lp-team-controls {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 18px;
-  /* Negativo para compensar el padding-bottom extra de .lp-team-track (56px
-     en vez de 10px) y dejar la misma separación visual de antes. */
-  margin-top: -18px;
-}
-
-.lp-team-arrow {
-  display: inline-flex;
-  flex: 0 0 auto;
-  align-items: center;
-  justify-content: center;
-  width: 46px;
-  height: 46px;
-  border-radius: 999px;
-  border: 1px solid var(--color-border);
-  background: var(--color-surface);
-  color: var(--color-navy);
-  cursor: pointer;
-  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease, transform 0.15s ease;
-}
-
-.lp-team-arrow svg {
-  width: 20px;
-  height: 20px;
-}
-
-.lp-team-arrow:hover:not(:disabled) {
-  background: var(--color-navy);
-  border-color: var(--color-navy);
-  color: var(--color-paper);
-  transform: translateY(-2px);
-}
-
-.lp-team-arrow:focus-visible {
-  outline: 2px solid var(--color-orange);
-  outline-offset: 2px;
-}
-
-.lp-team-arrow:disabled {
-  opacity: 0.32;
-  cursor: not-allowed;
-}
-
-.lp-team-dots {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.lp-team-dot {
-  width: 8px;
-  height: 8px;
-  padding: 0;
-  border: none;
-  border-radius: 999px;
-  background: var(--color-border);
-  cursor: pointer;
-  transform: scaleX(1);
-  transform-origin: center;
-  transition: background 0.15s ease, transform 0.15s ease;
-}
-
-.lp-team-dot:hover {
-  background: var(--color-steel);
-}
-
-.lp-team-dot.is-active {
-  transform: scaleX(2.75);
-  background: var(--color-impulso);
-}
-
-.lp-team-dot:focus-visible {
-  outline: 2px solid var(--color-orange);
-  outline-offset: 3px;
-}
-
-/* ---------- Eventos ---------- */
-
-/* v2: Eventos comparte el plano Azul TE del hero para dar columna vertebral a
-   la página, con su propio círculo Impulso entrando por la esquina superior
-   derecha (el titular vive arriba a la izquierda, el círculo no lo pisa). */
-.lp-events {
-  position: relative;
-  overflow: hidden;
-  padding: 124px 0 124px;
-  background: var(--color-azul);
-}
-
-.lp-events::before {
-  content: "";
-  position: absolute;
-  z-index: 0;
-  width: min(26vw, 300px);
-  height: min(26vw, 300px);
-  top: -12%;
-  right: -7%;
-  border-radius: 50%;
-  background: var(--color-impulso);
-}
-
-.lp-events > .lp-container {
-  position: relative;
-  z-index: 1;
-}
-
-.lp-events-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 24px;
-  margin-top: 52px;
-}
-
-.lp-event-card {
-  display: flex;
-  flex-direction: column;
-  background: rgba(255, 255, 255, 0.07);
-  border: 1px solid var(--color-divider-on-dark);
-  border-radius: 24px;
-  overflow: hidden;
-  transition: transform 0.18s ease, border-color 0.18s ease;
-}
-
-@media (hover: hover) and (pointer: fine) {
-  .lp-event-card:hover {
-    transform: translateY(-4px);
-    border-color: rgba(255, 255, 255, 0.4);
-  }
-}
-
-.lp-event-cover {
-  position: relative;
-  min-height: 260px;
-  aspect-ratio: 1 / 1;
-}
-
-.lp-event-cover img {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.lp-event-tag {
-  position: absolute;
-  top: 16px;
-  left: 16px;
-  padding: 7px 14px;
-  border-radius: 999px;
-  background: var(--color-gold);
-  color: var(--color-navy);
-  font-size: 0.8rem;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.3);
-}
-
-.lp-event-logo {
-  position: absolute;
-  bottom: 14px;
-  right: 14px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 46px;
-  max-width: 130px;
-  padding: 8px 12px;
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.94);
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.28);
-}
-
-.lp-event-logo img {
-  display: block;
-  width: auto;
-  height: 100%;
-  max-width: 100%;
-  object-fit: contain;
-}
-
-.lp-event-body {
-  display: flex;
-  flex-direction: column;
-  padding: 22px 24px 26px;
-}
-
-.lp-event-body h3 {
-  margin: 0 0 10px;
-  font-family: var(--font-body);
-  font-size: 1.32rem;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  color: var(--color-paper);
-}
-
-.lp-event-body p {
-  margin: 0;
-  color: var(--color-text-on-dark);
-  font-size: 0.97rem;
-  line-height: 1.68;
-}
-
-.lp-event-thumbs {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-top: 18px;
-}
-
-.lp-event-thumbs img {
-  flex: 1;
-  min-width: 0;
-  max-width: 110px;
-  height: 64px;
-  object-fit: cover;
-  border-radius: 10px;
-  border: 1px solid rgba(var(--color-papel-rgb), 0.14);
-}
-
-/* ---------- Inscripción (restyle del formulario compartido) ---------- */
-
-/* ---------- Requisitos de la solicitud ---------- */
-
-.lp-requirements {
-  padding: 120px 0 120px;
-  background: linear-gradient(180deg, var(--color-steel-tint), transparent 62%), var(--color-steel-soft);
-}
-
-.lp-requirements-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 22px;
-  margin-top: 44px;
-}
-
-.lp-requirement-card {
-  padding: 30px 28px;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: 24px;
-  box-shadow: var(--shadow-soft);
-}
-
-.lp-requirement-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 52px;
-  height: 52px;
-  margin-bottom: 16px;
-  border-radius: 16px;
-  background: color-mix(in srgb, var(--color-impulso) 14%, transparent);
-  color: var(--color-noche);
-}
-
-.lp-requirement-card h3 {
-  margin: 0 0 10px;
-  font-family: var(--font-body);
-  font-size: 1.24rem;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  color: var(--color-navy);
-}
-
-.lp-requirement-card p {
-  margin: 0;
-  color: var(--color-text-muted);
-  font-size: 0.98rem;
-  line-height: 1.65;
-}
-
-/* `.lp-highlight` vive en dos superficies: el hero (tinta) y Requisitos
-   (banda clara). El subrayado ámbar es el mismo en las dos; lo que cambia es
-   el color del texto, así que solo el del hero se sube a blanco -- ponerlo en
-   la clase compartida lo habría hecho invisible en Requisitos. */
-.lp-hero .lp-highlight {
-  color: var(--color-text-on-dark);
-}
-
-.lp-highlight {
-  background: none;
-  color: var(--color-noche);
-  font-weight: 700;
-  text-decoration: underline;
-  text-decoration-color: var(--color-gold);
-  text-decoration-thickness: 2px;
-  text-underline-offset: 3px;
-}
-
-/* ---------- Departamentos ---------- */
-
-.lp-departments {
-  padding: 124px 0;
-}
-
-.lp-departments-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 26px;
-  margin-top: 52px;
-}
-
-.lp-department-card {
-  position: relative;
-  padding: 30px 28px;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: 24px;
-  box-shadow: var(--shadow-soft);
-  overflow: hidden;
-  /* Un color por departamento: Tech = Azul, Marketing = Impulso, Eventos =
-     Noche. Se expresa en el icono y en los topos de la lista, no con una
-     franja de borde. */
-  --depto: var(--color-impulso);
-}
-
-.lp-department-card[data-depto="tech"] {
-  --depto: var(--color-depto-tech);
-}
-
-.lp-department-card[data-depto="marketing"] {
-  --depto: var(--color-depto-marketing);
-}
-
-.lp-department-card[data-depto="eventos"] {
-  --depto: var(--color-depto-eventos);
-}
-
-.lp-department-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 52px;
-  height: 52px;
-  margin-bottom: 16px;
-  border-radius: 16px;
-  background: color-mix(in srgb, var(--depto) 16%, transparent);
-  color: var(--depto);
-}
-
-.lp-department-card h3 {
-  margin: 0 0 14px;
-  font-family: var(--font-body);
-  font-size: 1.24rem;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  color: var(--color-navy);
-}
-
-.lp-department-lines {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.lp-department-lines li {
-  position: relative;
-  padding-left: 16px;
-  color: var(--color-text-muted);
-  font-size: 0.96rem;
-  line-height: 1.6;
-}
-
-.lp-department-lines li::before {
-  content: "";
-  position: absolute;
-  left: 0;
-  top: 0.62em;
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--depto);
-}
-
-/* ---------- Gracias (post-inscripción) ---------- */
+/* ---------- Privacidad y páginas de error ---------- */
 
 .lp-legal {
   padding: 96px 0 108px;
@@ -1117,95 +399,6 @@
   margin: 0 0 28px;
 }
 
-.lp-thankyou-note {
-  margin-bottom: 26px;
-  padding: 22px 24px;
-  border-radius: 22px;
-  background: linear-gradient(135deg, rgba(var(--color-impulso-rgb), 0.08), rgba(var(--color-chispa-rgb), 0.14));
-  border: 1px solid rgba(var(--color-chispa-rgb), 0.3);
-}
-
-.lp-thankyou-note strong {
-  display: block;
-  margin-bottom: 8px;
-  font-size: 1rem;
-  font-weight: 700;
-  color: var(--color-navy);
-}
-
-.lp-thankyou-note p {
-  margin: 0;
-  color: var(--color-text-muted);
-  line-height: 1.6;
-}
-
-.lp-thankyou-meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-bottom: 26px;
-}
-
-.lp-thankyou-meta-item {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  padding: 9px 16px;
-  border-radius: 999px;
-  background: rgba(var(--color-azul-rgb), 0.12);
-  border: 1px solid rgba(var(--color-azul-rgb), 0.28);
-  color: var(--color-navy-soft);
-  font-weight: 700;
-  font-size: 0.92rem;
-}
-
-.lp-thankyou-meta-item svg {
-  color: var(--color-azul);
-}
-
-.lp-thankyou-points {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 14px;
-  margin-bottom: 32px;
-}
-
-.lp-thankyou-point {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  grid-template-areas:
-    "icon title"
-    "icon body";
-  column-gap: 12px;
-  align-items: start;
-  padding: 20px 20px 18px;
-  border-radius: 20px;
-  background: rgba(var(--color-azul-rgb), 0.07);
-  border: 1px solid var(--color-border);
-}
-
-.lp-thankyou-point-icon {
-  grid-area: icon;
-  display: flex;
-  color: var(--color-noche);
-}
-
-.lp-thankyou-point strong {
-  grid-area: title;
-  display: block;
-  margin-bottom: 6px;
-  font-size: 0.98rem;
-  font-weight: 700;
-  color: var(--color-navy);
-}
-
-.lp-thankyou-point span:last-child {
-  grid-area: body;
-  display: block;
-  color: var(--color-text-muted);
-  line-height: 1.55;
-}
-
 .lp-thankyou-actions {
   display: flex;
   gap: 14px;
@@ -1220,58 +413,6 @@
 
 .lp-btn-outline:hover {
   border-color: var(--color-impulso);
-}
-
-.lp-btn-whatsapp {
-  background: var(--color-impulso);
-  color: #ffffff;
-}
-
-@media (hover: hover) and (pointer: fine) {
-  .lp-btn-whatsapp:hover {
-    transform: translateY(-2px);
-    filter: brightness(1.06);
-  }
-}
-
-.lp-btn-whatsapp-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 26px;
-  height: 26px;
-  border-radius: 999px;
-  /* Verde de WhatsApp: color de la otra marca, no de la nuestra. */
-  background: #25d366;
-  color: #fff;
-  flex-shrink: 0;
-}
-
-.lp-btn-whatsapp-icon svg {
-  width: 16px;
-  height: 16px;
-}
-
-.form-section-react {
-  padding: 16px 0 104px;
-}
-
-.section-eyebrow-react {
-  background: rgba(var(--color-impulso-rgb), 0.11);
-  color: var(--color-noche);
-  letter-spacing: 0.09em;
-}
-
-.section-copy-card-react h2,
-.panel-card-react h2 {
-  font-family: var(--font-display);
-  text-transform: uppercase;
-  letter-spacing: var(--tracking-display);
-}
-
-.form-card-react {
-  position: relative;
-  overflow: hidden;
 }
 
 .field-group-react input:focus,
@@ -1301,63 +442,6 @@
 .field-group-react select:invalid,
 .field-group-react select option[value=""] {
   color: var(--color-text-muted);
-}
-
-.field-label-react {
-  font-weight: 700;
-  color: var(--color-slate);
-}
-
-.level-toggle-react {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 6px;
-  padding: 6px;
-  border-radius: 16px;
-  background: var(--color-paper-line);
-  border: 1px solid var(--color-border);
-}
-
-.level-toggle-react button {
-  min-height: 46px;
-  border: 0;
-  border-radius: 11px;
-  background: transparent;
-  color: var(--color-text-muted);
-  font-weight: 700;
-  cursor: pointer;
-  transition: background 0.15s ease, color 0.15s ease;
-}
-
-.level-toggle-react button:hover {
-  color: var(--color-navy);
-}
-
-.level-toggle-react button.active {
-  background: var(--color-gold);
-  color: var(--color-navy);
-  font-weight: 700;
-}
-
-.submit-btn-react,
-.primary-btn-react,
-.panel-btn-react,
-.highlight-btn-react {
-  background: var(--color-impulso);
-  color: #ffffff;
-  /* Blanco sobre Impulso solo pasa a ≥18 px (regla de la guía). */
-  font-size: 1.125rem;
-}
-
-.submit-btn-react:hover,
-.primary-btn-react:hover,
-.panel-btn-react:hover,
-.highlight-btn-react:hover {
-  filter: brightness(1.06);
-}
-
-.checkbox-row-react input {
-  accent-color: var(--color-orange);
 }
 
 /* ---------- Footer ---------- */
@@ -1473,24 +557,6 @@
 
 /* ---------- Responsive ---------- */
 
-@media (max-width: 980px) {
-  .lp-hero {
-    padding: 64px 0 88px;
-  }
-
-  .lp-departments-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .lp-events-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .lp-event-cover {
-    min-height: 280px;
-  }
-}
-
 @media (max-width: 720px) {
   .lp-container {
     padding: 0 18px;
@@ -1550,9 +616,7 @@
     right: 0;
     margin-top: 1px;
     padding: 12px 18px 18px;
-    background: var(--color-navy);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    box-shadow: 0 20px 40px rgba(var(--color-noche-rgb), 0.35);
+    background: var(--color-azul);
     opacity: 0;
     transform: translateY(-8px);
     transition:
@@ -1581,83 +645,52 @@
   }
 
   .lp-nav-links a:hover {
-    background: rgba(var(--color-chispa-rgb), 0.1);
-  }
-
-  .lp-hero {
-    padding: 48px 0 72px;
-  }
-
-  .lp-hero-lead {
-    font-size: 1.02rem;
-  }
-
-  .lp-hero-actions {
-    align-items: stretch;
-    flex-direction: column;
+    background: var(--color-azul-profundo);
   }
 
   .lp-btn {
     width: 100%;
   }
 
-  /* .lp-hero-actions pasa a columna y estira sus hijos (align-items:
-     stretch): sin justify-content el enlace secundario queda con su texto
-     pegado al borde izquierdo de esa caja ancha. Se centra y se le da aire
-     para un touch target de sobra por encima de 44px. */
-  .lp-hero-secondary {
-    justify-content: center;
-    padding: 8px 4px;
-  }
-
-  .lp-about,
-  .lp-departments,
-  .lp-events,
-  .lp-requirements,
-  .lp-thankyou,
-  .form-section-react {
+  .lp-thankyou {
     padding: 84px 0 88px;
-  }
-
-  .lp-departments-grid,
-  .lp-requirements-grid,
-  .lp-thankyou-points {
-    grid-template-columns: 1fr;
-    gap: 20px;
-    margin-top: 36px;
-  }
-
-  .lp-team-carousel {
-    margin-top: 36px;
-  }
-
-  .lp-team-track {
-    gap: 16px;
-  }
-
-  .lp-team-card {
-    flex-basis: 78vw;
-  }
-
-  .lp-thankyou-points {
-    margin-top: 0;
   }
 
   .lp-thankyou-card {
     padding: 32px 24px;
   }
 
-  .lp-events-grid {
-    margin-top: 36px;
-    gap: 18px;
-  }
-
-  .lp-event-cover {
-    min-height: 220px;
-  }
-
   .lp-footer-inner {
     flex-direction: column;
     gap: 26px;
   }
+}
+
+/* ---------- Barra de lectura y firma del pie (rediseño 2026/27) ---------- */
+
+/* Cuánto llevas de página: Chispa sobre el borde inferior de la nav, la
+   escala la pone motion (useScroll). */
+.lp-nav-progreso {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 3px;
+  background: var(--color-chispa);
+  transform-origin: left;
+}
+
+/* El nombre del club a lo ancho del pie, como firma. Decorativo. */
+.lp-footer-firma {
+  margin: 0;
+  padding: 40px clamp(16px, 4vw, 48px) 0;
+  overflow: hidden;
+  font-family: var(--font-display);
+  font-size: 14.5vw;
+  line-height: 0.82;
+  letter-spacing: -0.015em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--color-text-on-dark);
+  user-select: none;
 }

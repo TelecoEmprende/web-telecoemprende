@@ -70,7 +70,6 @@ function Breakdown({ filas, total }: { filas: [string, number][]; total: number 
       {filas.map(([nombre, count], indice) => (
         <FilaAnimada
           key={nombre}
-          como="li"
           indice={indice}
           className="grid grid-cols-[minmax(110px,1.3fr)_minmax(50px,1fr)_28px] items-center gap-2.5 text-[0.86rem]"
         >
@@ -95,7 +94,7 @@ function Breakdown({ filas, total }: { filas: [string, number][]; total: number 
 
 /**
  * Panel de estadísticas del evento activo. Se calcula todo a partir de los
- * `registros` que llegan (ya filtrados por evento en AdminPage), así que
+ * `registros` que llegan (ya filtrados por evento en `InscripcionesView`), así que
  * sirve igual para cualquier evento futuro sin tocar este componente.
  */
 export function AdminStats({ registros }: AdminStatsProps) {

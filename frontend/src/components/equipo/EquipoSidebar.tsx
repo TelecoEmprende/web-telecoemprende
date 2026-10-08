@@ -45,7 +45,7 @@ import {
 import { AvatarResponsable, etiquetaDe } from "./marketing/Avatares";
 import { getEquipoCalendario, getEventosLuma, getMisTareas } from "../../api/equipo";
 import { listarNotas } from "../../api/notas";
-import { GITHUB_REPO, type Cargo, type Team } from "../../types/equipo";
+import { DEPTO_LABEL, GITHUB_REPO, type Cargo, type Team } from "../../types/equipo";
 
 /** El próximo evento, venga del calendario del club o de Luma. */
 type Proximo = { titulo: string; fecha: string; hora: string; url: string };
@@ -78,10 +78,11 @@ export type Seccion =
   | "club" | "notas" | "metricas" | "calendario" | "anuncios" | Panel;
 
 /** Qué panel tiene cada departamento. Los tres comparten Tareas, Recursos y
- *  Miembros; Campañas es de Marketing/Eventos (Ingeniería no tiene, ver
- *  `docs/CLAUDE.md`); Presupuesto es de quien mueve dinero (Eventos) y Alumni,
- *  Plataforma, Servicios y Decisiones de Ingeniería. Esto decide qué panel aparece (`seccionesDe`) y qué
- *  departamentos ofrece el filtro dentro de cada uno (`equiposConPanel`). */
+ *  Miembros; Campañas es de Marketing/Eventos (Ingeniería no tiene);
+ *  Presupuesto es de quien mueve dinero (Eventos) y Alumni, Plataforma,
+ *  Servicios y Decisiones de Ingeniería. Esto decide qué panel aparece
+ *  (`seccionesDe`) y qué departamentos ofrece el filtro dentro de cada uno
+ *  (`equiposConPanel`). */
 const PANELES_POR_EQUIPO: Record<Team, Panel[]> = {
   marketing: ["campanas", "tareas", "recursos", "miembros"],
   eventos: ["campanas", "tareas", "recursos", "presupuesto", "reuniones", "miembros"],
@@ -164,12 +165,6 @@ const CARGO_LABEL: Record<Exclude<Cargo, "">, string> = {
   boardmember: "Board member",
 };
 
-const TEAM_LABEL: Record<Team, string> = {
-  marketing: "Marketing",
-  eventos: "Eventos",
-  ingenieria: "Ingeniería",
-};
-
 type Props = {
   seccion: Seccion;
   onSeccion: (seccion: Seccion) => void;
@@ -188,9 +183,9 @@ type Props = {
  *  nombre en el pie del sidebar. El cargo manda sobre el departamento -- es
  *  lo que explica por qué esa persona ve lo que ve. */
 function papelDe(cargo: Cargo, vpDe: Team[], teams: Team[]) {
-  if (vpDe.length > 0) return `VP de ${vpDe.map((t) => TEAM_LABEL[t]).join(" + ")}`;
+  if (vpDe.length > 0) return `VP de ${vpDe.map((t) => DEPTO_LABEL[t]).join(" + ")}`;
   if (cargo) return CARGO_LABEL[cargo];
-  if (teams.length > 0) return teams.map((t) => TEAM_LABEL[t]).join(" + ");
+  if (teams.length > 0) return teams.map((t) => DEPTO_LABEL[t]).join(" + ");
   return "Equipo";
 }
 
@@ -351,7 +346,7 @@ export function EquipoSidebar({
               <Users />
             </span>
             <span className="workspace-contexto-texto-react">
-              <strong>{teams.map((t) => TEAM_LABEL[t]).join(" + ")}</strong>
+              <strong>{teams.map((t) => DEPTO_LABEL[t]).join(" + ")}</strong>
               <span>{cargo ? CARGO_LABEL[cargo] : vpDe.length > 0 ? "VP" : "Equipo"}</span>
             </span>
           </div>

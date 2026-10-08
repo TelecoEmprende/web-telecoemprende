@@ -176,7 +176,7 @@ def api_equipo_session():
 def api_equipo_directorio():
     """Quién es quién del club entero -- para el widget de "Mi semana".
     Cualquiera con sesión de equipo, no solo board/VP: es un directorio, no
-    datos de rendimiento (eso es `/metricas` y `/miembros/salud`)."""
+    datos de rendimiento (eso es `/metricas`)."""
     if not is_equipo_authenticated() and not is_admin_authenticated():
         return jsonify(build_response(False, "No autorizado.")), 401
     return jsonify({"ok": True, "miembros": listar_directorio_club()}), 200
@@ -333,8 +333,7 @@ def api_equipo_mis_proyectos():
 def api_equipo_metricas():
     """Salud del club entero para el board: mismo semáforo que la de cada
     departamento, cruzando los tres, más productividad por persona. Ver
-    `metricas_club` -- gated a board/VP, igual que `/api/marketing/miembros/
-    salud` en cada departamento por separado."""
+    `metricas_club` -- gated a board/VP."""
     if not is_equipo_authenticated() and not is_admin_authenticated():
         return jsonify(build_response(False, "No autorizado.")), 401
     if not _es_board_o_vp():

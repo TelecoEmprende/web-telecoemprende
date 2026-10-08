@@ -231,10 +231,10 @@ function App() {
           {/* La demo se ve en el stand y en el móvil de quien pasa, así que
               se navega en la misma pestaña: es la web del club, no un sitio ajeno. */}
           <a
-            className="barra__solicitud"
-            href={club.solicitud.url}
+            className="barra__unete"
+            href={club.unete.url}
           >
-            {t(club.solicitud.texto)}
+            {t(club.unete.texto)}
           </a>
         </div>
 
