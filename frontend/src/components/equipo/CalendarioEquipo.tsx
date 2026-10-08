@@ -2,12 +2,11 @@ import { motion, useReducedMotion } from "motion/react";
 import { FormEvent, useMemo, useState, useEffect } from "react";
 
 import {
-  checkinEventoCalendario,
-  confirmarEventoCalendario,
   createEquipoCalendarioEvento,
   getDirectorioClub,
   getEquipoCalendario,
   getEquipoSession,
+  getEventosLuma,
   getMisProyectos,
   getMisTareas,
 } from "../../api/equipo";
@@ -16,10 +15,12 @@ import type { Seccion } from "./EquipoSidebar";
 import { DeptoProvider } from "./DeptoApi";
 import { AvatarResponsable, etiquetaDe } from "./marketing/Avatares";
 import { TaskDialog } from "./marketing/TaskDialog";
-import { useEntradaDeFila } from "../movimiento";
+import { Contador, useEntradaDeFila } from "../movimiento";
+import { listarNotas } from "../../api/notas";
+import type { NotaResumen } from "../../types/notas";
 import { DURATION, EASE_OUT } from "@/components/smoothui/lib/animation";
 import type { ApiFailure } from "../../types/api";
-import { DEPTO_LABEL, type EventoCalendario, type MiembroDirectorio, type Team } from "../../types/equipo";
+import { DEPTO_LABEL, type EventoCalendario, type EventoLuma, type MiembroDirectorio, type Team } from "../../types/equipo";
 import { textoDe, type Registro } from "../../types/registros";
 import {
   diasHasta,
@@ -139,9 +140,11 @@ type Props = {
   /** Cambiar de sección del workspace (Avisos, Calendario, Tareas...), para
    *  los atajos de la cabecera y el enlace del aviso del board. */
   onIrA: (seccion: Seccion) => void;
+  /** Abrir una nota concreta en "Notas". */
+  onAbrirNota?: (id: number) => void;
 };
 
-export function CalendarioEquipo({ onIrA }: Props) {
+export function CalendarioEquipo({ onIrA, onAbrirNota }: Props) {
   const menosMovimiento = useReducedMotion();
   const entradaFila = useEntradaDeFila();
   const [eventos, setEventos] = useState<EventoCalendario[]>([]);
@@ -164,6 +167,11 @@ export function CalendarioEquipo({ onIrA }: Props) {
   const [anuncio, setAnuncio] = useState<Registro | null>(null);
   const [directorio, setDirectorio] = useState<MiembroDirectorio[]>([]);
   const [marcandoHecha, setMarcandoHecha] = useState<number | null>(null);
+  const [notas, setNotas] = useState<NotaResumen[]>([]);
+  const [luma, setLuma] = useState<{ calendario: string; eventos: EventoLuma[] }>({
+    calendario: "",
+    eventos: [],
+  });
 
   async function cargarCalendario() {
     try {
@@ -187,6 +195,20 @@ export function CalendarioEquipo({ onIrA }: Props) {
     let active = true;
 
     void cargarCalendario();
+    getEventosLuma()
+      .then((r) => {
+        if (active && r.ok) setLuma({ calendario: r.calendario, eventos: r.eventos });
+      })
+      .catch(() => {
+        // Sin Luma, la caja enseña solo los eventos del club.
+      });
+    listarNotas()
+      .then((r) => {
+        if (active && r.ok) setNotas(r.notas);
+      })
+      .catch(() => {
+        // Sin notas: la caja se queda en su estado vacío.
+      });
 
     getEquipoSession()
       .then((sesion) => {
@@ -263,51 +285,6 @@ export function CalendarioEquipo({ onIrA }: Props) {
     return [...vps, ...presidencia];
   }, [directorio, teams, email]);
 
-  async function confirmarAsistencia(evento: EventoCalendario, confirmar: boolean) {
-    try {
-      await confirmarEventoCalendario(evento.id, confirmar);
-      setEventos((actuales) =>
-        actuales.map((e) =>
-          e.id === evento.id
-            ? {
-                ...e,
-                confirmados: confirmar
-                  ? [...e.confirmados, email]
-                  : e.confirmados.filter((m) => m !== email),
-              }
-            : e,
-        ),
-      );
-    } catch {
-      // Sin confirmar, el evento se queda como estaba -- no bloquea el resto.
-    }
-  }
-
-  /** Check-in el día del evento: lo hace quien gestiona la puerta (VP de
-   *  cualquier departamento o admin, mismo criterio que `puedeAnadirEvento`),
-   *  marcando a cada confirmado según va llegando. Alimenta la asistencia
-   *  media de `metricas_club` en el backend, a diferencia de
-   *  `confirmarAsistencia`, que es solo la intención previa. */
-  async function marcarAsistio(evento: EventoCalendario, personaEmail: string, asistio: boolean) {
-    try {
-      await checkinEventoCalendario(evento.id, personaEmail, asistio);
-      setEventos((actuales) =>
-        actuales.map((e) =>
-          e.id === evento.id
-            ? {
-                ...e,
-                asistio: asistio
-                  ? [...e.asistio, personaEmail]
-                  : e.asistio.filter((m) => m !== personaEmail),
-              }
-            : e,
-        ),
-      );
-    } catch {
-      // Sin marcar, el check-in se queda como estaba -- no bloquea el resto.
-    }
-  }
-
   /** Marcar hecha desde la casilla, sin abrir el diálogo -- para eso está la
    *  casilla en el boceto. Vuelve a "pendiente" si se desmarca. */
   async function alternarHecha(tarea: Task) {
@@ -360,13 +337,35 @@ export function CalendarioEquipo({ onIrA }: Props) {
 
   const semana = useMemo(() => celdasDeLaSemana(new Date()), []);
 
+  /** Los eventos del club (los que se apuntan desde /admin) y los de Luma,
+   *  en una sola lista. Los de Luma traen su página, que es donde la gente se
+   *  apunta: ya no hay "Confirmar" dentro del panel. */
   const proximos = useMemo(() => {
     const hoy = new Date();
     hoy.setHours(0, 0, 0, 0);
-    return eventos
+    const delClub = eventos
       .filter((evento) => parsearFechaLocal(evento.fecha) >= hoy)
-      .sort((a, b) => (a.fecha + a.hora).localeCompare(b.fecha + b.hora));
-  }, [eventos]);
+      .map((e) => ({
+        clave: `club-${e.id}`,
+        titulo: e.titulo,
+        fecha: e.fecha,
+        hora: e.hora,
+        detalle: e.descripcion,
+        url: "",
+      }));
+    const deLuma = luma.eventos.map((e) => {
+      const inicio = new Date(e.inicio);
+      return {
+        clave: `luma-${e.id}`,
+        titulo: e.titulo,
+        fecha: iso(inicio),
+        hora: `${String(inicio.getHours()).padStart(2, "0")}:${String(inicio.getMinutes()).padStart(2, "0")}`,
+        detalle: e.lugar,
+        url: e.url || luma.calendario,
+      };
+    });
+    return [...delClub, ...deLuma].sort((a, b) => (a.fecha + a.hora).localeCompare(b.fecha + b.hora));
+  }, [eventos, luma]);
 
   const hoy = iso(new Date());
 
@@ -382,27 +381,74 @@ export function CalendarioEquipo({ onIrA }: Props) {
     }).length;
   }, [tareas, semana]);
 
+  // Lo pendiente del club sale de las notas: cada casilla sin marcar es una
+  // cosa por hacer, con la nota de la que viene al lado.
+  const notasConPendientes = notas.filter((n) => n.checks_pendientes > 0);
+  const totalPendientes = notasConPendientes.reduce((suma, n) => suma + n.checks_pendientes, 0);
+  const tareasAbiertas = tareas.filter((t) => t.estado !== "acabado");
+  const proximoEvento = proximos[0];
+  const diasProximo = proximoEvento ? diasHasta(proximoEvento.fecha) : null;
+
+
   return (
     <>
-      <header className="crm-cabecera-react">
-        <div>
-          <h1 className="crm-h1">{saludoDeAhora()}{nombre ? `, ${nombre}` : ""}</h1>
-          <p className="crm-sub">
-            Semana del {rangoSemana(semana[0], semana[6])} ·{" "}
+      <section className="inicio-hero-react" aria-labelledby="inicio-saludo">
+        <div className="inicio-hero-texto-react">
+          <p className="inicio-hero-fecha-react">Semana del {rangoSemana(semana[0], semana[6])}</p>
+          <h1 id="inicio-saludo" className="inicio-hero-saludo-react">
+            {saludoDeAhora()}{nombre ? `, ${nombre}` : ""}
+          </h1>
+          <p className="inicio-hero-sub-react">
             {tareasQueVencenEstaSemana === 0
               ? "ninguna tarea vence esta semana"
               : `${tareasQueVencenEstaSemana} ${tareasQueVencenEstaSemana === 1 ? "tarea vence" : "tareas vencen"} esta semana`}
+            {totalPendientes > 0
+              ? ` · ${totalPendientes} ${totalPendientes === 1 ? "pendiente" : "pendientes"} en las notas`
+              : ""}
           </p>
         </div>
-        <div className="crm-acciones-react">
-          <button type="button" className="crm-btn crm-btn-ghost-react" onClick={() => onIrA("miembros")}>
-            Buscar miembro
-          </button>
+        <div className="inicio-hero-acciones-react">
           <button type="button" className="crm-btn" onClick={() => onIrA("tareas")}>
             Nueva tarea
           </button>
+          <button type="button" className="inicio-btn-claro-react" onClick={() => onIrA("notas")}>
+            Nueva nota
+          </button>
+          <button type="button" className="inicio-btn-claro-react" onClick={() => onIrA("miembros")}>
+            Buscar miembro
+          </button>
         </div>
-      </header>
+      </section>
+
+      <div className="inicio-kpis-react">
+        <button type="button" className="inicio-kpi-react" onClick={() => onIrA("tareas")}>
+          <span className="crm-k">Tareas abiertas</span>
+          <Contador className="inicio-kpi-num-react" valor={tareasAbiertas.length} />
+          <span className="crm-s">en tus departamentos</span>
+        </button>
+        <button type="button" className="inicio-kpi-react" onClick={() => onIrA("calendario")}>
+          <span className="crm-k">Vencen esta semana</span>
+          <Contador
+            className={`inicio-kpi-num-react${tareasQueVencenEstaSemana > 0 ? " inicio-kpi-alerta-react" : ""}`}
+            valor={tareasQueVencenEstaSemana}
+          />
+          <span className="crm-s">de lunes a domingo</span>
+        </button>
+        <button type="button" className="inicio-kpi-react" onClick={() => onIrA("notas")}>
+          <span className="crm-k">Pendiente en notas</span>
+          <Contador className="inicio-kpi-num-react" valor={totalPendientes} />
+          <span className="crm-s">
+            en {notasConPendientes.length} {notasConPendientes.length === 1 ? "nota" : "notas"}
+          </span>
+        </button>
+        <button type="button" className="inicio-kpi-react" onClick={() => onIrA("calendario")}>
+          <span className="crm-k">Próximo evento</span>
+          <span className="inicio-kpi-num-react">
+            {diasProximo === null ? "—" : diasProximo === 0 ? "Hoy" : `${diasProximo}d`}
+          </span>
+          <span className="crm-s inicio-kpi-recorte-react">{proximoEvento?.titulo ?? "Nada apuntado"}</span>
+        </button>
+      </div>
 
       {anuncio ? (
         <div className="crm-c crm-c-aviso-react">
@@ -421,9 +467,8 @@ export function CalendarioEquipo({ onIrA }: Props) {
         </div>
       ) : null}
 
-      <div className="crm-grid-react">
-        <div className="crm-col-react">
-          <section className="crm-c">
+      <div className="inicio-bento-react">
+          <section className="crm-c inicio-span-7-react">
             <div className="crm-cabecera-react">
               <p className="crm-k">Mis tareas de la semana</p>
               <div className="crm-tags-react" role="group" aria-label="Filtrar tareas">
@@ -453,7 +498,7 @@ export function CalendarioEquipo({ onIrA }: Props) {
                   : "Nada pendiente en ningún departamento ahora mismo."}
               </p>
             ) : (
-              <div>
+              <div className="inicio-scroll-react">
                 {tareasVisibles.map((tarea, indice) => {
                   const otros = tarea.responsables
                     .filter((r) => r !== email)
@@ -512,7 +557,44 @@ export function CalendarioEquipo({ onIrA }: Props) {
             )}
           </section>
 
-          <section className="crm-c">
+          <section className="crm-c inicio-span-5-react">
+            <div className="crm-cabecera-react">
+              <p className="crm-k">Pendiente en notas</p>
+              <button type="button" className="crm-enlace-react" onClick={() => onIrA("notas")}>
+                Ver notas
+              </button>
+            </div>
+            {notasConPendientes.length === 0 ? (
+              <p className="crm-s">
+                Nada pendiente. Las casillas que dejes sin marcar en una nota aparecen aquí.
+              </p>
+            ) : (
+              <div className="inicio-scroll-react">
+                {notasConPendientes.slice(0, 4).map((n, indice) => (
+                  <motion.div key={n.id} className="inicio-pendientes-react" {...entradaFila(indice)}>
+                    <button
+                      type="button"
+                      className="inicio-pendientes-nota-react"
+                      onClick={() => (onAbrirNota ? onAbrirNota(n.id) : onIrA("notas"))}
+                    >
+                      {n.titulo || "Sin título"}
+                      <span>{n.checks_pendientes}</span>
+                    </button>
+                    <ul>
+                      {n.pendientes.slice(0, 3).map((texto, i) => (
+                        <li key={i}>{texto}</li>
+                      ))}
+                      {n.checks_pendientes > 3 ? (
+                        <li className="crm-s">y {n.checks_pendientes - 3} más</li>
+                      ) : null}
+                    </ul>
+                  </motion.div>
+                ))}
+              </div>
+            )}
+          </section>
+
+          <section className="crm-c inicio-span-7-react">
             <div className="crm-cabecera-react">
               <p className="crm-k">Esta semana</p>
               <button type="button" className="crm-enlace-react" onClick={() => onIrA("calendario")}>
@@ -528,8 +610,8 @@ export function CalendarioEquipo({ onIrA }: Props) {
                     key={clave}
                     className={`crm-semana-dia-react${clave === hoy ? " crm-semana-hoy-react" : ""}`}
                   >
-                    <div className="crm-s">
-                      {DIAS_LETRA[indice]} {dia.getDate()}
+                    <div className="crm-s inicio-dia-react">
+                      <span>{DIAS_LETRA[indice]}</span> <b>{dia.getDate()}</b>
                     </div>
                     {(porDia[clave] ?? []).map((evento) => (
                       <span
@@ -558,52 +640,14 @@ export function CalendarioEquipo({ onIrA }: Props) {
             </div>
           </section>
 
-          <section className="crm-c">
-            <p className="crm-k">Mis proyectos</p>
-
-            {proyectos.length === 0 ? (
-              <p className="crm-s">No tienes tareas en ningún proyecto ahora mismo.</p>
-            ) : (
-              <div className="crm-pila-react">
-                {proyectos.map((proyecto, indice) => {
-                  const porcentaje =
-                    proyecto.total_tasks === 0
-                      ? 0
-                      : Math.round((proyecto.tareas_acabadas / proyecto.total_tasks) * 100);
-                  return (
-                    <motion.div key={proyecto.id} {...entradaFila(indice)}>
-                      <div className="crm-cabecera-react">
-                        <div className="crm-t">
-                          {proyecto.nombre}{" "}
-                          <span className="crm-s" style={{ fontWeight: 400 }}>
-                            · {DEPTO_LABEL[proyecto.departamento] ?? proyecto.departamento}
-                          </span>
-                        </div>
-                        <div className="crm-s">{porcentaje}%</div>
-                      </div>
-                      <div className="crm-bar" style={{ marginTop: 7 }} aria-hidden="true">
-                        <motion.i
-                          initial={{ transform: "scaleX(0)" }}
-                          animate={{ transform: `scaleX(${porcentaje / 100})` }}
-                          transition={
-                            menosMovimiento
-                              ? { duration: 0 }
-                              : { duration: DURATION.slow, ease: EASE_OUT }
-                          }
-                        />
-                      </div>
-                    </motion.div>
-                  );
-                })}
-              </div>
-            )}
-          </section>
-        </div>
-
-        <div className="crm-col-react">
-          <section className="crm-c">
+          <section className="crm-c inicio-span-5-react">
             <div className="crm-cabecera-react">
               <p className="crm-k">Próximos eventos</p>
+              {luma.calendario ? (
+                <a className="crm-enlace-react" href={luma.calendario} target="_blank" rel="noreferrer noopener">
+                  Calendario en Luma
+                </a>
+              ) : null}
               {puedeAnadirEvento ? (
                 <button
                   type="button"
@@ -674,51 +718,28 @@ export function CalendarioEquipo({ onIrA }: Props) {
                   : "Los eventos del club se añaden desde el panel de administración."}
               </p>
             ) : (
-              <div>
+              <div className="inicio-scroll-react">
                 {proximos.map((evento, indice) => {
-                  const voy = evento.confirmados.includes(email);
+                  const [, mes, dia] = evento.fecha.split("-").map(Number);
                   return (
-                    <motion.div key={evento.id} {...entradaFila(indice)}>
-                      <div className="crm-row">
-                        <div className="crm-row-cuerpo-react">
-                          <div className="crm-t">{evento.titulo}</div>
-                          <div className="crm-s">
-                            {[
-                              formatearFechaCorta(evento.fecha),
-                              evento.hora || null,
-                              evento.descripcion || null,
-                            ].filter(Boolean).join(" · ")}
-                          </div>
+                    <motion.div key={evento.clave} className="crm-row" {...entradaFila(indice)}>
+                      <span className="inicio-fecha-react" aria-hidden="true">
+                        <b>{dia}</b>
+                        <span>{MESES[mes - 1].slice(0, 3)}</span>
+                      </span>
+                      <div className="crm-row-cuerpo-react">
+                        <div className="crm-t">{evento.titulo}</div>
+                        <div className="crm-s inicio-kpi-recorte-react">
+                          {[formatearFechaCorta(evento.fecha), evento.hora || null, evento.detalle || null]
+                            .filter(Boolean)
+                            .join(" · ")}
                         </div>
-                        <button
-                          type="button"
-                          className={`crm-tag${voy ? " crm-tag-verde-react" : ""}`}
-                          onClick={() => void confirmarAsistencia(evento, !voy)}
-                        >
-                          {voy ? "Voy" : "Confirmar"}
-                        </button>
                       </div>
-
-                      {puedeAnadirEvento && evento.confirmados.length > 0 ? (
-                        <div className="crm-tags-react" style={{ paddingBottom: 11 }}>
-                          <span className="crm-s">
-                            Check-in · {evento.asistio.length}/{evento.confirmados.length}
-                          </span>
-                          {evento.confirmados.map((confirmadoEmail) => {
-                            const asistio = evento.asistio.includes(confirmadoEmail);
-                            return (
-                              <button
-                                key={confirmadoEmail}
-                                type="button"
-                                className={`crm-tag${asistio ? " crm-tag-verde-react" : ""}`}
-                                onClick={() => void marcarAsistio(evento, confirmadoEmail, !asistio)}
-                              >
-                                {asistio ? "✓ " : ""}
-                                {etiquetaDe(confirmadoEmail, directorio.find((m) => m.email === confirmadoEmail)?.nombre)}
-                              </button>
-                            );
-                          })}
-                        </div>
+                      {evento.url ? (
+                        <a className="crm-tag crm-tag-azul-react" href={evento.url} target="_blank" rel="noreferrer noopener">
+                          Apuntarme
+                          <span className="sr-only"> a {evento.titulo} en Luma (se abre en otra pestaña)</span>
+                        </a>
                       ) : null}
                     </motion.div>
                   );
@@ -727,8 +748,79 @@ export function CalendarioEquipo({ onIrA }: Props) {
             )}
           </section>
 
+          <section className="crm-c inicio-span-4-react">
+            <p className="crm-k">Mis proyectos</p>
+
+            {proyectos.length === 0 ? (
+              <p className="crm-s">No tienes tareas en ningún proyecto ahora mismo.</p>
+            ) : (
+              <div className="crm-pila-react">
+                {proyectos.map((proyecto, indice) => {
+                  const porcentaje =
+                    proyecto.total_tasks === 0
+                      ? 0
+                      : Math.round((proyecto.tareas_acabadas / proyecto.total_tasks) * 100);
+                  return (
+                    <motion.div key={proyecto.id} {...entradaFila(indice)}>
+                      <div className="crm-cabecera-react">
+                        <div className="crm-t">
+                          {proyecto.nombre}{" "}
+                          <span className="crm-s" style={{ fontWeight: 400 }}>
+                            · {DEPTO_LABEL[proyecto.departamento] ?? proyecto.departamento}
+                          </span>
+                        </div>
+                        <div className="crm-s">{porcentaje}%</div>
+                      </div>
+                      <div className="crm-bar" style={{ marginTop: 7 }} aria-hidden="true">
+                        <motion.i
+                          initial={{ transform: "scaleX(0)" }}
+                          animate={{ transform: `scaleX(${porcentaje / 100})` }}
+                          transition={
+                            menosMovimiento
+                              ? { duration: 0 }
+                              : { duration: DURATION.slow, ease: EASE_OUT }
+                          }
+                        />
+                      </div>
+                    </motion.div>
+                  );
+                })}
+              </div>
+            )}
+          </section>
+
+          <section className="crm-c inicio-span-4-react">
+            <div className="crm-cabecera-react">
+              <p className="crm-k">Notas</p>
+              <button type="button" className="crm-enlace-react" onClick={() => onIrA("notas")}>
+                Ver todas
+              </button>
+            </div>
+            {notas.length === 0 ? (
+              <p className="crm-s">Sin notas todavía. Actas, lluvias de ideas, listas de lo que falta: todo cabe en una nota.</p>
+            ) : (
+              <div>
+                {notas.slice(0, 4).map((n, indice) => (
+                  <motion.div key={n.id} className="crm-row" {...entradaFila(indice)}>
+                    <button
+                      type="button"
+                      className="crm-row-cuerpo-react"
+                      onClick={() => (onAbrirNota ? onAbrirNota(n.id) : onIrA("notas"))}
+                    >
+                      <div className="crm-t">{n.titulo || "Sin título"}</div>
+                      <div className="crm-s inicio-recorte-react">{n.resumen || haceTiempo(n.updated_at)}</div>
+                    </button>
+                    {n.checks_pendientes > 0 ? (
+                      <span className="crm-tag crm-tag-ambar-react">{n.checks_pendientes} por hacer</span>
+                    ) : null}
+                  </motion.div>
+                ))}
+              </div>
+            )}
+          </section>
+
           {contactos.length > 0 ? (
-            <section className="crm-c crm-c-oscura-react">
+            <section className="crm-c crm-c-oscura-react inicio-span-4-react">
               <p className="crm-k">A quién escribir</p>
 
               <div>
@@ -765,7 +857,6 @@ export function CalendarioEquipo({ onIrA }: Props) {
               </div>
             </section>
           ) : null}
-        </div>
       </div>
 
       {tareaAbierta ? (

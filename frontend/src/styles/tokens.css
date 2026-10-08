@@ -31,9 +31,11 @@
   --color-azul-profundo: #0e43a0;  /* capas y formas sobre Azul TE */
   --color-azul-claro: #a9c4f0;     /* etiquetas y texto secundario sobre azul */
 
-  /* ---------- Degradado: el único que se usa, a 135°, entre colores
+  /* ---------- Degradados: los que se usan, siempre a 135°, entre colores
      vecinos de la paleta. Fondos grandes y formas sólidas; jamás el logo,
-     iconos ni texto largo. ---------- */
+     iconos ni texto largo. Profundidad es el fondo de la cabecera del Inicio
+     de /equipo. ---------- */
+  --gradient-profundidad: linear-gradient(135deg, var(--color-azul), var(--color-azul-profundo));
   --gradient-calor: linear-gradient(135deg, var(--color-chispa), var(--color-impulso));
 
   /* ---------- Alias de rol (lo que usan las hojas) ---------- */
