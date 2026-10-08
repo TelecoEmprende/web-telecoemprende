@@ -5,8 +5,6 @@ import { CampaignsPanel } from "./marketing/CampaignsPanel";
 import { MembersPanel } from "./marketing/MembersPanel";
 import { TasksPanel } from "./marketing/TasksPanel";
 import {
-  AnunciosPanel,
-  DecisionesPanel,
   PresupuestoPanel,
   ReunionesPanel,
 } from "./registros/paneles";
@@ -15,13 +13,13 @@ import type { Team } from "../../types/equipo";
 type Props = {
   /** Departamento primario: el que ata el contexto (`DeptoProvider`) para los
    *  paneles que todavía no son multi-departamento (Miembros,
-   *  Presupuesto, Reuniones, Decisiones,
-   *  Calendario, Anuncios). */
+   *  Presupuesto, Reuniones,
+   *  Calendario). */
   depto: Team;
   /** Departamentos filtrados a la vez -- solo lo usan Tareas y Proyectos, que
    *  sí saben mezclar varios (ver `TasksPanel`/`CampaignsPanel`). */
   deptos: Team[];
-  seccion: Panel | "calendario" | "anuncios";
+  seccion: Panel | "calendario";
   /** Departamentos de la persona (no solo `deptos`): el calendario ahora es
    *  uno solo para todo el mundo y puede enseñar eventos de cualquiera de
    *  sus departamentos, no solo del que está filtrado. */
@@ -38,6 +36,8 @@ type Props = {
   vpDe: Team[];
   /** Board del club: asigna tareas en cualquier departamento, sea VP o no. */
   puedeAsignarEnTodo: boolean;
+  /** Abre una nota en Notas (desde las notas enlazadas a un proyecto). */
+  onAbrirNota: (id: number) => void;
 };
 
 /**
@@ -50,6 +50,7 @@ type Props = {
  */
 export function DeptoDashboard({
   depto, deptos, seccion, teams, campaignInicial, onCampaignAbierta, onAbrirCampaign, vpDe, puedeAsignarEnTodo,
+  onAbrirNota,
 }: Props) {
   return (
     <DeptoProvider value={depto}>
@@ -59,6 +60,7 @@ export function DeptoDashboard({
             deptos={deptos}
             campaignInicial={campaignInicial}
             onCampaignAbierta={onCampaignAbierta}
+            onAbrirNota={onAbrirNota}
           />
         ) : null}
         {seccion === "tareas" ? (
@@ -77,11 +79,9 @@ export function DeptoDashboard({
             onAbrirCampaign={onAbrirCampaign}
           />
         ) : null}
-        {seccion === "miembros" ? <MembersPanel /> : null}
+        {seccion === "miembros" ? <MembersPanel deptos={teams} /> : null}
         {seccion === "presupuesto" ? <PresupuestoPanel /> : null}
-        {seccion === "anuncios" ? <AnunciosPanel /> : null}
         {seccion === "reuniones" ? <ReunionesPanel /> : null}
-        {seccion === "decisiones" ? <DecisionesPanel /> : null}
       </DirectorioProvider>
     </DeptoProvider>
   );
