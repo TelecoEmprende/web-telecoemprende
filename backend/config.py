@@ -1,6 +1,5 @@
 import os
 
-ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "")
 DATABASE_URL = os.environ.get(
     "DATABASE_URL",
     "postgresql://telecoemprende:telecoemprende@localhost:5432/telecoemprende",
@@ -33,12 +32,14 @@ DEPARTAMENTOS_VALIDOS = {
 ESTADOS_VALIDOS = {"pendiente", "aceptado", "rechazado", "waitlist"}
 
 EQUIPOS_VALIDOS = {"marketing", "eventos", "ingenieria"}
-# Quien tenga este equipo recibe también sesión de admin al hacer login en /equipo.
-EQUIPO_CON_PERMISOS_ADMIN = "ingenieria"
+# Mínimo de departamentos por persona: el primero de `equipos` es su 1ª
+# preferencia, el segundo la 2ª (ver `ordenar_equipos`).
+MIN_EQUIPOS_POR_PERSONA = 2
 
-# Cargos de dirección, independientes del departamento: dan acceso a /admin
-# igual que EQUIPO_CON_PERMISOS_ADMIN, sea cual sea su equipo (o ninguno).
-CARGOS_VALIDOS = {"presidente", "boardmember"}
+# Cargos de dirección: un título, independiente del departamento y del permiso
+# de admin (`equipo_accesos.es_admin`). Siguen dando permisos de gestión de
+# departamento (asignar tareas en cualquiera, calendario del club).
+CARGOS_VALIDOS = {"presidente", "vicepresidente", "boardmember"}
 
 # Envío de email transaccional (Resend, https://resend.com). Si RESEND_API_KEY
 # no está configurada, el envío se salta en silencio (ver services/email.py).
