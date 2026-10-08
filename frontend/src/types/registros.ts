@@ -23,7 +23,7 @@ export type Registro = {
   [clave: string]: unknown;
 };
 
-export type TipoCampo =
+type TipoCampo =
   | "texto"
   | "parrafo"
   | "opcion"
@@ -31,10 +31,9 @@ export type TipoCampo =
   | "hora"
   | "importe"
   | "url"
-  | "lista"
   | "check"
-  /** Como "lista" (emails, uno por línea) pero elegidos del roster del
-   *  departamento por nombre y foto, no tecleados de memoria. */
+  /** Emails elegidos del roster del departamento por nombre y foto, no
+   *  tecleados de memoria. */
   | "miembros";
 
 export type CampoSpec = {
@@ -44,8 +43,6 @@ export type CampoSpec = {
   opciones?: readonly { valor: string; etiqueta: string }[];
   ayuda?: string;
   requerido?: boolean;
-  /** Marca el campo del que sale el título de la fila en el listado. */
-  esTitulo?: boolean;
 };
 
 export type ResumenPresupuesto = {

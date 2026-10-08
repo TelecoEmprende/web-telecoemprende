@@ -57,12 +57,6 @@ export function SeccionTech() {
           ))}
         </div>
       </div>
-
-      {tech.pendiente && (
-        <p className="pendiente" role="note">
-          {tech.pendiente}
-        </p>
-      )}
     </section>
   )
 }

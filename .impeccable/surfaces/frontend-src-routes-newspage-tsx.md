@@ -19,7 +19,7 @@ Mundo visual del club sin cambios (tokens.css, Anton + Space Grotesk, secciones 
 ## Direction contract
 THESIS: la semana como la agenda de un estudiante; rechaza el feed infinito y la rejilla de tarjetas iguales.
 OWN-WORLD: franjas por día a todo el ancho; hoy en azul TE con fecha Anton gigante y ámbar; días pasados sobre papel, plegados; pastillas de tema como las etiquetas del club.
-STORY: el visitante ve primero lo que importa hoy, entiende por qué le afecta, abre la fuente y, si quiere, repasa la semana o se inscribe.
+STORY: el visitante ve primero lo que importa hoy, entiende por qué le afecta, abre la fuente y, si quiere, repasa la semana o se suma a la comunidad del club.
 FIRST VIEWPORT: franja azul «HOY · VIE 25» con la fecha a escala de titular; debajo, la noticia más relevante abierta (tema, titular, por qué importa, fuentes) y las siguientes como filas; pastillas de tema fijas bajo la navegación.
 FORM: agenda de la semana, puesto 5 de 7 en mi lista, seed 80c73763 (reroll 1). Firma: plegar y desplegar días; tocar una fila la abre en su sitio.
 FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, DESIGN.md, and every shipping raster carrying its provenance

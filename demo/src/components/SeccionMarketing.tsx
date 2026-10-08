@@ -69,12 +69,6 @@ export function SeccionMarketing({ onAbrirImagen }: Props) {
           <Carteles carteles={marketing.carteles} onAbrirImagen={onAbrirImagen} />
         </div>
       </div>
-
-      {marketing.pendiente && (
-        <p className="pendiente" role="note">
-          {marketing.pendiente}
-        </p>
-      )}
     </section>
   )
 }

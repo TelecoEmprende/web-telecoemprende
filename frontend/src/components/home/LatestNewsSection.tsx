@@ -4,6 +4,7 @@ import { ArrowRight } from "lucide-react";
 import { agruparPorDia, fetchNoticias, relativo, type Noticia } from "../../api/news";
 import { useTranslation } from "../../i18n/translations";
 import { DIAS, enlaceNoticia, LIMITE, TemaPastilla } from "../../routes/NewsPage";
+import { Aparece, TitularAnimado } from "./aparece";
 
 /** Las 3 primeras del último día, en el mismo orden que el muro. Sin datos, la sección no se ve. */
 export function LatestNewsSection() {
@@ -24,25 +25,36 @@ export function LatestNewsSection() {
 
   // La sección existe siempre (oculta sin datos) para que el menú la observe desde el principio.
   return (
-    <section className="nw-portada" id="noticias" aria-labelledby="nw-portada-titulo" hidden={noticias.length === 0}>
-      <div className="lp-container">
-        <h2 id="nw-portada-titulo" className="lp-heading">{titulo}</h2>
-        <p className="lp-section-lead">{t.latestNews.lead}</p>
-        <ol className="nw-portada-lista">
-          {noticias.map((n) => (
-            <li key={n.id}>
-              <a href={enlaceNoticia(n.id)} className="nw-portada-item">
-                <span className="nw-portada-titular">
-                  <TemaPastilla tema={n.tema} /> {n.titular}
+    <section className="in-seccion in-hueso" id="noticias" aria-labelledby="noticias-titulo" hidden={noticias.length === 0}>
+      <div className="in-wrap">
+        <Aparece como="p" className="in-etiqueta in-etiqueta-directo">
+          02 — {t.nav.noticias}
+          <span className="in-directo">
+            <span className="in-pulso" aria-hidden="true" />
+            {t.latestNews.directo}
+          </span>
+        </Aparece>
+        <TitularAnimado id="noticias-titulo" texto={titulo} key={titulo} />
+        <Aparece como="p" className="in-lead" retraso={0.15}>{t.latestNews.lead}</Aparece>
+
+        <ol className="in-noticias">
+          {noticias.map((n, i) => (
+            <Aparece como="li" key={n.id} retraso={i * 0.08}>
+              <a href={enlaceNoticia(n.id)} className="in-noticia">
+                <TemaPastilla tema={n.tema} />
+                <span className="in-noticia-cuerpo">
+                  <span className="in-noticia-titular">{n.titular}</span>
+                  {n.por_que_importa && <span className="in-noticia-importa">{n.por_que_importa}</span>}
                 </span>
-                {n.por_que_importa && <span className="nw-portada-importa">{n.por_que_importa}</span>}
+                <ArrowRight className="in-noticia-flecha" aria-hidden size={22} strokeWidth={2} />
               </a>
-            </li>
+            </Aparece>
           ))}
         </ol>
-        <a href="/news" className="lp-btn lp-btn-gold nw-portada-cta">
+
+        <a href="/news" className="in-enlace">
           {t.latestNews.verTodas}
-          <ArrowRight aria-hidden size={20} strokeWidth={2.5} />
+          <ArrowRight aria-hidden size={18} strokeWidth={2.25} />
         </a>
       </div>
     </section>

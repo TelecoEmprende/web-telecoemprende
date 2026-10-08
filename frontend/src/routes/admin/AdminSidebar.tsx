@@ -17,7 +17,7 @@ import {
 
 /** Las tres vistas del panel. Es la única lista: de aquí salen el sidebar,
  *  el título de la barra superior (`tituloDe`) y las rutas de `adminRoutes`. */
-export const NAV = [
+const NAV = [
   { ruta: "inscripciones", label: "Inscripciones", icono: ClipboardList },
   { ruta: "equipo", label: "Accesos de equipo", icono: Users },
   { ruta: "calendario", label: "Calendario", icono: CalendarDays },

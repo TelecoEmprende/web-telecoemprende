@@ -262,18 +262,6 @@ def listar(tabla: Tabla, departamento: str | None = None) -> list[dict]:
             return [_serializar(f) for f in cur.fetchall()]
 
 
-def obtener(tabla: Tabla, fila_id: int, departamento: str | None = None) -> dict | None:
-    donde, valores = _alcance(tabla, departamento)
-    with _get_connection() as conn:
-        with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute(
-                f"SELECT * FROM {tabla.nombre} WHERE id = %s{donde}",
-                [fila_id, *valores],
-            )
-            fila = cur.fetchone()
-    return _serializar(fila) if fila is not None else None
-
-
 def crear(tabla: Tabla, campos: dict, creado_por: str, departamento: str | None = None) -> dict:
     columnas = [c for c in tabla.columnas if c in campos]
     valores = [campos[c] for c in columnas]

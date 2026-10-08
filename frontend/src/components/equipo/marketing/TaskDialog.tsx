@@ -36,11 +36,11 @@ type Props = {
   onCerrar: () => void;
   onGuardado: () => void;
   /** Para el autocompletado del campo de etiquetas -- las que ya se usan en
-   *  el departamento, no una lista fija (ver `TasksPanel`/`WeekPanel`). */
+   *  el departamento, no una lista fija (ver `TasksPanel`). */
   etiquetasExistentes?: string[];
-  /** Solo board y VPs reasignan (ver docs/CLAUDE.md) -- si es `false`, el
+  /** Solo board y VPs reasignan -- si es `false`, el
    *  selector de responsables se enseña de solo lectura. */
-  puedeAsignar?: boolean;
+  puedeAsignar: boolean;
   /** Departamentos a los que se puede mudar la tarea: los mismos donde la
    *  persona puede darla de alta (ver `TasksPanel`). Con menos de dos no se
    *  enseña el selector, que no habría nada que elegir. */
@@ -77,7 +77,7 @@ function desdeLineas(texto: string) {
  * de tocarlos desde la interfaz. Aquí es donde se editan.
  */
 export function TaskDialog({
-  task, onCerrar, onGuardado, etiquetasExistentes = [], puedeAsignar = true,
+  task, onCerrar, onGuardado, etiquetasExistentes = [], puedeAsignar,
   deptosDisponibles = [], onAbrirCampaign, cargando = false,
 }: Props) {
   const { deleteTask, getTaskComments, createTaskComment, updateTask } = useApi();

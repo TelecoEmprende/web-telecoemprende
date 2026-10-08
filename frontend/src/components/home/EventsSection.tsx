@@ -1,60 +1,42 @@
+import { ArrowUpRight } from "lucide-react";
+
 import { CLUB_EVENTS } from "../../data/events";
 import { useTranslation } from "../../i18n/translations";
+import { Aparece, TitularAnimado } from "./aparece";
+
+const LUMA_EVENTOS = "https://luma.com/alumni.etsit.upm";
 
 export function EventsSection() {
   const { t, language } = useTranslation();
 
   return (
-    <section className="lp-events" id="eventos">
-      <div className="lp-container">
-        <span className="lp-eyebrow lp-eyebrow-dark">{t.events.eyebrow}</span>
-        <h2 className="lp-heading lp-heading-dark">{t.events.heading}</h2>
-        <p className="lp-section-lead lp-section-lead-dark">{t.events.lead}</p>
+    <section className="in-seccion in-azul" id="eventos" aria-labelledby="eventos-titulo">
+      <div className="in-wrap">
+        <Aparece como="p" className="in-etiqueta">04 — {t.events.eyebrow}</Aparece>
+        <TitularAnimado id="eventos-titulo" texto={t.events.heading} />
+        <Aparece como="p" className="in-lead" retraso={0.15}>{t.events.lead}</Aparece>
 
-        <div className="lp-events-grid">
-          {CLUB_EVENTS.map((event) => (
-            <article className="lp-event-card" key={event.id}>
-              <div className="lp-event-cover">
-                <img
-                  src={event.photos[0].src}
-                  alt={event.photos[0].alt}
-                  loading="lazy"
-                />
-                <span className="lp-event-tag">{event.tag[language]}</span>
-                {event.companyLogo ? (
-                  <span className="lp-event-logo">
-                    <img
-                      src={event.companyLogo.src}
-                      alt={event.companyLogo.alt}
-                      loading="lazy"
-                    />
-                  </span>
-                ) : null}
+        <ul className="in-eventos">
+          {CLUB_EVENTS.map((event, i) => (
+            <Aparece como="li" className="in-evento" key={event.id} retraso={(i % 3) * 0.08}>
+              <div className="in-evento-foto">
+                <img src={event.photo.src} alt={event.photo.alt} loading="lazy" />
               </div>
-
-              <div className="lp-event-body">
-                <h3>{event.title}</h3>
-                {event.description ? <p>{event.description[language]}</p> : null}
-
-                {event.photos.length > 1 ? (
-                  <div
-                    className="lp-event-thumbs"
-                    aria-label={`${t.events.morePhotosLabel} ${event.title}`}
-                  >
-                    {event.photos.slice(1).map((photo) => (
-                      <img
-                        key={photo.src}
-                        src={photo.src}
-                        alt={photo.alt}
-                        loading="lazy"
-                      />
-                    ))}
-                  </div>
-                ) : null}
-              </div>
-            </article>
+              <p className="in-evento-tag">{event.tag[language]}</p>
+              <h3>{event.title}</h3>
+              {event.description ? <p className="in-evento-texto">{event.description[language]}</p> : null}
+            </Aparece>
           ))}
-        </div>
+
+          <Aparece como="li" className="in-evento in-evento-proximo" retraso={0.16}>
+            <p className="in-evento-tag">{t.events.proximoEtiqueta}</p>
+            <h3>{t.events.proximoTitulo}</h3>
+            <a href={LUMA_EVENTOS} className="in-enlace in-enlace-claro" target="_blank" rel="noreferrer">
+              {t.events.proximoCta}
+              <ArrowUpRight aria-hidden size={18} strokeWidth={2.25} />
+            </a>
+          </Aparece>
+        </ul>
       </div>
     </section>
   );

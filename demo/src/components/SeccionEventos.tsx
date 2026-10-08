@@ -58,12 +58,6 @@ export function SeccionEventos({ onAbrirImagen }: Props) {
           ))}
         </div>
       </div>
-
-      {eventos.pendiente && (
-        <p className="pendiente" role="note">
-          {eventos.pendiente}
-        </p>
-      )}
     </section>
   )
 }

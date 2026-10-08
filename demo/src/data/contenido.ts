@@ -13,8 +13,8 @@
  * enlaces, nombres propios, los pesos del test— se queda como un texto
  * suelto, sin idiomas, para que no pueda descuadrarse.
  *
- * Las imágenes se dejan en `frontend/public/img/` y se escriben aquí
- * empezando por `/img/`. Lee `frontend/public/img/README.md`.
+ * Las imágenes se dejan en `demo/public/img/` y se escriben aquí
+ * empezando por `/img/`. Lee `demo/public/img/README.md`.
  *
  * Cada departamento tiene su propia composición, así que su contenido
  * es distinto: Tech tiene proyectos, Marketing tiene piezas de diseño
@@ -109,11 +109,11 @@ export const club = {
   web: 'https://telecoemprende.es',
   /*
    * El botón de la barra: es lo único que se pide en esta página, así que
-   * lleva directo al formulario de la web del club, no a su portada.
+   * lleva directo a la comunidad del club (WhatsApp e Instagram), no a su portada.
    */
-  solicitud: {
-    texto: { es: 'Envía tu solicitud', en: 'Submit your application' },
-    url: 'https://telecoemprende.es/#inscripcion',
+  unete: {
+    texto: { es: 'Únete a la comunidad', en: 'Join the community' },
+    url: 'https://telecoemprende.es/#comunidad',
   },
   titular: {
     es: 'En ingeniería sobra talento. Falta dónde montarlo.',
@@ -217,7 +217,6 @@ export const tech = {
       },
     },
   ] satisfies Proyecto[],
-  pendiente: '',
 }
 
 /* ------------------------------------------------------------------ */
@@ -290,7 +289,6 @@ export const marketing = {
   } satisfies Imagen,
   /** Al pulsar el reel se abre esta publicación en una pestaña nueva. */
   enlaceReel: 'https://www.instagram.com/reel/DYPcyrlIplJ/',
-  pendiente: '',
 }
 
 /* ------------------------------------------------------------------ */
@@ -384,7 +382,6 @@ export const eventos = {
       },
     },
   ] satisfies Charla[],
-  pendiente: '',
 }
 
 

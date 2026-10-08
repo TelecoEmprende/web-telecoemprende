@@ -1,70 +1,5 @@
-/* Paneles del departamento de Marketing dentro de /equipo.
-   Hereda paleta, radios y sombras de tokens.css: no hay sistema visual nuevo,
-   solo las piezas que el panel de equipo todavía no tenía (tablero,
-   calendario, modal). Prefijo `mkt-` para no chocar con `.equipo-*` ni con
-   `.lp-*`.
-
-   El shell (sidebar navy + barra + área de trabajo crema) ya NO está aquí:
-   vive en `equipo.css`, que es quien lo monta para todos los departamentos.
-   Este archivo solo estila lo que va dentro. */
-
-/* ---------- Pestañas ---------- */
-
-.mkt-tabs-react {
-  display: flex;
-  gap: 6px;
-  padding-bottom: 14px;
-  margin-bottom: 20px;
-  border-bottom: 1px solid var(--color-divider);
-  /* Una sola fila: al partirse en dos, la pestaña activa quedaba sola abajo
-     y se leía como un fallo de render. */
-  overflow-x: auto;
-  scrollbar-width: none;
-}
-
-.mkt-tabs-react::-webkit-scrollbar {
-  display: none;
-}
-
-.mkt-tab-react {
-  flex-shrink: 0;
-  min-height: 44px;
-  padding: 9px 16px;
-  border: none;
-  border-radius: 999px;
-  background: transparent;
-  color: var(--color-text-muted);
-  font-family: inherit;
-  font-size: 0.95rem;
-  font-weight: 700;
-  cursor: pointer;
-  transition: background var(--dur-fast) var(--ease-out),
-    color var(--dur-fast) var(--ease-out);
-}
-
-.mkt-tab-react:hover {
-  background: var(--color-background);
-  color: var(--color-navy);
-}
-
-.mkt-tab-activa-react,
-.mkt-tab-activa-react:hover {
-  background: var(--color-navy);
-  color: var(--color-cream);
-}
-
 /* ---------- Estructura de panel ---------- */
 
-.mkt-panel-header-react {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 12px;
-  margin-bottom: 16px;
-}
-
-.mkt-panel-header-react h3,
 .mkt-detalle-header-react h3 {
   margin: 0;
   font-family: var(--font-display);
@@ -653,34 +588,7 @@
   line-height: 1.45;
 }
 
-.mkt-task-acciones-react {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-top: 10px;
-}
-
-.mkt-task-acciones-react select {
-  flex: 1;
-  min-width: 0;
-  min-height: 44px;
-  padding: 5px 8px;
-  border: 1px solid var(--color-border);
-  border-radius: 8px;
-  background: var(--color-surface);
-  color: var(--color-text);
-  font-family: inherit;
-  font-size: 0.78rem;
-}
-
 /* ---------- Calendario ---------- */
-
-.mkt-calendario-nav-react {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px;
-}
 
 /* "Capas": el filtro de departamento vive en una columna vertical junto a la
    rejilla, no en chips horizontales encima -- así el filtro se lee como
@@ -703,15 +611,6 @@
   background: var(--color-surface);
 }
 
-.mkt-capas-titulo-react {
-  margin: 0;
-  font-size: 0.68rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: var(--tracking-label);
-  color: var(--color-text-muted);
-}
-
 /* Las capas se apilan pero no se estiran: son cajitas, no bandas de color
    de lado a lado -- tres losas saturadas pesaban más que la propia rejilla. */
 .mkt-capas-lista-react {
@@ -730,12 +629,6 @@
   align-items: stretch;
   gap: 16px;
   margin-top: 16px;
-}
-
-.mkt-calendario-fila-inferior-react .mkt-ficha-evento-react {
-  flex: 1;
-  min-width: 0;
-  margin-top: 0;
 }
 
 /* La ficha de evento ya se abre en un modal, así que esta caja suele quedarse
@@ -779,7 +672,6 @@
     flex-wrap: wrap;
   }
 
-  .mkt-capas-lista-react .mkt-toggle-react,
   .mkt-capas-lista-react .mkt-btn-mini-react {
     width: auto;
   }
@@ -788,23 +680,6 @@
     flex: 0 0 auto;
     width: 100%;
   }
-}
-
-.mkt-vista-toggle-react {
-  display: flex;
-  gap: 4px;
-  padding: 3px;
-  border-radius: 12px;
-  background: var(--color-background);
-}
-
-.mkt-vista-toggle-react .mkt-btn-mini-react {
-  border: none;
-}
-
-.mkt-btn-mini-activo-react {
-  background: var(--color-navy);
-  color: var(--color-cream);
 }
 
 .mkt-calendario-react {
@@ -890,17 +765,6 @@
 .mkt-evento-club-react {
   background: rgba(var(--color-chispa-rgb), 0.22);
   color: var(--color-noche);
-}
-
-.mkt-leyenda-react {
-  display: flex;
-  gap: 10px;
-  margin-top: 14px;
-}
-
-.mkt-leyenda-react .mkt-evento-react {
-  display: inline-block;
-  margin: 0;
 }
 
 /* ---------- Ficha de evento ---------- */
@@ -1013,14 +877,6 @@
   font-size: 0.98rem;
   font-weight: 700;
   color: var(--color-navy);
-}
-
-.mkt-miembro-email-react {
-  margin: 0;
-  font-size: 0.92rem;
-  font-weight: 700;
-  color: var(--color-navy);
-  overflow-wrap: anywhere;
 }
 
 /* ---------- Habilidades y carga ---------- */
@@ -1528,67 +1384,9 @@
    Esta semana — la pantalla de entrada
    ========================================================================== */
 
-.mkt-resumen-react {
-  margin: 0;
-  font-size: 1.15rem;
-  font-weight: 700;
-  color: var(--color-navy);
-}
-
-.mkt-resumen-react strong {
-  font-size: 1.5rem;
-  font-weight: 700;
-  letter-spacing: -0.03em;
-}
-
 .mkt-resumen-alerta-react {
   color: var(--color-error-text);
   font-weight: 700;
-}
-
-.mkt-buscador-react {
-  min-height: 44px;
-  padding: 0 14px;
-  border: 1px solid var(--color-border);
-  border-radius: 999px;
-  background: var(--color-surface);
-  color: var(--color-navy);
-  font-family: inherit;
-  font-size: 0.88rem;
-  min-width: 0;
-  flex: 1 1 200px;
-}
-
-.mkt-buscador-react:focus {
-  outline: 2px solid var(--color-orange);
-  outline-offset: 1px;
-}
-
-/* Filtro "solo lo mío": una casilla, no un menú. */
-.mkt-toggle-react {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  min-height: 44px;
-  padding: 0 14px;
-  border: 1px solid var(--color-border);
-  border-radius: 999px;
-  background: var(--color-surface);
-  color: var(--color-navy);
-  font-size: 0.88rem;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.mkt-toggle-react:hover {
-  border-color: var(--color-orange);
-}
-
-.mkt-toggle-react input {
-  width: 20px;
-  height: 20px;
-  accent-color: var(--color-orange);
-  cursor: pointer;
 }
 
 .mkt-grupo-react {
@@ -1607,75 +1405,8 @@
   letter-spacing: var(--tracking-label);
 }
 
-.mkt-grupo-urgente-react {
-  color: var(--color-error-text);
-}
-
-.mkt-filas-react,
-.mkt-publicaciones-react {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.mkt-fila-react,
-.mkt-publicacion-react {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 14px;
-  padding: 10px 16px;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  background: var(--color-surface);
-}
-
-.mkt-fila-check-react {
-  display: flex;
-  align-items: center;
-  min-height: 44px;
-  cursor: pointer;
-}
-
-.mkt-fila-check-react input {
-  width: 22px;
-  height: 22px;
-  flex-shrink: 0;
-  accent-color: var(--color-orange);
-  cursor: pointer;
-}
-
-.mkt-fila-texto-react {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  min-width: 0;
-}
-
-/* El título de la fila es un botón (abre la tarea) separado de la casilla,
-   así tocar el texto ya no alterna "hecho" -- solo lo hace la casilla. */
-.mkt-fila-abrir-react {
-  flex: 1;
-  min-width: 0;
-  padding: 4px 0;
-  border: none;
-  background: none;
-  font: inherit;
-  color: inherit;
-  text-align: left;
-  cursor: pointer;
-}
-
-.mkt-fila-abrir-react:hover .mkt-fila-titulo-react {
-  text-decoration: underline;
-}
-
 /* De qué cuelga la cosa, encima de su nombre. Sin esto el usuario lee cuatro
    filas llamadas "Guion" y tiene que reconstruir de memoria a cuál va cada una. */
-.mkt-fila-padre-react,
 .mkt-task-padre-react {
   font-size: 0.72rem;
   font-weight: 700;
@@ -1689,61 +1420,6 @@
 
 .mkt-task-padre-react {
   margin: 0 0 3px;
-}
-
-.mkt-fila-titulo-react {
-  font-size: 0.95rem;
-  font-weight: 700;
-  color: var(--color-navy);
-  line-height: 1.4;
-}
-
-/* El "cuándo" lleva la urgencia en el texto, no solo en el color. */
-.mkt-cuando-react {
-  flex-shrink: 0;
-  padding: 4px 10px;
-  border-radius: 999px;
-  font-size: 0.78rem;
-  font-weight: 700;
-  white-space: nowrap;
-  background: var(--color-background);
-  color: var(--color-text-muted);
-}
-
-.mkt-cuando-tarde-react {
-  background: var(--color-error-bg);
-  color: var(--color-error-text);
-}
-
-.mkt-cuando-hoy-react {
-  background: var(--color-impulso);
-  color: #fff;
-}
-
-.mkt-cuando-pronto-react {
-  background: var(--color-info-bg);
-  color: var(--color-info-text);
-}
-
-.mkt-publicacion-estado-react {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-shrink: 0;
-}
-
-.mkt-listo-react {
-  font-size: 0.78rem;
-  font-weight: 700;
-  color: var(--color-success-text);
-  white-space: nowrap;
-}
-
-.mkt-pendientes-react {
-  font-size: 0.78rem;
-  font-weight: 700;
-  color: var(--color-text-muted);
-  white-space: nowrap;
 }
 
 .mkt-vencida-react {
@@ -1810,28 +1486,6 @@
 /* ==========================================================================
    Calendario accionable
    ========================================================================== */
-
-/* Las dos notas van juntas en un solo bloque empujado a la derecha -- si
-   cada nota lleva su propio margin-left:auto (como antes), dos elementos
-   compiten por el mismo hueco y el resultado es impredecible según cuántas
-   notas haya y cuánto quepa en la fila. */
-.mkt-leyenda-notas-react {
-  margin-left: auto;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px 14px;
-}
-
-.mkt-leyenda-nota-react {
-  color: var(--color-text-muted);
-  font-size: 0.82rem;
-}
-
-.mkt-leyenda-react {
-  align-items: center;
-  flex-wrap: wrap;
-  margin: 0 0 12px;
-}
 
 /* El número del día es el sitio donde se pulsa para añadir algo. */
 .mkt-dia-numero-react {
@@ -2110,11 +1764,6 @@ button.mkt-evento-react:active {
   opacity: 0.85;
 }
 
-.mkt-evento-reunion-react {
-  background: rgba(var(--color-impulso-rgb), 0.18);
-  color: var(--color-navy);
-}
-
 /* Bajo 720px, 7 columnas de verdad ya no caben apretadas a `1fr`: se
    quedaban en ~45px, ilegibles. Mismo patrón que el tablero de tareas y el
    mes del calendario un poco más abajo: ancho mínimo por columna y scroll
@@ -2150,24 +1799,6 @@ button.mkt-evento-react:active {
 
   .mkt-semana-dia-cabecera-react {
     font-size: 0.62rem;
-  }
-}
-
-@media (max-width: 620px) {
-  .mkt-fila-react,
-  .mkt-publicacion-react {
-    align-items: flex-start;
-    flex-direction: column;
-    gap: 8px;
-  }
-
-  .mkt-panel-header-react {
-    align-items: stretch;
-  }
-
-  .mkt-leyenda-notas-react {
-    margin-left: 0;
-    width: 100%;
   }
 }
 
@@ -2360,13 +1991,6 @@ button.mkt-evento-react:active {
   font-weight: 700;
 }
 
-.mkt-fila-derecha-react {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-shrink: 0;
-}
-
 /* ---------- Tarjetas de resumen (Home) ---------- */
 
 .mkt-tiles-react {
@@ -2410,147 +2034,6 @@ button.mkt-evento-react:active {
   }
 }
 
-/* ---------- Resumen del departamento (Home) ---------- */
-
-/* Antes solo se veía entrando campaña por campaña; aquí es lo primero que
-   se lee, como en /admin: cuántas campañas hay y en qué fase está el
-   contenido de todo el equipo, no solo el mío. */
-.mkt-resumen-depto-react {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px 12px;
-  margin-bottom: 20px;
-  padding: 12px 16px;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  background: var(--color-surface);
-  font-size: 0.86rem;
-  color: var(--color-text-muted);
-}
-
-.mkt-resumen-depto-numero-react {
-  font-family: inherit;
-  font-size: 1rem;
-  font-weight: 700;
-  color: var(--color-navy);
-}
-
-.mkt-pipeline-react {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-left: auto;
-}
-
-.mkt-pipeline-chip-react {
-  padding: 3px 10px;
-  border-radius: 999px;
-  background: var(--color-background);
-  font-size: 0.74rem;
-  font-weight: 700;
-  white-space: nowrap;
-}
-
-.mkt-pipeline-en_diseno-react {
-  background: var(--color-info-bg);
-  color: var(--color-info-text);
-}
-
-.mkt-pipeline-en_revision-react {
-  background: rgba(var(--color-impulso-rgb), 0.16);
-  color: var(--color-impulso);
-}
-
-.mkt-pipeline-programado-react,
-.mkt-pipeline-publicado-react {
-  background: var(--color-success-bg);
-  color: var(--color-success-text);
-}
-
-/* ---------- Timeline (Home) ---------- */
-
-/* Antes las tareas se agrupaban por urgencia y las publicaciones vivían en
-   una lista aparte ("Se publica pronto"). Aquí comparten día: se lee como
-   una agenda, no como dos secciones que hay que cruzar mentalmente. */
-.mkt-tl-react {
-  position: relative;
-  padding-left: 22px;
-}
-
-.mkt-tl-react::before {
-  content: "";
-  position: absolute;
-  left: 5px;
-  top: 6px;
-  bottom: 6px;
-  width: 2px;
-  background: var(--color-border);
-}
-
-.mkt-tl-dia-react {
-  position: relative;
-  margin-bottom: 22px;
-}
-
-.mkt-tl-dia-react::before {
-  content: "";
-  position: absolute;
-  left: -22px;
-  top: 4px;
-  width: 12px;
-  height: 12px;
-  border-radius: 999px;
-  background: var(--color-surface);
-  border: 3px solid var(--color-steel);
-}
-
-.mkt-tl-dia-hoy-react::before {
-  border-color: var(--color-orange);
-  background: var(--color-orange);
-}
-
-/* El día de una publicación es un hito, no un día más: rombo en vez de
-   punto, igual que un evento marcado a mano en un calendario de papel. */
-.mkt-tl-dia-hito-react::before {
-  border-radius: 3px;
-  transform: rotate(45deg);
-  width: 11px;
-  height: 11px;
-  border-color: var(--color-impulso);
-  background: var(--color-gold);
-}
-
-.mkt-tl-etiqueta-react {
-  margin: 0 0 8px;
-  font-size: 0.76rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--color-text-muted);
-}
-
-.mkt-tl-dia-hoy-react .mkt-tl-etiqueta-react {
-  color: var(--color-impulso);
-}
-
-.mkt-tl-hito-react {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 10px 14px;
-  margin-bottom: 8px;
-  border: 1.5px solid var(--color-gold);
-  border-radius: var(--radius-md);
-  background: var(--color-surface);
-}
-
-.mkt-tl-hito-titulo-react {
-  font-size: 0.93rem;
-  font-weight: 700;
-  color: var(--color-navy);
-}
-
 /* ---------- Avatares ---------- */
 
 /* El Avatar de shadcn no trae `object-fit` propio (solo `aspect-square
@@ -2558,10 +2041,6 @@ button.mkt-evento-react:active {
    rellenar el círculo en vez de recortarse, y se ve deformada. */
 [data-slot="avatar-image"] {
   object-fit: cover;
-}
-
-.mkt-avatares-dialogo-react {
-  margin-bottom: 8px;
 }
 
 .mkt-evento-avatares-react {
@@ -2928,89 +2407,12 @@ button.mkt-evento-react {
 
 /* ---------- Tu agenda (Inicio, cuando hay más de un departamento) ---------- */
 
-.mkt-agenda-panel-react {
-  margin-bottom: 20px;
-}
-
-.mkt-agenda-react {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  border-radius: var(--radius-lg);
-  overflow: hidden;
-  border: 1px solid var(--color-border);
-}
-
 /* Color por departamento para los chips del directorio (`MembersPanel`). */
 .mkt-agenda-marketing-react { color: var(--color-depto-marketing); }
 .mkt-agenda-eventos-react { color: var(--color-depto-eventos); }
 .mkt-agenda-ingenieria-react { color: var(--color-depto-tech); }
 
-.mkt-agenda-cuando-react {
-  flex-shrink: 0;
-  font-size: 0.74rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-  color: var(--color-text-muted);
-  min-width: 5.5ch;
-}
-
-.mkt-agenda-vencida-react {
-  color: var(--color-error-text);
-}
-
-.mkt-agenda-titulo-react {
-  flex: 1;
-  min-width: 0;
-  font-size: 0.9rem;
-  font-weight: 700;
-  color: var(--color-navy);
-}
-
-/* Toda la fila (hora + título + departamento) es un botón: abre la tarea
-   sin salir de "Tu agenda" para ir a buscarla al tablero del departamento. */
-.mkt-agenda-abrir-react {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  align-items: baseline;
-  gap: 12px;
-  padding: 0;
-  border: none;
-  background: none;
-  font: inherit;
-  color: inherit;
-  text-align: left;
-  cursor: pointer;
-}
-
-.mkt-agenda-abrir-react:hover .mkt-agenda-titulo-react {
-  text-decoration: underline;
-}
-
-.mkt-saludo-react {
-  margin-bottom: 20px;
-}
-
-.mkt-saludo-react h3 {
-  margin: 0;
-}
-
-.mkt-saludo-react .mkt-meta-react {
-  margin: 2px 0 0;
-}
-
 /* ---------- Tira de la semana ---------- */
-
-.mkt-semana-tira-react {
-  display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
-  gap: 6px;
-  margin-bottom: 20px;
-}
 
 .mkt-semana-dia-react {
   padding: 8px 4px;
@@ -3023,125 +2425,4 @@ button.mkt-evento-react {
 .mkt-semana-dia-hoy-react {
   border-color: var(--color-orange);
   background: color-mix(in srgb, var(--color-orange) 10%, var(--color-surface));
-}
-
-.mkt-semana-letra-react {
-  display: block;
-  font-size: 0.62rem;
-  font-weight: 700;
-  color: var(--color-text-muted);
-  text-transform: uppercase;
-}
-
-.mkt-semana-numero-react {
-  display: block;
-  font-weight: 700;
-  font-size: 1.05rem;
-  margin-top: 2px;
-  color: var(--color-navy);
-}
-
-.mkt-semana-dia-hoy-react .mkt-semana-numero-react {
-  color: var(--color-primary);
-}
-
-.mkt-semana-puntos-react {
-  display: flex;
-  justify-content: center;
-  gap: 3px;
-  margin-top: 5px;
-  height: 6px;
-}
-
-.mkt-semana-punto-react {
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: var(--color-steel);
-}
-
-.mkt-semana-punto-react.mkt-agenda-marketing-react { background: var(--color-depto-marketing); }
-.mkt-semana-punto-react.mkt-agenda-eventos-react { background: var(--color-depto-eventos); }
-.mkt-semana-punto-react.mkt-agenda-ingenieria-react { background: var(--color-depto-tech); }
-.mkt-semana-punto-club-react { background: var(--color-gold); }
-
-/* ---------- Inicio: agenda + calendario en columnas ---------- */
-
-.mkt-inicio-columnas-react {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 20px;
-  align-items: start;
-}
-
-.mkt-agenda-leyenda-react {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 14px;
-  margin-top: 14px;
-  font-size: 0.8rem;
-  color: var(--color-text-muted);
-}
-
-.mkt-agenda-leyenda-punto-react {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.mkt-agenda-leyenda-punto-react::before {
-  content: "";
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--color-steel);
-}
-
-.mkt-agenda-leyenda-punto-react.mkt-agenda-marketing-react::before { background: var(--color-depto-marketing); }
-.mkt-agenda-leyenda-punto-react.mkt-agenda-eventos-react::before { background: var(--color-depto-eventos); }
-.mkt-agenda-leyenda-punto-react.mkt-agenda-ingenieria-react::before { background: var(--color-depto-tech); }
-.mkt-agenda-leyenda-vencida-react::before { background: var(--color-error-text); }
-
-.mkt-inicio-lateral-react {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  min-width: 0;
-}
-
-/* El mes entero en la columna de Inicio, más compacto que en la pestaña de
-   Calendario propia (esa sí tiene la pantalla entera para él): casillas más
-   bajas para que quepa sin desplazarse. Acotado a esta columna, no toca la
-   rejilla de Marketing/Eventos. */
-.mkt-inicio-lateral-react .mkt-calendario-react {
-  margin-top: 10px;
-  gap: 3px;
-}
-
-.mkt-inicio-lateral-react .mkt-calendario-cabecera-react {
-  padding: 4px;
-  font-size: 0.66rem;
-}
-
-.mkt-inicio-lateral-react .mkt-dia-react,
-.mkt-inicio-lateral-react .mkt-dia-vacio-react {
-  min-height: 38px;
-  padding: 4px;
-}
-
-.mkt-inicio-lateral-react .mkt-dia-numero-react {
-  font-size: 0.68rem;
-  margin-bottom: 2px;
-}
-
-.mkt-inicio-lateral-react .mkt-evento-react {
-  padding: 1px 4px;
-  margin-bottom: 2px;
-  font-size: 0.6rem;
-}
-
-@media (max-width: 900px) {
-  .mkt-inicio-columnas-react {
-    grid-template-columns: 1fr;
-  }
 }

@@ -28,20 +28,16 @@
   --color-papel-rgb: 247, 245, 241;
   --color-papel-hueso: #ede9e2;    /* secciones alternas y tarjetas */
   --color-papel-hueso-rgb: 237, 233, 226;
-  --color-azul-claro-rgb: 169, 196, 240;
   --color-azul-profundo: #0e43a0;  /* capas y formas sobre Azul TE */
   --color-azul-claro: #a9c4f0;     /* etiquetas y texto secundario sobre azul */
 
-  /* ---------- Degradados: sólo estos tres, siempre a 135°, entre colores
+  /* ---------- Degradado: el único que se usa, a 135°, entre colores
      vecinos de la paleta. Fondos grandes y formas sólidas; jamás el logo,
      iconos ni texto largo. ---------- */
-  --gradient-profundidad: linear-gradient(135deg, var(--color-azul), var(--color-azul-profundo));
   --gradient-calor: linear-gradient(135deg, var(--color-chispa), var(--color-impulso));
-  --gradient-contacto: linear-gradient(135deg, var(--color-impulso), var(--color-azul));
 
   /* ---------- Alias de rol (lo que usan las hojas) ---------- */
   --color-primary: var(--color-impulso);
-  --color-primary-dark: var(--color-impulso);
   --color-surface: #ffffff;
   --color-surface-soft: rgba(255, 255, 255, 0.86);
   --color-background: var(--color-papel);
@@ -122,15 +118,11 @@
   --color-navy-deep: var(--color-noche);
   --color-navy-soft: var(--color-azul-profundo);
   --color-gold: var(--color-chispa);
-  --color-gold-soft: var(--color-chispa);
   --color-orange: var(--color-impulso);
-  --color-orange-dark: var(--color-impulso);
   --color-steel: var(--color-azul-claro);
-  --color-steel-light: var(--color-azul-claro);
   --color-steel-soft: color-mix(in srgb, var(--color-azul) 10%, var(--color-papel));
   --color-steel-tint: color-mix(in srgb, var(--color-azul) 22%, var(--color-papel));
   --color-paper: var(--color-papel);
   --color-paper-line: var(--color-papel-hueso);
   --color-slate: var(--color-text-muted);
-  --gradient-cta: var(--gradient-calor);
 }

@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { useEntradaDeFila } from "../../movimiento";
 import { SPRING_DEFAULT } from "@/components/smoothui/lib/animation";
 import type { ApiFailure } from "../../../types/api";
-import type { Team } from "../../../types/equipo";
+import { DEPTO_LABEL, type Team } from "../../../types/equipo";
 import {
   CONTENT_ESTADOS,
   CONTENT_ESTADO_LABEL,
@@ -25,12 +25,6 @@ import {
   type ContentEstado,
   type Task,
 } from "../../../types/marketing";
-
-const DEPTO_LABEL: Record<Team, string> = {
-  marketing: "Marketing",
-  eventos: "Eventos",
-  ingenieria: "Ingeniería",
-};
 
 function mensajeDeError(error: unknown, porDefecto: string) {
   const fallo = error as ApiFailure;
