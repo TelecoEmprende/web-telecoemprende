@@ -14,6 +14,7 @@ import {
 } from "../components/equipo/EquipoSidebar";
 import { EquipoLoginForm, type ModoAcceso } from "../components/equipo/EquipoLoginForm";
 import { DeptoDashboard } from "../components/equipo/DeptoDashboard";
+import { HerramientasPanel } from "../components/equipo/HerramientasPanel";
 import { MetricasPanel } from "../components/equipo/MetricasPanel";
 import { NotasPanel } from "../components/equipo/notas/NotasPanel";
 import { PanelAnimado } from "../components/movimiento";
@@ -21,8 +22,7 @@ import type { ApiFailure } from "../types/api";
 import { DEPTO_LABEL, type Cargo, type Team } from "../types/equipo";
 
 const PANELES: Panel[] = [
-  "tareas", "campanas", "miembros", "recursos", "presupuesto", "reuniones", "alumni",
-  "plataforma", "decisiones", "servicios",
+  "tareas", "campanas", "miembros", "recursos", "presupuesto", "reuniones", "decisiones",
 ];
 
 function esPanel(seccion: Seccion): seccion is Panel {
@@ -290,6 +290,7 @@ export function EquipoPage() {
               />
             ) : null}
             {seccion === "metricas" ? <MetricasPanel /> : null}
+            {seccion === "herramientas" ? <HerramientasPanel teams={teams} /> : null}
             {esPanel(seccion) || seccion === "calendario" || seccion === "anuncios" ? (
               // `key` para que cambiar de departamento(s) remonte el panel: si
               // no, dos conjuntos de departamentos comparten estado y el

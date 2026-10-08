@@ -1,6 +1,7 @@
 import { apiRequest } from "./client";
 import type { ApiResult } from "../types/api";
 import type {
+  AccesoClub,
   EquipoLoginResponse,
   EquipoSessionResponse,
   EventoCalendario,
@@ -43,6 +44,11 @@ export function getDirectorioClub() {
 
 export function getEquipoCalendario() {
   return apiRequest<ApiResult & { eventos: EventoCalendario[] }>("/api/equipo/calendario");
+}
+
+/** Enlaces del club para Herramientas (Slack, WhatsApp...), y el de Luma. */
+export function getAccesos() {
+  return apiRequest<ApiResult & { luma: string; accesos: AccesoClub[] }>("/api/equipo/accesos");
 }
 
 /** Próximos eventos del calendario de Luma del club, y la URL del calendario. */
