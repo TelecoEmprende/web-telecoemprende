@@ -17,6 +17,7 @@ from backend.api.admin import admin_api
 from backend.api.cron import cron_api
 from backend.api.equipo import equipo_api
 from backend.api.marketing import marketing_api
+from backend.api.notas import notas_api
 from backend.api.slack_bot import slack_bot_api
 
 # Importar por el efecto: `registros` cuelga sus rutas de `marketing_api`, y
@@ -37,6 +38,7 @@ app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
 app.register_blueprint(public_api)
 app.register_blueprint(admin_api)
 app.register_blueprint(equipo_api)
+app.register_blueprint(notas_api)
 app.register_blueprint(cron_api)
 app.register_blueprint(slack_bot_api)
 # El mismo blueprint, una vez por departamento con workspace: mismas rutas bajo
