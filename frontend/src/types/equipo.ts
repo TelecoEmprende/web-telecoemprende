@@ -8,6 +8,11 @@ export const TEAMS: Team[] = ["marketing", "eventos", "ingenieria"];
  *  Ingeniería en el sidebar y el commit desplegado en "Plataforma". */
 export const GITHUB_REPO = "https://github.com/TelecoEmprende/web-telecoemprende";
 
+/** El Slack del club. Es el mismo para todo el mundo (invitación abierta):
+ *  sale en Herramientas y en "A quién escribir" del Inicio. */
+export const SLACK_CLUB =
+  "https://join.slack.com/t/telecoemprende/shared_invite/zt-492kyuq78-CJ~sB7TN5xz_j11xj1nnAw";
+
 export const DEPTO_LABEL: Record<Team, string> = {
   marketing: "Marketing",
   eventos: "Eventos",
@@ -89,4 +94,13 @@ export type EventoLuma = {
   lugar: string;
   /** Página del evento en Luma, donde la gente se apunta. Puede venir vacía. */
   url: string;
+};
+
+/** Un servicio que Ingeniería ha marcado como acceso para todo el club. */
+export type AccesoClub = {
+  id: number;
+  nombre: string;
+  tipo: string;
+  url: string;
+  notas: string;
 };

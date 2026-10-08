@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/dialog";
 import { DeptoProvider, useDirectorio } from "../DeptoApi";
 import { apiDepto } from "../../../api/marketing";
-import { getCalendarioEquipo } from "../../../api/equipo";
+import { getCalendarioEquipo, getEventosLuma } from "../../../api/equipo";
 import { AlertBanner } from "../../feedback/AlertBanner";
 import { Esqueleto } from "../../feedback/Esqueleto";
 import { AvataresDeResponsables } from "./Avatares";
@@ -20,12 +20,6 @@ import { formatearFecha, type CalendarioItem, type Task } from "../../../types/m
 import { DEPTO_LABEL, TEAMS, type Team } from "../../../types/equipo";
 
 /** La cajita de departamento del sistema (ver CalendarioEquipo). */
-const DEPTO_TAG: Record<string, string> = {
-  ingenieria: "crm-tag-azul-react",
-  marketing: "crm-tag-ambar-react",
-  eventos: "",
-};
-
 /** El color de un elemento en la rejilla es el de su departamento, el mismo
  *  que su capa -- así "Capas" es la leyenda del calendario y no hace falta
  *  una tira de colores aparte explicando nada. */
@@ -40,6 +34,7 @@ const ORIGEN_LABEL: Record<CalendarioItem["origen"], string> = {
   task: "Tarea",
   reunion: "Reunión",
   club: "Evento del club",
+  luma: "Evento en Luma",
 };
 
 /** `detalle` no es una descripción libre: el backend reutiliza esa columna
@@ -52,7 +47,11 @@ const DETALLE_LABEL: Record<CalendarioItem["origen"], string> = {
   task: "Prioridad",
   reunion: "Objetivo",
   club: "Descripción",
+  luma: "Lugar",
 };
+
+/** Iniciales para la cabecera de la rejilla en pantallas estrechas. */
+const DIAS_CORTOS = ["L", "M", "X", "J", "V", "S", "D"];
 
 const DIAS = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
 const MESES = [
@@ -85,17 +84,17 @@ function iso(fecha: Date) {
   return `${fecha.getFullYear()}-${mes}-${dia}`;
 }
 
-/** Días del mes precedidos por los huecos necesarios para que el 1 caiga en su
- *  columna. Semana que empieza en lunes, como el calendario de aquí. */
+/** Semanas completas, de lunes a domingo, que cubren el mes: los días del mes
+ *  de antes y de después rellenan los huecos (atenuados en la rejilla) para
+ *  que no queden casillas vacías. */
 function celdasDelMes(año: number, mes: number) {
-  const primero = new Date(año, mes, 1);
-  const huecos = (primero.getDay() + 6) % 7;
-  const diasEnMes = new Date(año, mes + 1, 0).getDate();
-
-  return [
-    ...Array.from({ length: huecos }, () => null),
-    ...Array.from({ length: diasEnMes }, (_, i) => new Date(año, mes, i + 1)),
-  ];
+  const inicio = lunesDe(new Date(año, mes, 1));
+  const ultimo = new Date(año, mes + 1, 0);
+  const total = Math.ceil(((ultimo.getTime() - inicio.getTime()) / 86400000 + 1) / 7) * 7;
+  return Array.from({ length: total }, (_, i) => {
+    const fecha = new Date(inicio.getFullYear(), inicio.getMonth(), inicio.getDate() + i);
+    return { fecha, fuera: fecha.getMonth() !== mes };
+  });
 }
 
 /** Lunes de la semana de `fecha`. */
@@ -277,6 +276,10 @@ export function CalendarPanel({
   // clic sin ninguna respuesta visible.
   const [tareaPedida, setTareaPedida] = useState<CalendarioItem | null>(null);
   const [tituloNuevo, setTituloNuevo] = useState("");
+  // Los eventos del calendario de Luma, como una capa más. Se piden una vez:
+  // el feed solo trae los que aún no han pasado.
+  const [luma, setLuma] = useState<CalendarioItem[]>([]);
+  const [verLuma, setVerLuma] = useState(true);
   // Se busca un mes con datos una sola vez, en el primer montaje. Después el
   // usuario manda: si navega a un mes vacío, se queda ahí.
   const [yaBuscado, setYaBuscado] = useState(false);
@@ -290,6 +293,40 @@ export function CalendarPanel({
     if (!contenedor) return;
     contenedor.scrollTop = (HORA_SCROLL_INICIAL / (HORA_FIN - HORA_INICIO)) * contenedor.scrollHeight;
   }, [vista, isLoading]);
+
+  useEffect(() => {
+    let activo = true;
+    const dos = (n: number) => String(n).padStart(2, "0");
+    getEventosLuma()
+      .then((r) => {
+        if (!activo || !r.ok) return;
+        setLuma(
+          r.eventos.map((e, i) => {
+            const d = new Date(e.inicio);
+            return {
+              origen: "luma",
+              id: -1 - i,
+              titulo: e.titulo,
+              fecha: iso(d),
+              hora: `${dos(d.getHours())}:${dos(d.getMinutes())}`,
+              estado: "",
+              campaign_id: null,
+              detalle: e.lugar,
+              prioridad: null,
+              padre: null,
+              responsables: [],
+              url: e.url || r.calendario,
+            };
+          }),
+        );
+      })
+      .catch(() => {
+        // Sin Luma, el calendario enseña lo demás igual.
+      });
+    return () => {
+      activo = false;
+    };
+  }, []);
 
   const cargar = useCallback(async (referencia: Date) => {
     setIsLoading(true);
@@ -367,6 +404,10 @@ export function CalendarPanel({
   }, [cursor, cargar]);
 
   async function abrir(item: CalendarioItem) {
+    if (item.origen === "luma") {
+      if (item.url) window.open(item.url, "_blank", "noopener,noreferrer");
+      return;
+    }
     if (item.origen !== "task" || !item.departamento) {
       setSeleccionado(item);
       return;
@@ -393,10 +434,12 @@ export function CalendarPanel({
     setTareaPedida(null);
   }
 
-  const porDia = items.reduce<Record<string, CalendarioItem[]>>((acc, item) => {
-    (acc[item.fecha] ??= []).push(item);
-    return acc;
-  }, {});
+  const porDia = [...items, ...(verLuma ? luma : [])]
+    .sort((a, b) => (a.hora ?? "").localeCompare(b.hora ?? ""))
+    .reduce<Record<string, CalendarioItem[]>>((acc, item) => {
+      (acc[item.fecha] ??= []).push(item);
+      return acc;
+    }, {});
 
   const hoy = iso(new Date());
 
@@ -416,7 +459,10 @@ export function CalendarPanel({
   /** "septiembre 2026" en vista de mes; "1–7 de septiembre 2026" (o cruzando
    *  mes, "29 ago – 4 sep") en vista de semana. */
   function tituloDeVista() {
-    if (vista === "mes") return `${MESES[cursor.getMonth()]} ${cursor.getFullYear()}`;
+    if (vista === "mes") {
+      const mes = MESES[cursor.getMonth()];
+      return `${mes[0].toUpperCase()}${mes.slice(1)} de ${cursor.getFullYear()}`;
+    }
 
     const { desde, hasta } = rangoDeVista(cursor, "semana");
     const rango =
@@ -439,7 +485,9 @@ export function CalendarPanel({
     if (!titulo) return;
 
     try {
-      await apiDepto(deptoNuevaTarea).createTask({ titulo, deadline: fecha });
+      // `instrucciones` es obligatorio en el backend: desde aquí solo hay
+      // título, así que hace de instrucciones hasta que alguien las amplíe.
+      await apiDepto(deptoNuevaTarea).createTask({ titulo, instrucciones: titulo, deadline: fecha });
       setTituloNuevo("");
       setDiaAbierto(null);
       await cargar(cursor);
@@ -456,7 +504,9 @@ export function CalendarPanel({
       ? ` ${DEPTO_EVENTO[item.departamento] ?? ""}`
       : item.origen === "club"
         ? " mkt-evento-club-react"
-        : "";
+        : item.origen === "luma"
+          ? " mkt-evento-luma-react"
+          : "";
     const etiquetaDepto = item.departamento ? DEPTO_LABEL[item.departamento as Team] : null;
 
     return (
@@ -471,6 +521,7 @@ export function CalendarPanel({
         onClick={() => void abrir(item)}
       >
         {item.hora ? <span className="mkt-evento-hora-react">{item.hora}</span> : null}
+        {item.hora ? <span className="mkt-evento-sep-react" aria-hidden="true">·</span> : null}
         <span className="mkt-evento-texto-react">{item.titulo}</span>
         {/* Las caras solo caben en la rejilla horaria de la semana: en una
             celda del mes empujaban el título fuera de la cajita. Quién lo
@@ -529,88 +580,107 @@ export function CalendarPanel({
   }
 
   return (
-    <section className="mkt-panel-react">
+    <section className="mkt-panel-react cal-v3-react">
       {error ? <AlertBanner variant="error" message={error} /> : null}
 
-      <header className="crm-cabecera-react">
-        <h3 className="crm-h1">{tituloDeVista()}</h3>
-        <div className="crm-tags-react" role="group" aria-label="Vista del calendario">
+      <header className="cal-cabecera-react">
+        <p className="crm-sub">
+          Tareas, publicaciones, reuniones, eventos del club y de Luma, en hora de Madrid.
+        </p>
+        {vista === "mes" ? (
           <button
             type="button"
-            className={`crm-tag${vista === "mes" ? " crm-tag-azul-react" : ""}`}
-            aria-pressed={vista === "mes"}
-            onClick={() => setVista("mes")}
+            className="cal-anadir-react"
+            onClick={() => {
+              const ahora = new Date();
+              setCursor(new Date(ahora.getFullYear(), ahora.getMonth(), 1));
+              setTituloNuevo("");
+              setDiaAbierto(hoy);
+            }}
           >
-            Mes
+            <span aria-hidden="true">+</span> Añadir
           </button>
-          <button
-            type="button"
-            className={`crm-tag${vista === "semana" ? " crm-tag-azul-react" : ""}`}
-            aria-pressed={vista === "semana"}
-            onClick={() => setVista("semana")}
-          >
-            Semana
-          </button>
-          <button type="button" className="crm-tag" onClick={() => mover(-1)}>
-            ← Anterior
-          </button>
-          <button type="button" className="crm-tag" onClick={irAHoy}>
-            Hoy
-          </button>
-          <button type="button" className="crm-tag" onClick={() => mover(1)}>
-            Siguiente →
-          </button>
-        </div>
+        ) : null}
       </header>
 
-      <div className="mkt-calendario-layout-react">
-        <aside className="crm-c mkt-capas-react">
-          <p className="crm-k">Capas</p>
-          <div className="mkt-filtros-react mkt-capas-lista-react" role="group" aria-label="Departamentos visibles">
-            <label
-              className={`crm-tag crm-tag-check-react${
-                todosDepartamentos ? " crm-tag-azul-react" : ""
-              }`}
-            >
-              <input
-                type="checkbox"
-                className="crm-check"
-                checked={todosDepartamentos}
-                onChange={(event) => setTodosDepartamentos(event.target.checked)}
-              />
-              Todos
-            </label>
-            {/* No es un filtro como los de abajo: los eventos del club salen
-                siempre, se esté mirando el departamento que se esté mirando.
-                Está aquí porque "Capas" es también la leyenda de colores, y
-                un cuarto color sin entrada no se podría leer. */}
-            <span
-              className="crm-tag mkt-evento-club-react"
-              title="Charlas de alumni, ferias, asambleas... Los pone el club desde /admin y salen siempre."
-            >
-              Club
-            </span>
-            {todosDepartamentos
-              ? TEAMS.map((depto) => (
-                  <button
-                    key={depto}
-                    type="button"
-                    className={`crm-tag ${DEPTO_TAG[depto]}`}
-                    aria-pressed={deptosFiltro.includes(depto)}
-                    onClick={() =>
-                      setDeptosFiltro((actuales) =>
-                        actuales.includes(depto)
-                          ? actuales.filter((d) => d !== depto)
-                          : [...actuales, depto],
-                      )
-                    }
-                  >
-                    {DEPTO_LABEL[depto]}
-                  </button>
-                ))
-              : null}
+      <div className="cal-tarjeta-react">
+        <div className="cal-barra-react">
+          <div className="cal-navegacion-react">
+            <button type="button" className="cal-flecha-react" aria-label="Anterior" onClick={() => mover(-1)}>
+              ‹
+            </button>
+            <button type="button" className="cal-flecha-react" aria-label="Siguiente" onClick={() => mover(1)}>
+              ›
+            </button>
+            <button type="button" className="cal-hoy-react" onClick={irAHoy}>
+              Hoy
+            </button>
+            <h3 className="cal-titulo-react">{tituloDeVista()}</h3>
           </div>
-        </aside>
+          <div className="cal-segmentos-react" role="group" aria-label="Vista del calendario">
+            <button type="button" aria-pressed={vista === "mes"} onClick={() => setVista("mes")}>
+              Mes
+            </button>
+            <button
+              type="button"
+              aria-pressed={vista === "semana"}
+              onClick={() => {
+                // Desde el mes, la semana que interesa es la de hoy si hoy cae
+                // en ese mes; si no, la primera del mes que se estaba mirando.
+                const ahora = new Date();
+                if (vista === "mes" && ahora.getMonth() === cursor.getMonth() && ahora.getFullYear() === cursor.getFullYear()) {
+                  setCursor(ahora);
+                }
+                setVista("semana");
+              }}
+            >
+              Semana
+            </button>
+          </div>
+        </div>
+
+        <div className="cal-capas-react" role="group" aria-label="Capas visibles">
+          <label className={`cal-capa-react${todosDepartamentos ? " cal-capa-activa-react" : ""}`}>
+            <input
+              type="checkbox"
+              checked={todosDepartamentos}
+              onChange={(event) => setTodosDepartamentos(event.target.checked)}
+            />
+            Todos los departamentos
+          </label>
+          {todosDepartamentos
+            ? TEAMS.map((depto) => (
+                <button
+                  key={depto}
+                  type="button"
+                  className={`cal-capa-react cal-capa-${depto}-react`}
+                  aria-pressed={deptosFiltro.includes(depto)}
+                  onClick={() =>
+                    setDeptosFiltro((actuales) =>
+                      actuales.includes(depto)
+                        ? actuales.filter((d) => d !== depto)
+                        : [...actuales, depto],
+                    )
+                  }
+                >
+                  {DEPTO_LABEL[depto]}
+                </button>
+              ))
+            : null}
+          {/* Los eventos del club salen siempre: no es un filtro, es la
+              leyenda de su color. */}
+          <span className="cal-capa-react cal-capa-club-react" aria-pressed="true">
+            Club
+          </span>
+          <button
+            type="button"
+            className="cal-capa-react cal-capa-luma-react"
+            aria-pressed={verLuma}
+            onClick={() => setVerLuma((v) => !v)}
+          >
+            Luma
+          </button>
+        </div>
 
         <div className="mkt-calendario-principal-react">
       {isLoading ? (
@@ -623,31 +693,32 @@ export function CalendarPanel({
       ) : null}
 
       {!isLoading && vista === "mes" ? (
-        <div className="mkt-calendario-react">
-          {DIAS.map((dia) => (
-            <div key={dia} className="mkt-calendario-cabecera-react">
-              {dia}
+        <div className="cal-mes-react">
+          {DIAS.map((dia, i) => (
+            <div key={dia} className={`cal-mes-cabecera-react${i >= 5 ? " cal-finde-react" : ""}`}>
+              <span className="cal-dia-largo-react">{dia}</span>
+              <span className="cal-dia-corto-react" aria-hidden="true">{DIAS_CORTOS[i]}</span>
             </div>
           ))}
 
-          {celdasDelMes(cursor.getFullYear(), cursor.getMonth()).map((fecha, indice) => {
-            if (fecha === null) {
-              return <div key={`hueco-${indice}`} className="mkt-dia-vacio-react" />;
-            }
-
+          {celdasDelMes(cursor.getFullYear(), cursor.getMonth()).map(({ fecha, fuera }, indice) => {
             const clave = iso(fecha);
-            const delDia = porDia[clave] ?? [];
+            const delDia = fuera ? [] : porDia[clave] ?? [];
             const visibles = delDia.slice(0, MAX_POR_DIA);
             const ocultos = delDia.length - visibles.length;
+            const finde = indice % 7 >= 5;
 
             return (
               <div
                 key={clave}
-                className={`mkt-dia-react${clave === hoy ? " mkt-dia-hoy-react" : ""}`}
+                className={`cal-celda-react${clave === hoy ? " cal-hoy-celda-react" : ""}${
+                  fuera ? " cal-fuera-react" : ""
+                }${finde ? " cal-finde-react" : ""}`}
               >
                 <button
                   type="button"
-                  className="mkt-dia-numero-react"
+                  className="cal-numero-react"
+                  disabled={fuera}
                   aria-label={`Añadir tarea el ${fecha.getDate()} de ${MESES[fecha.getMonth()]}`}
                   onClick={() => {
                     setTituloNuevo("");
@@ -655,15 +726,21 @@ export function CalendarPanel({
                   }}
                 >
                   {fecha.getDate()}
-                  <span aria-hidden="true" className="mkt-dia-mas-react">
-                    +
-                  </span>
                 </button>
 
                 {visibles.map((item) => botonEvento(item))}
 
                 {ocultos > 0 ? (
-                  <span className="mkt-dia-mas-eventos-react">+{ocultos} más</span>
+                  <button
+                    type="button"
+                    className="cal-mas-react"
+                    onClick={() => {
+                      setCursor(fecha);
+                      setVista("semana");
+                    }}
+                  >
+                    +{ocultos} más
+                  </button>
                 ) : null}
 
                 {diaAbierto === clave
@@ -676,7 +753,7 @@ export function CalendarPanel({
       ) : null}
 
       {!isLoading && vista === "mes" ? (
-        <p className="crm-s">Toca un día para añadir una tarea.</p>
+        <p className="crm-s cal-pista-react">Toca el número de un día para añadir una tarea ahí.</p>
       ) : null}
 
       {/* Vista semana: una rejilla de horas de verdad, como Google Calendar.
@@ -872,16 +949,6 @@ export function CalendarPanel({
         </DeptoProvider>
       ) : null}
 
-      <div className="mkt-calendario-fila-inferior-react">
-        <div className="crm-c mkt-sincronizacion-react">
-          <p className="crm-k">Sincronización</p>
-          <ul className="mkt-sincronizacion-lista-react">
-            <li>Las tareas con fecha límite se colocan solas en su día.</li>
-            <li>Toca un día para añadir una tarea directamente ahí.</li>
-            <li>El filtro de capas no cambia el menú, solo lo que ves aquí.</li>
-          </ul>
-        </div>
-      </div>
         </div>
       </div>
     </section>
