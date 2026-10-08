@@ -10,6 +10,7 @@ from backend.config import (
     CARGOS_VALIDOS,
     EQUIPOS_VALIDOS,
     LOGIN_BLOCK_WINDOW_SECONDS,
+    LUMA_CALENDAR_URL,
     MAX_DNI_LEN,
     MAX_EMAIL_LEN,
     MAX_LOGIN_ATTEMPTS_PER_WINDOW,
@@ -17,6 +18,7 @@ from backend.config import (
 )
 from backend.schemas import build_response
 from backend.services.admin import is_admin_authenticated
+from backend.services.luma import eventos_luma
 from backend.services.equipo import (
     confirmar_evento_calendario,
     crear_evento_calendario,
@@ -187,6 +189,14 @@ def api_equipo_calendario():
 
     init_equipo_db()
     return jsonify({"ok": True, "eventos": listar_eventos_calendario()}), 200
+
+
+@equipo_api.route("/luma", methods=["GET"])
+def api_equipo_luma():
+    """Próximos eventos del calendario de Luma del club (ver services/luma.py)."""
+    if not is_equipo_authenticated():
+        return jsonify(build_response(False, "No autorizado.")), 401
+    return jsonify({"ok": True, "calendario": LUMA_CALENDAR_URL, "eventos": eventos_luma()}), 200
 
 
 @equipo_api.route("/calendario", methods=["POST"])

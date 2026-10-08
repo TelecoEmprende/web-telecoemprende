@@ -53,6 +53,13 @@ RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "")
 RESEND_FROM_EMAIL = os.environ.get("RESEND_FROM_EMAIL", "inscripciones@telecoemprende.es")
 RESEND_FROM_NAME = os.environ.get("RESEND_FROM_NAME", "TelecoEmprende")
 
+# Calendario público de Luma del que salen los eventos del Inicio de /equipo
+# (ver services/luma.py). Es el feed iCal abierto del calendario: no hace
+# falta clave. Para cambiar de calendario basta con su id `cal-...` (está en
+# el HTML de la página pública) y su URL.
+LUMA_CALENDAR_ID = os.environ.get("LUMA_CALENDAR_ID", "cal-rdO2naybCwmas2F")
+LUMA_CALENDAR_URL = os.environ.get("LUMA_CALENDAR_URL", "https://luma.com/alumni.etsit.upm")
+
 # Avisos a Slack (Incoming Webhook). Sin la variable no se envía nada y el
 # resto sigue funcionando igual (ver services/slack.py).
 SLACK_WEBHOOK_URL = os.environ.get("SLACK_WEBHOOK_URL", "")
