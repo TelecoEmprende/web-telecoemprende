@@ -132,6 +132,15 @@
   padding: 22px 26px 60px;
 }
 
+/* `PanelAnimado` envuelve la sección entera en un solo `div`: el hueco entre
+   cajas tiene que ponerlo él, o el `gap` de arriba no llega a ninguna. */
+.crm-react .workspace-contenido-react > div {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+
 /* ---------- Marca en la cabecera del sidebar ---------- */
 
 .workspace-marca-react {
@@ -1240,4 +1249,1104 @@ a.crm-tag:focus-visible,
 .crm-react [data-slot="avatar-group"] > [data-slot="avatar"],
 .crm-react [data-slot="avatar-group-count"] {
   box-shadow: 0 0 0 2px var(--color-surface);
+}
+
+/* ==========================================================================
+   CRM v3 — "Papel y Azul" (oct 2026)
+
+   Evolución del sistema de arriba, no un sistema nuevo: las seis piezas
+   siguen siendo las mismas. Lo que cambia es el carácter:
+
+   - Cajas más grandes y más aire (16px de radio, sombra en dos capas muy
+     suave) sobre el Papel, para que el trabajo se lea por bloques.
+   - Una sola losa de color por pantalla: el saludo del Inicio en Azul TE,
+     con los círculos del sistema gráfico de la marca (Impulso y Chispa)
+     entrando por la esquina, como la portada de la web.
+   - Los números grandes van en Anton -- es lo único que "grita" en el
+     workspace; el resto sigue en la tipografía de cuerpo.
+   ========================================================================== */
+
+.crm-react .crm-c {
+  padding: 18px 20px;
+  border-color: rgba(var(--color-noche-rgb), 0.07);
+  border-radius: 16px;
+  box-shadow:
+    0 1px 2px rgba(var(--color-noche-rgb), 0.04),
+    0 12px 32px -18px rgba(var(--color-noche-rgb), 0.18);
+}
+
+.crm-react .crm-c-oscura-react {
+  border-color: var(--color-noche);
+}
+
+/* "Más": rótulo de grupo que se despliega. */
+.workspace-grupo-plegable-react {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  cursor: pointer;
+  background: none;
+  border: 0;
+}
+
+.workspace-grupo-plegable-react svg {
+  width: 14px;
+  height: 14px;
+  transition: transform var(--dur-menu) var(--ease-out);
+}
+
+[data-state="open"] > .workspace-grupo-plegable-react svg,
+.workspace-grupo-plegable-react[data-state="open"] svg {
+  transform: rotate(90deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .workspace-grupo-plegable-react svg {
+    transition: none;
+  }
+}
+
+/* ---------- Piezas pequeñas que faltaban ---------- */
+
+.crm-btn-icono-react {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.crm-btn-icono-react svg {
+  width: 15px;
+  height: 15px;
+}
+
+.crm-btn-peligro-react {
+  background: var(--color-error-text);
+}
+
+.crm-btn-peligro-react:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--color-error-text) 85%, var(--color-noche));
+}
+
+.crm-select-react {
+  padding: 8px 10px;
+  border: 1px solid rgba(var(--color-noche-rgb), 0.14);
+  border-radius: 8px;
+  background: var(--color-surface);
+  color: var(--color-navy);
+  font-family: inherit;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.crm-select-react:focus-visible {
+  outline: 2px solid var(--color-azul);
+  outline-offset: 1px;
+}
+
+kbd {
+  padding: 1px 6px;
+  border: 1px solid rgba(var(--color-noche-rgb), 0.18);
+  border-bottom-width: 2px;
+  border-radius: 5px;
+  font-family: inherit;
+  font-size: 0.75em;
+  font-weight: 600;
+}
+
+/* ==========================================================================
+   Inicio
+   ========================================================================== */
+
+.inicio-hero-react {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 30px 32px;
+  border-radius: 20px;
+  background: var(--gradient-profundidad);
+  color: var(--color-text-on-dark);
+}
+
+/* Los círculos de la marca: uno grande en Impulso saliendo por la esquina y
+   uno pequeño en Chispa, como en la portada. */
+.inicio-hero-react::before,
+.inicio-hero-react::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  border-radius: 50%;
+}
+
+.inicio-hero-react::before {
+  width: 240px;
+  height: 240px;
+  right: -60px;
+  top: -150px;
+  background: var(--color-impulso);
+}
+
+.inicio-hero-react::after {
+  width: 54px;
+  height: 54px;
+  right: 196px;
+  top: 18px;
+  background: var(--color-chispa);
+}
+
+.inicio-hero-texto-react {
+  min-width: 0;
+  max-width: 640px;
+}
+
+.inicio-hero-fecha-react {
+  margin: 0 0 10px;
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--color-text-on-dark-muted);
+}
+
+.inicio-hero-saludo-react {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: clamp(2rem, 5cqi, 3.1rem);
+  line-height: var(--leading-display);
+  letter-spacing: var(--tracking-display);
+  text-transform: uppercase;
+  color: var(--color-text-on-dark);
+}
+
+.inicio-hero-sub-react {
+  margin: 10px 0 0;
+  font-size: 0.92rem;
+  color: var(--color-text-on-dark);
+  opacity: 0.88;
+}
+
+.inicio-hero-sub-react::first-letter {
+  text-transform: uppercase;
+}
+
+.inicio-hero-acciones-react {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.inicio-hero-acciones-react .crm-btn {
+  padding: 11px 16px;
+}
+
+/* Botón secundario sobre azul: velo claro, texto blanco. */
+.inicio-btn-claro-react {
+  padding: 11px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--color-text-on-dark);
+  font-family: inherit;
+  font-size: 0.78rem;
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+  backdrop-filter: blur(6px);
+  transition: background var(--dur-fast) var(--ease-out);
+}
+
+.inicio-btn-claro-react:hover {
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.inicio-btn-claro-react:focus-visible,
+.inicio-hero-react .crm-btn:focus-visible {
+  outline: 2px solid var(--color-chispa);
+  outline-offset: 2px;
+}
+
+/* ---------- Cifras ---------- */
+
+.inicio-kpis-react {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.inicio-kpi-react {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  min-width: 0;
+  padding: 16px 18px;
+  border: 1px solid rgba(var(--color-noche-rgb), 0.07);
+  border-radius: 16px;
+  background: var(--color-surface);
+  box-shadow: 0 1px 2px rgba(var(--color-noche-rgb), 0.04);
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color var(--dur-fast) var(--ease-out),
+    transform var(--dur-press) var(--ease-out);
+}
+
+.inicio-kpi-react:hover {
+  border-color: rgba(var(--color-azul-rgb), 0.35);
+}
+
+.inicio-kpi-react:active {
+  transform: scale(0.98);
+}
+
+.inicio-kpi-react:focus-visible {
+  outline: 2px solid var(--color-azul);
+  outline-offset: 2px;
+}
+
+.inicio-kpi-num-react {
+  font-family: var(--font-display);
+  font-size: 2.4rem;
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: var(--tracking-display);
+  text-transform: uppercase;
+  color: var(--color-noche);
+}
+
+.inicio-kpi-alerta-react {
+  color: var(--color-impulso);
+}
+
+.inicio-kpi-recorte-react,
+.inicio-recorte-react {
+  display: -webkit-box;
+  max-width: 100%;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 1;
+}
+
+.inicio-recorte-react {
+  -webkit-line-clamp: 2;
+}
+
+/* ---------- Rejilla de cajas ---------- */
+
+.inicio-bento-react {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 16px;
+  align-items: stretch;
+}
+
+.inicio-span-7-react { grid-column: span 7; }
+.inicio-span-5-react { grid-column: span 5; }
+.inicio-span-4-react { grid-column: span 4; }
+
+/* Listas largas dentro de una caja: se desplazan dentro, no estiran la fila
+   de la rejilla hasta dejar la caja vecina medio vacía. */
+.inicio-scroll-react {
+  max-height: 360px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+.inicio-dia-react span {
+  font-weight: 500;
+}
+
+.inicio-dia-react b {
+  font-weight: 700;
+  color: var(--color-noche);
+}
+
+.crm-semana-hoy-react .inicio-dia-react b {
+  display: inline-grid;
+  place-items: center;
+  min-width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--color-impulso);
+  color: var(--color-text-on-dark);
+}
+
+/* Fecha en bloque en "Próximos eventos": el día grande, el mes debajo. */
+.inicio-fecha-react {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 46px;
+  border-radius: 10px;
+  background: rgba(var(--color-azul-rgb), 0.08);
+  color: var(--color-azul);
+  line-height: 1;
+}
+
+.inicio-fecha-react b {
+  font-family: var(--font-display);
+  font-size: 1.3rem;
+  font-weight: 400;
+}
+
+.inicio-fecha-react span {
+  margin-top: 2px;
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* "Pendiente en notas": la nota como cabecera y sus casillas debajo. */
+.inicio-pendientes-react {
+  padding: 10px 0;
+  border-top: 1px solid rgba(var(--color-noche-rgb), 0.07);
+}
+
+.inicio-pendientes-react:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.inicio-pendientes-nota-react {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-noche);
+  font-family: inherit;
+  font-size: 0.86rem;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.inicio-pendientes-nota-react:hover {
+  color: var(--color-azul);
+}
+
+.inicio-pendientes-nota-react span {
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: rgba(var(--color-impulso-rgb), 0.12);
+  color: var(--color-info-text);
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+
+.inicio-pendientes-react ul {
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.inicio-pendientes-react li {
+  position: relative;
+  padding: 3px 0 3px 22px;
+  font-size: 0.82rem;
+  color: var(--color-noche);
+}
+
+/* Casilla vacía dibujada: es una lista de cosas por hacer, no un menú. */
+.inicio-pendientes-react li:not(.crm-s)::before {
+  content: "";
+  position: absolute;
+  left: 2px;
+  top: 6px;
+  width: 12px;
+  height: 12px;
+  border: 1.5px solid rgba(var(--color-noche-rgb), 0.3);
+  border-radius: 4px;
+}
+
+@container (max-width: 980px) {
+  .inicio-span-7-react,
+  .inicio-span-5-react {
+    grid-column: span 12;
+  }
+
+  .inicio-span-4-react {
+    grid-column: span 6;
+  }
+
+  .inicio-kpis-react {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@container (max-width: 620px) {
+  .inicio-span-4-react {
+    grid-column: span 12;
+  }
+
+  .inicio-hero-react {
+    padding: 24px 20px;
+  }
+
+  .inicio-hero-react::before {
+    width: 150px;
+    height: 150px;
+    top: -95px;
+    right: -45px;
+  }
+
+  .inicio-hero-react::after {
+    display: none;
+  }
+
+  .inicio-kpi-num-react {
+    font-size: 2rem;
+  }
+}
+
+/* ==========================================================================
+   Notas
+   ========================================================================== */
+
+.notas-react {
+  display: grid;
+  grid-template-columns: minmax(240px, 300px) minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.notas-lista-react {
+  position: sticky;
+  top: 76px;
+  max-height: calc(100vh - 100px);
+  overflow: hidden;
+}
+
+.notas-buscar-react {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 10px;
+  border: 1px solid rgba(var(--color-noche-rgb), 0.12);
+  border-radius: 8px;
+  color: var(--color-text-muted);
+}
+
+.notas-buscar-react svg {
+  width: 15px;
+  height: 15px;
+  flex: none;
+}
+
+.notas-buscar-react input {
+  flex: 1;
+  min-width: 0;
+  padding: 9px 0;
+  border: 0;
+  background: none;
+  color: var(--color-noche);
+  font-family: inherit;
+  font-size: 0.82rem;
+}
+
+.notas-buscar-react input:focus {
+  outline: none;
+}
+
+.notas-buscar-react:focus-within {
+  border-color: var(--color-azul);
+}
+
+.notas-items-react {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0 -8px;
+  padding: 0;
+  list-style: none;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+.notas-item-react {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+  padding: 10px 10px;
+  border: 0;
+  border-radius: 10px;
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out);
+}
+
+.notas-item-react:hover {
+  background: rgba(var(--color-noche-rgb), 0.04);
+}
+
+.notas-item-react:focus-visible {
+  outline: 2px solid var(--color-azul);
+  outline-offset: -2px;
+}
+
+.notas-item-activa-react,
+.notas-item-activa-react:hover {
+  background: rgba(var(--color-azul-rgb), 0.08);
+}
+
+.notas-item-titulo-react {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: var(--color-noche);
+}
+
+.notas-item-titulo-react svg {
+  width: 13px;
+  height: 13px;
+  flex: none;
+  color: var(--color-azul);
+}
+
+.notas-item-resumen-react {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.notas-item-meta-react {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 0.68rem;
+  font-weight: 500;
+  color: var(--color-text-muted);
+}
+
+.notas-item-checks-react {
+  color: var(--color-impulso);
+  font-weight: 700;
+}
+
+.notas-vacio-react {
+  padding: 8px 0;
+}
+
+.crm-react .notas-pagina-react {
+  min-height: 70vh;
+  padding: 18px 28px 28px;
+}
+
+.notas-barra-react {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(var(--color-noche-rgb), 0.07);
+}
+
+.notas-guardado-react {
+  margin-left: auto;
+}
+
+.notas-volver-react {
+  display: none;
+  align-items: center;
+  gap: 6px;
+}
+
+.notas-volver-react svg {
+  width: 14px;
+  height: 14px;
+}
+
+.notas-titulo-react {
+  width: 100%;
+  margin-top: 14px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-noche);
+  font-family: var(--font-body);
+  font-size: clamp(1.6rem, 3cqi, 2.2rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+}
+
+.notas-titulo-react::placeholder {
+  color: rgba(var(--color-noche-rgb), 0.28);
+}
+
+.notas-titulo-react:focus {
+  outline: none;
+}
+
+.notas-autoria-react {
+  margin: -4px 0 0;
+}
+
+/* BlockNote trae su propio margen lateral para el asa de arrastrar: se le
+   deja sitio en vez de recortarlo. */
+.notas-editor-react {
+  margin: 0 -28px 0 -54px;
+  min-height: 240px;
+}
+
+.notas-editor-react .bn-editor {
+  padding-inline: 54px 28px;
+  background: transparent;
+}
+
+/* Los titulares de la web (Anton en mayúsculas) se cuelan en los h1-h3 del
+   editor. Una nota es un documento, no un cartel: titulares en la letra de
+   cuerpo, como el título de la propia nota. */
+.notas-editor-react .bn-editor :is(h1, h2, h3) {
+  font-family: var(--font-body);
+  font-weight: 700;
+  text-transform: none;
+  letter-spacing: -0.015em;
+  line-height: 1.25;
+  color: var(--color-noche);
+}
+
+.notas-placeholder-react {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  max-width: 480px;
+  margin: auto 0;
+  padding: 40px 0;
+}
+
+.notas-placeholder-titulo-react {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.8rem;
+  font-weight: 400;
+  line-height: var(--leading-display);
+  letter-spacing: var(--tracking-display);
+  text-transform: uppercase;
+  color: var(--color-noche);
+}
+
+/* Estrecho: o la lista o la nota, con "← Notas" para volver. */
+@container (max-width: 760px) {
+  .notas-react {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .notas-lista-react {
+    position: static;
+    max-height: none;
+  }
+
+  .notas-con-abierta-react .notas-lista-react {
+    display: none;
+  }
+
+  .notas-react:not(.notas-con-abierta-react) .notas-pagina-react {
+    display: none;
+  }
+
+  .notas-volver-react {
+    display: inline-flex;
+  }
+
+  .crm-react .notas-pagina-react {
+    padding: 14px 16px 22px;
+  }
+
+  .notas-editor-react {
+    margin: 0 -16px;
+  }
+
+  .notas-editor-react .bn-editor {
+    padding-inline: 16px;
+  }
+}
+
+/* ==========================================================================
+   Sidebar flotante (oct 2026)
+
+   Una tarjeta blanca redondeada que flota sobre el Papel, separada del
+   borde, en vez de una columna pegada. Las entradas son píldoras; la del
+   activo es una sola píldora Noche que se desliza de una a otra (ver
+   `layoutId` en EquipoSidebar.tsx), con su contador en Chispa.
+
+   Todo cuelga de `.crm-sidebar-react` y no de `.crm-react`: en móvil el
+   sidebar se pinta en un portal fuera del workspace y ahí no llegaría.
+   ========================================================================== */
+
+.crm-sidebar-react {
+  --sidebar: var(--color-surface);
+  --sidebar-foreground: var(--color-noche);
+  --sidebar-primary: var(--color-noche);
+  --sidebar-primary-foreground: var(--color-text-on-dark);
+  --sidebar-accent: rgba(var(--color-noche-rgb), 0.05);
+  --sidebar-accent-foreground: var(--color-noche);
+  --sidebar-border: rgba(var(--color-noche-rgb), 0.07);
+  --sidebar-ring: var(--color-azul);
+  font-family: var(--font-body);
+}
+
+/* El hueco alrededor de la tarjeta. */
+.crm-sidebar-react[data-slot="sidebar-container"] {
+  padding: 12px 0 12px 12px;
+}
+
+.crm-sidebar-react [data-slot="sidebar-inner"] {
+  border: 1px solid rgba(var(--color-noche-rgb), 0.07);
+  border-radius: 28px;
+  box-shadow:
+    0 1px 2px rgba(var(--color-noche-rgb), 0.04),
+    0 18px 40px -24px rgba(var(--color-noche-rgb), 0.25);
+  overflow: hidden;
+}
+
+.crm-sidebar-react [data-slot="sidebar-header"] {
+  gap: 10px;
+  padding: 16px 14px 6px;
+}
+
+.crm-sidebar-react [data-slot="sidebar-content"] {
+  padding: 0 6px;
+}
+
+.crm-sidebar-react [data-slot="sidebar-group-label"] {
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: rgba(var(--color-noche-rgb), 0.5);
+}
+
+/* ---------- Marca y contexto ---------- */
+
+.crm-sidebar-react .workspace-marca-logo-react {
+  width: 38px;
+  height: 38px;
+  padding: 3px;
+  border-radius: 12px;
+  background: var(--color-papel);
+}
+
+.crm-sidebar-react .workspace-marca-texto-react strong {
+  font-size: 1.3rem;
+}
+
+.workspace-contexto-react {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 9px 12px 9px 9px;
+  border-radius: 18px;
+  background: var(--color-papel);
+}
+
+.workspace-contexto-icono-react {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--color-surface);
+  color: var(--color-noche);
+}
+
+.workspace-contexto-icono-react svg {
+  width: 17px;
+  height: 17px;
+}
+
+.workspace-contexto-texto-react {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.25;
+}
+
+.workspace-contexto-texto-react strong {
+  overflow: hidden;
+  font-size: 0.86rem;
+  font-weight: 600;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.workspace-contexto-texto-react span {
+  font-size: 0.74rem;
+  color: var(--color-text-muted);
+}
+
+/* ---------- Entradas ---------- */
+
+.crm-sidebar-react .workspace-item-react {
+  position: relative;
+  isolation: isolate;
+  height: 38px;
+  padding: 0 14px;
+  /* Sin el reset de Tailwind, un <button> trae su borde de 2px de fábrica. */
+  border: 0;
+  background: none;
+  font-family: inherit;
+  border-radius: 999px;
+  font-size: 0.93rem;
+  font-weight: 500;
+  color: rgba(var(--color-noche-rgb), 0.82);
+  transition: color var(--dur-fast) var(--ease-out),
+    background var(--dur-fast) var(--ease-out);
+}
+
+.crm-sidebar-react .workspace-item-react > svg {
+  width: 18px;
+  height: 18px;
+}
+
+.crm-sidebar-react [data-slot="sidebar-group"] {
+  padding-block: 4px;
+}
+
+.crm-sidebar-react .workspace-item-react:hover {
+  background: rgba(var(--color-noche-rgb), 0.05);
+  color: var(--color-noche);
+}
+
+/* El fondo del activo lo pone la píldora deslizante, no el botón. */
+.crm-sidebar-react [data-slot="sidebar-menu-button"][data-active="true"],
+.crm-sidebar-react [data-slot="sidebar-menu-button"][data-active="true"]:hover {
+  background: transparent;
+  color: var(--color-text-on-dark);
+  font-weight: 600;
+}
+
+.workspace-activo-react {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: 999px;
+  background: var(--color-noche);
+}
+
+.workspace-cuenta-react {
+  margin-left: auto;
+  min-width: 26px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(var(--color-noche-rgb), 0.06);
+  color: var(--color-noche);
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+[data-active="true"] > .workspace-cuenta-react {
+  background: var(--color-chispa);
+  color: var(--color-noche);
+}
+
+.crm-sidebar-react .workspace-grupo-plegable-react {
+  color: rgba(var(--color-noche-rgb), 0.5);
+}
+
+/* ---------- Pie: próximo evento y perfil ---------- */
+
+.crm-sidebar-react [data-slot="sidebar-footer"] {
+  gap: 8px;
+  padding: 8px 10px 12px;
+}
+
+.workspace-evento-react {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 22px;
+  background: var(--color-chispa);
+  color: var(--color-noche);
+}
+
+.workspace-evento-cabecera-react {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.workspace-evento-icono-react {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--color-noche);
+  color: var(--color-chispa);
+}
+
+.workspace-evento-icono-react svg {
+  width: 16px;
+  height: 16px;
+}
+
+.workspace-evento-texto-react {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.25;
+}
+
+.workspace-evento-texto-react strong {
+  overflow: hidden;
+  font-size: 0.84rem;
+  font-weight: 600;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.workspace-evento-texto-react span {
+  font-size: 0.74rem;
+  color: rgba(var(--color-noche-rgb), 0.75);
+}
+
+.workspace-evento-boton-react {
+  display: flex;
+  text-decoration: none;
+  align-items: center;
+  justify-content: space-between;
+  padding: 9px 14px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--color-surface);
+  color: var(--color-noche);
+  font-family: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform var(--dur-press) var(--ease-out);
+}
+
+.workspace-evento-boton-react svg {
+  width: 15px;
+  height: 15px;
+}
+
+.workspace-evento-boton-react:active {
+  transform: scale(0.97);
+}
+
+.workspace-evento-boton-react:focus-visible,
+.workspace-icono-react:focus-visible {
+  outline: 2px solid var(--color-azul);
+  outline-offset: 2px;
+}
+
+.crm-sidebar-react .workspace-perfil-react {
+  gap: 10px;
+  padding: 8px 8px 8px 9px;
+  border: 0;
+  border-radius: 20px;
+  background: var(--color-papel);
+}
+
+.crm-sidebar-react .workspace-perfil-react .crm-av {
+  width: 34px;
+  height: 34px;
+}
+
+.crm-sidebar-react .workspace-perfil-texto-react {
+  flex: 1;
+}
+
+.workspace-perfil-acciones-react {
+  display: flex;
+  gap: 2px;
+}
+
+.workspace-icono-react {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: rgba(var(--color-noche-rgb), 0.6);
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out);
+}
+
+.workspace-icono-react svg {
+  width: 16px;
+  height: 16px;
+}
+
+.workspace-icono-react:hover {
+  background: var(--color-surface);
+  color: var(--color-noche);
+}
+
+.workspace-icono-react:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* ---------- Plegado a iconos ---------- */
+
+[data-state="collapsed"] .workspace-contexto-react,
+[data-state="collapsed"] .workspace-evento-react,
+[data-state="collapsed"] .workspace-cuenta-react {
+  display: none;
+}
+
+[data-state="collapsed"] .crm-sidebar-react [data-slot="sidebar-header"] {
+  padding-inline: 8px;
+}
+
+[data-state="collapsed"] .crm-sidebar-react .workspace-item-react {
+  padding: 0;
+  justify-content: center;
+}
+
+/* Solo el icono: la etiqueta ya sale en el tooltip. */
+[data-state="collapsed"] .workspace-item-react > span:not(.workspace-activo-react) {
+  display: none;
+}
+
+[data-state="collapsed"] .crm-sidebar-react .workspace-perfil-react {
+  flex-direction: column;
+  padding: 6px 0;
+}
+
+[data-state="collapsed"] .workspace-perfil-acciones-react {
+  flex-direction: column;
+}
+
+/* La barra de arriba ya no es una franja blanca: se funde con el Papel,
+   como el resto del lienzo alrededor de la tarjeta del sidebar. */
+.crm-react .workspace-barra-react {
+  border-bottom: 0;
+  background: color-mix(in srgb, var(--color-papel) 88%, transparent);
+  backdrop-filter: blur(10px);
 }

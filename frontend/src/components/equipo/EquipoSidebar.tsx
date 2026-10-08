@@ -3,6 +3,7 @@ import {
   Activity,
   BarChart3,
   CalendarDays,
+  ChevronRight,
   ExternalLink,
   FolderOpen,
   GitBranch,
@@ -12,6 +13,7 @@ import {
   LogOut,
   Megaphone,
   Megaphone as Anuncio,
+  NotebookPen,
   ScrollText,
   ServerCog,
   Settings,
@@ -19,7 +21,13 @@ import {
   Users2,
   Wallet,
 } from "lucide-react";
+import { LayoutGroup, motion, useReducedMotion } from "motion/react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+
+import { SPRING_DEFAULT } from "@/components/smoothui/lib/animation";
+
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 import {
   Sidebar,
@@ -35,14 +43,24 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { AvatarResponsable, etiquetaDe } from "./marketing/Avatares";
+import { getEquipoCalendario, getEventosLuma, getMisTareas } from "../../api/equipo";
+import { listarNotas } from "../../api/notas";
 import { GITHUB_REPO, type Cargo, type Team } from "../../types/equipo";
+
+/** El próximo evento, venga del calendario del club o de Luma. */
+type Proximo = { titulo: string; fecha: string; hora: string; url: string };
 
 /** Una entrada de la navegación: un panel, no un par departamento+panel. Antes
  *  cada departamento repetía su propio "Tareas"/"Campañas"/"Miembros" en el
  *  sidebar; ahora hay una sola entrada por panel, siempre con la misma
  *  etiqueta -- el filtro de departamento (checkboxes dentro del panel, ver
  *  `EquipoPage.tsx`) no toca nunca el sidebar. */
-type Item = { id: Seccion; label: string; icono: LucideIcon };
+type Item = { id: Seccion; label: string; icono: LucideIcon; grupo: Grupo };
+
+/** Los grupos del sidebar, en orden. "Más" va plegado: es lo que solo usa un
+ *  departamento y no hace falta ver cada día. */
+export type Grupo = "Inicio" | "Trabajo" | "Club" | "Más";
+const GRUPOS: Grupo[] = ["Inicio", "Trabajo", "Club", "Más"];
 
 export type Panel =
   | "tareas"
@@ -56,7 +74,8 @@ export type Panel =
   | "decisiones"
   | "servicios";
 
-export type Seccion = "club" | "metricas" | "calendario" | "anuncios" | Panel;
+export type Seccion =
+  | "club" | "notas" | "metricas" | "calendario" | "anuncios" | Panel;
 
 /** Qué panel tiene cada departamento. Los tres comparten Tareas, Recursos y
  *  Miembros; Campañas es de Marketing/Eventos (Ingeniería no tiene, ver
@@ -108,33 +127,35 @@ export function equiposConPanel(panel: Panel, teams: Team[]): Team[] {
   return teams.filter((t) => PANELES_POR_EQUIPO[t].includes(panel));
 }
 
-/** Todas las secciones visibles para esa persona, en el orden del sidebar --
- *  primero lo del boceto (Mi semana, Tareas, Proyectos, Calendario, Miembros,
- *  Avisos), luego lo que no sale ahí porque es de un departamento concreto
- *  (Recursos, Presupuesto, Reuniones, Alumni). Métricas y Presupuesto no
- *  están aquí -- son del grupo "Admin" (ver `EquipoSidebar`). */
+/** Todas las secciones visibles para esa persona, en el orden del sidebar y
+ *  con su grupo: Inicio (lo personal: resumen y notas), Trabajo
+ *  (tareas, proyectos, calendario), Club (gente, avisos, reuniones, recursos)
+ *  y Más (lo propio de un solo departamento). Métricas y Presupuesto no están
+ *  aquí -- son del grupo "Admin" (ver `EquipoSidebar`). */
 export function seccionesDe(teams: Team[]): Item[] {
   const paneles = new Set<Panel>(teams.flatMap((t) => PANELES_POR_EQUIPO[t]));
-  const item = (id: Panel): Item[] =>
-    paneles.has(id) ? [{ id, label: ETIQUETA_PANEL[id], icono: ICONO[id] }] : [];
+  const item = (id: Panel, grupo: Grupo): Item[] =>
+    paneles.has(id) ? [{ id, label: ETIQUETA_PANEL[id], icono: ICONO[id], grupo }] : [];
+  const conEquipo = teams.length > 0;
 
   return [
-    { id: "club", label: "Mi semana", icono: Home },
-    ...item("tareas"),
-    ...item("campanas"),
-    ...(teams.length > 0
-      ? [{ id: "calendario" as const, label: "Calendario", icono: CalendarDays }]
+    { id: "club", label: "Inicio", icono: Home, grupo: "Inicio" },
+    { id: "notas", label: "Notas", icono: NotebookPen, grupo: "Inicio" },
+    ...item("tareas", "Trabajo"),
+    ...item("campanas", "Trabajo"),
+    ...(conEquipo
+      ? [{ id: "calendario" as const, label: "Calendario", icono: CalendarDays, grupo: "Trabajo" as const }]
       : []),
-    ...item("miembros"),
-    ...(teams.length > 0
-      ? [{ id: "anuncios" as const, label: "Avisos", icono: Anuncio }]
+    ...item("miembros", "Club"),
+    ...(conEquipo
+      ? [{ id: "anuncios" as const, label: "Avisos", icono: Anuncio, grupo: "Club" as const }]
       : []),
-    ...item("recursos"),
-    ...item("reuniones"),
-    ...item("alumni"),
-    ...item("plataforma"),
-    ...item("servicios"),
-    ...item("decisiones"),
+    ...item("reuniones", "Club"),
+    ...item("recursos", "Club"),
+    ...item("plataforma", "Más"),
+    ...item("servicios", "Más"),
+    ...item("decisiones", "Más"),
+    ...item("alumni", "Más"),
   ];
 }
 
@@ -173,6 +194,14 @@ function papelDe(cargo: Cargo, vpDe: Team[], teams: Team[]) {
   return "Equipo";
 }
 
+/** "Mar 14 oct · 18:00" para la tarjeta del próximo evento. */
+function cuandoEvento(fecha: string, hora: string) {
+  const [anio, mes, dia] = fecha.split("-").map(Number);
+  const texto = new Intl.DateTimeFormat("es-ES", { weekday: "short", day: "numeric", month: "short" })
+    .format(new Date(anio, mes - 1, dia));
+  return hora ? `${texto} · ${hora}` : texto;
+}
+
 export function EquipoSidebar({
   seccion,
   onSeccion,
@@ -186,10 +215,73 @@ export function EquipoSidebar({
   isLoggingOut,
 }: Props) {
   const { state, isMobile, setOpenMobile } = useSidebar();
+  const menosMovimiento = useReducedMotion();
+  const [masAbierto, setMasAbierto] = useState(false);
+  const [cuentas, setCuentas] = useState<Partial<Record<Seccion, number>>>({});
+  const [proximo, setProximo] = useState<Proximo | null>(null);
 
   const ayuda = (label: string) => (state === "collapsed" ? label : undefined);
   const esBoardOVp = cargo === "presidente" || cargo === "boardmember" || vpDe.length > 0;
   const tienePresupuesto = equiposConPanel("presupuesto", teams).length > 0;
+
+  // Los numeritos de al lado (tareas abiertas, notas) y la tarjeta del
+  // próximo evento. Se vuelven a pedir al cambiar de sección: es cuando lo
+  // que hay detrás ha podido cambiar (se cerró una tarea, se creó una nota).
+  useEffect(() => {
+    let activo = true;
+    getMisTareas()
+      .then((r) => {
+        if (activo && r.ok) {
+          const abiertas = r.tareas.filter((t) => t.estado !== "acabado").length;
+          setCuentas((c) => ({ ...c, tareas: abiertas }));
+        }
+      })
+      .catch(() => {
+        // Sin cuenta, la entrada sale sin numerito.
+      });
+    listarNotas()
+      .then((r) => {
+        if (activo && r.ok) setCuentas((c) => ({ ...c, notas: r.notas.length }));
+      })
+      .catch(() => {
+        // Sin cuenta, la entrada sale sin numerito.
+      });
+    return () => {
+      activo = false;
+    };
+  }, [seccion]);
+
+  useEffect(() => {
+    let activo = true;
+    const dos = (n: number) => String(n).padStart(2, "0");
+    Promise.allSettled([getEquipoCalendario(), getEventosLuma()]).then(([club, luma]) => {
+      if (!activo) return;
+      const ahora = new Date();
+      const hoy = `${ahora.getFullYear()}-${dos(ahora.getMonth() + 1)}-${dos(ahora.getDate())}`;
+      const candidatos: Proximo[] = [];
+      if (club.status === "fulfilled" && club.value.ok) {
+        for (const e of club.value.eventos) {
+          if (e.fecha >= hoy) candidatos.push({ titulo: e.titulo, fecha: e.fecha, hora: e.hora, url: "" });
+        }
+      }
+      if (luma.status === "fulfilled" && luma.value.ok) {
+        for (const e of luma.value.eventos) {
+          const d = new Date(e.inicio);
+          candidatos.push({
+            titulo: e.titulo,
+            fecha: `${d.getFullYear()}-${dos(d.getMonth() + 1)}-${dos(d.getDate())}`,
+            hora: `${dos(d.getHours())}:${dos(d.getMinutes())}`,
+            url: e.url || luma.value.calendario,
+          });
+        }
+      }
+      candidatos.sort((a, b) => (a.fecha + a.hora).localeCompare(b.fecha + b.hora));
+      setProximo(candidatos[0] ?? null);
+    });
+    return () => {
+      activo = false;
+    };
+  }, []);
 
   function elegir(id: Seccion) {
     onSeccion(id);
@@ -200,125 +292,204 @@ export function EquipoSidebar({
   // Métricas, Presupuesto y el panel de administración son herramientas de
   // gestión, no de trabajo diario: un solo grupo "Admin" en vez de mezclarlas
   // con Tareas/Proyectos/Miembros o repartirlas sueltas por el sidebar.
-  const itemsAdmin: Item[] = [
+  const itemsAdmin: Omit<Item, "grupo">[] = [
     ...(esBoardOVp ? [{ id: "metricas" as const, label: "Métricas", icono: BarChart3 }] : []),
     ...(tienePresupuesto
       ? [{ id: "presupuesto" as const, label: "Presupuesto", icono: Wallet }]
       : []),
   ];
 
+  /** Una entrada. La píldora del activo es UNA sola (`layoutId`) que se
+   *  desliza de una entrada a otra en vez de apagarse aquí y encenderse
+   *  allí: así se ve de dónde vienes y a dónde vas. */
+  const boton = ({ id, label, icono: Icono }: Omit<Item, "grupo">) => {
+    const activo = seccion === id;
+    const cuenta = cuentas[id];
+    return (
+      <SidebarMenuItem key={id}>
+        <SidebarMenuButton
+          isActive={activo}
+          aria-current={activo ? "page" : undefined}
+          onClick={() => elegir(id)}
+          tooltip={ayuda(label)}
+          className="workspace-item-react"
+        >
+          {activo ? (
+            <motion.span
+              layoutId="workspace-activo"
+              className="workspace-activo-react"
+              aria-hidden="true"
+              transition={menosMovimiento ? { duration: 0 } : SPRING_DEFAULT}
+            />
+          ) : null}
+          <Icono />
+          <span>{label}</span>
+          {cuenta ? <span className="workspace-cuenta-react">{cuenta}</span> : null}
+        </SidebarMenuButton>
+      </SidebarMenuItem>
+    );
+  };
+
   return (
-    <Sidebar collapsible="icon">
+    <Sidebar
+      collapsible="icon"
+      variant="floating"
+      // En móvil el sidebar se pinta en un portal fuera del workspace: sin
+      // estas clases se queda sin los colores ni las utilidades de Tailwind.
+      className={isMobile ? "shadcn-scope crm-sidebar-react" : "crm-sidebar-react"}
+    >
       <SidebarHeader>
         <div className="workspace-marca-react">
           <img src="/logo.png" alt="" className="workspace-marca-logo-react" />
           <span className="workspace-marca-texto-react">
             <strong>TelecoEmprende</strong>
-            <span>{cargo ? CARGO_LABEL[cargo] : "Equipo"}</span>
           </span>
         </div>
+        {teams.length > 0 ? (
+          <div className="workspace-contexto-react">
+            <span className="workspace-contexto-icono-react" aria-hidden="true">
+              <Users />
+            </span>
+            <span className="workspace-contexto-texto-react">
+              <strong>{teams.map((t) => TEAM_LABEL[t]).join(" + ")}</strong>
+              <span>{cargo ? CARGO_LABEL[cargo] : vpDe.length > 0 ? "VP" : "Equipo"}</span>
+            </span>
+          </div>
+        ) : null}
       </SidebarHeader>
 
       <SidebarContent>
         <nav aria-label="Secciones de /equipo">
-          <SidebarGroup>
-            <SidebarGroupLabel>Club</SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                {items.map(({ id, label, icono: Icono }) => (
-                  <SidebarMenuItem key={id}>
-                    <SidebarMenuButton
-                      isActive={seccion === id}
-                      aria-current={seccion === id ? "page" : undefined}
-                      onClick={() => elegir(id)}
-                      tooltip={ayuda(label)}
-                    >
-                      <Icono />
-                      <span>{label}</span>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
+          <LayoutGroup>
+            {GRUPOS.map((grupo) => {
+              const delGrupo = items.filter((i) => i.grupo === grupo);
+              if (delGrupo.length === 0) return null;
+              if (grupo === "Más") {
+                return (
+                  <Collapsible
+                    key={grupo}
+                    open={masAbierto || state === "collapsed" || delGrupo.some((i) => i.id === seccion)}
+                    onOpenChange={setMasAbierto}
+                    asChild
+                  >
+                    <SidebarGroup>
+                      <SidebarGroupLabel asChild>
+                        <CollapsibleTrigger className="workspace-grupo-plegable-react">
+                          Más
+                          <ChevronRight aria-hidden="true" />
+                        </CollapsibleTrigger>
+                      </SidebarGroupLabel>
+                      <CollapsibleContent>
+                        <SidebarGroupContent>
+                          <SidebarMenu>{delGrupo.map(boton)}</SidebarMenu>
+                        </SidebarGroupContent>
+                      </CollapsibleContent>
+                    </SidebarGroup>
+                  </Collapsible>
+                );
+              }
+              return (
+                <SidebarGroup key={grupo}>
+                  {/* El primer grupo no lleva rótulo, como en el boceto:
+                      Inicio y Notas son la puerta de entrada, no una sección. */}
+                  {grupo === "Inicio" ? null : <SidebarGroupLabel>{grupo}</SidebarGroupLabel>}
+                  <SidebarGroupContent>
+                    <SidebarMenu>{delGrupo.map(boton)}</SidebarMenu>
+                  </SidebarGroupContent>
+                </SidebarGroup>
+              );
+            })}
 
-          {itemsAdmin.length > 0 || tieneAccesoAdmin ? (
-            <SidebarGroup>
-              <SidebarGroupLabel>Admin</SidebarGroupLabel>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  {itemsAdmin.map(({ id, label, icono: Icono }) => (
-                    <SidebarMenuItem key={id}>
-                      <SidebarMenuButton
-                        isActive={seccion === id}
-                        aria-current={seccion === id ? "page" : undefined}
-                        onClick={() => elegir(id)}
-                        tooltip={ayuda(label)}
-                      >
-                        <Icono />
-                        <span>{label}</span>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  ))}
-                  {tieneAccesoAdmin ? (
-                    <SidebarMenuItem>
-                      <SidebarMenuButton asChild tooltip={ayuda("Panel admin")}>
-                        <Link to="/admin">
-                          <Settings />
-                          <span>Panel admin</span>
-                        </Link>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  ) : null}
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </SidebarGroup>
-          ) : null}
+            {itemsAdmin.length > 0 || tieneAccesoAdmin ? (
+              <SidebarGroup>
+                <SidebarGroupLabel>Admin</SidebarGroupLabel>
+                <SidebarGroupContent>
+                  <SidebarMenu>
+                    {itemsAdmin.map(boton)}
+                    {tieneAccesoAdmin ? (
+                      <SidebarMenuItem>
+                        <SidebarMenuButton asChild tooltip={ayuda("Panel admin")} className="workspace-item-react">
+                          <Link to="/admin">
+                            <Settings />
+                            <span>Panel admin</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    ) : null}
+                  </SidebarMenu>
+                </SidebarGroupContent>
+              </SidebarGroup>
+            ) : null}
+          </LayoutGroup>
         </nav>
       </SidebarContent>
 
       <SidebarFooter>
-        {email ? (
-          <div className="workspace-perfil-react">
-            <AvatarResponsable email={email} nombre={nombre} className="crm-av" />
-            <span className="workspace-perfil-texto-react">
-              <strong>{etiquetaDe(email, nombre)}</strong>
-              <span>{papelDe(cargo, vpDe, teams)}</span>
-            </span>
+        {proximo ? (
+          <div className="workspace-evento-react">
+            <div className="workspace-evento-cabecera-react">
+              <span className="workspace-evento-icono-react" aria-hidden="true">
+                <CalendarDays />
+              </span>
+              <span className="workspace-evento-texto-react">
+                <strong>{proximo.titulo}</strong>
+                <span>{cuandoEvento(proximo.fecha, proximo.hora)}</span>
+              </span>
+            </div>
+            {proximo.url ? (
+              <a
+                className="workspace-evento-boton-react"
+                href={proximo.url}
+                target="_blank"
+                rel="noreferrer noopener"
+              >
+                Apuntarme en Luma
+                <ChevronRight aria-hidden="true" />
+              </a>
+            ) : (
+              <button type="button" className="workspace-evento-boton-react" onClick={() => elegir("calendario")}>
+                Ver calendario
+                <ChevronRight aria-hidden="true" />
+              </button>
+            )}
           </div>
         ) : null}
 
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton asChild tooltip={ayuda("Ver la web")}>
-              <Link to="/">
-                <ExternalLink />
-                <span>Ver la web</span>
+        <div className="workspace-perfil-react">
+            {email ? <AvatarResponsable email={email} nombre={nombre} className="crm-av" /> : null}
+            <span className="workspace-perfil-texto-react">
+              <strong>{email ? etiquetaDe(email, nombre) : nombre || "Equipo"}</strong>
+              <span>{papelDe(cargo, vpDe, teams)}</span>
+            </span>
+            <span className="workspace-perfil-acciones-react">
+              <Link to="/" className="workspace-icono-react" title="Ver la web">
+                <ExternalLink aria-hidden="true" />
+                <span className="sr-only">Ver la web</span>
               </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-          {teams.includes("ingenieria") ? (
-            <SidebarMenuItem>
-              <SidebarMenuButton asChild tooltip={ayuda("GitHub")}>
-                <a href={GITHUB_REPO} target="_blank" rel="noreferrer noopener">
-                  <GitBranch />
-                  <span>GitHub</span>
-                  <span className="sr-only">(se abre en otra pestaña)</span>
+              {teams.includes("ingenieria") ? (
+                <a
+                  href={GITHUB_REPO}
+                  target="_blank"
+                  rel="noreferrer noopener"
+                  className="workspace-icono-react"
+                  title="GitHub"
+                >
+                  <GitBranch aria-hidden="true" />
+                  <span className="sr-only">GitHub (se abre en otra pestaña)</span>
                 </a>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          ) : null}
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              tooltip={ayuda("Cerrar sesión")}
-              onClick={onLogout}
-              disabled={isLoggingOut}
-            >
-              <LogOut />
-              <span>{isLoggingOut ? "Saliendo..." : "Cerrar sesión"}</span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
+              ) : null}
+              <button
+                type="button"
+                className="workspace-icono-react"
+                title="Cerrar sesión"
+                onClick={onLogout}
+                disabled={isLoggingOut}
+              >
+                <LogOut aria-hidden="true" />
+                <span className="sr-only">{isLoggingOut ? "Saliendo..." : "Cerrar sesión"}</span>
+              </button>
+            </span>
+        </div>
       </SidebarFooter>
     </Sidebar>
   );

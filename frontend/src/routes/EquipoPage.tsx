@@ -15,6 +15,7 @@ import {
 import { EquipoLoginForm, type ModoAcceso } from "../components/equipo/EquipoLoginForm";
 import { DeptoDashboard } from "../components/equipo/DeptoDashboard";
 import { MetricasPanel } from "../components/equipo/MetricasPanel";
+import { NotasPanel } from "../components/equipo/notas/NotasPanel";
 import { PanelAnimado } from "../components/movimiento";
 import type { ApiFailure } from "../types/api";
 import type { Cargo, Team } from "../types/equipo";
@@ -58,6 +59,8 @@ export function EquipoPage() {
   // compartido (?campaign=, ver el efecto de abajo) o porque se saltó aquí
   // desde un evento del calendario de otro departamento (`abrirCampaign`).
   const [campaignInicial, setCampaignInicial] = useState<number | null>(null);
+  // La nota que "Notas" abre al montar (desde el Inicio).
+  const [notaInicial, setNotaInicial] = useState<number | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
 
   useEffect(() => {
@@ -184,6 +187,11 @@ export function EquipoPage() {
     setSeccion("campanas");
   }
 
+  function abrirNota(id: number) {
+    setNotaInicial(id);
+    setSeccion("notas");
+  }
+
   // El equipo de ingeniería (y presidencia/board) no tiene secciones propias
   // aquí: su acceso ya incluye sesión de /admin (ver login_equipo en el
   // backend), así que el sidebar solo les ofrece el enlace a ese panel.
@@ -278,7 +286,15 @@ export function EquipoPage() {
           <div className="workspace-contenido-react">
             <PanelAnimado llave={seccion}>
             {seccion === "club" ? (
-              <CalendarioEquipo onIrA={setSeccion} />
+              <CalendarioEquipo onIrA={setSeccion} onAbrirNota={abrirNota} />
+            ) : null}
+            {seccion === "notas" ? (
+              <NotasPanel
+                email={perfil.email}
+                teams={teams}
+                notaInicial={notaInicial}
+                onNotaAbierta={() => setNotaInicial(null)}
+              />
             ) : null}
             {seccion === "metricas" ? <MetricasPanel /> : null}
             {esPanel(seccion) || seccion === "calendario" || seccion === "anuncios" ? (

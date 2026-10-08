@@ -31,6 +31,10 @@ const getPlataforma = vi.fn();
 // workspace pide los datos de los suyos y no de los del otro.
 const deptosPedidos: string[] = [];
 
+vi.mock("../../api/notas", () => ({
+  listarNotas: () => Promise.resolve({ ok: true, notas: [] }),
+}));
+
 vi.mock("../../api/marketing", () => ({
   apiDepto: (depto: string) => {
     deptosPedidos.push(depto);
@@ -94,8 +98,7 @@ vi.mock("../../api/equipo", () => ({
   getMisTareas: () => Promise.resolve({ ok: true, tareas: [] }),
   getMisProyectos: () => Promise.resolve({ ok: true, proyectos: [] }),
   getDirectorioClub: () => Promise.resolve({ ok: true, miembros: [] }),
-  confirmarEventoCalendario: vi.fn(),
-  checkinEventoCalendario: vi.fn(),
+  getEventosLuma: () => Promise.resolve({ ok: true, calendario: "", eventos: [] }),
   logoutEquipo: () => Promise.resolve({ ok: true }),
   loginEquipo: vi.fn(),
 }));
@@ -782,7 +785,7 @@ describe("/equipo — panel de Marketing", () => {
     await renderMarketing();
 
     const nav = screen.getByRole("navigation", { name: "Secciones de /equipo" });
-    expect(within(nav).getByRole("button", { name: "Mi semana" })).toHaveAttribute(
+    expect(within(nav).getByRole("button", { name: "Inicio" })).toHaveAttribute(
       "aria-current",
       "page",
     );
@@ -953,7 +956,7 @@ describe("/equipo — panel de Eventos", () => {
     // de Marketing: nunca dice "Gestiones"/"Eventos" -- eso, si acaso, va en
     // el título de la página, nunca en el sidebar (ver EquipoSidebar.tsx).
     for (const panel of [
-      "Mi semana", "Tareas", "Proyectos", "Calendario",
+      "Inicio", "Notas", "Tareas", "Proyectos", "Calendario",
       "Recursos", "Presupuesto", "Reuniones", "Miembros", "Avisos",
     ]) {
       expect(screen.getByRole("button", { name: panel })).toBeInTheDocument();
@@ -1132,6 +1135,8 @@ describe("/equipo — Ingeniería", () => {
 
   it("Plataforma enseña el estado y enlaza el commit desplegado con GitHub", async () => {
     await renderMarketing();
+    // Los paneles de un solo departamento van en el grupo plegable "Más".
+    await userEvent.click(screen.getByRole("button", { name: "Más" }));
     await userEvent.click(screen.getByRole("button", { name: "Plataforma" }));
 
     const commit = await screen.findByRole("link", { name: /Ver el commit en GitHub/ });
@@ -1148,6 +1153,8 @@ describe("/equipo — Ingeniería", () => {
     getPlataforma.mockResolvedValue({ ...PLATAFORMA, base_de_datos: { ok: false, ms: null } });
 
     await renderMarketing();
+    // Los paneles de un solo departamento van en el grupo plegable "Más".
+    await userEvent.click(screen.getByRole("button", { name: "Más" }));
     await userEvent.click(screen.getByRole("button", { name: "Plataforma" }));
 
     expect(await screen.findByText("Sin respuesta")).toBeInTheDocument();
@@ -1157,6 +1164,8 @@ describe("/equipo — Ingeniería", () => {
     getPlataforma.mockRejectedValue({ message: "No autorizado." });
 
     await renderMarketing();
+    // Los paneles de un solo departamento van en el grupo plegable "Más".
+    await userEvent.click(screen.getByRole("button", { name: "Más" }));
     await userEvent.click(screen.getByRole("button", { name: "Plataforma" }));
 
     expect(await screen.findByText("No autorizado.")).toBeInTheDocument();
@@ -1171,6 +1180,8 @@ describe("/equipo — Ingeniería", () => {
     ]);
 
     await renderMarketing();
+    // Los paneles de un solo departamento van en el grupo plegable "Más".
+    await userEvent.click(screen.getByRole("button", { name: "Más" }));
     await userEvent.click(screen.getByRole("button", { name: "Servicios" }));
 
     expect(await screen.findByText("Renueva en 10 d")).toBeInTheDocument();
@@ -1194,6 +1205,8 @@ describe("/equipo — Ingeniería", () => {
     ]);
 
     await renderMarketing();
+    // Los paneles de un solo departamento van en el grupo plegable "Más".
+    await userEvent.click(screen.getByRole("button", { name: "Más" }));
     await userEvent.click(screen.getByRole("button", { name: "Decisiones" }));
 
     expect(await screen.findByText("Postgres en Supabase")).toBeInTheDocument();
