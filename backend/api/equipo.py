@@ -199,6 +199,18 @@ def api_equipo_luma():
     return jsonify({"ok": True, "calendario": LUMA_CALENDAR_URL, "eventos": eventos_luma()}), 200
 
 
+@equipo_api.route("/accesos", methods=["GET"])
+def api_equipo_accesos():
+    """Enlaces del club para Herramientas: los servicios marcados como acceso
+    para todo el club (ver `accesos_club`). Cualquiera con sesión de equipo."""
+    if not is_equipo_authenticated():
+        return jsonify(build_response(False, "No autorizado.")), 401
+    from backend.services.registros import accesos_club, init_registros_db
+
+    init_registros_db()
+    return jsonify({"ok": True, "luma": LUMA_CALENDAR_URL, "accesos": accesos_club()}), 200
+
+
 @equipo_api.route("/calendario", methods=["POST"])
 def api_equipo_crear_calendario():
     """VPs pueden añadir eventos al calendario del club sin pasar por /admin

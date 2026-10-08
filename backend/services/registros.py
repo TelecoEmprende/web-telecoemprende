@@ -85,7 +85,10 @@ DECISIONES = Tabla(
 
 SERVICIOS = Tabla(
     nombre="servicios",
-    columnas=("nombre", "tipo", "url", "responsables", "renovacion", "estado", "notas"),
+    columnas=(
+        "nombre", "tipo", "url", "responsables", "renovacion", "estado", "notas",
+        "visible_club",
+    ),
     orden="nombre",
 )
 
@@ -223,6 +226,12 @@ def _crear_tablas_registros():
                     updated_at TIMESTAMP NOT NULL DEFAULT NOW()
                 )
             """)
+            # Un servicio marcado así sale a todo el club en Herramientas
+            # (Slack, el grupo de WhatsApp...), no solo a Ingeniería.
+            cur.execute(
+                "ALTER TABLE servicios"
+                " ADD COLUMN IF NOT EXISTS visible_club BOOLEAN NOT NULL DEFAULT FALSE"
+            )
             for tabla in (RECURSOS, PRESUPUESTO, REUNIONES, ALUMNI, DECISIONES, SERVICIOS):
                 cur.execute(
                     f"CREATE INDEX IF NOT EXISTS {tabla.nombre}_depto_idx"
@@ -321,6 +330,19 @@ def eliminar(tabla: Tabla, fila_id: int, departamento: str | None = None) -> boo
             eliminado = cur.rowcount > 0
         conn.commit()
     return eliminado
+
+
+def accesos_club() -> list[dict]:
+    """Los servicios que Ingeniería ha marcado como acceso para todo el club,
+    con su enlace: lo único que sale de esta tabla fuera de Ingeniería."""
+    with _get_connection() as conn:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(
+                "SELECT id, nombre, tipo, url, notas FROM servicios"
+                " WHERE visible_club AND url <> '' AND estado <> 'baja'"
+                " ORDER BY nombre"
+            )
+            return [dict(f) for f in cur.fetchall()]
 
 
 def resumen_presupuesto(departamento: str) -> dict:

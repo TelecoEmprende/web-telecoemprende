@@ -294,67 +294,6 @@ export function ReunionesPanel() {
 }
 
 // --------------------------------------------------------------------------
-// Red Alumni
-// --------------------------------------------------------------------------
-
-const CAMPOS_ALUMNI: readonly CampoSpec[] = [
-  { clave: "nombre", etiqueta: "Nombre", tipo: "texto", requerido: true },
-  { clave: "promocion", etiqueta: "Promoción", tipo: "texto", ayuda: "El año en que salió." },
-  { clave: "empresa", etiqueta: "Empresa", tipo: "texto" },
-  { clave: "puesto", etiqueta: "Puesto", tipo: "texto" },
-  { clave: "email", etiqueta: "Email", tipo: "texto" },
-  { clave: "linkedin", etiqueta: "LinkedIn", tipo: "url" },
-  {
-    clave: "estado",
-    etiqueta: "Estado del contacto",
-    tipo: "opcion",
-    opciones: [
-      { valor: "pendiente", etiqueta: "Pendiente" },
-      { valor: "contactado", etiqueta: "Contactado" },
-      { valor: "en_conversacion", etiqueta: "En conversación" },
-      { valor: "colabora", etiqueta: "Colabora" },
-      { valor: "descartado", etiqueta: "Descartado" },
-    ],
-  },
-  {
-    clave: "notas",
-    etiqueta: "Notas",
-    tipo: "parrafo",
-    ayuda: "De qué se habló, qué podría aportar, cuándo volver a escribirle.",
-  },
-];
-
-export function AlumniPanel() {
-  return (
-    <RegistrosPanel
-      recurso="alumni"
-      descripcion="Quién pasó por el club o por la escuela, dónde está ahora y por dónde va la conversación."
-      vacio="La red está vacía. Empieza por quien ya conocéis: es más fácil que se apunte quien ya estuvo."
-      etiquetaNuevo="Nuevo contacto"
-      campos={CAMPOS_ALUMNI}
-      fila={(r) => {
-        const estado = textoDe(r, "estado");
-        return {
-          titulo: textoDe(r, "nombre"),
-          meta: [textoDe(r, "puesto"), textoDe(r, "empresa"), textoDe(r, "promocion")]
-            .filter(Boolean)
-            .join(" · "),
-          badges: (
-            <span className="mkt-tags-react">
-              <span className={`reg-estado-react reg-estado-${estado}-react`}>
-                {etiqueta(CAMPOS_ALUMNI, "estado", estado)}
-              </span>
-            </span>
-          ),
-          derecha: <Enlace url={textoDe(r, "linkedin")} texto="LinkedIn" />,
-          cuerpo: textoDe(r, "notas") ? <p>{textoDe(r, "notas")}</p> : null,
-        };
-      }}
-    />
-  );
-}
-
-// --------------------------------------------------------------------------
 // Decisiones técnicas (Ingeniería)
 // --------------------------------------------------------------------------
 
@@ -484,6 +423,12 @@ const CAMPOS_SERVICIOS: readonly CampoSpec[] = [
     tipo: "parrafo",
     ayuda: "Qué hay ahí y qué hay que saber. Nunca pegues aquí contraseñas ni claves.",
   },
+  {
+    clave: "visible_club",
+    etiqueta: "Acceso para todo el club",
+    tipo: "check",
+    ayuda: "Sale en Herramientas para cualquiera del equipo (Slack, el grupo de WhatsApp...). Solo el enlace, nunca credenciales.",
+  },
 ];
 
 /** Días de margen para avisar de una renovación. Un dominio que caduca sin
@@ -520,6 +465,7 @@ export function ServiciosPanel() {
               <span className={`reg-estado-react reg-estado-${estado}-react`}>
                 {etiqueta(CAMPOS_SERVICIOS, "estado", estado)}
               </span>
+              {r.visible_club ? <span className="reg-estado-react">En Herramientas</span> : null}
               {vigilar ? (
                 <span
                   className={`reg-estado-react${dias < 0 ? " reg-estado-caducado-react" : ""}`}

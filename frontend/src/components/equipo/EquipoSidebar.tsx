@@ -1,13 +1,11 @@
 import type { LucideIcon } from "lucide-react";
 import {
-  Activity,
   BarChart3,
   CalendarDays,
   ChevronRight,
   ExternalLink,
   FolderOpen,
   GitBranch,
-  Handshake,
   Home,
   KanbanSquare,
   LogOut,
@@ -15,11 +13,11 @@ import {
   Megaphone as Anuncio,
   NotebookPen,
   ScrollText,
-  ServerCog,
   Settings,
   Users,
   Users2,
   Wallet,
+  Wrench,
 } from "lucide-react";
 import { LayoutGroup, motion, useReducedMotion } from "motion/react";
 import { useEffect, useState } from "react";
@@ -69,25 +67,22 @@ export type Panel =
   | "recursos"
   | "presupuesto"
   | "reuniones"
-  | "alumni"
-  | "plataforma"
-  | "decisiones"
-  | "servicios";
+  | "decisiones";
 
 export type Seccion =
-  | "club" | "notas" | "metricas" | "calendario" | "anuncios" | Panel;
+  | "club" | "notas" | "herramientas" | "metricas" | "calendario" | "anuncios" | Panel;
 
 /** Qué panel tiene cada departamento. Los tres comparten Tareas, Recursos y
  *  Miembros; Campañas es de Marketing/Eventos (Ingeniería no tiene);
- *  Presupuesto es de quien mueve dinero (Eventos) y Alumni, Plataforma,
- *  Servicios y Decisiones de Ingeniería. Esto decide qué panel aparece
+ *  Presupuesto es de quien mueve dinero (Eventos) y Decisiones de
+ *  Ingeniería (Plataforma y Servicios viven en Herramientas). Esto decide qué panel aparece
  *  (`seccionesDe`) y qué departamentos ofrece el filtro dentro de cada uno
  *  (`equiposConPanel`). */
 const PANELES_POR_EQUIPO: Record<Team, Panel[]> = {
   marketing: ["campanas", "tareas", "recursos", "miembros"],
   eventos: ["campanas", "tareas", "recursos", "presupuesto", "reuniones", "miembros"],
   ingenieria: [
-    "tareas", "plataforma", "servicios", "decisiones", "alumni", "reuniones", "recursos", "miembros",
+    "tareas", "decisiones", "reuniones", "recursos", "miembros",
   ],
 };
 
@@ -98,10 +93,7 @@ const ICONO: Record<Panel, LucideIcon> = {
   recursos: FolderOpen,
   presupuesto: Wallet,
   reuniones: Users2,
-  alumni: Handshake,
-  plataforma: Activity,
   decisiones: ScrollText,
-  servicios: ServerCog,
 };
 
 /** Etiqueta del panel en el sidebar: siempre la misma, para todo el mundo,
@@ -116,10 +108,7 @@ const ETIQUETA_PANEL: Record<Panel, string> = {
   recursos: "Recursos",
   presupuesto: "Presupuesto",
   reuniones: "Reuniones",
-  alumni: "Red Alumni",
-  plataforma: "Plataforma",
   decisiones: "Decisiones",
-  servicios: "Servicios",
 };
 
 /** Qué departamentos de la persona tienen este panel -- para el filtro
@@ -153,10 +142,8 @@ export function seccionesDe(teams: Team[]): Item[] {
       : []),
     ...item("reuniones", "Club"),
     ...item("recursos", "Club"),
-    ...item("plataforma", "Más"),
-    ...item("servicios", "Más"),
+    { id: "herramientas", label: "Herramientas", icono: Wrench, grupo: "Club" },
     ...item("decisiones", "Más"),
-    ...item("alumni", "Más"),
   ];
 }
 

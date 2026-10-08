@@ -2344,3 +2344,552 @@ kbd {
   background: color-mix(in srgb, var(--color-papel) 88%, transparent);
   backdrop-filter: blur(10px);
 }
+
+/* ==========================================================================
+   Calendario (oct 2026)
+
+   Una tarjeta blanca grande con la barra dentro (flechas, Hoy, mes y el
+   selector Mes/Semana en píldora), las capas en línea y una rejilla de
+   líneas finas: días de los meses vecinos atenuados, fin de semana en Papel
+   y hoy marcado en azul. Cada elemento es una cajita con franja del color
+   de su capa: Tech = Azul, Marketing = Impulso, Eventos = Noche,
+   Club = Chispa y Luma = Chispa con borde discontinuo (es de fuera: se
+   apunta uno allí).
+   ========================================================================== */
+
+.cal-v3-react {
+  --cal-linea: rgba(var(--color-noche-rgb), 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.cal-cabecera-react {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.cal-cabecera-react .crm-sub {
+  margin: 0;
+  font-size: 0.92rem;
+}
+
+.cal-anadir-react {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 20px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--color-azul);
+  color: var(--color-text-on-dark);
+  font-family: inherit;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform var(--dur-press) var(--ease-out),
+    background var(--dur-fast) var(--ease-out);
+}
+
+.cal-anadir-react span {
+  font-size: 1.15rem;
+  line-height: 1;
+}
+
+.cal-anadir-react:hover {
+  background: var(--color-azul-profundo);
+}
+
+.cal-anadir-react:active {
+  transform: scale(0.97);
+}
+
+.cal-tarjeta-react {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+  padding: 20px 22px 22px;
+  border: 1px solid rgba(var(--color-noche-rgb), 0.06);
+  border-radius: 28px;
+  background: var(--color-surface);
+  box-shadow:
+    0 1px 2px rgba(var(--color-noche-rgb), 0.04),
+    0 18px 40px -26px rgba(var(--color-noche-rgb), 0.22);
+}
+
+/* ---------- Barra ---------- */
+
+.cal-barra-react {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.cal-navegacion-react {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.cal-flecha-react {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  padding: 0 0 2px;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: var(--color-noche);
+  font-family: inherit;
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out);
+}
+
+.cal-flecha-react:hover {
+  background: rgba(var(--color-noche-rgb), 0.06);
+}
+
+.cal-hoy-react {
+  margin: 0 8px 0 4px;
+  padding: 7px 14px;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(var(--color-noche-rgb), 0.05);
+  color: var(--color-text-muted);
+  font-family: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.cal-hoy-react:hover {
+  background: rgba(var(--color-noche-rgb), 0.09);
+  color: var(--color-noche);
+}
+
+.cal-titulo-react {
+  margin: 0;
+  font-family: var(--font-body);
+  font-size: 1.35rem;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  color: var(--color-noche);
+  white-space: nowrap;
+}
+
+/* Mes / Semana: píldora blanca que se mueve sobre un carril de Papel. */
+.cal-segmentos-react {
+  display: inline-flex;
+  padding: 4px;
+  border-radius: 999px;
+  background: rgba(var(--color-noche-rgb), 0.05);
+}
+
+.cal-segmentos-react button {
+  padding: 7px 18px;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  color: var(--color-text-muted);
+  font-family: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out);
+}
+
+.cal-segmentos-react button[aria-pressed="true"] {
+  background: var(--color-surface);
+  color: var(--color-noche);
+  box-shadow: 0 1px 3px rgba(var(--color-noche-rgb), 0.14);
+}
+
+.cal-v3-react :is(.cal-flecha-react, .cal-hoy-react, .cal-segmentos-react button, .cal-capa-react, .cal-numero-react, .cal-mas-react, .cal-anadir-react):focus-visible {
+  outline: 2px solid var(--color-azul);
+  outline-offset: 2px;
+}
+
+/* ---------- Capas ---------- */
+
+.cal-capas-react {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.cal-capa-react {
+  --capa: var(--color-noche);
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 11px 5px 9px;
+  border: 1px solid rgba(var(--color-noche-rgb), 0.1);
+  border-radius: 999px;
+  background: var(--color-surface);
+  color: var(--color-noche);
+  font-family: inherit;
+  font-size: 0.76rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity var(--dur-fast) var(--ease-out);
+}
+
+.cal-capa-react::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--capa);
+}
+
+.cal-capa-react[aria-pressed="false"] {
+  opacity: 0.45;
+}
+
+label.cal-capa-react::before {
+  display: none;
+}
+
+label.cal-capa-react input {
+  margin: 0;
+  accent-color: var(--color-azul);
+}
+
+.cal-capa-activa-react {
+  border-color: rgba(var(--color-azul-rgb), 0.3);
+}
+
+span.cal-capa-react {
+  cursor: default;
+}
+
+.cal-capa-ingenieria-react { --capa: var(--color-azul); }
+.cal-capa-marketing-react { --capa: var(--color-impulso); }
+.cal-capa-eventos-react { --capa: var(--color-noche); }
+.cal-capa-club-react { --capa: var(--color-chispa); }
+.cal-capa-luma-react { --capa: var(--color-chispa); }
+
+.cal-capa-luma-react::before {
+  background: none;
+  border: 1.5px dashed var(--color-chispa);
+}
+
+/* ---------- Rejilla del mes ---------- */
+
+.cal-mes-react {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  border: 1px solid var(--cal-linea);
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.cal-mes-cabecera-react {
+  padding: 10px 6px;
+  border-bottom: 1px solid var(--cal-linea);
+  color: var(--color-text-muted);
+  font-size: 0.82rem;
+  font-weight: 500;
+  text-align: center;
+}
+
+.cal-mes-cabecera-react:not(:nth-child(7n)) {
+  border-right: 1px solid var(--cal-linea);
+}
+
+.cal-dia-corto-react {
+  display: none;
+}
+
+.cal-celda-react {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  min-height: 118px;
+  padding: 6px 6px 8px;
+  border-bottom: 1px solid var(--cal-linea);
+  background: var(--color-surface);
+}
+
+.cal-celda-react:not(:nth-child(7n)) {
+  border-right: 1px solid var(--cal-linea);
+}
+
+.cal-celda-react:nth-last-child(-n + 7) {
+  border-bottom: 0;
+}
+
+.cal-finde-react {
+  background: color-mix(in srgb, var(--color-papel) 70%, var(--color-surface));
+}
+
+.cal-hoy-celda-react {
+  background: rgba(var(--color-azul-rgb), 0.05);
+}
+
+.cal-numero-react {
+  align-self: flex-end;
+  min-width: 26px;
+  height: 26px;
+  padding: 0 6px;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  color: rgba(var(--color-noche-rgb), 0.7);
+  font-family: inherit;
+  font-size: 0.86rem;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out);
+}
+
+.cal-numero-react:hover:not(:disabled) {
+  background: rgba(var(--color-noche-rgb), 0.06);
+}
+
+.cal-hoy-celda-react .cal-numero-react {
+  color: var(--color-azul);
+  font-weight: 800;
+}
+
+.cal-fuera-react .cal-numero-react {
+  color: rgba(var(--color-noche-rgb), 0.3);
+  cursor: default;
+}
+
+/* La cajita: franja de su color a la izquierda, fondo teñido, una línea. */
+/* El color por defecto va con poca especificidad para que el de cada capa
+   (`.cal-v3-react .mkt-evento-<capa>-react`) le gane. */
+.mkt-evento-react {
+  --franja: rgba(var(--color-noche-rgb), 0.5);
+}
+
+.cal-v3-react .cal-mes-react .mkt-evento-react {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 4px;
+  min-width: 0;
+  padding: 4px 7px 4px 8px;
+  border: 0;
+  border-left: 3px solid var(--franja);
+  border-radius: 6px;
+  font-size: 0.74rem;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.cal-v3-react .mkt-evento-ingenieria-react { --franja: var(--color-azul); }
+.cal-v3-react .mkt-evento-marketing-react { --franja: var(--color-impulso); }
+.cal-v3-react .mkt-evento-eventos-react { --franja: var(--color-noche); }
+.cal-v3-react .mkt-evento-club-react { --franja: var(--color-chispa); }
+
+.cal-v3-react .mkt-evento-luma-react {
+  --franja: var(--color-chispa);
+  border: 1.5px dashed var(--color-chispa);
+  background: rgba(var(--color-chispa-rgb), 0.1);
+  color: var(--color-noche);
+}
+
+.cal-v3-react .cal-mes-react .mkt-evento-luma-react {
+  border-left-width: 1.5px;
+  border-left-style: dashed;
+}
+
+.cal-v3-react .mkt-evento-alta-react { --franja: var(--color-error-text); }
+
+.cal-v3-react .cal-mes-react .mkt-evento-hora-react {
+  flex: none;
+  font-size: inherit;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.mkt-evento-sep-react {
+  flex: none;
+  opacity: 0.6;
+}
+
+/* En la semana la hora va encima del título, no al lado. */
+.cal-v3-react .mkt-evento-horario-react .mkt-evento-sep-react {
+  display: none;
+}
+
+.cal-mas-react {
+  align-self: flex-start;
+  padding: 1px 6px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--color-text-muted);
+  font-family: inherit;
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.cal-mas-react:hover {
+  background: rgba(var(--color-noche-rgb), 0.05);
+  color: var(--color-noche);
+}
+
+.cal-pista-react {
+  margin: 0;
+}
+
+@container (max-width: 760px) {
+  .cal-tarjeta-react {
+    padding: 14px 12px 14px;
+    border-radius: 22px;
+  }
+
+  .cal-dia-largo-react {
+    display: none;
+  }
+
+  .cal-dia-corto-react {
+    display: inline;
+  }
+
+  .cal-celda-react {
+    min-height: 74px;
+    padding: 4px 3px;
+  }
+
+  /* En un móvil no caben títulos: cada cosa queda como una raya de su color. */
+  .cal-v3-react .cal-mes-react .mkt-evento-react {
+    height: 6px;
+    padding: 0;
+    border-left-width: 0;
+    background: var(--franja);
+    font-size: 0;
+  }
+
+  .cal-v3-react .cal-mes-react .mkt-evento-react > * {
+    display: none;
+  }
+
+  .cal-titulo-react {
+    font-size: 1.1rem;
+  }
+}
+
+/* ==========================================================================
+   Herramientas: los accesos del club en tarjetas grandes y, para
+   Ingeniería, el estado de la plataforma y los servicios debajo.
+   ========================================================================== */
+
+.herr-react {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.herr-rejilla-react {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 10px;
+}
+
+.herr-tarjeta-react {
+  --tono: var(--color-noche);
+  --tono-fondo: rgba(var(--color-noche-rgb), 0.07);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  padding: 12px 12px 12px 12px;
+  border: 1px solid rgba(var(--color-noche-rgb), 0.07);
+  border-radius: 18px;
+  background: var(--color-surface);
+  color: var(--color-noche);
+  text-decoration: none;
+  transition: border-color var(--dur-fast) var(--ease-out),
+    transform var(--dur-press) var(--ease-out),
+    box-shadow var(--dur-fast) var(--ease-out);
+}
+
+.herr-tarjeta-react:hover {
+  border-color: rgba(var(--color-noche-rgb), 0.16);
+  box-shadow: 0 10px 24px -18px rgba(var(--color-noche-rgb), 0.4);
+}
+
+.herr-tarjeta-react:active {
+  transform: scale(0.98);
+}
+
+.herr-tarjeta-react:focus-visible {
+  outline: 2px solid var(--color-azul);
+  outline-offset: 2px;
+}
+
+.herr-tono-azul-react { --tono: var(--color-azul); --tono-fondo: rgba(var(--color-azul-rgb), 0.1); }
+.herr-tono-chispa-react { --tono: var(--color-noche); --tono-fondo: rgba(var(--color-chispa-rgb), 0.35); }
+.herr-tono-impulso-react { --tono: var(--color-impulso); --tono-fondo: rgba(var(--color-impulso-rgb), 0.12); }
+
+.herr-icono-react {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 14px;
+  background: var(--tono-fondo);
+  color: var(--tono);
+}
+
+.herr-icono-react svg {
+  width: 20px;
+  height: 20px;
+}
+
+.herr-texto-react {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.3;
+}
+
+.herr-texto-react strong {
+  overflow: hidden;
+  font-size: 0.9rem;
+  font-weight: 600;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.herr-texto-react span {
+  overflow: hidden;
+  font-size: 0.76rem;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.herr-flecha-react {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  color: rgba(var(--color-noche-rgb), 0.35);
+}
+
+.herr-servicios-react {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 6px;
+}

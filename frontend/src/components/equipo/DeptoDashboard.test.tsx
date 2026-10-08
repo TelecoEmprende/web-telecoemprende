@@ -97,6 +97,7 @@ vi.mock("../../api/equipo", () => ({
   getMisProyectos: () => Promise.resolve({ ok: true, proyectos: [] }),
   getDirectorioClub: () => Promise.resolve({ ok: true, miembros: [] }),
   getEventosLuma: () => Promise.resolve({ ok: true, calendario: "", eventos: [] }),
+  getAccesos: () => Promise.resolve({ ok: true, luma: "", accesos: [] }),
   logoutEquipo: () => Promise.resolve({ ok: true }),
   loginEquipo: vi.fn(),
 }));
@@ -1114,16 +1115,15 @@ describe("/equipo — Ingeniería", () => {
     await renderMarketing();
 
     expect(screen.queryByRole("link", { name: /GitHub/ })).not.toBeInTheDocument();
-    for (const nombre of ["Plataforma", "Servicios", "Decisiones"]) {
+    for (const nombre of ["Decisiones"]) {
       expect(screen.queryByRole("button", { name: nombre })).not.toBeInTheDocument();
     }
   });
 
   it("Plataforma enseña el estado y enlaza el commit desplegado con GitHub", async () => {
     await renderMarketing();
-    // Los paneles de un solo departamento van en el grupo plegable "Más".
-    await userEvent.click(screen.getByRole("button", { name: "Más" }));
-    await userEvent.click(screen.getByRole("button", { name: "Plataforma" }));
+    // Plataforma y Servicios viven juntos en Herramientas (solo Ingeniería).
+    await userEvent.click(screen.getByRole("button", { name: "Herramientas" }));
 
     const commit = await screen.findByRole("link", { name: /Ver el commit en GitHub/ });
     expect(commit).toHaveAttribute("href", `${REPO}/commit/24c1de7`);
@@ -1139,9 +1139,8 @@ describe("/equipo — Ingeniería", () => {
     getPlataforma.mockResolvedValue({ ...PLATAFORMA, base_de_datos: { ok: false, ms: null } });
 
     await renderMarketing();
-    // Los paneles de un solo departamento van en el grupo plegable "Más".
-    await userEvent.click(screen.getByRole("button", { name: "Más" }));
-    await userEvent.click(screen.getByRole("button", { name: "Plataforma" }));
+    // Plataforma y Servicios viven juntos en Herramientas (solo Ingeniería).
+    await userEvent.click(screen.getByRole("button", { name: "Herramientas" }));
 
     expect(await screen.findByText("Sin respuesta")).toBeInTheDocument();
   });
@@ -1150,9 +1149,8 @@ describe("/equipo — Ingeniería", () => {
     getPlataforma.mockRejectedValue({ message: "No autorizado." });
 
     await renderMarketing();
-    // Los paneles de un solo departamento van en el grupo plegable "Más".
-    await userEvent.click(screen.getByRole("button", { name: "Más" }));
-    await userEvent.click(screen.getByRole("button", { name: "Plataforma" }));
+    // Plataforma y Servicios viven juntos en Herramientas (solo Ingeniería).
+    await userEvent.click(screen.getByRole("button", { name: "Herramientas" }));
 
     expect(await screen.findByText("No autorizado.")).toBeInTheDocument();
   });
@@ -1166,9 +1164,8 @@ describe("/equipo — Ingeniería", () => {
     ]);
 
     await renderMarketing();
-    // Los paneles de un solo departamento van en el grupo plegable "Más".
-    await userEvent.click(screen.getByRole("button", { name: "Más" }));
-    await userEvent.click(screen.getByRole("button", { name: "Servicios" }));
+    // Plataforma y Servicios viven juntos en Herramientas (solo Ingeniería).
+    await userEvent.click(screen.getByRole("button", { name: "Herramientas" }));
 
     expect(await screen.findByText("Renueva en 10 d")).toBeInTheDocument();
     expect(screen.getByText("Caducado")).toBeInTheDocument();

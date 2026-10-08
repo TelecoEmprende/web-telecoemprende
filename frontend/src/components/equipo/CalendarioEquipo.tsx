@@ -20,7 +20,7 @@ import { listarNotas } from "../../api/notas";
 import type { NotaResumen } from "../../types/notas";
 import { DURATION, EASE_OUT } from "@/components/smoothui/lib/animation";
 import type { ApiFailure } from "../../types/api";
-import { DEPTO_LABEL, type EventoCalendario, type EventoLuma, type MiembroDirectorio, type Team } from "../../types/equipo";
+import { DEPTO_LABEL, SLACK_CLUB, type EventoCalendario, type EventoLuma, type MiembroDirectorio, type Team } from "../../types/equipo";
 import { textoDe, type Registro } from "../../types/registros";
 import {
   diasHasta,
@@ -37,11 +37,6 @@ const DEPTO_TAG: Record<string, string> = {
   marketing: "crm-tag-ambar-react",
   eventos: "",
 };
-
-/** El Slack del club. Es el mismo para todo el mundo (invitación abierta),
- *  así que vive aquí y no en la ficha de cada persona. */
-const SLACK_CLUB =
-  "https://join.slack.com/t/telecoemprende/shared_invite/zt-492kyuq78-CJ~sB7TN5xz_j11xj1nnAw";
 
 /** Por qué le escribes a esta persona: primero su VP-azgo en TUS
  *  departamentos, que es lo que la hace tu referente; la presidencia, si no

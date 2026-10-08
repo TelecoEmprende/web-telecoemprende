@@ -145,7 +145,7 @@ export type CalendarioItem = {
   /** "club" son los eventos que pone /admin para todo el club (charlas de
    *  alumni, feria...): no son de ningún departamento, así que llegan con
    *  `departamento` vacío y salen esté filtrada la vista a lo que sea. */
-  origen: "task" | "content" | "reunion" | "club";
+  origen: "task" | "content" | "reunion" | "club" | "luma";
   id: number;
   titulo: string;
   fecha: string;
@@ -161,6 +161,8 @@ export type CalendarioItem = {
   /** Solo en la lectura cruzada entre departamentos (`getCalendarioEquipo`),
    *  y vacío en los eventos del club, que no son de ninguno. */
   departamento?: string;
+  /** Solo en los de Luma: su página, donde la gente se apunta. */
+  url?: string;
 };
 
 export type Miembro = {

@@ -1,25 +1,22 @@
 import { DeptoProvider, DirectorioProvider } from "./DeptoApi";
 import type { Panel } from "./EquipoSidebar";
-import { PlataformaPanel } from "./PlataformaPanel";
 import { CalendarPanel } from "./marketing/CalendarPanel";
 import { CampaignsPanel } from "./marketing/CampaignsPanel";
 import { MembersPanel } from "./marketing/MembersPanel";
 import { TasksPanel } from "./marketing/TasksPanel";
 import {
-  AlumniPanel,
   AnunciosPanel,
   DecisionesPanel,
   PresupuestoPanel,
   RecursosPanel,
   ReunionesPanel,
-  ServiciosPanel,
 } from "./registros/paneles";
 import type { Team } from "../../types/equipo";
 
 type Props = {
   /** Departamento primario: el que ata el contexto (`DeptoProvider`) para los
    *  paneles que todavía no son multi-departamento (Miembros, Recursos,
-   *  Presupuesto, Reuniones, Alumni, Plataforma, Decisiones, Servicios,
+   *  Presupuesto, Reuniones, Decisiones,
    *  Calendario, Anuncios). */
   depto: Team;
   /** Departamentos filtrados a la vez -- solo lo usan Tareas y Proyectos, que
@@ -86,10 +83,7 @@ export function DeptoDashboard({
         {seccion === "presupuesto" ? <PresupuestoPanel /> : null}
         {seccion === "anuncios" ? <AnunciosPanel /> : null}
         {seccion === "reuniones" ? <ReunionesPanel /> : null}
-        {seccion === "alumni" ? <AlumniPanel /> : null}
-        {seccion === "plataforma" ? <PlataformaPanel /> : null}
         {seccion === "decisiones" ? <DecisionesPanel /> : null}
-        {seccion === "servicios" ? <ServiciosPanel /> : null}
       </DirectorioProvider>
     </DeptoProvider>
   );
