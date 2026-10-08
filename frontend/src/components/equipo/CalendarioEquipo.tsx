@@ -21,7 +21,6 @@ import type { NotaResumen } from "../../types/notas";
 import { DURATION, EASE_OUT } from "@/components/smoothui/lib/animation";
 import type { ApiFailure } from "../../types/api";
 import { DEPTO_LABEL, SLACK_CLUB, type EventoCalendario, type EventoLuma, type MiembroDirectorio, type Team } from "../../types/equipo";
-import { textoDe, type Registro } from "../../types/registros";
 import {
   diasHasta,
   formatearFecha as formatearFechaCorta,
@@ -71,8 +70,8 @@ function saludoDeAhora() {
   return "Buenas noches";
 }
 
-/** "Hace 2h" / "Hace 3 días", para el aviso del board -- una fecha exacta ahí
- *  no dice nada de si es reciente o lleva semanas colgado. */
+/** "Hace 2h" / "Hace 3 días": una fecha exacta no dice nada de si algo es
+ *  reciente o lleva semanas parado. */
 function haceTiempo(iso: string) {
   const minutos = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60000));
   if (minutos < 60) return minutos <= 1 ? "Hace un momento" : `Hace ${minutos} min`;
@@ -127,13 +126,13 @@ function rangoSemana(lunes: Date, domingo: Date) {
  * Inicio del club: "Mi semana", la única pantalla que se abre a diario.
  *
  * Sigue el boceto de alta fidelidad (pantalla 2a) pieza a pieza: cabecera con
- * saludo y dos acciones, aviso del board, y dos columnas de cajas -- tareas
+ * saludo y dos acciones, y dos columnas de cajas -- tareas
  * de la semana con casilla, rejilla de siete días, proyectos con su barra a
  * la izquierda; próximos eventos y a quién escribir a la derecha.
  */
 type Props = {
-  /** Cambiar de sección del workspace (Avisos, Calendario, Tareas...), para
-   *  los atajos de la cabecera y el enlace del aviso del board. */
+  /** Cambiar de sección del workspace (Calendario, Tareas...), para
+   *  los atajos de la cabecera. */
   onIrA: (seccion: Seccion) => void;
   /** Abrir una nota concreta en "Notas". */
   onAbrirNota?: (id: number) => void;
@@ -159,7 +158,6 @@ export function CalendarioEquipo({ onIrA, onAbrirNota }: Props) {
   // "Asignadas a mí" filtra por responsable; "Mis departamentos" (por
   // defecto) es lo de siempre: todo lo abierto de los departamentos propios.
   const [filtroTareas, setFiltroTareas] = useState<"mias" | "departamentos">("departamentos");
-  const [anuncio, setAnuncio] = useState<Registro | null>(null);
   const [directorio, setDirectorio] = useState<MiembroDirectorio[]>([]);
   const [marcandoHecha, setMarcandoHecha] = useState<number | null>(null);
   const [notas, setNotas] = useState<NotaResumen[]>([]);
@@ -223,20 +221,6 @@ export function CalendarioEquipo({ onIrA, onAbrirNota }: Props) {
           .catch(() => {
             // Sin proyectos disponibles: la sección no aparece, sin más.
           });
-
-        // Los anuncios son del club entero pero se piden por la ruta de un
-        // departamento (el backend no los acota); da igual cuál mientras la
-        // persona pertenezca a él. Ya vienen ordenados fijado > recientes.
-        if (sesion.teams.length > 0) {
-          apiDepto(sesion.teams[0])
-            .listarRegistros("anuncios")
-            .then((respuesta) => {
-              if (active) setAnuncio(respuesta.anuncios[0] ?? null);
-            })
-            .catch(() => {
-              // Sin anuncios disponibles: el banner no aparece, sin más.
-            });
-        }
       })
       .catch(() => {
         // Sin sesión legible no hay nombre que saludar ni agenda que pedir.
@@ -444,23 +428,6 @@ export function CalendarioEquipo({ onIrA, onAbrirNota }: Props) {
           <span className="crm-s inicio-kpi-recorte-react">{proximoEvento?.titulo ?? "Nada apuntado"}</span>
         </button>
       </div>
-
-      {anuncio ? (
-        <div className="crm-c crm-c-aviso-react">
-          <span className="crm-tag crm-tag-azul-react">Aviso del board</span>
-          <div className="crm-row-cuerpo-react">
-            <div className="crm-t">{textoDe(anuncio, "titulo")}</div>
-            <div className="crm-s">
-              {[haceTiempo(anuncio.created_at), textoDe(anuncio, "cuerpo")]
-                .filter(Boolean)
-                .join(" · ")}
-            </div>
-          </div>
-          <button type="button" className="crm-btn crm-btn-ghost-react" onClick={() => onIrA("anuncios")}>
-            Ver anuncios
-          </button>
-        </div>
-      ) : null}
 
       <div className="inicio-bento-react">
           <section className="crm-c inicio-span-7-react">

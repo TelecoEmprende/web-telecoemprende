@@ -44,20 +44,23 @@ function StatCard({
   valueClassName?: string;
 }) {
   return (
-    <div className={`flex flex-col gap-1 rounded-[18px] border px-[18px] py-4 ${className}`}>
+    <div className={`flex items-baseline gap-2 rounded-[14px] border px-3.5 py-2.5 ${className}`}>
       <Contador
         valor={value}
-        className={`text-[1.7rem] font-bold tracking-[-0.03em] ${valueClassName}`}
+        className={`text-[1.35rem] font-bold tracking-[-0.03em] ${valueClassName}`}
       />
-      <span className="text-[0.82rem] font-bold text-muted-foreground">{label}</span>
+      <span className="text-[0.78rem] font-bold leading-tight text-muted-foreground">{label}</span>
     </div>
   );
 }
 
 function ChartCard({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <div className="rounded-[18px] border border-[var(--color-paper-line)] bg-white px-5 py-[18px]">
-      <h2 className="mb-3.5 text-[0.92rem] font-bold text-foreground">{title}</h2>
+    <div className="rounded-[14px] border border-[var(--color-paper-line)] bg-white px-4 py-3">
+      {/* Etiqueta y no <h2>: los h2 heredan el Anton gigante de los titulares. */}
+      <p className="mb-2.5 text-[0.72rem] font-bold tracking-[0.08em] text-muted-foreground uppercase">
+        {title}
+      </p>
       {children}
     </div>
   );
@@ -66,12 +69,12 @@ function ChartCard({ title, children }: { title: string; children: ReactNode }) 
 function Breakdown({ filas, total }: { filas: [string, number][]; total: number }) {
   const menos = useReducedMotion();
   return (
-    <ul className="flex list-none flex-col gap-2.5 p-0">
+    <ul className="m-0 flex list-none flex-col gap-1.5 p-0">
       {filas.map(([nombre, count], indice) => (
         <FilaAnimada
           key={nombre}
           indice={indice}
-          className="grid grid-cols-[minmax(110px,1.3fr)_minmax(50px,1fr)_28px] items-center gap-2.5 text-[0.86rem]"
+          className="grid grid-cols-[minmax(110px,1.3fr)_minmax(50px,1fr)_28px] items-center gap-2.5 text-[0.82rem]"
         >
           <span className="overflow-hidden text-ellipsis whitespace-nowrap font-bold text-foreground">
             {nombre}
@@ -132,8 +135,8 @@ export function AdminStats({ registros }: AdminStatsProps) {
   if (total === 0) return null;
 
   return (
-    <div className="mb-6">
-      <div className="mb-4 grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-3">
+    <div className="mb-4">
+      <div className="mb-3 grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-2">
         <StatCard value={total} label="Solicitudes totales" />
         <StatCard value={ultimas24h} label="Últimas 24h" />
         <StatCard
@@ -161,10 +164,10 @@ export function AdminStats({ registros }: AdminStatsProps) {
         />
       </div>
 
-      <div className="grid grid-cols-[repeat(auto-fit,minmax(240px,1fr))] gap-3">
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(240px,1fr))] gap-2">
         <ChartCard title="Solicitudes en el tiempo">
           <div
-            className="flex h-24 items-end gap-[3px] overflow-x-auto pb-0.5"
+            className="flex h-14 items-end gap-[3px] overflow-x-auto pb-0.5"
             role="img"
             aria-label={`Solicitudes por día, del ${porDia[0]?.[0]} al ${porDia[porDia.length - 1]?.[0]}`}
           >

@@ -4,6 +4,7 @@ import { Link, useSearchParams } from "react-router-dom";
 
 import { getEquipoSession, loginEquipo, logoutEquipo, registrarEquipo } from "../api/equipo";
 import { SidebarProvider, SidebarTrigger } from "../components/ui/sidebar";
+import { AuditoriaPanel } from "../components/admin/AuditoriaPanel";
 import { CalendarioPanel } from "../components/admin/CalendarioPanel";
 import { EquipoAccesosPanel } from "../components/admin/EquipoAccesosPanel";
 import { InscripcionesView } from "../components/admin/InscripcionesView";
@@ -25,7 +26,7 @@ import type { ApiFailure } from "../types/api";
 import { DEPTO_LABEL, type Cargo, type Team } from "../types/equipo";
 
 const PANELES: Panel[] = [
-  "tareas", "campanas", "miembros", "presupuesto", "reuniones", "decisiones",
+  "tareas", "campanas", "miembros", "presupuesto", "reuniones",
 ];
 
 /** Título de la barra para las secciones del grupo Admin, que no salen de
@@ -36,6 +37,7 @@ const TITULO_ADMIN: Partial<Record<Seccion, string>> = {
   inscripciones: "Inscripciones",
   cuentas: "Cuentas del equipo",
   "calendario-club": "Calendario del club",
+  auditoria: "Auditoría",
 };
 
 function esPanel(seccion: Seccion): seccion is Panel {
@@ -129,6 +131,12 @@ export function EquipoPage() {
     // cada cambio de sección.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [teams]);
+
+  // "Crear acceso de equipo" desde una inscripción aceptada abre Cuentas con
+  // el alta prellenada (`?seccion=cuentas&nombre=…`, que lee el propio panel).
+  useEffect(() => {
+    if (searchParams.get("seccion") === "cuentas") setSeccion("cuentas");
+  }, [searchParams]);
 
   async function handleLogin(email: string, password: string, modo: ModoAcceso) {
     setIsSubmitting(true);
@@ -310,7 +318,8 @@ export function EquipoPage() {
             <SidebarTrigger />
             <h2>{titulo}</h2>
 
-            {equiposDelPanel.length > 1 ? (
+            {/* Miembros filtra dentro de su panel (con "Todos"), no aquí. */}
+            {equiposDelPanel.length > 1 && seccion !== "miembros" ? (
               <div className="workspace-selector-depto-react" role="group" aria-label="Departamentos visibles">
                 {equiposDelPanel.map((team) => (
                   <label
@@ -352,7 +361,8 @@ export function EquipoPage() {
             {tieneAccesoAdmin && seccion === "inscripciones" ? <InscripcionesView /> : null}
             {tieneAccesoAdmin && seccion === "cuentas" ? <EquipoAccesosPanel /> : null}
             {tieneAccesoAdmin && seccion === "calendario-club" ? <CalendarioPanel /> : null}
-            {esPanel(seccion) || seccion === "calendario" || seccion === "anuncios" ? (
+            {tieneAccesoAdmin && seccion === "auditoria" ? <AuditoriaPanel /> : null}
+            {esPanel(seccion) || seccion === "calendario" ? (
               // `key` para que cambiar de departamento(s) remonte el panel: si
               // no, dos conjuntos de departamentos comparten estado y el
               // tablero enseña un momento los datos del anterior.
@@ -360,13 +370,14 @@ export function EquipoPage() {
                 key={`${seccion}:${(esPanel(seccion) ? deptosDelPanel : [teams[0]]).join(",")}`}
                 depto={(esPanel(seccion) ? deptosDelPanel[0] : teams[0]) ?? teams[0]}
                 deptos={esPanel(seccion) ? deptosDelPanel : [teams[0]].filter(Boolean) as Team[]}
-                seccion={seccion as Panel | "calendario" | "anuncios"}
+                seccion={seccion as Panel | "calendario"}
                 teams={teams}
                 campaignInicial={seccion === "campanas" ? campaignInicial : null}
                 onCampaignAbierta={() => setCampaignInicial(null)}
                 onAbrirCampaign={abrirCampaign}
                 vpDe={vpDe}
                 puedeAsignarEnTodo={puedeAsignarEnTodo}
+                onAbrirNota={abrirNota}
               />
             ) : null}
             </PanelAnimado>

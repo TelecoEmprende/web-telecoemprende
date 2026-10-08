@@ -2,7 +2,8 @@ import { motion } from "motion/react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Check, Copy, Mail } from "lucide-react";
 
-import { useApi, useDepto } from "../DeptoApi";
+import { apiDepto } from "../../../api/marketing";
+import { DeptoProvider } from "../DeptoApi";
 import { AlertBanner } from "../../feedback/AlertBanner";
 import { Esqueleto } from "../../feedback/Esqueleto";
 import { AvatarResponsable, etiquetaDe, nivelCarga, type NivelCarga } from "./Avatares";
@@ -35,30 +36,48 @@ function Carga({ abiertas }: { abiertas: number }) {
   );
 }
 
-export function MembersPanel() {
+type Props = {
+  /** Departamentos de la persona: el directorio junta a los de todos. Con
+   *  dos departamentos como mínimo por persona (de tres), eso es el club
+   *  entero. */
+  deptos: Team[];
+};
+
+export function MembersPanel({ deptos }: Props) {
   const entradaFila = useEntradaDeFila();
-  const { getMiembros } = useApi();
-  const depto = useDepto();
 
   const [miembros, setMiembros] = useState<Miembro[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filtro, setFiltro] = useState<string | null>(null);
+  // Departamento a la vista; null = todos. Dentro del panel y no en la barra:
+  // ahí no había forma de volver a "todos".
+  const [filtroDepto, setFiltroDepto] = useState<Team | null>(null);
   const [filtroCarga, setFiltroCarga] = useState<"" | NivelCarga>("");
   const [abierto, setAbierto] = useState<string | null>(null);
   const [copiado, setCopiado] = useState<string | null>(null);
 
+  const claveDeptos = deptos.join(",");
   const cargar = useCallback(async () => {
     try {
-      const respuesta = await getMiembros();
-      setMiembros(respuesta.miembros);
+      const respuestas = await Promise.all(deptos.map((d) => apiDepto(d).getMiembros()));
+      // Quien está en varios sale una vez; sus tareas abiertas (que son por
+      // departamento) se suman.
+      const porEmail = new Map<string, Miembro>();
+      for (const r of respuestas)
+        for (const m of r.miembros) {
+          const previo = porEmail.get(m.email);
+          porEmail.set(m.email, previo ? { ...m, abiertas: previo.abiertas + m.abiertas } : m);
+        }
+      setMiembros([...porEmail.values()]);
       setError(null);
     } catch (err) {
       setError((err as ApiFailure)?.message || "No se pudieron cargar los miembros.");
     } finally {
       setIsLoading(false);
     }
-  }, [getMiembros]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [claveDeptos]);
 
   useEffect(() => {
     void cargar();
@@ -73,13 +92,14 @@ export function MembersPanel() {
   const visibles = useMemo(
     () =>
       miembros
+        .filter((m) => filtroDepto === null || m.equipos.includes(filtroDepto))
         .filter((m) => filtro === null || m.tags.includes(filtro))
         .filter((m) => filtroCarga === "" || nivelCarga(m.abiertas) === filtroCarga)
         // Más libres primero: el directorio se abre para decidir a quién
         // asignar algo, y esa es la respuesta.
         .slice()
         .sort((a, b) => a.abiertas - b.abiertas || a.email.localeCompare(b.email)),
-    [miembros, filtro, filtroCarga],
+    [miembros, filtro, filtroCarga, filtroDepto],
   );
 
   /** Confirmación visual breve de "email copiado", sin depender de un toast. */
@@ -100,8 +120,27 @@ export function MembersPanel() {
       {error ? <AlertBanner variant="error" message={error} /> : null}
 
       <header className="crm-cabecera-react">
-        <h3 className="crm-h1">Miembros de {DEPTO_LABEL[depto]}</h3>
+        <h3 className="crm-h1">
+          {filtroDepto ?? (deptos.length === 1 ? deptos[0] : null)
+            ? `Miembros de ${DEPTO_LABEL[(filtroDepto ?? deptos[0]) as Team]}`
+            : "Miembros del club"}
+        </h3>
         <div className="flex flex-wrap items-center gap-3">
+          {deptos.length > 1 ? (
+            <div className="crm-tags-react" role="group" aria-label="Filtrar por departamento">
+              {[null, ...deptos].map((d) => (
+                <button
+                  key={d ?? "todos"}
+                  type="button"
+                  className={`crm-tag${filtroDepto === d ? " crm-tag-azul-react" : ""}`}
+                  aria-pressed={filtroDepto === d}
+                  onClick={() => setFiltroDepto(d)}
+                >
+                  {d ? DEPTO_LABEL[d] : "Todos"}
+                </button>
+              ))}
+            </div>
+          ) : null}
           {habilidades.length > 0 ? (
             <div className="crm-tags-react" role="group" aria-label="Filtrar por habilidad">
               <button
@@ -228,12 +267,21 @@ export function MembersPanel() {
       )}
 
       {abierto !== null ? (
-        <MemberDialog
-          email={abierto}
-          habilidadesConocidas={habilidades}
-          onCerrar={() => setAbierto(null)}
-          onGuardado={() => void cargar()}
-        />
+        // La ficha se pide por la ruta de un departamento que la persona y
+        // tú compartís: es lo que el backend exige para enseñarla.
+        <DeptoProvider
+          value={
+            deptos.find((d) => miembros.find((m) => m.email === abierto)?.equipos.includes(d)) ??
+            deptos[0]
+          }
+        >
+          <MemberDialog
+            email={abierto}
+            habilidadesConocidas={habilidades}
+            onCerrar={() => setAbierto(null)}
+            onGuardado={() => void cargar()}
+          />
+        </DeptoProvider>
       ) : null}
     </section>
   );

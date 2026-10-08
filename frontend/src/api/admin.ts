@@ -134,3 +134,19 @@ export function deleteCalendarioEvento(id: number) {
     method: "DELETE",
   });
 }
+
+export type RegistroAuditoria = {
+  id: number;
+  /** ISO con zona horaria. */
+  momento: string;
+  email: string;
+  metodo: string;
+  ruta: string;
+  estado: number;
+  ip: string;
+};
+
+export function getAuditoria(q = "") {
+  const qs = q ? `?q=${encodeURIComponent(q)}` : "";
+  return apiRequest<ApiResult & { registros: RegistroAuditoria[] }>(`/api/admin/auditoria${qs}`);
+}

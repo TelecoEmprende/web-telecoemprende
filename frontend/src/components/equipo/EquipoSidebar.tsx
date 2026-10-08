@@ -6,16 +6,15 @@ import {
   ChevronRight,
   ClipboardList,
   ExternalLink,
+  History,
+  FolderKanban,
   Home,
   KanbanSquare,
   LogOut,
-  Megaphone,
-  Megaphone as Anuncio,
   NotebookPen,
-  ScrollText,
   UserCog,
   Users,
-  Users2,
+  MessagesSquare,
   Wallet,
   Wrench,
 } from "lucide-react";
@@ -66,34 +65,32 @@ export type Panel =
   | "campanas"
   | "miembros"
   | "presupuesto"
-  | "reuniones"
-  | "decisiones";
+  | "reuniones";
 
 export type Seccion =
-  | "club" | "notas" | "herramientas" | "metricas" | "calendario" | "anuncios" | Panel
+  | "club" | "notas" | "herramientas" | "metricas" | "calendario" | Panel
   // Lo que antes era /admin: solo con `tieneAccesoAdmin` (Ingeniería y board).
-  | "inscripciones" | "cuentas" | "calendario-club";
+  | "inscripciones" | "cuentas" | "calendario-club" | "auditoria";
 
 /** Qué panel tiene cada departamento. Los tres comparten Tareas y Miembros; Campañas es de Marketing/Eventos (Ingeniería no tiene);
- *  Presupuesto es de quien mueve dinero (Eventos) y Decisiones de
- *  Ingeniería (Plataforma y Servicios viven en Herramientas). Esto decide qué panel aparece
+ *  Presupuesto es de quien mueve dinero (Eventos); lo propio de
+ *  Ingeniería (Plataforma y Servicios) vive en Herramientas. Esto decide qué panel aparece
  *  (`seccionesDe`) y qué departamentos ofrece el filtro dentro de cada uno
  *  (`equiposConPanel`). */
 const PANELES_POR_EQUIPO: Record<Team, Panel[]> = {
   marketing: ["campanas", "tareas", "miembros"],
   eventos: ["campanas", "tareas", "presupuesto", "reuniones", "miembros"],
-  ingenieria: [
-    "tareas", "decisiones", "reuniones", "miembros",
-  ],
+  // Proyectos es el mismo para los tres: mismo panel, mismo vocabulario.
+  ingenieria: ["campanas", "tareas", "reuniones", "miembros"],
 };
 
 const ICONO: Record<Panel, LucideIcon> = {
-  campanas: Megaphone,
+  campanas: FolderKanban,
   tareas: KanbanSquare,
   miembros: Users,
   presupuesto: Wallet,
-  reuniones: Users2,
-  decisiones: ScrollText,
+  // Distinto del de Miembros: una reunión es una conversación, no gente.
+  reuniones: MessagesSquare,
 };
 
 /** Etiqueta del panel en el sidebar: siempre la misma, para todo el mundo,
@@ -107,7 +104,6 @@ const ETIQUETA_PANEL: Record<Panel, string> = {
   miembros: "Miembros",
   presupuesto: "Presupuesto",
   reuniones: "Reuniones",
-  decisiones: "Decisiones",
 };
 
 /** Qué departamentos de la persona tienen este panel -- para el filtro
@@ -118,7 +114,7 @@ export function equiposConPanel(panel: Panel, teams: Team[]): Team[] {
 
 /** Todas las secciones visibles para esa persona, en el orden del sidebar y
  *  con su grupo: Inicio (lo personal: resumen y notas), Trabajo
- *  (tareas, proyectos, calendario), Club (gente, avisos, reuniones, herramientas)
+ *  (tareas, proyectos, calendario), Club (gente, reuniones, herramientas)
  *  y Más (lo propio de un solo departamento). Métricas y Presupuesto no están
  *  aquí -- son del grupo "Admin" (ver `EquipoSidebar`). */
 export function seccionesDe(teams: Team[]): Item[] {
@@ -136,12 +132,8 @@ export function seccionesDe(teams: Team[]): Item[] {
       ? [{ id: "calendario" as const, label: "Calendario", icono: CalendarDays, grupo: "Trabajo" as const }]
       : []),
     ...item("miembros", "Club"),
-    ...(conEquipo
-      ? [{ id: "anuncios" as const, label: "Avisos", icono: Anuncio, grupo: "Club" as const }]
-      : []),
     ...item("reuniones", "Club"),
     { id: "herramientas", label: "Herramientas", icono: Wrench, grupo: "Club" },
-    ...item("decisiones", "Más"),
   ];
 }
 
@@ -279,6 +271,7 @@ export function EquipoSidebar({
           { id: "inscripciones" as const, label: "Inscripciones", icono: ClipboardList },
           { id: "cuentas" as const, label: "Cuentas del equipo", icono: UserCog },
           { id: "calendario-club" as const, label: "Calendario del club", icono: CalendarCog },
+          { id: "auditoria" as const, label: "Auditoría", icono: History },
         ]
       : []),
   ];
@@ -330,17 +323,6 @@ export function EquipoSidebar({
             <strong>TelecoEmprende</strong>
           </span>
         </div>
-        {teams.length > 0 ? (
-          <div className="workspace-contexto-react">
-            <span className="workspace-contexto-icono-react" aria-hidden="true">
-              <Users />
-            </span>
-            <span className="workspace-contexto-texto-react">
-              <strong>{teams.map((t) => DEPTO_LABEL[t]).join(" + ")}</strong>
-              <span>{cargo ? CARGO_LABEL[cargo] : vpDe.length > 0 ? "VP" : "Equipo"}</span>
-            </span>
-          </div>
-        ) : null}
       </SidebarHeader>
 
       <SidebarContent>

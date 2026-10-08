@@ -22,12 +22,9 @@ vi.mock("../../api/equipo", () => ({
   getEventosLuma: () => Promise.resolve({ ok: true, calendario: "", eventos: [] }),
 }));
 
-// El aviso del board sale de los anuncios (`apiDepto(...).listarRegistros`),
-// igual que el resto de "registros" del workspace -- sin mock aquí la
-// llamada sería de verdad contra jsdom.
+// Sin mock, `apiDepto` haría peticiones de verdad contra jsdom.
 vi.mock("../../api/marketing", () => ({
   apiDepto: () => ({
-    listarRegistros: () => Promise.resolve({ ok: true, anuncios: [] }),
   }),
 }));
 

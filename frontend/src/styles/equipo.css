@@ -1090,13 +1090,6 @@ span.mkt-dia-numero-react:hover {
 
 /* El aviso del board: una fila, con el borde teñido de azul para que pese
    más que las demás cajas sin llegar a ser una alerta. */
-.crm-c-aviso-react {
-  flex-direction: row;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 14px;
-  border-color: rgba(var(--color-azul-rgb), 0.22);
-}
 
 /* La única caja oscura del boceto: la mentora. */
 .crm-c-oscura-react {
@@ -2414,51 +2407,11 @@ kbd {
   font-size: 1.3rem;
 }
 
-.workspace-contexto-react {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-width: 0;
-  padding: 9px 12px 9px 9px;
-  border-radius: 18px;
-  background: var(--color-papel);
-}
 
-.workspace-contexto-icono-react {
-  flex: none;
-  display: grid;
-  place-items: center;
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
-  background: var(--color-surface);
-  color: var(--color-noche);
-}
 
-.workspace-contexto-icono-react svg {
-  width: 17px;
-  height: 17px;
-}
 
-.workspace-contexto-texto-react {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  line-height: 1.25;
-}
 
-.workspace-contexto-texto-react strong {
-  overflow: hidden;
-  font-size: 0.86rem;
-  font-weight: 600;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
 
-.workspace-contexto-texto-react span {
-  font-size: 0.74rem;
-  color: var(--color-text-muted);
-}
 
 /* ---------- Entradas ---------- */
 
@@ -2677,7 +2630,7 @@ kbd {
 
 /* ---------- Plegado a iconos ---------- */
 
-[data-state="collapsed"] .workspace-contexto-react,
+
 [data-state="collapsed"] .workspace-evento-react,
 [data-state="collapsed"] .workspace-cuenta-react {
   display: none;

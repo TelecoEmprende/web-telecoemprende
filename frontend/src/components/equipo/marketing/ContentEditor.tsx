@@ -150,7 +150,7 @@ export function ContentEditor({ content, onCerrar, onGuardado }: Props) {
       onGuardado();
     } catch (err) {
       const fallo = err as ApiFailure;
-      setError(fallo?.message || "No se pudo guardar el contenido.");
+      setError(fallo?.message || "No se pudo guardar el entregable.");
       setIsSaving(false);
     }
   }
@@ -168,7 +168,7 @@ export function ContentEditor({ content, onCerrar, onGuardado }: Props) {
     >
       <div className="mkt-modal-react" ref={cajaRef}>
         <header className="mkt-modal-header-react">
-          <h3 id="ce-encabezado">Editar contenido</h3>
+          <h3 id="ce-encabezado">Editar entregable</h3>
           <button type="button" className="mkt-btn-mini-react" onClick={intentarCerrar}>
             Cerrar
           </button>

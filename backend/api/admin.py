@@ -19,6 +19,7 @@ from backend.config import (
 )
 from backend.schemas import build_response
 from backend.services.admin import is_admin_authenticated, logout_admin
+from backend.services import auditoria
 from backend.services.email import enviar_email_estado
 from backend.services.equipo import (
     actualizar_equipo_acceso,
@@ -622,6 +623,17 @@ def api_admin_eliminar_equipo(acceso_id: int):
         return jsonify(build_response(True, "Acceso eliminado.")), 200
 
     return jsonify(build_response(False, "Acceso no encontrado.")), 404
+
+
+@admin_api.route("/auditoria", methods=["GET"])
+def api_admin_auditoria():
+    """Registro de auditoría (ver `services/auditoria.py`), lo último primero."""
+    if not is_admin_authenticated():
+        return jsonify(build_response(False, "No autorizado.")), 401
+
+    q = limpiar_texto(str(request.args.get("q", "")))[:120]
+    limite = min(max(request.args.get("limite", 200, type=int), 1), 1000)
+    return jsonify({"ok": True, "registros": auditoria.listar(q, limite)}), 200
 
 
 _FECHA_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")

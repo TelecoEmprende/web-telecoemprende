@@ -37,9 +37,11 @@ const ESTADO_BADGE_CLASS: Record<Estado, string> = {
 // filas antiguas insertadas antes de que existiera esa validación).
 const DRIVE_LINK_PATTERN = /^https:\/\/(www\.)?drive\.google\.com\//i;
 
-const TH = "border-b border-[var(--color-divider)] bg-[var(--color-paper)] px-[18px] py-4 text-left text-sm font-bold text-[var(--color-slate)] max-[720px]:px-3.5";
-const TD = "border-b border-[var(--color-divider)] px-[18px] py-4 text-left align-top text-foreground max-[720px]:px-3.5";
-const TD_ANCHA = `${TD} min-w-[220px]`;
+const TH = "border-b border-[var(--color-divider)] bg-[var(--color-paper)] px-3 py-2.5 text-left text-xs font-bold text-[var(--color-slate)]";
+const TD = "border-b border-[var(--color-divider)] px-3 py-2.5 text-left align-top text-sm text-foreground";
+/** Segunda línea de una celda doble (email bajo el nombre, grado bajo la escuela). */
+const SUB = "block text-xs text-muted-foreground";
+const ACCION = "h-7 px-2.5 text-xs";
 
 type RecordsTableProps = {
   registros: Registro[];
@@ -141,19 +143,17 @@ export function RecordsTable({ registros, onUpdate, onDelete, onEstadoChange }: 
         </AlertDialogContent>
       </AlertDialog>
 
-      <table className="w-full min-w-[1080px] border-collapse">
+      {/* Columnas emparejadas (persona + email, escuela + grado) para que la
+          tabla quepa sin desplazarse en un portátil. La privacidad no tiene
+          columna: era obligatoria para inscribirse, así que siempre es "Sí". */}
+      <table className="w-full min-w-[920px] border-collapse">
         <thead>
           <tr>
-            <th className={TH}>Nombre</th>
-            <th className={TH}>Apellidos</th>
-            <th className={TH}>Escuela</th>
-            <th className={TH}>Nivel</th>
-            <th className={TH}>Grado / Máster</th>
-            <th className={TH}>Email</th>
+            <th className={TH}>Persona</th>
+            <th className={TH}>Estudios</th>
             <th className={TH}>Teléfono</th>
             <th className={TH}>Departamento</th>
-            <th className={TH}>CV y pitch</th>
-            <th className={TH}>Privacidad</th>
+            <th className={TH}>CV</th>
             <th className={TH}>Fecha</th>
             <th className={TH}>Estado</th>
             <th className={TH}>Acciones</th>
@@ -166,33 +166,38 @@ export function RecordsTable({ registros, onUpdate, onDelete, onEstadoChange }: 
               className="hover:bg-[var(--color-paper)]"
               {...entradaFila(indice)}
             >
-              <td className={TD}>{registro.nombre}</td>
-              <td className={TD}>{registro.apellidos}</td>
-              <td className={TD_ANCHA}>{registro.escuela || "—"}</td>
-              <td className={TD}>{registro.nivel || "—"}</td>
-              <td className={TD_ANCHA}>{registro.estudios}</td>
-              <td className={TD_ANCHA}>{registro.email}</td>
-              <td className={TD}>{registro.telefono || "—"}</td>
+              <td className={TD}>
+                <span className="font-semibold">
+                  {registro.nombre} {registro.apellidos}
+                </span>
+                <span className={SUB}>{registro.email}</span>
+              </td>
+              <td className={TD}>
+                {[registro.escuela, registro.nivel].filter(Boolean).join(" · ") || "—"}
+                <span className={SUB}>{registro.estudios}</span>
+              </td>
+              <td className={`${TD} whitespace-nowrap tabular-nums`}>{registro.telefono || "—"}</td>
               <td className={TD}>{registro.departamento || "—"}</td>
               <td className={TD}>
                 {registro.drive_link && DRIVE_LINK_PATTERN.test(registro.drive_link) ? (
                   <a href={registro.drive_link} target="_blank" rel="noreferrer">
-                    Ver enlace
+                    Ver
                   </a>
                 ) : (
                   "—"
                 )}
               </td>
-              <td className={TD}>{registro.privacidad}</td>
-              <td className={TD}>{registro.fecha}</td>
+              <td className={`${TD} whitespace-nowrap tabular-nums`} title={registro.fecha}>
+                {registro.fecha.slice(0, 10)}
+              </td>
               <td className={TD}>
                 <EstadoBadge registro={registro} />
               </td>
               <td className={`${TD} whitespace-nowrap`}>
-                <span className="mr-2.5 inline-flex gap-1.5">
+                <span className="mr-1.5 inline-flex gap-1">
                   <Button
                     size="sm"
-                    className="bg-[var(--color-success-text)] text-white hover:bg-[var(--color-success-text)]/90"
+                    className={`${ACCION} bg-[var(--color-success-text)] text-white hover:bg-[var(--color-success-text)]/90`}
                     title="Aceptar"
                     disabled={changingEstadoId === registro.id || registro.estado === "aceptado"}
                     onClick={() => void changeEstado(registro.id, "aceptado")}
@@ -201,7 +206,7 @@ export function RecordsTable({ registros, onUpdate, onDelete, onEstadoChange }: 
                   </Button>
                   <Button
                     size="sm"
-                    className="bg-[var(--color-error-text)] text-white hover:bg-[var(--color-error-text)]/90"
+                    className={`${ACCION} bg-[var(--color-error-text)] text-white hover:bg-[var(--color-error-text)]/90`}
                     title="Rechazar"
                     disabled={changingEstadoId === registro.id || registro.estado === "rechazado"}
                     onClick={() => void changeEstado(registro.id, "rechazado")}
@@ -210,7 +215,7 @@ export function RecordsTable({ registros, onUpdate, onDelete, onEstadoChange }: 
                   </Button>
                   <Button
                     size="sm"
-                    className="bg-[var(--color-gold)] text-[var(--color-navy)] hover:bg-[var(--color-gold)]/90"
+                    className={`${ACCION} bg-[var(--color-gold)] text-[var(--color-navy)] hover:bg-[var(--color-gold)]/90`}
                     title="Waitlist"
                     disabled={changingEstadoId === registro.id || registro.estado === "waitlist"}
                     onClick={() => void changeEstado(registro.id, "waitlist")}
@@ -221,9 +226,11 @@ export function RecordsTable({ registros, onUpdate, onDelete, onEstadoChange }: 
                 {registro.estado === "aceptado" ? (
                   <Button asChild variant="ghost" size="icon" className="text-[var(--color-impulso)]">
                     <Link
-                      to={`/admin/equipo?nombre=${encodeURIComponent(
-                        `${registro.nombre} ${registro.apellidos}`.trim(),
-                      )}&email=${encodeURIComponent(registro.email)}`}
+                      to={`/equipo?seccion=cuentas&nombre=${encodeURIComponent(
+                        registro.nombre,
+                      )}&apellidos=${encodeURIComponent(registro.apellidos)}&email=${encodeURIComponent(
+                        registro.email,
+                      )}`}
                       title="Crear acceso de equipo"
                     >
                       <UserPlus size={15} strokeWidth={1.75} />

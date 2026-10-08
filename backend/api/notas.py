@@ -81,7 +81,20 @@ def _campos_nota(datos: dict, teams: list[str]) -> dict:
     for clave in ("privada", "fijada"):
         if clave in datos:
             salida[clave] = bool(datos.get(clave))
+    if "proyecto_id" in datos:
+        salida["proyecto_id"] = _proyecto(datos.get("proyecto_id"))
     return salida
+
+
+def _proyecto(valor) -> int | None:
+    """Proyecto al que se enlaza la nota (null para desenlazarla)."""
+    if valor is None:
+        return None
+    if isinstance(valor, bool) or not isinstance(valor, int) or valor <= 0:
+        raise DatosInvalidos("Proyecto no válido.")
+    if not srv.proyecto_existe(valor):
+        raise DatosInvalidos("Ese proyecto no existe.")
+    return valor
 
 
 # --------------------------------------------------------------------------
