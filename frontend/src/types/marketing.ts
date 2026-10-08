@@ -1,4 +1,4 @@
-import type { Team } from "./equipo";
+import type { Cargo, Team } from "./equipo";
 
 export const TASK_ESTADOS = [
   "pendiente",
@@ -201,7 +201,7 @@ export type FichaMiembro = {
   email: string;
   equipos: string[];
   vp_de: string[];
-  cargo: string;
+  cargo: Cargo;
   tags: string[];
   notas: string;
   nombre: string;
@@ -255,7 +255,7 @@ export type MiembroMetricas = {
   email: string;
   nombre: string;
   equipos: Team[];
-  cargo: "" | "presidente" | "boardmember";
+  cargo: Cargo;
   abiertas: number;
   vencidas: number;
   completadas_periodo: number;

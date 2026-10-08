@@ -78,6 +78,8 @@ let teamsDeSesion = ["marketing"];
 // serlo (ver `_puede_asignar_tareas` en el backend), y la mayoría de estos
 // tests ejercitan ese flujo, no el límite de permisos en sí.
 let vpDeSesion = ["marketing"];
+// Permiso de admin, aparte del departamento y del cargo.
+let adminDeSesion = false;
 
 vi.mock("../../api/equipo", () => ({
   getEquipoSession: () =>
@@ -89,6 +91,7 @@ vi.mock("../../api/equipo", () => ({
       cargo: "",
       nombre: "",
       mentor_email: "",
+      admin: adminDeSesion,
     }),
   getEquipoCalendario: () => Promise.resolve({ ok: true, eventos: [] }),
   getCalendarioEquipo: (...args: unknown[]) => getCalendarioEquipo(...args),
@@ -156,6 +159,7 @@ async function renderMarketing() {
 describe("/equipo — panel de Marketing", () => {
   beforeEach(() => {
     teamsDeSesion = ["marketing"];
+    adminDeSesion = false;
     vpDeSesion = ["marketing"];
     deptosPedidos.length = 0;
     getTask.mockReset().mockResolvedValue({ ok: true, task: TAREA });
@@ -247,13 +251,13 @@ describe("/equipo — panel de Marketing", () => {
     expect(screen.queryByRole("button", { name: "+ Nueva tarea" })).not.toBeInTheDocument();
   });
 
-  it("ingeniería asigna en todo el club aunque no sea VP de nada ni tenga cargo", async () => {
-    // El backend ya la trata como superusuaria: entrar en /equipo estando en
-    // ingeniería da sesión de /admin, y `_puede_asignar_tareas` deja pasar a
-    // cualquiera que la tenga. La interfaz miraba solo el cargo, así que le
-    // escondía permisos que el servidor sí le daba.
+  it("admin asigna en todo el club aunque no sea VP de nada ni tenga cargo", async () => {
+    // El backend trata la sesión de admin como superusuaria:
+    // `_puede_asignar_tareas` deja pasar a cualquiera que la tenga. Estar en
+    // Ingeniería ya no la da: es el permiso `admin` de la cuenta.
     teamsDeSesion = ["ingenieria"];
     vpDeSesion = [];
+    adminDeSesion = true;
 
     await renderMarketing();
     await userEvent.click(screen.getByRole("button", { name: "Tareas" }));
@@ -944,7 +948,7 @@ describe("/equipo — panel de Eventos", () => {
     // el título de la página, nunca en el sidebar (ver EquipoSidebar.tsx).
     for (const panel of [
       "Inicio", "Notas", "Tareas", "Proyectos", "Calendario",
-      "Recursos", "Presupuesto", "Reuniones", "Miembros", "Avisos",
+      "Herramientas", "Presupuesto", "Reuniones", "Miembros", "Avisos",
     ]) {
       expect(screen.getByRole("button", { name: panel })).toBeInTheDocument();
     }
@@ -1110,6 +1114,7 @@ describe("/equipo — Ingeniería", () => {
 
   it("quien no es de Ingeniería no ve GitHub ni sus paneles", async () => {
     teamsDeSesion = ["marketing"];
+    adminDeSesion = false;
     vpDeSesion = ["marketing"];
 
     await renderMarketing();

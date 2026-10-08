@@ -1,42 +1,13 @@
 /* Área de equipo (/equipo).
    Dos pantallas distintas:
 
-   - `.equipo-shell-react`: el login, sobre el navy del club.
+   - `.acceso-react`: fuera de sesión (carga, entrar, crear cuenta), con la
+     portada de la web pública.
    - `.workspace-react`: el panel una vez dentro. Sidebar navy + área
      de trabajo crema, el patrón que estrenó Marketing y que ahora comparten
      todos los departamentos. Antes esto vivía en `marketing.css` y tapaba
      este shell desde fuera con `:has()`; ahora el shell ES esa pantalla, así
      que `marketing.css` solo tiene que estilar sus paneles. */
-
-/* El login usa la portada de marca: plano Azul TE y un círculo sólido en
-   Impulso entrando por una esquina, como el hero de la web pública. */
-.equipo-shell-react {
-  position: relative;
-  overflow: hidden;
-  min-height: 100vh;
-  background: var(--color-azul);
-}
-
-.equipo-shell-react::before {
-  content: "";
-  position: absolute;
-  z-index: 0;
-  width: min(40vw, 440px);
-  height: min(40vw, 440px);
-  right: -8%;
-  bottom: -22%;
-  border-radius: 50%;
-  background: var(--color-impulso);
-}
-
-.equipo-content-react {
-  position: relative;
-  z-index: 1;
-  width: 100%;
-  max-width: 880px;
-  margin: 0 auto;
-  padding: 48px 20px 64px;
-}
 
 /* ==========================================================================
    Workspace
@@ -151,13 +122,16 @@
   min-width: 0;
 }
 
+/* El logo blanco (con la «te» calada) como máscara rellena de Azul TE: un
+   logo de una sola tinta y sin caja detrás. `flex: none` + tamaño fijo para
+   que el sidebar plegado no lo aplaste a lo ancho. */
 .workspace-marca-logo-react {
+  flex: none;
   width: 32px;
   height: 32px;
-  flex-shrink: 0;
-  border-radius: 8px;
-  background: #fff;
-  object-fit: contain;
+  background: var(--color-azul);
+  -webkit-mask: url("/logo-blanco.png") center / contain no-repeat;
+  mask: url("/logo-blanco.png") center / contain no-repeat;
 }
 
 .workspace-marca-texto-react {
@@ -525,92 +499,328 @@ span.mkt-dia-numero-react:hover {
 }
 
 /* ==========================================================================
-   Login
+   Acceso (fuera de sesión): carga, entrar y crear cuenta
    ==========================================================================
 
-   La tarjeta va en la paleta del área de trabajo (crema, navy, naranja) sobre
-   el navy de la página: la misma pareja de tonos que dentro, sidebar oscuro y
-   trabajo claro, para que entrar no cambie de sitio.
+   La portada de la web pública (`.in-hero` en inicio.css): plano Azul TE,
+   titular Anton desde el margen izquierdo con la última palabra en Chispa y
+   un único círculo Impulso entrando por la esquina inferior derecha. La
+   carga usa la misma carcasa, así que pasar de "comprobando" al formulario
+   no cambia de pantalla. */
+.acceso-react {
+  --acceso-circulo: min(68vw, 860px);
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-height: 100svh;
+  padding-inline: clamp(16px, 5vw, 72px);
+  background: var(--color-azul);
+  color: var(--color-text-on-dark);
+}
 
-   Los componentes de shadcn se quedan (Input/Label/Button traen el foco y el
-   `aria` ya resueltos); lo que se re-encadena son sus tokens, que dentro de
-   `.shadcn-scope.dark` son todos oscuros. `--primary` es el que dejaba el
-   botón "Entrar" en gris casi blanco en vez del naranja del club: en
-   index.css `.dark` va sin capa y `.shadcn-scope` dentro de `@layer base`, y
-   al caer las dos en el mismo elemento gana la regla sin capa. */
+.acceso-circulo-react {
+  position: absolute;
+  right: calc(var(--acceso-circulo) * -0.32);
+  bottom: calc(var(--acceso-circulo) * -0.38);
+  width: var(--acceso-circulo);
+  aspect-ratio: 1;
+  border-radius: var(--radius-circle);
+  background: var(--color-impulso);
+  animation: acceso-circulo 0.6s var(--ease-out) 0.1s both;
+}
+
+@keyframes acceso-circulo {
+  from {
+    opacity: 0;
+    transform: scale(0.85);
+  }
+}
+
+.acceso-barra-react {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding-block: 20px;
+}
+
+.acceso-marca-react,
+.acceso-volver-react {
+  display: inline-flex;
+  align-items: center;
+  color: inherit;
+  text-decoration: none;
+}
+
+.acceso-marca-react {
+  gap: 10px;
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  letter-spacing: var(--tracking-display);
+  text-transform: uppercase;
+}
+
+.acceso-marca-react img {
+  width: 36px;
+  height: 36px;
+  object-fit: contain;
+}
+
+.acceso-volver-react {
+  gap: 8px;
+  min-height: 44px;
+  font-weight: 600;
+  text-underline-offset: 6px;
+}
+
+.acceso-volver-react svg {
+  width: 18px;
+  height: 18px;
+  transition: transform var(--dur-fast) var(--ease-out);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .acceso-volver-react:hover {
+    text-decoration: underline;
+  }
+
+  .acceso-volver-react:hover svg {
+    transform: translateX(-3px);
+  }
+}
+
+.acceso-main-react {
+  position: relative;
+  flex: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 420px);
+  align-items: center;
+  gap: 48px clamp(32px, 6vw, 96px);
+  width: 100%;
+  max-width: 1200px;
+  margin-inline: auto;
+  padding-block: clamp(24px, 5vw, 72px);
+}
+
+.acceso-eyebrow-react {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 24px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  /* Blanco y no Azul claro: a 13px el Azul claro sobre Azul TE (4.1:1) no
+     llega al 4.5:1 de AA. */
+  color: var(--color-text-on-dark);
+}
+
+/* El mismo punto que late en la home ("esto está vivo"). */
+.acceso-eyebrow-react::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-circle);
+  background: var(--color-chispa);
+}
+
+.acceso-titular-react {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: clamp(3.5rem, 7.5vw, 6.5rem);
+  font-weight: 400;
+  line-height: 0.92;
+  letter-spacing: -0.015em;
+  text-transform: uppercase;
+  text-wrap: balance;
+  animation: acceso-sube 0.5s var(--ease-out) both;
+}
+
+.acceso-titular-react .is-chispa {
+  color: var(--color-chispa); /* Chispa sobre Azul: solo ≥24 px */
+}
+
+.acceso-lead-react {
+  max-width: 38ch;
+  margin: 28px 0 0;
+  font-size: clamp(1.05rem, 1.4vw, 1.2rem);
+  line-height: var(--leading-body);
+  animation: acceso-sube 0.5s var(--ease-out) 0.1s both;
+}
+
+@keyframes acceso-sube {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+@keyframes acceso-aparece {
+  from {
+    opacity: 0;
+  }
+}
+
+/* La tarjeta se viene a usar: entra rápido y sin esperar al titular. */
+.acceso-tarjeta-react {
+  min-width: 0;
+  animation: acceso-sube 250ms var(--ease-out) both;
+}
+
+/* ---------- La tarjeta ---------- */
+
+/* Los componentes de shadcn (Input/Label) se quedan por el foco y el `aria`;
+   lo que se re-encadena aquí son sus tokens a la paleta clara. */
 .equipo-login-react {
   --background: var(--color-surface);
-  --foreground: var(--color-navy);
-  --card: var(--color-surface);
-  --card-foreground: var(--color-navy);
+  --foreground: var(--color-noche);
   --muted-foreground: var(--color-text-muted);
   --border: var(--color-border);
   --input: rgba(var(--color-noche-rgb), 0.18);
-  --primary: var(--color-impulso);
-  --primary-foreground: var(--color-noche);
-  --destructive: var(--color-error-text);
   --ring: var(--color-azul);
 
   width: 100%;
-  max-width: 400px;
-  margin: 0 auto;
-  padding: 30px 28px;
-  border: 1px solid var(--color-border);
+  padding: 28px;
   border-radius: var(--radius-lg);
   background: var(--color-surface);
-  box-shadow: var(--shadow-soft);
-  /* Igual que en `.workspace-main-react`: las etiquetas de shadcn no se pintan a
-     sí mismas y heredaban el crema del shell, ilegible sobre la tarjeta. */
+  box-shadow: 0 24px 60px rgba(var(--color-noche-rgb), 0.28);
   color: var(--color-text);
 }
 
-/* El <Input> de shadcn pide `border border-input`: ancho y color, pero el
-   estilo lo daba el Preflight de Tailwind (`border-style: solid` global), que
-   aquí está desactivado a propósito para no reescribir la landing. Sin él el
-   borde es `none` y el campo se ve sin caja -- en la versión oscura no se
-   notaba porque `dark:bg-input/30` le ponía un relleno. */
-.equipo-login-react [data-slot="input"] {
-  border-style: solid;
-  /* El color va aquí y no vía `--input`, que es lo que pide la utilidad
-     `border-input`: en este proyecto `@layer base` queda POR ENCIMA de
-     `@layer utilities` (index.css importa utilities antes que base, y el orden
-     entre capas ya usadas no se puede reescribir -- ver el comentario largo
-     del mini-reset del sidebar), así que el `@apply border-border` de
-     `.shadcn-scope *` le gana a `border-input` y dejaba el borde en el crema
-     de las tarjetas, invisible sobre el blanco del campo. Sin capa, esta regla
-     gana a las dos. */
-  border-color: rgba(var(--color-noche-rgb), 0.18);
-  background: var(--color-surface);
-  /* `h-8` son 32px: por debajo del objetivo táctil de 44px que respeta el
-     resto del proyecto (ver `.mkt-btn-mini-react`), y en un formulario que se
-     rellena desde el móvil eso se nota. */
+/* Entrar | Crear cuenta: la píldora Noche se desliza como la del sidebar. */
+.acceso-modos-react {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 999px;
+  background: var(--color-papel);
+}
+
+.acceso-modo-react {
+  position: relative;
   min-height: 44px;
-  padding: 8px 12px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--color-text-muted);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color var(--dur-fast) var(--ease-out);
 }
 
-.equipo-login-react h1 {
-  margin: 0;
-  font-family: var(--font-display);
-  text-transform: uppercase;
-  font-size: 1.9rem;
-  font-weight: 400;
-  letter-spacing: var(--tracking-display);
-  line-height: 1;
-  color: var(--color-navy);
+.acceso-modo-react[aria-pressed="true"] {
+  color: var(--color-text-on-dark);
 }
 
-.equipo-login-react p {
-  margin: 6px 0 22px;
+.acceso-modo-react:focus-visible {
+  outline: 2px solid var(--color-azul);
+  outline-offset: 2px;
+}
+
+.acceso-modo-pildora-react {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--color-noche);
+}
+
+.acceso-modo-texto-react {
+  position: relative;
+}
+
+.acceso-ayuda-react {
+  margin: 18px 0 20px;
   color: var(--color-text-muted);
   font-size: 0.92rem;
-  line-height: 1.6;
+  line-height: 1.55;
 }
 
-/* El error va antes del formulario y con el rojo de estado del proyecto, no
-   con el `--destructive` de shadcn: es el mismo aviso que en /admin. */
-/* Escrito con el padre delante a propósito: `.equipo-login-react p` (que pinta
-   la línea de introducción en gris) tiene MÁS especificidad que una clase
-   suelta, así que se comía el rojo del error. */
+.acceso-form-react {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.acceso-campo-react {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.acceso-campo-react [data-slot="label"] {
+  color: var(--color-noche);
+  font-weight: 600;
+}
+
+/* El <Input> de shadcn da por hecho el Preflight de Tailwind (borde sólido),
+   aquí desactivado; y `@layer base` le gana a `border-input` (ver el
+   mini-reset del sidebar). Sin capa, esta regla gana a las dos. */
+.equipo-login-react [data-slot="input"] {
+  min-height: 52px;
+  padding: 10px 16px;
+  border: 1px solid rgba(var(--color-noche-rgb), 0.18);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  font-size: 1rem;
+}
+
+.equipo-login-react [data-slot="input"]:focus-visible {
+  border-color: var(--color-azul);
+}
+
+/* El botón de la home (`.in-btn-impulso`): blanco sobre Impulso, solo ≥18 px. */
+.acceso-boton-react {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 56px;
+  margin-top: 8px;
+  padding: 0 24px;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: var(--color-impulso);
+  color: var(--color-text-on-dark);
+  font: inherit;
+  font-size: 1.125rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform var(--dur-press) var(--ease-out);
+}
+
+.acceso-boton-react:active {
+  transform: scale(0.97);
+}
+
+.acceso-boton-react:disabled {
+  opacity: 0.7;
+  cursor: progress;
+}
+
+.acceso-boton-react:focus-visible {
+  outline: 2px solid var(--color-noche);
+  outline-offset: 3px;
+}
+
+.acceso-boton-react svg {
+  width: 20px;
+  height: 20px;
+  transition: transform var(--dur-fast) var(--ease-out);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .acceso-boton-react:hover svg {
+    transform: translateX(3px);
+  }
+}
+
+/* Escrito con el padre delante: `.acceso-ayuda-react` y compañía no deben
+   comerse el rojo del error. */
 .equipo-login-react .equipo-login-error-react {
   margin: 0 0 16px;
   padding: 10px 14px;
@@ -620,6 +830,170 @@ span.mkt-dia-numero-react:hover {
   font-size: 0.88rem;
   font-weight: 700;
   line-height: 1.5;
+}
+
+/* Cuenta creada: queda a la espera de que un admin le dé departamento. */
+.acceso-hecho-react {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.acceso-hecho-icono-react {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-circle);
+  background: var(--color-chispa);
+  color: var(--color-noche);
+}
+
+.acceso-hecho-react h2 {
+  margin: 20px 0 0;
+  font-family: var(--font-display);
+  font-size: 2.25rem;
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: var(--tracking-display);
+  text-transform: uppercase;
+  color: var(--color-noche);
+}
+
+.acceso-hecho-react p {
+  margin: 12px 0 16px;
+  color: var(--color-text-muted);
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+.acceso-hecho-react strong {
+  color: var(--color-noche);
+}
+
+.acceso-hecho-react .acceso-boton-react {
+  align-self: stretch;
+}
+
+/* ---------- Carga ---------- */
+
+.acceso-cargando-react {
+  position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+  padding-bottom: 10vh;
+  /* Solo si la sesión tarda: con una respuesta rápida el loader no llega a
+     verse en vez de parpadear un instante. */
+  animation: acceso-aparece 200ms var(--ease-out) 300ms both;
+}
+
+.acceso-cargando-react p {
+  margin: 0;
+  font-weight: 600;
+  color: var(--color-text-on-dark);
+}
+
+/* El logo con la onda de `.in-pulso` de la home, más grande. */
+.acceso-latido-react {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 88px;
+  height: 88px;
+  border-radius: var(--radius-circle);
+  background: rgba(var(--color-noche-rgb), 0.22);
+}
+
+.acceso-latido-react::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border: 2px solid var(--color-chispa);
+  border-radius: inherit;
+  animation: acceso-latido 1.6s var(--ease-out) infinite;
+}
+
+.acceso-latido-react img {
+  width: 52px;
+  height: 52px;
+  object-fit: contain;
+}
+
+@keyframes acceso-latido {
+  from {
+    opacity: 0.9;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(1.6);
+  }
+}
+
+/* Movimiento reducido: fuera desplazamientos y escalas, pero se quedan los
+   fundidos, y el loader late en opacidad en vez de crecer. */
+@media (prefers-reduced-motion: reduce) {
+  .acceso-circulo-react,
+  .acceso-titular-react,
+  .acceso-lead-react,
+  .acceso-tarjeta-react {
+    animation-name: acceso-aparece;
+    animation-duration: 150ms;
+  }
+
+  .acceso-latido-react::after {
+    animation-name: acceso-latido-quieto;
+  }
+}
+
+@keyframes acceso-latido-quieto {
+  50% {
+    opacity: 0.25;
+  }
+}
+
+@media (max-width: 860px) {
+  .acceso-react {
+    --acceso-circulo: 90vw;
+  }
+
+  .acceso-main-react {
+    grid-template-columns: minmax(0, 1fr);
+    align-items: start;
+    gap: 32px;
+  }
+
+  .acceso-titular-react {
+    font-size: clamp(3rem, 14vw, 4.5rem);
+  }
+
+  .acceso-lead-react {
+    margin-top: 18px;
+  }
+
+  .equipo-login-react {
+    padding: 22px;
+  }
+}
+
+@media (max-width: 420px) {
+  .acceso-marca-react {
+    font-size: 1.05rem;
+  }
+
+  .acceso-marca-react img {
+    width: 30px;
+    height: 30px;
+  }
+
+  .acceso-volver-react {
+    font-size: 0.9rem;
+    white-space: nowrap;
+  }
 }
 
 /* ==========================================================================
@@ -688,21 +1062,6 @@ span.mkt-dia-numero-react:hover {
 
 /* Cabecera del login: la página es Azul TE, así que la barra se funde con el
    fondo — sin losa, solo un filete blanco abajo y el texto en blanco. */
-.equipo-shell-react .header-inner-react {
-  background: transparent;
-  border-color: rgba(255, 255, 255, 0.18);
-  box-shadow: none;
-}
-
-.equipo-shell-react .header-inner-react::before {
-  display: none;
-}
-
-.equipo-shell-react .brand-name-react,
-.equipo-shell-react .header-nav-react a {
-  color: #ffffff;
-}
-
 /* ==========================================================================
    Sistema CRM — el boceto de alta fidelidad de Claude Design, pieza a pieza.
 
@@ -1404,7 +1763,9 @@ kbd {
   font-weight: 500;
   letter-spacing: var(--tracking-label);
   text-transform: uppercase;
-  color: var(--color-text-on-dark-muted);
+  /* Blanco y no Azul claro: a 13px el Azul claro sobre Azul TE (4.1:1) no
+     llega al 4.5:1 de AA. */
+  color: var(--color-text-on-dark);
 }
 
 .inicio-hero-saludo-react {
@@ -2034,11 +2395,19 @@ kbd {
 /* ---------- Marca y contexto ---------- */
 
 .crm-sidebar-react .workspace-marca-logo-react {
-  width: 38px;
-  height: 38px;
-  padding: 3px;
-  border-radius: 12px;
-  background: var(--color-papel);
+  width: 36px;
+  height: 36px;
+}
+
+/* Plegado, el hueco es de ~32px: el logo baja a ese tamaño y se centra. */
+.crm-sidebar-react[data-state="collapsed"] .workspace-marca-logo-react,
+[data-state="collapsed"] .crm-sidebar-react .workspace-marca-logo-react {
+  width: 28px;
+  height: 28px;
+}
+
+[data-state="collapsed"] .workspace-marca-react {
+  justify-content: center;
 }
 
 .crm-sidebar-react .workspace-marca-texto-react strong {
@@ -2851,9 +3220,14 @@ span.cal-capa-react {
   color: var(--tono);
 }
 
-.herr-icono-react svg {
+.herr-icono-react svg,
+.herr-icono-react img {
   width: 20px;
   height: 20px;
+}
+
+.herr-icono-react img {
+  object-fit: contain;
 }
 
 .herr-texto-react {
@@ -2864,12 +3238,12 @@ span.cal-capa-react {
   line-height: 1.3;
 }
 
+/* El nombre parte línea en vez de cortarse ("WhatsApp del club (…"): es lo
+   que se busca con la vista. El detalle sí se recorta, es secundario. */
 .herr-texto-react strong {
-  overflow: hidden;
   font-size: 0.9rem;
   font-weight: 600;
-  white-space: nowrap;
-  text-overflow: ellipsis;
+  overflow-wrap: anywhere;
 }
 
 .herr-texto-react span {

@@ -19,7 +19,6 @@ services:
       - .env
     environment:
       - FLASK_SECRET_KEY=${FLASK_SECRET_KEY:?set in .env}
-      - ADMIN_PASSWORD=${ADMIN_PASSWORD:?set in .env}
       - DATABASE_URL=postgresql://telecoemprende:${POSTGRES_PASSWORD}@db:5432/telecoemprende
     depends_on:
       - db

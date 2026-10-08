@@ -31,51 +31,6 @@ function Enlace({ url, texto }: { url: string; texto?: string }) {
 }
 
 // --------------------------------------------------------------------------
-// Recursos / Docs
-// --------------------------------------------------------------------------
-
-const CAMPOS_RECURSOS: readonly CampoSpec[] = [
-  { clave: "titulo", etiqueta: "Título", tipo: "texto", requerido: true },
-  {
-    clave: "tipo",
-    etiqueta: "Tipo",
-    tipo: "opcion",
-    opciones: [
-      { valor: "documento", etiqueta: "Documento" },
-      { valor: "enlace", etiqueta: "Enlace" },
-      { valor: "carpeta", etiqueta: "Carpeta" },
-      { valor: "plantilla", etiqueta: "Plantilla" },
-      { valor: "otro", etiqueta: "Otro" },
-    ],
-  },
-  {
-    clave: "url",
-    etiqueta: "Enlace",
-    tipo: "url",
-    ayuda: "Drive, Notion, Canva... lo que sea, pega la URL.",
-  },
-  { clave: "notas", etiqueta: "Notas", tipo: "parrafo" },
-];
-
-export function RecursosPanel() {
-  return (
-    <RegistrosPanel
-      recurso="recursos"
-      descripcion="Los archivos y enlaces del departamento, en un sitio en vez de repartidos por chats."
-      vacio="Todavía no hay ningún recurso. Añade el primero: el plano del espacio, la carpeta de Drive, la plantilla de cartelería..."
-      etiquetaNuevo="Nuevo recurso"
-      campos={CAMPOS_RECURSOS}
-      fila={(r) => ({
-        titulo: textoDe(r, "titulo"),
-        meta: `${etiqueta(CAMPOS_RECURSOS, "tipo", textoDe(r, "tipo"))} · añadido ${haceCuanto(textoDe(r, "created_at"))}`,
-        derecha: <Enlace url={textoDe(r, "url")} />,
-        cuerpo: textoDe(r, "notas") ? <p>{textoDe(r, "notas")}</p> : null,
-      })}
-    />
-  );
-}
-
-// --------------------------------------------------------------------------
 // Presupuesto
 // --------------------------------------------------------------------------
 

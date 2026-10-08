@@ -8,7 +8,6 @@ equipos y desactivada, así que no da acceso a nada hasta que admin la activa.
 import os
 import unittest
 
-os.environ["ADMIN_PASSWORD"] = "test-admin"
 os.environ["DATABASE_URL"] = os.environ.get(
     "TEST_DATABASE_URL",
     "postgresql://telecoemprende:telecoemprende@localhost:5432/telecoemprende_test",

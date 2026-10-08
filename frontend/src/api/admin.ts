@@ -1,24 +1,7 @@
 import { apiRequest } from "./client";
-import type { AdminRegistrationsResponse, AdminSessionResponse, Estado } from "../types/admin";
+import type { AdminRegistrationsResponse, Estado } from "../types/admin";
 import type { ApiResult } from "../types/api";
 import type { Cargo, EquipoAcceso, EventoCalendario, Team } from "../types/equipo";
-
-export function loginAdmin(password: string) {
-  return apiRequest<ApiResult>("/api/admin/login", {
-    method: "POST",
-    body: JSON.stringify({ password }),
-  });
-}
-
-export function logoutAdmin() {
-  return apiRequest<ApiResult>("/api/admin/logout", {
-    method: "POST",
-  });
-}
-
-export function getAdminSession() {
-  return apiRequest<AdminSessionResponse>("/api/admin/session");
-}
 
 export function getAdminRegistrations(evento?: string) {
   const qs = evento ? `?evento=${encodeURIComponent(evento)}` : "";
@@ -72,18 +55,21 @@ export function getEquipoAccesos() {
   return apiRequest<ApiResult & { accesos: EquipoAcceso[] }>("/api/admin/equipo");
 }
 
-export function createEquipoAcceso(
-  email: string,
-  password: string,
-  equipos: Team[],
-  vp_de: Team[],
-  cargo: Cargo,
-  nombre: string,
-  mentor_email: string,
-) {
+export function createEquipoAcceso(datos: {
+  email: string;
+  password: string;
+  /** En orden de preferencia: el primero es la 1ª. */
+  equipos: Team[];
+  vp_de: Team[];
+  cargo: Cargo;
+  nombre: string;
+  apellidos: string;
+  mentor_email: string;
+  es_admin: boolean;
+}) {
   return apiRequest<ApiResult & { acceso: EquipoAcceso }>("/api/admin/equipo", {
     method: "POST",
-    body: JSON.stringify({ email, password, equipos, vp_de, cargo, nombre, mentor_email }),
+    body: JSON.stringify(datos),
   });
 }
 
@@ -96,9 +82,13 @@ export function updateEquipoAcceso(
     activo?: boolean;
     password?: string;
     nombre?: string;
+    apellidos?: string;
     dni?: string;
     correo_personal?: string;
     mentor_email?: string;
+    es_admin?: boolean;
+    /** Data URL ya reducida (`aAvatarCuadrado`), o "" para quitarla. */
+    foto?: string;
   },
 ) {
   return apiRequest<ApiResult>(`/api/admin/equipo/${id}`, {

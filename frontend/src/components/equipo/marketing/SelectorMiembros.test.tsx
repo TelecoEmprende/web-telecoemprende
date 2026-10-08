@@ -8,6 +8,7 @@ const getMiembros = vi.fn();
 
 vi.mock("../DeptoApi", () => ({
   useApi: () => ({ getMiembros }),
+  useDepto: () => "marketing",
   // Los avatares del selector leen las fotos propias del contexto.
   useFotos: () => ({}),
 }));
@@ -53,5 +54,30 @@ describe("SelectorMiembros", () => {
     await userEvent.click(screen.getByRole("button", { name: /Elegir personas/ }));
 
     expect(await screen.findByText(/Nadie en el equipo/)).toBeInTheDocument();
+  });
+
+  it("ordena por preferencia y carga, y propone a quien menos lleva de 1ª", async () => {
+    getMiembros.mockResolvedValue({
+      ok: true,
+      miembros: [
+        { email: "segunda@example.com", nombre: "Segunda", equipos: ["eventos", "marketing"], activo: true, tags: [], foto: "", abiertas: 0 },
+        { email: "cargada@example.com", nombre: "Cargada", equipos: ["marketing", "eventos"], activo: true, tags: [], foto: "", abiertas: 5 },
+        { email: "libre@example.com", nombre: "Libre", equipos: ["marketing", "ingenieria"], activo: true, tags: [], foto: "", abiertas: 1 },
+      ],
+    });
+    const onCambiar = vi.fn();
+    render(<SelectorMiembros seleccionados={[]} onCambiar={onCambiar} proponer />);
+
+    const propuesta = await screen.findByRole("button", { name: /Propuesta: Libre/ });
+    await userEvent.click(screen.getByRole("button", { name: /Elegir personas/ }));
+    const filas = (await screen.findAllByRole("listitem")).map((li) => li.textContent);
+    expect(filas).toEqual([
+      expect.stringMatching(/Libre1ª1 abierta$/),
+      expect.stringMatching(/Cargada1ª5 abiertas$/),
+      expect.stringMatching(/Segunda2ª0 abiertas$/),
+    ]);
+
+    await userEvent.click(propuesta);
+    expect(onCambiar).toHaveBeenCalledWith(["libre@example.com"]);
   });
 });

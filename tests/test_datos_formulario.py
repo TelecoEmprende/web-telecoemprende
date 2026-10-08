@@ -4,7 +4,6 @@ import os
 import unittest
 from io import BytesIO
 
-os.environ["ADMIN_PASSWORD"] = "test-admin"
 os.environ["DATABASE_URL"] = os.environ.get(
     "TEST_DATABASE_URL",
     "postgresql://telecoemprende:telecoemprende@localhost:5432/telecoemprende_test",
@@ -84,7 +83,8 @@ class DatosFormularioTestCase(unittest.TestCase):
 
         self.entrar()
         self.guardar(nombre="=HYPERLINK()")
-        self.client.post("/api/admin/login", json={"password": "test-admin"})
+        with self.client.session_transaction() as s:
+            s["admin_auth"] = True
         respuesta = self.client.get("/api/admin/equipo/excel")
         self.assertEqual(respuesta.status_code, 200)
 

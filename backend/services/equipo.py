@@ -12,7 +12,6 @@ from werkzeug.security import check_password_hash, generate_password_hash
 from backend.config import (
     CARGOS_VALIDOS,
     DATABASE_URL,
-    EQUIPO_CON_PERMISOS_ADMIN,
     EQUIPOS_VALIDOS,
 )
 from backend.services.registrations import _celda_segura
@@ -122,6 +121,23 @@ def _crear_tablas_equipo():
                 ALTER TABLE equipo_accesos
                 ADD COLUMN IF NOT EXISTS mentor_email VARCHAR(120) NOT NULL DEFAULT ''
             """)
+            # Permiso de admin (grupo Admin de /equipo: inscripciones, cuentas,
+            # calendario del club), separado del departamento y del cargo. La
+            # columna nace sin default para que el UPDATE de abajo pueda
+            # distinguir las filas que ya existían (NULL) y darles exactamente
+            # el acceso que tenían antes: Ingeniería o un cargo de dirección.
+            # Desde ahí se quita o se da a mano en la tabla de Cuentas.
+            cur.execute("""
+                ALTER TABLE equipo_accesos ADD COLUMN IF NOT EXISTS es_admin BOOLEAN
+            """)
+            cur.execute("""
+                UPDATE equipo_accesos
+                SET es_admin = ('ingenieria' = ANY(equipos) OR cargo IN ('presidente', 'boardmember'))
+                WHERE es_admin IS NULL
+            """)
+            cur.execute("""
+                ALTER TABLE equipo_accesos ALTER COLUMN es_admin SET DEFAULT FALSE
+            """)
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS calendario_eventos (
                     id SERIAL PRIMARY KEY,
@@ -173,8 +189,11 @@ def listar_directorio_club() -> list[dict]:
     ]
 
 
-def _tiene_permisos_admin(equipos: list[str], cargo: str) -> bool:
-    return EQUIPO_CON_PERMISOS_ADMIN in equipos or cargo in CARGOS_VALIDOS
+def ordenar_equipos(equipos: list[str]) -> list[str]:
+    """Sin duplicados y en el orden en que llegan: el primero es la 1ª
+    preferencia de la persona y el segundo la 2ª (no se ordena alfabéticamente,
+    que perdería esa información)."""
+    return list(dict.fromkeys(equipos))
 
 
 def login_equipo(email: str, password: str) -> dict | None:
@@ -183,7 +202,8 @@ def login_equipo(email: str, password: str) -> dict | None:
         with conn.cursor() as cur:
             cur.execute(
                 """
-                SELECT password_hash, equipos, vp_de, cargo, nombre, mentor_email
+                SELECT password_hash, equipos, vp_de, cargo, nombre, mentor_email,
+                       COALESCE(es_admin, FALSE)
                 FROM equipo_accesos WHERE email = %s AND activo = TRUE
                 """,
                 (email,),
@@ -201,9 +221,9 @@ def login_equipo(email: str, password: str) -> dict | None:
     cargo = row[3] if row[3] in CARGOS_VALIDOS else ""
     nombre = row[4]
     mentor_email = row[5]
+    es_admin = bool(row[6])
 
-    # session.clear() por higiene ante fijación de sesión (mismo criterio que
-    # login_admin).
+    # session.clear() por higiene ante fijación de sesión.
     session.clear()
     session.permanent = True
     session["equipo_email"] = email
@@ -212,14 +232,14 @@ def login_equipo(email: str, password: str) -> dict | None:
     session["equipo_cargo"] = cargo
     session["equipo_nombre"] = nombre
     session["equipo_mentor_email"] = mentor_email
-    # Ingeniería, presidencia y board reciben también sesión de /admin:
-    # reutiliza la misma clave de sesión que usa login_admin, así
-    # is_admin_authenticated() funciona igual venga de /admin o de /equipo.
-    if _tiene_permisos_admin(equipos, cargo):
+    session["equipo_admin"] = es_admin
+    # Solo quien tiene el permiso de admin marcado (no el departamento ni el
+    # cargo) recibe la sesión de admin: grupo Admin y rutas /api/admin/*.
+    if es_admin:
         session["admin_auth"] = True
     return {
         "teams": equipos, "vp_de": vp_de, "cargo": cargo, "nombre": nombre,
-        "mentor_email": mentor_email,
+        "mentor_email": mentor_email, "admin": es_admin,
     }
 
 
@@ -235,6 +255,7 @@ def equipo_session_info() -> dict:
         "email": session.get("equipo_email", ""),
         "nombre": session.get("equipo_nombre", ""),
         "mentor_email": session.get("equipo_mentor_email", ""),
+        "admin": session.get("equipo_admin", False),
     }
 
 
@@ -250,7 +271,7 @@ def listar_equipo_accesos() -> list[dict]:
                 """
                 SELECT id, email, equipos, vp_de, cargo, activo, created_at,
                        tags, notas, nombre, onboarding, dni, correo_personal,
-                       mentor_email, foto, apellidos
+                       mentor_email, foto, apellidos, COALESCE(es_admin, FALSE)
                 FROM equipo_accesos ORDER BY email
                 """
             )
@@ -274,6 +295,7 @@ def listar_equipo_accesos() -> list[dict]:
             "mentor_email": f[13],
             "foto": f[14],
             "apellidos": f[15],
+            "es_admin": f[16],
         }
         for f in filas
     ]
@@ -408,10 +430,12 @@ def miembros_activos(equipo: str) -> list[dict]:
 def _acceso_valido(equipos: list[str], vp_de: list[str], cargo: str) -> bool:
     """Un acceso necesita al menos un departamento O un cargo de dirección.
 
-    El cargo a solas (board member sin departamento) es válido a propósito: ya
-    da sesión de /admin por sí mismo (ver `_tiene_permisos_admin`), que es
-    justo el caso de quien está en el board pero no en ningún equipo. Sin
-    ninguno de los dos, en cambio, la cuenta no daría acceso a nada.
+    El cargo a solas (board member sin departamento) es válido a propósito:
+    el Inicio, las Notas y el club se ven igual. Sin ninguno de los dos, en
+    cambio, la cuenta no daría acceso a nada. El mínimo de dos departamentos
+    se exige en la API al cambiarlos, no aquí: así una fila antigua con uno
+    solo se puede seguir editando (cargo, VP...) sin tener que arreglarla
+    primero.
     """
     if cargo and cargo not in CARGOS_VALIDOS:
         return False
@@ -430,10 +454,12 @@ def crear_equipo_acceso(
     cargo: str = "",
     nombre: str = "",
     mentor_email: str = "",
+    es_admin: bool = False,
+    apellidos: str = "",
 ) -> dict | None:
     """Devuelve None si el email ya existe o si equipos/vp_de/cargo no son válidos."""
     email = email.strip().lower()
-    equipos = sorted(set(equipos))
+    equipos = ordenar_equipos(equipos)
     vp_de = sorted(set(vp_de or []))
     cargo = cargo or ""
     nombre = (nombre or "").strip()
@@ -451,11 +477,16 @@ def crear_equipo_acceso(
             cur.execute(
                 """
                 INSERT INTO equipo_accesos
-                    (email, password_hash, equipos, vp_de, cargo, nombre, mentor_email)
-                VALUES (%s, %s, %s, %s, %s, %s, %s)
-                RETURNING id, email, equipos, vp_de, cargo, activo, created_at, nombre, mentor_email
+                    (email, password_hash, equipos, vp_de, cargo, nombre, mentor_email, es_admin,
+                     apellidos)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                RETURNING id, email, equipos, vp_de, cargo, activo, created_at, nombre,
+                          mentor_email, es_admin, apellidos
                 """,
-                (email, generate_password_hash(password), equipos, vp_de, cargo, nombre, mentor_email),
+                (
+                    email, generate_password_hash(password), equipos, vp_de, cargo, nombre,
+                    mentor_email, es_admin, (apellidos or "").strip(),
+                ),
             )
             fila = cur.fetchone()
         conn.commit()
@@ -470,6 +501,8 @@ def crear_equipo_acceso(
         "created_at": fila[6].isoformat(),
         "nombre": fila[7],
         "mentor_email": fila[8],
+        "es_admin": fila[9],
+        "apellidos": fila[10],
     }
 
 
@@ -513,9 +546,12 @@ def actualizar_equipo_acceso(
     activo: bool | None = None,
     password: str | None = None,
     nombre: str | None = None,
+    apellidos: str | None = None,
     dni: str | None = None,
     correo_personal: str | None = None,
     mentor_email: str | None = None,
+    es_admin: bool | None = None,
+    foto: str | None = None,
 ) -> bool:
     """Actualiza solo los campos que se pasan. Devuelve False si el id no existe
     o si equipos/vp_de/cargo no son válidos.
@@ -524,7 +560,7 @@ def actualizar_equipo_acceso(
     llamada, se valida contra el `equipos` ya guardado en la fila.
     """
     if equipos is not None:
-        equipos = sorted(set(equipos))
+        equipos = ordenar_equipos(equipos)
     if vp_de is not None:
         vp_de = sorted(set(vp_de))
     campos = []
@@ -570,6 +606,9 @@ def actualizar_equipo_acceso(
     if nombre is not None:
         campos.append("nombre = %s")
         valores.append(nombre.strip())
+    if apellidos is not None:
+        campos.append("apellidos = %s")
+        valores.append(apellidos.strip())
     if dni is not None:
         campos.append("dni = %s")
         valores.append(dni.strip())
@@ -579,6 +618,13 @@ def actualizar_equipo_acceso(
     if mentor_email is not None:
         campos.append("mentor_email = %s")
         valores.append(mentor_email.strip().lower())
+    if es_admin is not None:
+        campos.append("es_admin = %s")
+        valores.append(es_admin)
+    if foto is not None:
+        # Ya validada con `_foto` en la API; "" vuelve a la de `public/`.
+        campos.append("foto = %s")
+        valores.append(foto)
 
     if not campos:
         return False

@@ -18,11 +18,6 @@ export type Registro = {
   notificado: boolean;
 };
 
-export type AdminSessionResponse = {
-  ok: true;
-  authenticated: boolean;
-};
-
 export type AdminRegistrationsResponse =
   | {
       ok: true;

@@ -1,7 +1,9 @@
 import logging
 import re
 
-from flask import Blueprint, jsonify, make_response, render_template_string, request, send_file
+from flask import Blueprint, jsonify, make_response, render_template_string, request, send_file, session
+
+from backend.api.marketing import DatosInvalidos, _foto
 
 from backend.config import (
     CARGOS_VALIDOS,
@@ -13,14 +15,10 @@ from backend.config import (
     MAX_EMAIL_LEN,
     MAX_LOGIN_ATTEMPTS_PER_WINDOW,
     MAX_NOMBRE_EQUIPO_LEN,
+    MIN_EQUIPOS_POR_PERSONA,
 )
 from backend.schemas import build_response
-from backend.services.admin import (
-    admin_password_configured,
-    is_admin_authenticated,
-    login_admin,
-    logout_admin,
-)
+from backend.services.admin import is_admin_authenticated, logout_admin
 from backend.services.email import enviar_email_estado
 from backend.services.equipo import (
     actualizar_equipo_acceso,
@@ -222,41 +220,6 @@ def access_denied_response(message: str, status_code: int = 401):
     return response
 
 
-@admin_api.route("/login", methods=["POST"])
-def api_admin_login():
-    if not admin_password_configured():
-        return (
-            jsonify(build_response(
-                False,
-                "El panel admin no está configurado correctamente.",
-            )),
-            503,
-        )
-
-    ip = obtener_ip_real()
-    if demasiadas_peticiones(
-        ip,
-        max_requests=MAX_LOGIN_ATTEMPTS_PER_WINDOW,
-        window_seconds=LOGIN_BLOCK_WINDOW_SECONDS,
-        bucket="admin_login",
-    ):
-        logger.warning("admin login rate-limited ip=%s", ip)
-        return (
-            jsonify(build_response(False, "Demasiados intentos. Espera unos minutos.")),
-            429,
-        )
-
-    payload = request.get_json(silent=True) or {}
-    password = str(payload.get("password", ""))
-
-    if login_admin(password):
-        logger.info("admin login success ip=%s", ip)
-        return jsonify(build_response(True, "Sesión iniciada.")), 200
-
-    logger.warning("admin login failed ip=%s", ip)
-    return jsonify(build_response(False, "Contraseña incorrecta.")), 401
-
-
 @admin_api.route("/logout", methods=["POST"])
 def api_admin_logout():
     logout_admin()
@@ -440,6 +403,16 @@ def api_admin_listar_equipo():
     return jsonify({"ok": True, "accesos": listar_equipo_accesos()}), 200
 
 
+def _error_equipos(equipos: list) -> str | None:
+    """Cada persona va en al menos dos departamentos, sin repetir: el primero
+    es su 1ª preferencia y el segundo la 2ª (el orden se guarda tal cual)."""
+    if len(set(equipos)) != len(equipos):
+        return "No repitas departamento entre preferencias."
+    if len(equipos) < MIN_EQUIPOS_POR_PERSONA:
+        return "Cada persona necesita una 1ª y una 2ª preferencia de departamento."
+    return None
+
+
 @admin_api.route("/equipo", methods=["POST"])
 def api_admin_crear_equipo():
     if not is_admin_authenticated():
@@ -453,7 +426,9 @@ def api_admin_crear_equipo():
     vp_de = payload.get("vp_de") or []
     cargo = str(payload.get("cargo", "") or "")
     nombre = limpiar_texto(str(payload.get("nombre", "") or ""))
+    apellidos = limpiar_texto(str(payload.get("apellidos", "") or ""))
     mentor_email = limpiar_texto(str(payload.get("mentor_email", "") or "")).lower()
+    es_admin = payload.get("es_admin", False)
 
     # No exigimos que sea correo UPM (puede ser gente externa colaborando en un
     # equipo): solo que tenga forma de email.
@@ -474,8 +449,15 @@ def api_admin_crear_equipo():
     # cuenta no daría acceso a nada.
     if not equipos and not cargo:
         return jsonify(build_response(
-            False, "Selecciona al menos un equipo, o asigna un cargo de dirección."
+            False, "Elige su 1ª y 2ª preferencia de departamento, o asigna un cargo."
         )), 400
+
+    error = _error_equipos(equipos) if equipos else None
+    if error:
+        return jsonify(build_response(False, error)), 400
+
+    if not isinstance(es_admin, bool):
+        return jsonify(build_response(False, "Valor de 'es_admin' no válido.")), 400
 
     if not isinstance(vp_de, list) or any(v not in equipos for v in vp_de):
         return jsonify(build_response(False, "VP solo puede marcarse en un equipo ya seleccionado.")), 400
@@ -483,7 +465,7 @@ def api_admin_crear_equipo():
     if cargo and cargo not in CARGOS_VALIDOS:
         return jsonify(build_response(False, "Cargo no válido.")), 400
 
-    if len(nombre) > MAX_NOMBRE_EQUIPO_LEN:
+    if len(nombre) > MAX_NOMBRE_EQUIPO_LEN or len(apellidos) > MAX_NOMBRE_EQUIPO_LEN:
         return jsonify(build_response(False, "El nombre supera la longitud permitida.")), 400
 
     if mentor_email and (len(mentor_email) > MAX_EMAIL_LEN or "@" not in mentor_email):
@@ -491,7 +473,7 @@ def api_admin_crear_equipo():
 
     acceso = crear_equipo_acceso(
         email, password, equipos, vp_de=vp_de, cargo=cargo, nombre=nombre,
-        mentor_email=mentor_email,
+        mentor_email=mentor_email, es_admin=es_admin, apellidos=apellidos,
     )
     if acceso is None:
         return jsonify(build_response(False, "Ese email ya tiene acceso de equipo.")), 409
@@ -512,9 +494,15 @@ def api_admin_actualizar_equipo(acceso_id: int):
     activo = payload.get("activo")
     password = str(payload.get("password", "")) or None
     nombre = payload.get("nombre")
+    apellidos = payload.get("apellidos")
     dni = payload.get("dni")
     correo_personal = payload.get("correo_personal")
     mentor_email = payload.get("mentor_email")
+    es_admin = payload.get("es_admin")
+    try:
+        foto = _foto(payload) if "foto" in payload else None
+    except DatosInvalidos as error:
+        return jsonify(build_response(False, str(error))), 400
 
     # La combinación equipos/vp_de/cargo la valida el servicio contra la fila ya
     # guardada (aquí solo se ven los campos que llegan en la petición).
@@ -522,6 +510,22 @@ def api_admin_actualizar_equipo(acceso_id: int):
         not isinstance(equipos, list) or any(e not in EQUIPOS_VALIDOS for e in equipos)
     ):
         return jsonify(build_response(False, "Selecciona al menos un equipo válido.")), 400
+
+    if equipos:
+        error = _error_equipos(equipos)
+        if error:
+            return jsonify(build_response(False, error)), 400
+
+    if es_admin is not None and not isinstance(es_admin, bool):
+        return jsonify(build_response(False, "Valor de 'es_admin' no válido.")), 400
+
+    # Quitarse el admin a uno mismo puede dejar el club sin nadie que lo
+    # devuelva: que lo haga otra persona con admin.
+    if es_admin is False and any(
+        a["id"] == acceso_id and a["email"] == session.get("equipo_email")
+        for a in listar_equipo_accesos()
+    ):
+        return jsonify(build_response(False, "No puedes quitarte el admin a ti mismo.")), 400
 
     if vp_de is not None and not isinstance(vp_de, list):
         return jsonify(build_response(False, "Valor de 'vp_de' no válido.")), 400
@@ -539,6 +543,11 @@ def api_admin_actualizar_equipo(acceso_id: int):
         nombre = limpiar_texto(str(nombre))
         if len(nombre) > MAX_NOMBRE_EQUIPO_LEN:
             return jsonify(build_response(False, "El nombre supera la longitud permitida.")), 400
+
+    if apellidos is not None:
+        apellidos = limpiar_texto(str(apellidos))
+        if len(apellidos) > MAX_NOMBRE_EQUIPO_LEN:
+            return jsonify(build_response(False, "Los apellidos superan la longitud permitida.")), 400
 
     if dni is not None:
         dni = limpiar_texto(str(dni))
@@ -563,9 +572,12 @@ def api_admin_actualizar_equipo(acceso_id: int):
         activo=activo,
         password=password,
         nombre=nombre,
+        apellidos=apellidos,
         dni=dni,
         correo_personal=correo_personal,
         mentor_email=mentor_email,
+        es_admin=es_admin,
+        foto=foto,
     ):
         logger.info("admin actualiza acceso equipo id=%s", acceso_id)
         return jsonify(build_response(True, "Acceso actualizado.")), 200

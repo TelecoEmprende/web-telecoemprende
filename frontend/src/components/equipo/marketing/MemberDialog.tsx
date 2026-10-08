@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/dialog";
 import { aAvatarCuadrado } from "../../../utils/imagen";
 import type { ApiFailure } from "../../../types/api";
+import { CARGO_LABEL } from "../../../types/equipo";
 import {
   formatearFecha,
   haceCuanto,
@@ -283,9 +284,7 @@ export function MemberDialog({ email, habilidadesConocidas, onCerrar, onGuardado
               <p className="mkt-ficha-nombre-react">{nombre}</p>
               <p className="mkt-meta-react">
                 {ficha.cargo
-                  ? ficha.cargo === "presidente"
-                    ? "Presidente"
-                    : "Board member"
+                  ? CARGO_LABEL[ficha.cargo]
                   : ficha.vp_de.length > 0
                     ? `VP de ${ficha.vp_de.join(", ")}`
                     : "Miembro"}

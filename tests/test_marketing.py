@@ -3,7 +3,6 @@ import os
 import unittest
 from datetime import date, timedelta
 
-os.environ["ADMIN_PASSWORD"] = "test-admin"
 os.environ["DATABASE_URL"] = os.environ.get(
     "TEST_DATABASE_URL",
     "postgresql://telecoemprende:telecoemprende@localhost:5432/telecoemprende_test",
@@ -140,13 +139,25 @@ class AutorizacionTests(MarketingTestCase):
         respuesta = self.client.get("/api/marketing/campaigns")
         self.assertEqual(respuesta.status_code, 200)
 
-    def test_ingenieria_entra_como_admin(self):
-        # login_equipo da admin_auth al equipo de ingeniería; el decorador lo
+    def test_admin_entra_en_cualquier_departamento(self):
+        # login_equipo da admin_auth a quien tiene `es_admin`; el decorador lo
         # acepta como superusuario aunque no esté en el equipo de marketing.
         self.login(email="dev@example.com", equipos=["ingenieria"])
+        conn = marketing_service._get_connection()
+        with conn.cursor() as cur:
+            cur.execute("UPDATE equipo_accesos SET es_admin = TRUE WHERE email = 'dev@example.com'")
+        conn.commit()
+        conn.close()
+        self.client.post("/api/equipo/login", json={"email": "dev@example.com", "password": "test-equipo"})
 
         respuesta = self.client.get("/api/marketing/campaigns")
         self.assertEqual(respuesta.status_code, 200)
+
+    def test_ingenieria_sin_permiso_de_admin_no_entra_en_otro_departamento(self):
+        self.login(email="dev@example.com", equipos=["ingenieria"])
+
+        respuesta = self.client.get("/api/marketing/campaigns")
+        self.assertEqual(respuesta.status_code, 401)
 
     def test_logout_corta_el_acceso(self):
         self.login()

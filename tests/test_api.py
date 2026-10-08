@@ -1,7 +1,6 @@
 import os
 import unittest
 
-os.environ["ADMIN_PASSWORD"] = "test-admin"
 os.environ["DATABASE_URL"] = os.environ.get(
     "TEST_DATABASE_URL",
     "postgresql://telecoemprende:telecoemprende@localhost:5432/telecoemprende_test",
@@ -13,7 +12,6 @@ os.environ["CRON_SECRET"] = "test-cron-secret"
 os.environ["SLACK_SIGNING_SECRET"] = "test-signing-secret"
 
 import app  # noqa: E402
-import backend.services.admin as admin_service  # noqa: E402
 import backend.services.equipo as equipo_service  # noqa: E402
 import backend.services.marketing as marketing_service  # noqa: E402
 import backend.services.registrations as registration_service  # noqa: E402
@@ -25,7 +23,6 @@ from werkzeug.security import generate_password_hash  # noqa: E402
 
 class ApiTestCase(unittest.TestCase):
     def setUp(self):
-        admin_service.ADMIN_PASSWORD = "test-admin"
         security_service.request_log.clear()
 
         registration_service.init_db()
@@ -106,20 +103,28 @@ class ApiTestCase(unittest.TestCase):
         conn.commit()
         conn.close()
 
-    def login(self, password="test-admin"):
-        return self.client.post("/api/admin/login", json={"password": password})
+    def login(self):
+        """Sesión de admin tal cual la deja el login de /equipo de alguien de
+        Ingeniería o del board (ver login_equipo): ya no hay contraseña
+        maestra."""
+        with self.client.session_transaction() as s:
+            s.clear()
+            s["admin_auth"] = True
+
+    def test_admin_password_login_no_longer_exists(self):
+        response = self.client.post("/api/admin/login", json={"password": "x"})
+        self.assertEqual(response.status_code, 404)
 
     def test_admin_session_login_and_registrations_flow(self):
         self.register()
 
         session_before = self.client.get("/api/admin/session")
-        login = self.login()
+        self.login()
         session_after = self.client.get("/api/admin/session")
         registrations = self.client.get("/api/admin/registrations")
 
         self.assertEqual(session_before.status_code, 200)
         self.assertFalse(session_before.get_json()["authenticated"])
-        self.assertEqual(login.status_code, 200)
         self.assertTrue(session_after.get_json()["authenticated"])
         self.assertEqual(registrations.status_code, 200)
         payload = registrations.get_json()
@@ -140,18 +145,6 @@ class ApiTestCase(unittest.TestCase):
             authorized.headers["Content-Disposition"],
         )
         authorized.close()
-
-    def test_admin_login_rate_limited_after_repeated_failures(self):
-        for _ in range(MAX_LOGIN_ATTEMPTS_PER_WINDOW):
-            attempt = self.login(password="wrong-password")
-            self.assertEqual(attempt.status_code, 401)
-
-        blocked = self.login(password="wrong-password")
-        self.assertEqual(blocked.status_code, 429)
-
-        # Un intento correcto tras agotar el cupo también debe quedar bloqueado.
-        still_blocked = self.login()
-        self.assertEqual(still_blocked.status_code, 429)
 
     def test_admin_update_rejects_invalid_departamento(self):
         self.register()
@@ -396,36 +389,80 @@ class ApiTestCase(unittest.TestCase):
         still_blocked = self.equipo_login()
         self.assertEqual(still_blocked.status_code, 429)
 
-    def test_equipo_login_uses_its_own_rate_limit_bucket(self):
-        # Agotar el cupo del login de admin no debe bloquear el de equipo:
-        # cada endpoint sensible tiene su propio contador por IP.
-        self.seed_equipo()
-        for _ in range(MAX_LOGIN_ATTEMPTS_PER_WINDOW):
-            self.login(password="wrong-password")
+    def test_equipo_login_ingenieria_does_not_grant_admin(self):
+        self.seed_equipo(email="dev@example.com", equipos=["ingenieria", "marketing"])
 
-        response = self.equipo_login()
-        self.assertEqual(response.status_code, 200)
-
-    def test_equipo_login_admin_session_mutually_exclusive(self):
-        # session.clear() en login_equipo/login_admin: no pueden coexistir
-        # una sesión admin y una de equipo en el mismo navegador.
-        self.seed_equipo()
-        self.login()
-        self.equipo_login()
+        response = self.equipo_login(email="dev@example.com")
+        self.assertFalse(response.get_json()["admin"])
 
         admin_session = self.client.get("/api/admin/session")
         self.assertFalse(admin_session.get_json()["authenticated"])
 
-    def test_equipo_login_ingenieria_grants_admin_session(self):
-        self.seed_equipo(email="dev@example.com", equipos=["ingenieria"])
+    def test_equipo_login_es_admin_grants_admin_session(self):
+        self.seed_equipo(email="admin@example.com", equipos=["marketing", "eventos"])
+        conn = registration_service._get_connection()
+        with conn.cursor() as cur:
+            cur.execute("UPDATE equipo_accesos SET es_admin = TRUE WHERE email = 'admin@example.com'")
+        conn.commit()
+        conn.close()
 
-        response = self.equipo_login(email="dev@example.com")
-        self.assertTrue(response.get_json()["ok"])
+        response = self.equipo_login(email="admin@example.com")
+        self.assertTrue(response.get_json()["admin"])
+        self.assertTrue(self.client.get("/api/admin/session").get_json()["authenticated"])
+        self.assertTrue(self.client.get("/api/equipo/session").get_json()["admin"])
 
-        admin_session = self.client.get("/api/admin/session")
-        self.assertTrue(admin_session.get_json()["authenticated"])
+    def test_admin_equipo_requires_two_departments_in_preference_order(self):
+        self.login()
+        base = {"password": "contrasena-larga"}
 
-    def test_equipo_login_presidente_cargo_grants_admin_session(self):
+        uno = self.client.post("/api/admin/equipo", json={**base, "email": "a@example.com", "equipos": ["eventos"]})
+        self.assertEqual(uno.status_code, 400)
+        repetido = self.client.post(
+            "/api/admin/equipo", json={**base, "email": "a@example.com", "equipos": ["eventos", "eventos"]}
+        )
+        self.assertEqual(repetido.status_code, 400)
+
+        dos = self.client.post(
+            "/api/admin/equipo", json={**base, "email": "a@example.com", "equipos": ["marketing", "eventos"]}
+        )
+        self.assertEqual(dos.status_code, 201)
+        self.assertEqual(dos.get_json()["acceso"]["equipos"], ["marketing", "eventos"])
+
+    def test_admin_equipo_sets_photo_and_rejects_non_images(self):
+        self.login()
+        self.seed_equipo(email="foto@example.com", equipos=["marketing", "eventos"])
+        acceso_id = next(
+            a["id"] for a in self.client.get("/api/admin/equipo").get_json()["accesos"]
+            if a["email"] == "foto@example.com"
+        )
+        png = (
+            "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4"
+            "nGNgYGD4DwABBAEAwS2OUAAAAABJRU5ErkJggg=="
+        )
+
+        malo = self.client.put(f"/api/admin/equipo/{acceso_id}", json={"foto": "data:text/html;base64,PHA+"})
+        self.assertEqual(malo.status_code, 400)
+        bueno = self.client.put(f"/api/admin/equipo/{acceso_id}", json={"foto": png})
+        self.assertEqual(bueno.status_code, 200)
+        guardado = next(
+            a for a in self.client.get("/api/admin/equipo").get_json()["accesos"] if a["id"] == acceso_id
+        )
+        self.assertEqual(guardado["foto"], png)
+
+    def test_admin_cannot_remove_own_admin(self):
+        self.seed_equipo(email="yo@example.com", equipos=["marketing", "eventos"])
+        conn = registration_service._get_connection()
+        with conn.cursor() as cur:
+            cur.execute("UPDATE equipo_accesos SET es_admin = TRUE WHERE email = 'yo@example.com' RETURNING id")
+            acceso_id = cur.fetchone()[0]
+        conn.commit()
+        conn.close()
+        self.equipo_login(email="yo@example.com")
+
+        response = self.client.put(f"/api/admin/equipo/{acceso_id}", json={"es_admin": False})
+        self.assertEqual(response.status_code, 400)
+
+    def test_equipo_login_presidente_cargo_does_not_grant_admin(self):
         self.seed_equipo(email="presi@example.com", equipos=["eventos"], cargo="presidente")
 
         response = self.equipo_login(email="presi@example.com")
@@ -433,8 +470,9 @@ class ApiTestCase(unittest.TestCase):
         self.assertTrue(body["ok"])
         self.assertEqual(body["cargo"], "presidente")
 
+        # El cargo es un título: el admin se da aparte (`es_admin`).
         admin_session = self.client.get("/api/admin/session")
-        self.assertTrue(admin_session.get_json()["authenticated"])
+        self.assertFalse(admin_session.get_json()["authenticated"])
 
     def test_equipo_login_regular_member_does_not_grant_admin(self):
         self.seed_equipo(email="miembro@example.com", equipos=["marketing"])
@@ -505,7 +543,7 @@ class ApiTestCase(unittest.TestCase):
             json={
                 "email": "nuevo@example.com",
                 "password": "contrasena-larga",
-                "equipos": ["marketing"],
+                "equipos": ["marketing", "eventos"],
                 "mentor_email": "mentora@example.com",
             },
         )
@@ -849,7 +887,10 @@ class ApiTestCase(unittest.TestCase):
 
         create = self.client.post(
             "/api/admin/equipo",
-            json={"email": "nueva@example.com", "password": "contrasena-larga", "equipos": ["eventos"]},
+            json={
+                "email": "nueva@example.com", "password": "contrasena-larga",
+                "equipos": ["eventos", "ingenieria"],
+            },
         )
         self.assertEqual(create.status_code, 201)
         acceso_id = create.get_json()["acceso"]["id"]
@@ -865,15 +906,18 @@ class ApiTestCase(unittest.TestCase):
                 "activo": False,
                 "dni": "12345678Z",
                 "correo_personal": "nueva.personal@gmail.com",
+                "apellidos": "García López",
             },
         )
         self.assertEqual(update.status_code, 200)
 
         listado_tras_update = self.client.get("/api/admin/equipo").get_json()["accesos"]
         actualizado = next(a for a in listado_tras_update if a["id"] == acceso_id)
-        self.assertEqual(sorted(actualizado["equipos"]), ["eventos", "marketing"])
+        # El orden es la preferencia: se guarda tal cual, sin ordenar.
+        self.assertEqual(actualizado["equipos"], ["eventos", "marketing"])
         self.assertFalse(actualizado["activo"])
         self.assertEqual(actualizado["dni"], "12345678Z")
+        self.assertEqual(actualizado["apellidos"], "García López")
         self.assertEqual(actualizado["correo_personal"], "nueva.personal@gmail.com")
 
         delete = self.client.delete(f"/api/admin/equipo/{acceso_id}")
@@ -888,12 +932,15 @@ class ApiTestCase(unittest.TestCase):
 
         response = self.client.post(
             "/api/admin/equipo",
-            json={"email": "ya-existe@example.com", "password": "contrasena-larga", "equipos": ["marketing"]},
+            json={
+                "email": "ya-existe@example.com", "password": "contrasena-larga",
+                "equipos": ["marketing", "eventos"],
+            },
         )
         self.assertEqual(response.status_code, 409)
 
     def test_admin_equipo_create_board_member_without_team(self):
-        """Board sin departamento: el cargo por sí solo ya da acceso a /admin."""
+        """Board sin departamento es válido; el admin va aparte del cargo."""
         self.login()
 
         create = self.client.post(
@@ -903,6 +950,7 @@ class ApiTestCase(unittest.TestCase):
                 "password": "contrasena-larga",
                 "equipos": [],
                 "cargo": "boardmember",
+                "es_admin": True,
             },
         )
         self.assertEqual(create.status_code, 201)
@@ -915,7 +963,7 @@ class ApiTestCase(unittest.TestCase):
         self.assertEqual(login.status_code, 200)
         self.assertEqual(login.get_json()["teams"], [])
         self.assertEqual(login.get_json()["cargo"], "boardmember")
-        # El cargo, sin ningún equipo, tiene que seguir abriendo /admin.
+        # Sin ningún equipo, el permiso de admin tiene que seguir abriendo Admin.
         self.assertEqual(self.client.get("/api/admin/registrations").status_code, 200)
 
     def test_admin_equipo_create_rejects_no_team_and_no_cargo(self):

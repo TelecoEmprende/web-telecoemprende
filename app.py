@@ -5,6 +5,7 @@ from flask import (
     send_file,
     send_from_directory,
     abort,
+    redirect,
 )
 import os
 import re
@@ -98,19 +99,15 @@ def index():
     return serve_frontend_index()
 
 
-# Las vistas del panel las resuelve el router de React, así que aquí solo hay
-# que devolver el index en vez de un 404 (en Vercel ya lo hace el rewrite del
-# servicio frontend; esto es para el Flask local). Se enumeran en vez de
-# aceptar `<path:>`: un comodín volvería a servir rutas retiradas a propósito,
-# como el viejo GET /admin/logout. Vista nueva en el router = vista nueva aquí.
+# /admin vive dentro de /equipo (grupo Admin del sidebar); los enlaces viejos
+# siguen llegando. En Vercel lo resuelve el <Navigate> de App.tsx.
 @app.route("/admin", methods=["GET"])
 @app.route("/admin/<any(inscripciones, equipo, calendario):_vista>", methods=["GET"])
 def admin(_vista: str = ""):
-    return serve_frontend_index()
+    return redirect("/equipo")
 
 
 @app.route("/equipo", methods=["GET"])
-@app.route("/equipo/datosformulario", methods=["GET"])
 def equipo():
     return serve_frontend_index()
 
