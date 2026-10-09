@@ -171,11 +171,36 @@ def listar_equipo_accesos() -> list[dict]:
 # Orden en la web: presidencia, board, VPs y luego el resto.
 _RANGO_WEB = {"presidente": 0, "boardmember": 1, "vicepresidente": 2}
 
+_DEPTO_WEB = {
+    "marketing": ("Marketing", "Marketing"),
+    "eventos": ("Eventos", "Events"),
+    "ingenieria": ("Ingeniería", "Engineering"),
+}
+
+
+def puesto_web(cargo: str, vp_de: list[str]) -> dict | None:
+    """El puesto que sale bajo el nombre en la web, en español e inglés: solo
+    para presidencia, board y VPs (de su departamento); el resto, nada."""
+    if cargo == "presidente":
+        return {"es": "Presidente", "en": "President"}
+    if cargo == "boardmember":
+        return {"es": "Board member", "en": "Board member"}
+    deptos = [d for d in vp_de if d in _DEPTO_WEB]
+    if deptos:
+        return {
+            "es": "VP de " + " y ".join(_DEPTO_WEB[d][0] for d in deptos),
+            "en": "VP of " + " & ".join(_DEPTO_WEB[d][1] for d in deptos),
+        }
+    if cargo == "vicepresidente":
+        return {"es": "Vicepresidente", "en": "Vice President"}
+    return None
+
 
 def listar_miembros_web() -> list[dict]:
     """Quién sale en la sección «Equipo» de la web pública: cuentas marcadas
     `en_web` y con foto subida. Ruta pública, así que solo viaja nombre,
-    primer apellido y foto; nada de email, DNI ni departamentos.
+    primer apellido, foto y, si lo tiene, su puesto (`puesto_web`); nada de
+    email, DNI ni departamentos.
     """
     with _get_connection() as conn:
         with conn.cursor() as cur:
@@ -190,7 +215,12 @@ def listar_miembros_web() -> list[dict]:
 
     filas.sort(key=lambda f: (_RANGO_WEB.get(f[3], 2 if f[4] else 3), f[0].lower()))
     return [
-        {"nombre": f[0], "apellido": (f[1].split() or [""])[0], "foto": f[2]}
+        {
+            "nombre": f[0],
+            "apellido": (f[1].split() or [""])[0],
+            "foto": f[2],
+            "puesto": puesto_web(f[3], f[4]),
+        }
         for f in filas
     ]
 
