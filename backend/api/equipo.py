@@ -2,6 +2,7 @@ import logging
 import re
 from datetime import date, timedelta
 
+import psycopg2
 from flask import Blueprint, jsonify, request, session
 
 from backend.api.admin import _validar_evento_calendario
@@ -29,6 +30,7 @@ from backend.services.equipo import (
     is_equipo_authenticated,
     listar_directorio_club,
     listar_eventos_calendario,
+    listar_miembros_web,
     login_equipo,
     logout_equipo,
     marcar_asistio_evento,
@@ -180,6 +182,21 @@ def api_equipo_directorio():
     if not is_equipo_authenticated() and not is_admin_authenticated():
         return jsonify(build_response(False, "No autorizado.")), 401
     return jsonify({"ok": True, "miembros": listar_directorio_club()}), 200
+
+
+@equipo_api.route("/miembros-web", methods=["GET"])
+def api_equipo_miembros_web():
+    """Sección «Equipo» de la web pública: sin sesión, solo lo que ya se ve en
+    la web (ver `listar_miembros_web`). La misma fila que /equipo, así que una
+    foto cambiada en Cuentas cambia también aquí."""
+    try:
+        miembros = listar_miembros_web()
+    except (psycopg2.errors.UndefinedColumn, psycopg2.errors.UndefinedTable):
+        # Primera visita tras desplegar, antes de que nada haya creado las
+        # columnas nuevas: se crean y se reintenta una vez.
+        init_equipo_db()
+        miembros = listar_miembros_web()
+    return jsonify({"ok": True, "miembros": miembros}), 200
 
 
 @equipo_api.route("/calendario", methods=["GET"])

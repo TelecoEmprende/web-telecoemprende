@@ -5,7 +5,6 @@ import { useApi } from "../DeptoApi";
 import { AlertBanner } from "../../feedback/AlertBanner";
 import { Esqueleto } from "../../feedback/Esqueleto";
 import { AvatarResponsable, etiquetaDe } from "./Avatares";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -13,13 +12,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { aAvatarCuadrado } from "../../../utils/imagen";
+import { aFotoPerfil } from "../../../utils/imagen";
 import type { ApiFailure } from "../../../types/api";
 import { CARGO_LABEL } from "../../../types/equipo";
 import {
   formatearFecha,
   haceCuanto,
-  ONBOARDING_PASOS,
   type CalendarioItem,
   type FichaMiembro,
   type TaskEstado,
@@ -67,7 +65,6 @@ export function MemberDialog({ email, habilidadesConocidas, onCerrar, onGuardado
   const [tags, setTags] = useState<string[]>([]);
   const [nuevaHabilidad, setNuevaHabilidad] = useState("");
   const [notas, setNotas] = useState("");
-  const [onboarding, setOnboarding] = useState<Record<string, boolean>>({});
   const [editandoPerfil, setEditandoPerfil] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [guardado, setGuardado] = useState(false);
@@ -96,7 +93,6 @@ export function MemberDialog({ email, habilidadesConocidas, onCerrar, onGuardado
         setTags(respuesta.ficha.tags);
         setFoto(respuesta.ficha.foto);
         setNotas(respuesta.ficha.notas);
-        setOnboarding(respuesta.ficha.onboarding ?? {});
       } catch (err) {
         if (activo) {
           setError((err as ApiFailure)?.message || "No se pudo cargar la ficha.");
@@ -138,7 +134,6 @@ export function MemberDialog({ email, habilidadesConocidas, onCerrar, onGuardado
     [habilidadesConocidas, tags],
   );
 
-  const onboardingCompletados = ONBOARDING_PASOS.filter((p) => onboarding[p.key]).length;
 
   function agregarHabilidad() {
     const nueva = nuevaHabilidad.trim();
@@ -153,7 +148,7 @@ export function MemberDialog({ email, habilidadesConocidas, onCerrar, onGuardado
     setSubiendoFoto(true);
     setError(null);
     try {
-      const nueva = await aAvatarCuadrado(archivo);
+      const nueva = await aFotoPerfil(archivo);
       await updateFichaMiembro(email, { foto: nueva });
       setFoto(nueva);
       onGuardado();
@@ -185,11 +180,11 @@ export function MemberDialog({ email, habilidadesConocidas, onCerrar, onGuardado
     setError(null);
 
     try {
-      await updateFichaMiembro(email, { tags, notas, onboarding });
+      await updateFichaMiembro(email, { tags, notas });
       // Sin esto, "Cancelar" tras un guardado anterior volvía a lo que había
       // ANTES de esa primera vez que se guardó -- `ficha` se queda como la
       // primera carga si nunca se actualiza con lo último guardado.
-      setFicha((actual) => (actual ? { ...actual, tags, notas, onboarding } : actual));
+      setFicha((actual) => (actual ? { ...actual, tags, notas } : actual));
       setGuardado(true);
       setEditandoPerfil(false);
       onGuardado();
@@ -208,7 +203,6 @@ export function MemberDialog({ email, habilidadesConocidas, onCerrar, onGuardado
     if (ficha) {
       setTags(ficha.tags);
       setNotas(ficha.notas);
-      setOnboarding(ficha.onboarding ?? {});
     }
     setNuevaHabilidad("");
     setEditandoPerfil(false);
@@ -291,11 +285,6 @@ export function MemberDialog({ email, habilidadesConocidas, onCerrar, onGuardado
                 {" · desde "}
                 {formatearFecha(ficha.desde.slice(0, 10), true)}
               </p>
-              {ficha.mentor_email ? (
-                <p className="mkt-meta-react">
-                  Mentor: {etiquetaDe(ficha.mentor_email, undefined)}
-                </p>
-              ) : null}
 
               {tags.length > 0 ? (
                 <span className="mkt-tags-react mkt-ficha-skills-react">
@@ -398,9 +387,6 @@ export function MemberDialog({ email, habilidadesConocidas, onCerrar, onGuardado
 
               <section className="mkt-ficha-bloque-react">
                 <h4>Perfil</h4>
-                <p className="mkt-meta-react">
-                  Onboarding: {onboardingCompletados}/{ONBOARDING_PASOS.length} completado
-                </p>
 
                 {editandoPerfil ? (
                   <>
@@ -463,24 +449,6 @@ export function MemberDialog({ email, habilidadesConocidas, onCerrar, onGuardado
                         La ve todo el departamento. Sirve para repartir mejor, no para
                         evaluar a nadie.
                       </p>
-                    </div>
-
-                    <div className="field-group-react">
-                      <span className="mkt-meta-react">Onboarding</span>
-                      <div className="mt-1.5 flex flex-col gap-1.5">
-                        {ONBOARDING_PASOS.map((paso) => (
-                          <label key={paso.key} className="flex items-center gap-2 text-sm">
-                            <Checkbox
-                              checked={!!onboarding[paso.key]}
-                              onCheckedChange={(checked) => {
-                                setOnboarding((actual) => ({ ...actual, [paso.key]: checked === true }));
-                                setGuardado(false);
-                              }}
-                            />
-                            {paso.label}
-                          </label>
-                        ))}
-                      </div>
                     </div>
 
                     <div className="mkt-ficha-acciones-react">

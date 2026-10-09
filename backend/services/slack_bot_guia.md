@@ -43,17 +43,15 @@ calendario se puede elegir a qué departamento pertenece. Un elemento del
 calendario de otro departamento del que también formas parte se puede abrir
 directamente sin cambiar de pestaña.
 
-## Miembros y onboarding
+## Miembros
 
-Cada persona tiene una ficha con su carga de trabajo y una checklist de
-onboarding. Al completar el último punto de la checklist, el club lo anuncia
-en Slack.
+Cada persona tiene una ficha con su carga de trabajo, sus etiquetas y su foto.
 
 ## Otras secciones (según departamento)
 
-- **Recursos, Presupuesto, Reuniones, Alumni**: paneles con su propio listado
-  editable, cada uno dentro del departamento correspondiente.
-- **Anuncios**: visible para todo el club sin importar el departamento.
+- **Presupuesto y Reuniones**: paneles con su propio listado editable, cada
+  uno dentro del departamento correspondiente. Los avisos van por Slack y los
+  documentos compartidos en el Drive del club (en Herramientas).
 
 ## Lo que este bot NO sabe hacer
 
