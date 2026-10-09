@@ -3,7 +3,7 @@ import { Aparece, TitularAnimado } from "./aparece";
 import { useMiembrosWeb } from "./useMiembrosWeb";
 
 export function TeamSection() {
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
   // Las cuentas de /equipo marcadas «Sale en la web» (ver Cuentas del equipo):
   // misma foto y mismo nombre que dentro, sin lista aparte que mantener.
   const miembros = useMiembrosWeb() ?? [];
@@ -21,6 +21,7 @@ export function TeamSection() {
               <Aparece como="li" className="in-persona" key={`${nombre}-${i}`} retraso={(i % 4) * 0.07}>
                 <img src={miembro.foto} alt={`${t.team.photoAlt} ${nombre}`} loading="lazy" />
                 <h3>{nombre}</h3>
+                {miembro.puesto ? <p>{miembro.puesto[language]}</p> : null}
               </Aparece>
             );
           })}

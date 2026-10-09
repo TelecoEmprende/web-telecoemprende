@@ -99,6 +99,8 @@ export type MiembroWeb = {
   apellido: string;
   /** Data URL: solo salen quienes tienen foto subida en su cuenta. */
   foto: string;
+  /** Presidente, board o VP de su departamento; null para el resto. */
+  puesto: { es: string; en: string } | null;
 };
 
 export type EventoCalendario = {
