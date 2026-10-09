@@ -16,7 +16,6 @@ import psycopg2
 from psycopg2.extras import RealDictCursor
 
 from backend.config import DATABASE_URL
-from backend.services.db import activar_rls
 
 logger = logging.getLogger("telecoemprende.auditoria")
 
@@ -28,31 +27,8 @@ EXCLUIDAS = ("/api/cron/", "/api/slack/")
 
 MAX_RUTA_LEN = 255
 
-_tabla_lista = False
-
-
 def _get_connection():
     return psycopg2.connect(DATABASE_URL)
-
-
-def _asegurar_tabla(cur) -> None:
-    global _tabla_lista
-    if _tabla_lista:
-        return
-    cur.execute("""
-        CREATE TABLE IF NOT EXISTS auditoria (
-            id SERIAL PRIMARY KEY,
-            momento TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-            email VARCHAR(120) NOT NULL DEFAULT '',
-            metodo VARCHAR(8) NOT NULL,
-            ruta VARCHAR(255) NOT NULL,
-            estado INTEGER NOT NULL,
-            ip VARCHAR(64) NOT NULL DEFAULT ''
-        )
-    """)
-    cur.execute("CREATE INDEX IF NOT EXISTS auditoria_momento_idx ON auditoria (momento DESC)")
-    activar_rls(cur, "auditoria")
-    _tabla_lista = True
 
 
 def debe_registrarse(metodo: str, ruta: str) -> bool:
@@ -65,7 +41,6 @@ def registrar(email: str, metodo: str, ruta: str, estado: int, ip: str) -> None:
     try:
         with _get_connection() as conn:
             with conn.cursor() as cur:
-                _asegurar_tabla(cur)
                 cur.execute(
                     "INSERT INTO auditoria (email, metodo, ruta, estado, ip) VALUES (%s, %s, %s, %s, %s)",
                     (email[:120], metodo[:8], ruta[:MAX_RUTA_LEN], estado, ip[:64]),
@@ -79,8 +54,6 @@ def listar(q: str = "", limite: int = 200) -> list[dict]:
     """Lo último primero. `q` filtra por email o ruta (contiene, sin mayúsculas)."""
     with _get_connection() as conn:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            _asegurar_tabla(cur)
-            conn.commit()
             donde, valores = "", []
             if q.strip():
                 patron = f"%{q.strip().lower()}%"

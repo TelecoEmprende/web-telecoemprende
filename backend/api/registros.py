@@ -132,11 +132,9 @@ def _montar_rutas(ruta: str, tabla: reg.Tabla, leer_campos, obligatorio: str):
     depto_de = departamento_actual
 
     def listar():
-        reg.init_registros_db()
         return jsonify({"ok": True, ruta: reg.listar(tabla, depto_de())}), 200
 
     def crear():
-        reg.init_registros_db()
         datos = _payload()
         campos = leer_campos(datos)
         if obligatorio not in campos:
@@ -145,7 +143,6 @@ def _montar_rutas(ruta: str, tabla: reg.Tabla, leer_campos, obligatorio: str):
         return jsonify(build_response(True, "Creado.", registro=fila)), 201
 
     def actualizar(fila_id: int):
-        reg.init_registros_db()
         campos = leer_campos(_payload())
         if not campos:
             raise DatosInvalidos("No hay nada que actualizar.")
@@ -154,7 +151,6 @@ def _montar_rutas(ruta: str, tabla: reg.Tabla, leer_campos, obligatorio: str):
         return jsonify(build_response(True, "Actualizado.")), 200
 
     def eliminar(fila_id: int):
-        reg.init_registros_db()
         if not reg.eliminar(tabla, fila_id, depto_de()):
             return jsonify(build_response(False, "No encontrado.")), 404
         return jsonify(build_response(True, "Eliminado.")), 200
@@ -180,7 +176,6 @@ _montar_rutas("servicios", reg.SERVICIOS, _campos_servicio, "nombre")
 @marketing_api.route("/presupuesto/resumen", methods=["GET"])
 @requiere_equipo
 def api_presupuesto_resumen():
-    reg.init_registros_db()
     return jsonify({"ok": True, "resumen": reg.resumen_presupuesto(departamento_actual())}), 200
 
 

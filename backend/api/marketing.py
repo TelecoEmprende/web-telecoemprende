@@ -33,6 +33,7 @@ from backend.config import (
 )
 from backend.schemas import build_response
 from backend.services.admin import is_admin_authenticated
+from backend.services.db import DatosInvalidos
 from backend.services.equipo import equipo_session_info, is_equipo_authenticated
 from backend.services.slack import (
     tarea_cambia_estado,
@@ -54,7 +55,6 @@ from backend.services.marketing import (
     eliminar_campaign,
     eliminar_content,
     eliminar_task,
-    init_marketing_db,
     listar_campaigns,
     listar_task_comments,
     listar_tasks,
@@ -113,10 +113,6 @@ def departamento_actual() -> str:
     return _DEPARTAMENTO_POR_BLUEPRINT[request.blueprint]
 
 
-class DatosInvalidos(ValueError):
-    """Error de validación con el mensaje que se le enseña al usuario."""
-
-
 def requiere_equipo(func):
     """Exige pertenecer al departamento de la ruta. El admin pasa siempre: el
     equipo de ingeniería recibe `admin_auth` al entrar en /equipo y hace de
@@ -131,17 +127,6 @@ def requiere_equipo(func):
         if not autorizado:
             return jsonify(build_response(False, "No autorizado.")), 401
 
-        init_marketing_db()
-        # `calendario()` hace JOIN contra `reuniones`, que solo creaba
-        # `init_registros_db()` -- y esa función solo se llamaba desde las
-        # rutas de api/registros.py. Un departamento que nunca hubiera abierto
-        # Recursos/Reuniones antes de mirar su Calendario se encontraba con un
-        # 500 (relation "reuniones" does not exist). Se inicializa aquí, en la
-        # puerta común de todas las rutas de este blueprint, para que no
-        # dependa de qué ruta se visitó primero.
-        from backend.services.registros import init_registros_db
-
-        init_registros_db()
         try:
             return func(*args, **kwargs)
         except DatosInvalidos as error:
@@ -655,9 +640,8 @@ def api_miembros():
     """Directorio del departamento: quién está, qué sabe hacer y cuánto lleva
     encima. Las etiquetas salen de `equipo_accesos` (perfil de la persona); la
     carga se calcula sobre las tareas del departamento, no se guarda."""
-    from backend.services.equipo import init_equipo_db, miembros_activos
+    from backend.services.equipo import miembros_activos
 
-    init_equipo_db()
     depto = departamento_actual()
     carga = carga_por_miembro(depto)
     miembros = [
@@ -686,9 +670,8 @@ def _es_mi_ficha(email: str) -> bool:
 def _miembro_del_departamento(email: str) -> dict | None:
     """La persona, solo si está en el departamento de la petición: sin esto,
     la ficha sería una forma de leer las notas de cualquiera del club."""
-    from backend.services.equipo import init_equipo_db, listar_equipo_accesos
+    from backend.services.equipo import listar_equipo_accesos
 
-    init_equipo_db()
     return next(
         (
             a

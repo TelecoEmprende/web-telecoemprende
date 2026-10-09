@@ -28,7 +28,6 @@ def requiere_sesion(func):
     def envoltorio(*args, **kwargs):
         if not is_equipo_authenticated():
             return jsonify(build_response(False, "No autorizado.")), 401
-        srv.init_notas_db()
         sesion = equipo_session_info()
         try:
             return func(sesion["email"], sesion["teams"], *args, **kwargs)

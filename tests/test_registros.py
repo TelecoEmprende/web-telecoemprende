@@ -24,13 +24,13 @@ import backend.services.plataforma as plataforma_service  # noqa: E402
 import backend.services.registros as registros_service  # noqa: E402
 import backend.services.security as security_service  # noqa: E402
 from werkzeug.security import generate_password_hash  # noqa: E402
+from backend.services.db import migrar  # noqa: E402
 
 
 class RegistrosTestCase(unittest.TestCase):
     def setUp(self):
         security_service.request_log.clear()
-        equipo_service.init_equipo_db()
-        registros_service.init_registros_db()
+        migrar()
 
         conn = registros_service._get_connection()
         with conn.cursor() as cur:

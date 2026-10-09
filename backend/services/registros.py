@@ -18,8 +18,8 @@ from decimal import Decimal
 import psycopg2
 from psycopg2.extras import RealDictCursor
 
-from backend.services.db import activar_rls
 from backend.config import DATABASE_URL
+from backend.services.db import PERSONAS, fijar_personas, id_de_persona
 
 
 def _get_connection():
@@ -69,89 +69,6 @@ SERVICIO_TIPOS = (
 SERVICIO_ESTADOS = ("activo", "pendiente", "baja")
 
 
-def init_registros_db():
-    # Ahora la llama la puerta común de todas las rutas de marketing_api
-    # (`requiere_equipo`), así que puede correr en paralelo con ella misma
-    # -- varias peticiones a la vez sobre una base de datos que todavía no
-    # tiene estas tablas (el primer `Promise.all` de un departamento nuevo).
-    # `CREATE TABLE IF NOT EXISTS` no es atómico entre transacciones: dos
-    # peticiones pueden comprobar a la vez que la tabla no existe y las dos
-    # intentar crearla, y la segunda revienta contra el catálogo de Postgres
-    # (UniqueViolation en pg_type) en vez de contra un "ya existe" limpio. Si
-    # eso pasa, es porque la otra petición ya la ha creado -- no hay nada que
-    # arreglar, solo devolver como si hubiera ido bien.
-    try:
-        _crear_tablas_registros()
-    except psycopg2.errors.UniqueViolation:
-        pass
-
-
-def _crear_tablas_registros():
-    with _get_connection() as conn:
-        with conn.cursor() as cur:
-            # NUMERIC y no float: el total de un presupuesto no puede depender
-            # de cómo redondee el binario. Se serializa como texto por lo mismo.
-            cur.execute("""
-                CREATE TABLE IF NOT EXISTS presupuesto_lineas (
-                    id SERIAL PRIMARY KEY,
-                    departamento VARCHAR(20) NOT NULL,
-                    concepto VARCHAR(160) NOT NULL,
-                    tipo VARCHAR(10) NOT NULL DEFAULT 'gasto',
-                    importe NUMERIC(10, 2) NOT NULL DEFAULT 0,
-                    estado VARCHAR(20) NOT NULL DEFAULT 'previsto',
-                    fecha DATE,
-                    notas TEXT NOT NULL DEFAULT '',
-                    creado_por VARCHAR(120) NOT NULL DEFAULT '',
-                    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-                    updated_at TIMESTAMP NOT NULL DEFAULT NOW()
-                )
-            """)
-            cur.execute("""
-                CREATE TABLE IF NOT EXISTS reuniones (
-                    id SERIAL PRIMARY KEY,
-                    departamento VARCHAR(20) NOT NULL,
-                    titulo VARCHAR(160) NOT NULL,
-                    fecha DATE,
-                    hora VARCHAR(5) NOT NULL DEFAULT '',
-                    objetivo TEXT NOT NULL DEFAULT '',
-                    asistentes TEXT[] NOT NULL DEFAULT '{}',
-                    acta TEXT NOT NULL DEFAULT '',
-                    creado_por VARCHAR(120) NOT NULL DEFAULT '',
-                    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-                    updated_at TIMESTAMP NOT NULL DEFAULT NOW()
-                )
-            """)
-            cur.execute("""
-                CREATE TABLE IF NOT EXISTS servicios (
-                    id SERIAL PRIMARY KEY,
-                    departamento VARCHAR(20) NOT NULL,
-                    nombre VARCHAR(120) NOT NULL,
-                    tipo VARCHAR(20) NOT NULL DEFAULT 'otro',
-                    url TEXT NOT NULL DEFAULT '',
-                    responsables TEXT[] NOT NULL DEFAULT '{}',
-                    renovacion DATE,
-                    estado VARCHAR(20) NOT NULL DEFAULT 'activo',
-                    notas TEXT NOT NULL DEFAULT '',
-                    creado_por VARCHAR(120) NOT NULL DEFAULT '',
-                    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-                    updated_at TIMESTAMP NOT NULL DEFAULT NOW()
-                )
-            """)
-            # Un servicio marcado así sale a todo el club en Herramientas
-            # (Slack, el grupo de WhatsApp...), no solo a Ingeniería.
-            cur.execute(
-                "ALTER TABLE servicios"
-                " ADD COLUMN IF NOT EXISTS visible_club BOOLEAN NOT NULL DEFAULT FALSE"
-            )
-            for tabla in (PRESUPUESTO, REUNIONES, SERVICIOS):
-                cur.execute(
-                    f"CREATE INDEX IF NOT EXISTS {tabla.nombre}_depto_idx"
-                    f" ON {tabla.nombre} (departamento)"
-                )
-            activar_rls(cur, "presupuesto_lineas", "reuniones", "servicios")
-        conn.commit()
-
-
 def _serializar(fila: dict) -> dict:
     salida = dict(fila)
     for clave, valor in salida.items():
@@ -174,7 +91,7 @@ def listar(tabla: Tabla, departamento: str | None = None) -> list[dict]:
     with _get_connection() as conn:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute(
-                f"SELECT * FROM {tabla.nombre} WHERE TRUE{donde}"
+                f"SELECT * FROM {tabla.nombre}_v WHERE TRUE{donde}"
                 f" ORDER BY {tabla.orden}",
                 valores,
             )
@@ -182,25 +99,36 @@ def listar(tabla: Tabla, departamento: str | None = None) -> list[dict]:
 
 
 def crear(tabla: Tabla, campos: dict, creado_por: str, departamento: str | None = None) -> dict:
-    columnas = [c for c in tabla.columnas if c in campos]
+    campo_personas = _campo_personas(tabla)
+    columnas = [c for c in tabla.columnas if c in campos and c != campo_personas]
     valores = [campos[c] for c in columnas]
 
-    columnas.append("creado_por")
-    valores.append(creado_por)
     columnas.append("departamento")
     valores.append(departamento)
 
     marcadores = ", ".join(["%s"] * len(columnas))
     with _get_connection() as conn:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            columnas.append("creado_por_id")
+            valores.append(id_de_persona(cur, creado_por))
             cur.execute(
                 f"INSERT INTO {tabla.nombre} ({', '.join(columnas)})"
-                f" VALUES ({marcadores}) RETURNING *",
+                f" VALUES ({marcadores}, %s) RETURNING id",
                 valores,
             )
+            nueva_id = cur.fetchone()["id"]
+            if campo_personas:
+                fijar_personas(cur, tabla.nombre, nueva_id, campos.get(campo_personas, []))
+            cur.execute(f"SELECT * FROM {tabla.nombre}_v WHERE id = %s", (nueva_id,))
             fila = cur.fetchone()
         conn.commit()
     return _serializar(fila)
+
+
+def _campo_personas(tabla: Tabla) -> str | None:
+    """Nombre del campo de personas de la tabla (asistentes, responsables), que
+    no es una columna: va a su tabla aparte (ver services/db.py)."""
+    return PERSONAS[tabla.nombre][2] if tabla.nombre in PERSONAS else None
 
 
 def actualizar(
@@ -208,9 +136,12 @@ def actualizar(
 ) -> bool:
     """El departamento va en el WHERE del propio UPDATE: pasar el id de una
     fila de otro departamento no actualiza nada, sin SELECT previo."""
-    asignaciones = [f"{c} = %s" for c in tabla.columnas if c in campos]
-    valores = [campos[c] for c in tabla.columnas if c in campos]
-    if not asignaciones:
+    campo_personas = _campo_personas(tabla)
+    personas = campos.get(campo_personas) if campo_personas else None
+    columnas = [c for c in tabla.columnas if c in campos and c != campo_personas]
+    asignaciones = [f"{c} = %s" for c in columnas]
+    valores = [campos[c] for c in columnas]
+    if not asignaciones and personas is None:
         return False
 
     asignaciones.append("updated_at = NOW()")
@@ -224,6 +155,8 @@ def actualizar(
                 [*valores, fila_id, *valores_alcance],
             )
             actualizado = cur.rowcount > 0
+            if actualizado and personas is not None:
+                fijar_personas(cur, tabla.nombre, fila_id, personas)
         conn.commit()
     return actualizado
 
