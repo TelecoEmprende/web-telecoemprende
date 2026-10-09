@@ -19,16 +19,14 @@ import backend.services.security as security_service  # noqa: E402
 from backend.config import MAX_LOGIN_ATTEMPTS_PER_WINDOW  # noqa: E402
 from openpyxl import load_workbook  # noqa: E402
 from werkzeug.security import generate_password_hash  # noqa: E402
+from backend.services.db import migrar  # noqa: E402
 
 
 class ApiTestCase(unittest.TestCase):
     def setUp(self):
         security_service.request_log.clear()
 
-        registration_service.init_db()
-        equipo_service.init_equipo_db()
-
-        marketing_service.init_marketing_db()
+        migrar()
 
         conn = registration_service._get_connection()
         with conn.cursor() as cur:
@@ -565,9 +563,12 @@ class ApiTestCase(unittest.TestCase):
             registro_id = cur.fetchone()[0]
         conn.commit()
         conn.close()
-        self.seed_equipo(email="ana@alumnos.upm.es", equipos=["marketing"])
+        alta = self.client.post("/api/admin/equipo", json={
+            "email": "ana@alumnos.upm.es", "password": "contrasena-larga",
+            "equipos": ["marketing", "eventos"], "nombre": "Ana",
+        })
+        self.assertEqual(alta.status_code, 201, alta.get_json())
 
-        equipo_service.init_equipo_db()
         ana = next(a for a in equipo_service.listar_equipo_accesos() if a["email"] == "ana@alumnos.upm.es")
         self.assertEqual(ana["registro_id"], registro_id)
 
@@ -696,6 +697,7 @@ class ApiTestCase(unittest.TestCase):
         self.client.post("/api/admin/logout")
 
         self.seed_equipo(email="vp@example.com", vp_de=["marketing"])
+        self.seed_equipo(email="asistio@example.com")
         self.equipo_login(email="vp@example.com")
 
         checkin = self.client.post(

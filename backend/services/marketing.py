@@ -4,11 +4,10 @@ Modelo: Campaign -> Content -> Task. Un Content es una pieza de comunicación
 (un reel, un post); una Task es trabajo que hay que hacer. Son cosas distintas
 con ciclos de vida distintos, por eso no comparten tabla ni estados.
 
-Los responsables se guardan como TEXT[] de emails, no como tabla intermedia:
-es el mismo idioma que ya usa `equipo_accesos.equipos` y ahorra dos joins.
-Los emails apuntan a `equipo_accesos.email` pero SIN foreign key a propósito
--- esa tabla es de Hammad y no la tocamos; además así un responsable no
-desaparece de una tarea histórica si se le da de baja el acceso.
+Los responsables y autores son cuentas (`equipo_accesos.id`, con clave
+foránea): se escriben en `tarea_responsables`/`entregable_responsables` y en
+`creado_por_id`/`autor_id`, y se leen de las vistas `tasks_v`, `contents_v`...,
+que los devuelven como emails, que es lo que habla la API (ver services/db.py).
 """
 
 import json
@@ -17,153 +16,12 @@ from datetime import date, datetime, timedelta
 import psycopg2
 from psycopg2.extras import RealDictCursor
 
-from backend.services.db import activar_rls
 from backend.config import DATABASE_URL
+from backend.services.db import PERSONAS, fijar_personas, id_de_persona
 
 
 def _get_connection():
     return psycopg2.connect(DATABASE_URL)
-
-
-def init_marketing_db():
-    # Se llama en cada petición a marketing_api (ver `requiere_equipo`), así
-    # que puede correr en paralelo con ella misma sobre una base de datos
-    # recién estrenada -- el primer `Promise.all` de un departamento nuevo
-    # dispara varias a la vez. `CREATE TABLE IF NOT EXISTS` no es atómico
-    # entre transacciones: si dos llegan a crearla a la vez, la segunda
-    # revienta contra el catálogo de Postgres (UniqueViolation en pg_type) en
-    # vez de encontrarla ya creada. Si pasa, es que la otra ya la ha creado.
-    try:
-        _crear_tablas_marketing()
-    except psycopg2.errors.UniqueViolation:
-        pass
-
-
-def _crear_tablas_marketing():
-    with _get_connection() as conn:
-        with conn.cursor() as cur:
-            cur.execute("""
-                CREATE TABLE IF NOT EXISTS campaigns (
-                    id SERIAL PRIMARY KEY,
-                    nombre VARCHAR(160) NOT NULL,
-                    objetivo TEXT NOT NULL DEFAULT '',
-                    audiencia TEXT NOT NULL DEFAULT '',
-                    fecha DATE,
-                    creado_por VARCHAR(120) NOT NULL DEFAULT '',
-                    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-                    updated_at TIMESTAMP NOT NULL DEFAULT NOW()
-                )
-            """)
-            cur.execute("""
-                CREATE TABLE IF NOT EXISTS contents (
-                    id SERIAL PRIMARY KEY,
-                    campaign_id INTEGER NOT NULL
-                        REFERENCES campaigns(id) ON DELETE CASCADE,
-                    titulo VARCHAR(160) NOT NULL,
-                    tipo VARCHAR(20) NOT NULL DEFAULT '',
-                    plataforma VARCHAR(20) NOT NULL DEFAULT '',
-                    fecha_publicacion DATE,
-                    estado VARCHAR(20) NOT NULL DEFAULT 'idea',
-                    script TEXT NOT NULL DEFAULT '',
-                    copy_texto TEXT NOT NULL DEFAULT '',
-                    cta VARCHAR(200) NOT NULL DEFAULT '',
-                    hashtags TEXT NOT NULL DEFAULT '',
-                    idea_visual TEXT NOT NULL DEFAULT '',
-                    responsables TEXT[] NOT NULL DEFAULT '{}',
-                    enlaces TEXT[] NOT NULL DEFAULT '{}',
-                    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-                    updated_at TIMESTAMP NOT NULL DEFAULT NOW()
-                )
-            """)
-            # `content_id` con ON DELETE CASCADE: borrar un contenido se lleva
-            # sus tareas, que no significan nada sin él. `campaign_id` va suelto
-            # para permitir tareas de campaña que no cuelgan de ningún contenido
-            # ("reservar sala", "pedir presupuesto").
-            cur.execute("""
-                CREATE TABLE IF NOT EXISTS tasks (
-                    id SERIAL PRIMARY KEY,
-                    departamento VARCHAR(20) NOT NULL DEFAULT 'marketing',
-                    campaign_id INTEGER REFERENCES campaigns(id) ON DELETE CASCADE,
-                    content_id INTEGER REFERENCES contents(id) ON DELETE CASCADE,
-                    titulo VARCHAR(160) NOT NULL,
-                    descripcion TEXT NOT NULL DEFAULT '',
-                    estado VARCHAR(20) NOT NULL DEFAULT 'pendiente',
-                    prioridad VARCHAR(10) NOT NULL DEFAULT 'media',
-                    deadline DATE,
-                    responsables TEXT[] NOT NULL DEFAULT '{}',
-                    tags TEXT[] NOT NULL DEFAULT '{}',
-                    checklist JSONB NOT NULL DEFAULT '[]',
-                    enlaces TEXT[] NOT NULL DEFAULT '{}',
-                    creado_por VARCHAR(120) NOT NULL DEFAULT '',
-                    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-                    updated_at TIMESTAMP NOT NULL DEFAULT NOW()
-                )
-            """)
-            # Las campañas son de un departamento, igual que las tareas. Sin
-            # esta columna, montar el mismo tablero para Eventos le enseñaría
-            # las campañas de Marketing. Default 'marketing' porque todas las
-            # que existían cuando se añadió eran de Marketing.
-            cur.execute("""
-                ALTER TABLE campaigns
-                ADD COLUMN IF NOT EXISTS departamento VARCHAR(20)
-                    NOT NULL DEFAULT 'marketing'
-            """)
-            # Hora opcional: mismo formato "HH:MM" y misma columna que
-            # `reuniones`, sin la cual una tarea con hora real no se puede
-            # distinguir de una que solo tiene fecha límite.
-            cur.execute("""
-                ALTER TABLE tasks
-                ADD COLUMN IF NOT EXISTS hora VARCHAR(5) NOT NULL DEFAULT ''
-            """)
-            # Cuándo se completó de verdad, no cuándo se tocó por última vez:
-            # `updated_at` se mueve con cualquier edición posterior (retocar el
-            # título, tildar la checklist...), así que no sirve para saber si
-            # una tarea acabó a tiempo (ver `salud_equipo`). Se rellena solo al
-            # entrar en 'acabado' -- ver `actualizar_task`.
-            cur.execute("""
-                ALTER TABLE tasks
-                ADD COLUMN IF NOT EXISTS completado_en TIMESTAMP
-            """)
-            # Toda tarea nace con instrucciones: es la regla que responde a
-            # "que todos sepan qué hacer y cómo". Se
-            # exige a nivel de API (`_texto(..., obligatorio=True)` en
-            # `api_crear_task`), no aquí -- una columna NOT NULL sin default
-            # habría roto las tareas ya existentes.
-            cur.execute("""
-                ALTER TABLE tasks
-                ADD COLUMN IF NOT EXISTS instrucciones TEXT NOT NULL DEFAULT ''
-            """)
-            # Archivar en vez de borrar: una campaña vieja deja de estorbar en
-            # el listado sin perder su historial (contenidos, tareas, enlaces).
-            cur.execute("""
-                ALTER TABLE campaigns
-                ADD COLUMN IF NOT EXISTS archivado BOOLEAN NOT NULL DEFAULT FALSE
-            """)
-            cur.execute(
-                "CREATE INDEX IF NOT EXISTS contents_campaign_idx ON contents (campaign_id)"
-            )
-            cur.execute(
-                "CREATE INDEX IF NOT EXISTS tasks_content_idx ON tasks (content_id)"
-            )
-            cur.execute(
-                "CREATE INDEX IF NOT EXISTS tasks_campaign_idx ON tasks (campaign_id)"
-            )
-            # Conversación de una tarea. `ON DELETE CASCADE`: sin la tarea, sus
-            # comentarios no significan nada (mismo criterio que `contents`).
-            cur.execute("""
-                CREATE TABLE IF NOT EXISTS task_comments (
-                    id SERIAL PRIMARY KEY,
-                    task_id INTEGER NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
-                    autor VARCHAR(120) NOT NULL DEFAULT '',
-                    texto TEXT NOT NULL,
-                    created_at TIMESTAMP NOT NULL DEFAULT NOW()
-                )
-            """)
-            cur.execute(
-                "CREATE INDEX IF NOT EXISTS task_comments_task_idx ON task_comments (task_id)"
-            )
-            activar_rls(cur, "campaigns", "contents", "tasks", "task_comments")
-        conn.commit()
 
 
 def _serializar(fila: dict) -> dict:
@@ -191,7 +49,7 @@ def listar_campaigns(departamento: str) -> list[dict]:
                        (SELECT COUNT(*) FROM tasks t
                             WHERE t.campaign_id = c.id AND t.estado = 'acabado')
                            AS tareas_acabadas
-                FROM campaigns c
+                FROM campaigns_v c
                 WHERE c.departamento = %s
                 ORDER BY COALESCE(c.fecha, c.created_at::date) DESC, c.id DESC
             """, (departamento,))
@@ -220,7 +78,7 @@ def mis_campanas(email: str) -> list[dict]:
                   -- la campaña) -- la persona solo decide qué campañas
                   -- aparecen, comprobado aparte con este subquery.
                   AND EXISTS (
-                      SELECT 1 FROM tasks t2
+                      SELECT 1 FROM tasks_v t2
                       WHERE t2.campaign_id = c.id AND %s = ANY(t2.responsables)
                   )
                 GROUP BY c.id
@@ -236,7 +94,7 @@ def obtener_campaign(campaign_id: int, departamento: str) -> dict | None:
     with _get_connection() as conn:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute(
-                "SELECT * FROM campaigns WHERE id = %s AND departamento = %s",
+                "SELECT * FROM campaigns_v WHERE id = %s AND departamento = %s",
                 (campaign_id, departamento),
             )
             campaign = cur.fetchone()
@@ -244,14 +102,14 @@ def obtener_campaign(campaign_id: int, departamento: str) -> dict | None:
                 return None
 
             cur.execute(
-                "SELECT * FROM contents WHERE campaign_id = %s"
+                "SELECT * FROM contents_v WHERE campaign_id = %s"
                 " ORDER BY COALESCE(fecha_publicacion, '9999-12-31'::date), id",
                 (campaign_id,),
             )
             contents = [_serializar(f) for f in cur.fetchall()]
 
             cur.execute(
-                "SELECT * FROM tasks WHERE campaign_id = %s ORDER BY id",
+                "SELECT * FROM tasks_v WHERE campaign_id = %s ORDER BY id",
                 (campaign_id,),
             )
             tasks = [_serializar(f) for f in cur.fetchall()]
@@ -286,12 +144,14 @@ def crear_campaign(
             cur.execute(
                 """
                 INSERT INTO campaigns
-                    (nombre, objetivo, audiencia, fecha, creado_por, departamento)
+                    (nombre, objetivo, audiencia, fecha, creado_por_id, departamento)
                 VALUES (%s, %s, %s, %s, %s, %s)
-                RETURNING *
+                RETURNING id
                 """,
-                (nombre, objetivo, audiencia, fecha, creado_por, departamento),
+                (nombre, objetivo, audiencia, fecha, id_de_persona(cur, creado_por), departamento),
             )
+            nueva_id = cur.fetchone()["id"]
+            cur.execute("SELECT * FROM campaigns_v WHERE id = %s", (nueva_id,))
             fila = cur.fetchone()
         conn.commit()
     return _serializar(fila)
@@ -397,11 +257,10 @@ def crear_content(campaign_id: int, departamento: str, **campos) -> dict | None:
                 """
                 INSERT INTO contents (
                     campaign_id, titulo, tipo, plataforma, fecha_publicacion,
-                    estado, script, copy_texto, cta, hashtags, idea_visual,
-                    responsables, enlaces
+                    estado, script, copy_texto, cta, hashtags, idea_visual, enlaces
                 )
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                RETURNING *
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                RETURNING id
                 """,
                 (
                     campaign_id,
@@ -415,10 +274,12 @@ def crear_content(campaign_id: int, departamento: str, **campos) -> dict | None:
                     campos.get("cta", ""),
                     campos.get("hashtags", ""),
                     campos.get("idea_visual", ""),
-                    campos.get("responsables", []),
                     campos.get("enlaces", []),
                 ),
             )
+            nuevo_id = cur.fetchone()["id"]
+            fijar_personas(cur, "contents", nuevo_id, campos.get("responsables", []))
+            cur.execute("SELECT * FROM contents_v WHERE id = %s", (nuevo_id,))
             fila = cur.fetchone()
         conn.commit()
 
@@ -431,7 +292,7 @@ def obtener_content(content_id: int, departamento: str) -> dict | None:
     with _get_connection() as conn:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute(
-                "SELECT co.* FROM contents co"
+                "SELECT co.* FROM contents_v co"
                 " JOIN campaigns c ON c.id = co.campaign_id"
                 " WHERE co.id = %s AND c.departamento = %s",
                 (content_id, departamento),
@@ -441,7 +302,7 @@ def obtener_content(content_id: int, departamento: str) -> dict | None:
                 return None
 
             cur.execute(
-                "SELECT * FROM tasks WHERE content_id = %s ORDER BY id", (content_id,)
+                "SELECT * FROM tasks_v WHERE content_id = %s ORDER BY id", (content_id,)
             )
             tasks = [_serializar(t) for t in cur.fetchall()]
 
@@ -502,7 +363,7 @@ def listar_tasks(departamento: str) -> list[dict]:
                 SELECT t.*,
                        co.titulo AS content_titulo,
                        c.nombre AS campaign_nombre
-                FROM tasks t
+                FROM tasks_v t
                 LEFT JOIN contents co ON co.id = t.content_id
                 LEFT JOIN campaigns c ON c.id = t.campaign_id
                 WHERE t.departamento = %s
@@ -527,7 +388,7 @@ def listar_tasks_archivadas(departamento: str) -> list[dict]:
                 SELECT t.*,
                        co.titulo AS content_titulo,
                        c.nombre AS campaign_nombre
-                FROM tasks t
+                FROM tasks_v t
                 LEFT JOIN contents co ON co.id = t.content_id
                 LEFT JOIN campaigns c ON c.id = t.campaign_id
                 WHERE t.departamento = %s
@@ -549,7 +410,7 @@ def tareas_que_vencen(fecha: date) -> list[dict]:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute(
                 """
-                SELECT * FROM tasks
+                SELECT * FROM tasks_v
                 WHERE deadline = %s AND estado != 'acabado'
                 ORDER BY departamento, id
                 """,
@@ -572,7 +433,7 @@ def mis_tareas(email: str) -> list[dict]:
                 SELECT t.*,
                        co.titulo AS content_titulo,
                        c.nombre AS campaign_nombre
-                FROM tasks t
+                FROM tasks_v t
                 LEFT JOIN contents co ON co.id = t.content_id
                 LEFT JOIN campaigns c ON c.id = t.campaign_id
                 WHERE %s = ANY(t.responsables) AND t.estado != 'acabado'
@@ -587,7 +448,7 @@ def obtener_task(task_id: int, departamento: str) -> dict | None:
     with _get_connection() as conn:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute(
-                "SELECT * FROM tasks WHERE id = %s AND departamento = %s",
+                "SELECT * FROM tasks_v WHERE id = %s AND departamento = %s",
                 (task_id, departamento),
             )
             fila = cur.fetchone()
@@ -630,10 +491,10 @@ def crear_task(**campos) -> dict | None:
                 INSERT INTO tasks (
                     departamento, campaign_id, content_id, titulo, descripcion,
                     instrucciones, estado, prioridad, deadline, hora,
-                    responsables, tags, checklist, enlaces, creado_por
+                    tags, checklist, enlaces, creado_por_id
                 )
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                RETURNING *
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                RETURNING id
                 """,
                 (
                     campos.get("departamento", "marketing"),
@@ -646,13 +507,15 @@ def crear_task(**campos) -> dict | None:
                     campos.get("prioridad", "media"),
                     campos.get("deadline"),
                     campos.get("hora", ""),
-                    campos.get("responsables", []),
                     campos.get("tags", []),
                     json.dumps(campos.get("checklist", [])),
                     campos.get("enlaces", []),
-                    campos.get("creado_por", ""),
+                    id_de_persona(cur, campos.get("creado_por", "")),
                 ),
             )
+            nueva_id = cur.fetchone()["id"]
+            fijar_personas(cur, "tasks", nueva_id, campos.get("responsables", []))
+            cur.execute("SELECT * FROM tasks_v WHERE id = %s", (nueva_id,))
             nueva = cur.fetchone()
         conn.commit()
     return _serializar(nueva)
@@ -702,7 +565,7 @@ def listar_task_comments(task_id: int) -> list[dict]:
     with _get_connection() as conn:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute(
-                "SELECT * FROM task_comments WHERE task_id = %s ORDER BY id",
+                "SELECT * FROM task_comments_v WHERE task_id = %s ORDER BY id",
                 (task_id,),
             )
             return [_serializar(f) for f in cur.fetchall()]
@@ -713,12 +576,13 @@ def crear_task_comment(task_id: int, autor: str, texto: str) -> dict:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute(
                 """
-                INSERT INTO task_comments (task_id, autor, texto)
+                INSERT INTO task_comments (task_id, autor_id, texto)
                 VALUES (%s, %s, %s)
-                RETURNING *
+                RETURNING id
                 """,
-                (task_id, autor, texto),
+                (task_id, id_de_persona(cur, autor), texto),
             )
+            cur.execute("SELECT * FROM task_comments_v WHERE id = %s", (cur.fetchone()["id"],))
             fila = cur.fetchone()
         conn.commit()
     return _serializar(fila)
@@ -751,7 +615,7 @@ def calendario(desde: date, hasta: date, departamento: str) -> list[dict]:
                            co.campaign_id, co.plataforma AS detalle,
                            NULL AS prioridad, c.nombre AS padre,
                            co.responsables, NULL::varchar AS hora
-                    FROM contents co
+                    FROM contents_v co
                     JOIN campaigns c ON c.id = co.campaign_id
                     WHERE co.fecha_publicacion BETWEEN %(desde)s AND %(hasta)s
                       AND c.departamento = %(departamento)s
@@ -761,7 +625,7 @@ def calendario(desde: date, hasta: date, departamento: str) -> list[dict]:
                            t.campaign_id, t.prioridad AS detalle,
                            t.prioridad, COALESCE(co.titulo, c.nombre) AS padre,
                            t.responsables, NULLIF(t.hora, '') AS hora
-                    FROM tasks t
+                    FROM tasks_v t
                     LEFT JOIN contents co ON co.id = t.content_id
                     LEFT JOIN campaigns c ON c.id = t.campaign_id
                     WHERE t.deadline BETWEEN %(desde)s AND %(hasta)s
@@ -772,7 +636,7 @@ def calendario(desde: date, hasta: date, departamento: str) -> list[dict]:
                            NULL::integer AS campaign_id, r.objetivo AS detalle,
                            NULL AS prioridad, NULL AS padre,
                            r.asistentes AS responsables, NULLIF(r.hora, '') AS hora
-                    FROM reuniones r
+                    FROM reuniones_v r
                     WHERE r.fecha BETWEEN %(desde)s AND %(hasta)s
                       AND r.departamento = %(departamento)s
                 ) x
@@ -800,13 +664,6 @@ def calendario_equipo(desde: date, hasta: date, departamentos: list[str]) -> lis
 
     Incluye además los eventos del club puestos desde /admin, que no son de
     ningún departamento y por tanto salen siempre."""
-    # `calendario_eventos` la crea `init_equipo_db`, no `init_marketing_db`:
-    # sin esto, un despliegue nuevo se encontraría un 500 aquí según qué ruta
-    # se visitara primero (mismo motivo que el init de registros en
-    # `requiere_equipo`).
-    from backend.services.equipo import init_equipo_db
-
-    init_equipo_db()
     with _get_connection() as conn:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute(
@@ -818,7 +675,7 @@ def calendario_equipo(desde: date, hasta: date, departamentos: list[str]) -> lis
                            NULL AS prioridad, c.nombre AS padre,
                            co.responsables, NULL::varchar AS hora,
                            c.departamento
-                    FROM contents co
+                    FROM contents_v co
                     JOIN campaigns c ON c.id = co.campaign_id
                     WHERE co.fecha_publicacion BETWEEN %(desde)s AND %(hasta)s
                       AND c.departamento = ANY(%(departamentos)s)
@@ -829,7 +686,7 @@ def calendario_equipo(desde: date, hasta: date, departamentos: list[str]) -> lis
                            t.prioridad, COALESCE(co.titulo, c.nombre) AS padre,
                            t.responsables, NULLIF(t.hora, '') AS hora,
                            t.departamento
-                    FROM tasks t
+                    FROM tasks_v t
                     LEFT JOIN contents co ON co.id = t.content_id
                     LEFT JOIN campaigns c ON c.id = t.campaign_id
                     WHERE t.deadline BETWEEN %(desde)s AND %(hasta)s
@@ -841,7 +698,7 @@ def calendario_equipo(desde: date, hasta: date, departamentos: list[str]) -> lis
                            NULL AS prioridad, NULL AS padre,
                            r.asistentes AS responsables, NULLIF(r.hora, '') AS hora,
                            r.departamento
-                    FROM reuniones r
+                    FROM reuniones_v r
                     WHERE r.fecha BETWEEN %(desde)s AND %(hasta)s
                       AND r.departamento = ANY(%(departamentos)s)
                     UNION ALL
@@ -857,7 +714,7 @@ def calendario_equipo(desde: date, hasta: date, departamentos: list[str]) -> lis
                            NULL AS prioridad, NULL AS padre,
                            e.confirmados AS responsables, NULLIF(e.hora, '') AS hora,
                            NULL::varchar AS departamento
-                    FROM calendario_eventos e
+                    FROM calendario_eventos_v e
                     WHERE e.fecha BETWEEN %(desde)s AND %(hasta)s
                 ) x
                 ORDER BY fecha,
@@ -900,14 +757,18 @@ def _actualizar(
     `departamento` acota la fila: pasar el id de una tarea de otro
     departamento no actualiza nada y devuelve False.
     """
+    # Las personas no son una columna de la fila: van a su tabla aparte.
+    campo_personas = PERSONAS[tabla][2] if tabla in PERSONAS else None
+    personas = campos.get(campo_personas) if campo_personas in permitidos else None
+
     asignaciones = []
     valores: list = []
     for clave in permitidos:
-        if clave in campos:
+        if clave in campos and clave != campo_personas:
             asignaciones.append(f"{clave} = %s")
             valores.append(campos[clave])
 
-    if not asignaciones:
+    if not asignaciones and personas is None:
         return False
 
     asignaciones.append("updated_at = NOW()")
@@ -921,6 +782,8 @@ def _actualizar(
                 valores,
             )
             actualizado = cur.rowcount > 0
+            if actualizado and personas is not None:
+                fijar_personas(cur, tabla, fila_id, personas)
         conn.commit()
     return actualizado
 
@@ -944,8 +807,8 @@ def _eliminar(tabla: str, fila_id: int, departamento: str) -> bool:
 def carga_por_miembro(departamento: str) -> dict[str, int]:
     """Tareas sin acabar por persona, en un solo GROUP BY.
 
-    `responsables` es un TEXT[], así que se desenrolla con unnest en vez de
-    traerse todas las tareas y contarlas en Python: el tablero de un
+    `responsables` llega de `tasks_v` como lista, así que se desenrolla con
+    unnest en vez de traerse todas las tareas y contarlas en Python: el tablero de un
     departamento con doscientas tareas seguiría siendo una consulta.
     """
     with _get_connection() as conn:
@@ -953,7 +816,7 @@ def carga_por_miembro(departamento: str) -> dict[str, int]:
             cur.execute(
                 """
                 SELECT responsable, COUNT(*)
-                FROM tasks, unnest(responsables) AS responsable
+                FROM tasks_v, unnest(responsables) AS responsable
                 WHERE departamento = %s AND estado <> 'acabado'
                 GROUP BY responsable
                 """,
@@ -978,7 +841,7 @@ def ficha_miembro(email: str, departamento: str) -> dict:
                     COUNT(*) FILTER (WHERE estado = 'acabado') AS completadas,
                     COUNT(DISTINCT campaign_id) FILTER (WHERE campaign_id IS NOT NULL)
                         AS campanas
-                FROM tasks
+                FROM tasks_v
                 WHERE departamento = %s AND %s = ANY(responsables)
                 """,
                 (departamento, email),
@@ -989,7 +852,7 @@ def ficha_miembro(email: str, departamento: str) -> dict:
                 """
                 SELECT t.id, t.titulo, t.estado, t.updated_at,
                        COALESCE(co.titulo, c.nombre) AS padre
-                FROM tasks t
+                FROM tasks_v t
                 LEFT JOIN contents co ON co.id = t.content_id
                 LEFT JOIN campaigns c ON c.id = t.campaign_id
                 WHERE t.departamento = %s AND %s = ANY(t.responsables)
@@ -1017,9 +880,8 @@ def salud_equipo(departamento: str) -> dict:
     cumplimiento de plazo), ninguna repetida por miembro: un departamento con
     veinte personas cuesta lo mismo que uno con dos.
     """
-    from backend.services.equipo import init_equipo_db, miembros_activos
+    from backend.services.equipo import miembros_activos
 
-    init_equipo_db()
     emails = [a["email"] for a in miembros_activos(departamento)]
 
     abiertas_por_email = carga_por_miembro(departamento)
@@ -1032,7 +894,7 @@ def salud_equipo(departamento: str) -> dict:
             cur.execute(
                 """
                 SELECT responsable, MAX(updated_at)
-                FROM tasks, unnest(responsables) AS responsable
+                FROM tasks_v, unnest(responsables) AS responsable
                 WHERE departamento = %s
                 GROUP BY responsable
                 """,
@@ -1106,24 +968,22 @@ def metricas_club(dias_periodo: int = 30) -> dict:
     que contar, y un 0 fingido sería peor que no enseñar la tarjeta.
     """
     from backend.config import EQUIPOS_VALIDOS
-    from backend.services.equipo import init_equipo_db, listar_equipo_accesos
+    from backend.services.equipo import listar_equipo_accesos
 
-    init_equipo_db()
     activos = [a for a in listar_equipo_accesos() if a["activo"]]
 
     hoy = date.today()
     desde_periodo = hoy - timedelta(days=dias_periodo)
 
     # Asistencia media de los eventos del club ya celebrados en el periodo --
-    # sale del check-in real (`calendario_eventos.asistio`), no de quién dijo
-    # que iba a venir. `init_equipo_db()` ya se llamó arriba (misma conexión
-    # a la tabla que crea `calendario_eventos`).
+    # sale del check-in real (`evento_asistentes`), no de quién dijo que iba
+    # a venir.
     with _get_connection() as conn:
         with conn.cursor() as cur:
             cur.execute(
                 """
                 SELECT AVG(COALESCE(array_length(asistio, 1), 0))
-                FROM calendario_eventos
+                FROM calendario_eventos_v
                 WHERE fecha BETWEEN %s AND %s
                 """,
                 (desde_periodo, hoy),
@@ -1138,7 +998,7 @@ def metricas_club(dias_periodo: int = 30) -> dict:
             cur.execute(
                 """
                 SELECT responsable, MAX(updated_at)
-                FROM tasks, unnest(responsables) AS responsable
+                FROM tasks_v, unnest(responsables) AS responsable
                 GROUP BY responsable
                 """
             )
@@ -1152,7 +1012,7 @@ def metricas_club(dias_periodo: int = 30) -> dict:
                        COUNT(*) FILTER (
                            WHERE estado <> 'acabado' AND deadline IS NOT NULL AND deadline < %s
                        ) AS vencidas
-                FROM tasks, unnest(responsables) AS responsable
+                FROM tasks_v, unnest(responsables) AS responsable
                 GROUP BY responsable
                 """,
                 (hoy,),
@@ -1169,7 +1029,7 @@ def metricas_club(dias_periodo: int = 30) -> dict:
                              AND COALESCE(completado_en, updated_at)::date <= deadline
                        ) AS a_tiempo,
                        COUNT(*) FILTER (WHERE deadline IS NOT NULL) AS con_deadline
-                FROM tasks, unnest(responsables) AS responsable
+                FROM tasks_v, unnest(responsables) AS responsable
                 WHERE estado = 'acabado' AND COALESCE(completado_en, updated_at) >= %s
                 GROUP BY responsable
                 """,

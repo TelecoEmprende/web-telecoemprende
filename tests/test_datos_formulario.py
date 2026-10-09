@@ -14,6 +14,7 @@ from openpyxl import load_workbook  # noqa: E402
 import app  # noqa: E402
 import backend.services.equipo as equipo_service  # noqa: E402
 import backend.services.security as security_service  # noqa: E402
+from backend.services.db import migrar  # noqa: E402
 
 # PNG de 1x1 válido.
 FOTO = (
@@ -25,7 +26,7 @@ FOTO = (
 class DatosFormularioTestCase(unittest.TestCase):
     def setUp(self):
         security_service.request_log.clear()
-        equipo_service.init_equipo_db()
+        migrar()
 
         conn = equipo_service._get_connection()
         with conn.cursor() as cur:

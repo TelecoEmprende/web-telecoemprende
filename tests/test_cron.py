@@ -20,12 +20,12 @@ import app  # noqa: E402
 import backend.services.equipo as equipo_service  # noqa: E402
 import backend.services.marketing as marketing_service  # noqa: E402
 from werkzeug.security import generate_password_hash  # noqa: E402
+from backend.services.db import migrar  # noqa: E402
 
 
 class CronTests(unittest.TestCase):
     def setUp(self):
-        equipo_service.init_equipo_db()
-        marketing_service.init_marketing_db()
+        migrar()
 
         conn = marketing_service._get_connection()
         with conn.cursor() as cur:

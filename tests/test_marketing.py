@@ -18,14 +18,13 @@ import backend.services.security as security_service  # noqa: E402
 import backend.services.slack as marketing_api_slack  # noqa: E402
 import urllib.error  # noqa: E402
 from werkzeug.security import generate_password_hash  # noqa: E402
+from backend.services.db import migrar  # noqa: E402
 
 
 class MarketingTestCase(unittest.TestCase):
     def setUp(self):
         security_service.request_log.clear()
-        equipo_service.init_equipo_db()
-        marketing_service.init_marketing_db()
-        registros_service.init_registros_db()
+        migrar()
 
         conn = marketing_service._get_connection()
         with conn.cursor() as cur:
@@ -318,6 +317,9 @@ class ContentTests(MarketingTestCase):
         self.campaign = self.crear_campaign()
 
     def test_crear_con_todos_los_campos(self):
+        # Los responsables son cuentas del equipo: un email suelto se rechaza.
+        for email in ("abril@example.com", "hugo@example.com"):
+            self.seed_acceso(email)
         content = self.crear_content(
             self.campaign["id"],
             tipo="reel",
@@ -464,6 +466,8 @@ class TaskTests(MarketingTestCase):
         return respuesta.get_json()["task"]
 
     def test_varios_responsables(self):
+        for email in ("abril@x.com", "hugo@x.com", "diego@x.com"):
+            self.seed_acceso(email)
         task = self.crear_task(responsables=["abril@x.com", "hugo@x.com", "diego@x.com"])
         self.assertEqual(len(task["responsables"]), 3)
 
@@ -668,10 +672,14 @@ class TaskAsignacionTests(MarketingTestCase):
 
     def test_miembro_raso_no_puede_reasignar_el_responsable(self):
         self.login(vp_de=["marketing"])
+        self.seed_acceso("raso@example.com", vp_de=[])
+        self.seed_acceso("otro@example.com", vp_de=[])
         task = self.crear_task_directo(responsables=["raso@example.com"]).get_json()["task"]
 
         self.client.post("/api/equipo/logout")
-        self.login(email="raso@example.com", vp_de=[])
+        self.client.post(
+            "/api/equipo/login", json={"email": "raso@example.com", "password": "test-equipo"}
+        )
         respuesta = self.client.put(
             f"/api/marketing/tasks/{task['id']}", json={"responsables": ["otro@example.com"]}
         )
@@ -1053,6 +1061,7 @@ class SlackTestCase(MarketingTestCase):
 
     def test_crear_una_tarea_avisa_a_slack(self):
         self.login()
+        self.seed_acceso("diego@telecoemprende.es")
         self.client.post(
             "/api/marketing/tasks",
             json={
@@ -1091,6 +1100,7 @@ class SlackTestCase(MarketingTestCase):
 
     def test_comentar_una_tarea_avisa_a_slack(self):
         self.login()
+        self.seed_acceso("diego@telecoemprende.es")
         task_id = self.client.post(
             "/api/marketing/tasks",
             json={

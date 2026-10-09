@@ -8,7 +8,7 @@ from openpyxl import Workbook
 from openpyxl.drawing.image import Image as XLImage
 from werkzeug.security import check_password_hash, generate_password_hash
 
-from backend.services.db import activar_rls
+from backend.services.db import ids_de_personas
 from backend.config import (
     CARGOS_VALIDOS,
     DATABASE_URL,
@@ -26,164 +26,12 @@ def _get_connection():
     return psycopg2.connect(DATABASE_URL)
 
 
-def init_equipo_db():
-    # Mismo motivo que en `init_marketing_db`/`init_registros_db`: se llama en
-    # cada petición y puede correr en paralelo con ella misma sobre una base
-    # de datos recién estrenada, donde `CREATE TABLE IF NOT EXISTS` no es
-    # atómico entre transacciones concurrentes.
-    try:
-        _crear_tablas_equipo()
-    except psycopg2.errors.UniqueViolation:
-        pass
-
-
-def _crear_tablas_equipo():
-    # `registro_id` apunta a `registrations`: tiene que existir antes.
-    from backend.services.registrations import init_db as init_registrations_db
-
-    init_registrations_db()
-    with _get_connection() as conn:
-        with conn.cursor() as cur:
-            cur.execute("""
-                CREATE TABLE IF NOT EXISTS equipo_accesos (
-                    id SERIAL PRIMARY KEY,
-                    email VARCHAR(120) NOT NULL UNIQUE,
-                    password_hash VARCHAR(255) NOT NULL,
-                    equipos TEXT[] NOT NULL DEFAULT '{}',
-                    activo BOOLEAN NOT NULL DEFAULT TRUE,
-                    created_at TIMESTAMP NOT NULL DEFAULT NOW()
-                )
-            """)
-            # vp_de: subconjunto de `equipos` donde la persona es VP (gestiona
-            # el dashboard de ese equipo). cargo: 'presidente'/'boardmember'/''
-            # (dirección, independiente del departamento).
-            cur.execute("""
-                ALTER TABLE equipo_accesos
-                ADD COLUMN IF NOT EXISTS vp_de TEXT[] NOT NULL DEFAULT '{}'
-            """)
-            cur.execute("""
-                ALTER TABLE equipo_accesos
-                ADD COLUMN IF NOT EXISTS cargo VARCHAR(20) NOT NULL DEFAULT ''
-            """)
-            # Perfil de la persona, no del departamento: por eso vive aquí y no
-            # en una tabla de Marketing. Eventos e Ingeniería leen lo mismo sin
-            # volver a construirlo.
-            cur.execute("""
-                ALTER TABLE equipo_accesos
-                ADD COLUMN IF NOT EXISTS tags TEXT[] NOT NULL DEFAULT '{}'
-            """)
-            cur.execute("""
-                ALTER TABLE equipo_accesos
-                ADD COLUMN IF NOT EXISTS notas TEXT NOT NULL DEFAULT ''
-            """)
-            # Nombre para mostrar: sin él, cada avatar/etiqueta de la app
-            # adivinaba el nombre a partir del email (ver Avatares.tsx).
-            cur.execute("""
-                ALTER TABLE equipo_accesos
-                ADD COLUMN IF NOT EXISTS nombre VARCHAR(80) NOT NULL DEFAULT ''
-            """)
-            # DNI/NIE/pasaporte y correo personal: los rellena admin a mano
-            # (no forman parte del alta ni del login), para tener con qué
-            # identificar a la persona una vez pierda el correo de la UPM.
-            cur.execute("""
-                ALTER TABLE equipo_accesos
-                ADD COLUMN IF NOT EXISTS dni VARCHAR(20) NOT NULL DEFAULT ''
-            """)
-            cur.execute("""
-                ALTER TABLE equipo_accesos
-                ADD COLUMN IF NOT EXISTS correo_personal VARCHAR(120) NOT NULL DEFAULT ''
-            """)
-            # Foto de perfil propia, como data URL (`data:image/jpeg;base64,...`).
-            # Va en la fila y no en un blob store porque la imagen llega ya
-            # reducida a 800px de lado mayor desde el navegador (~70 KB) y la CSP del sitio
-            # ya permite `data:` en img-src -- montar almacenamiento aparte
-            # para eso sería más infraestructura que foto. Vacía = se usa la
-            # que hay en `public/equipo-*.jpg` (ver `Avatares.tsx`).
-            cur.execute("""
-                ALTER TABLE equipo_accesos
-                ADD COLUMN IF NOT EXISTS foto TEXT NOT NULL DEFAULT ''
-            """)
-            # Apellidos aparte de `nombre` (que es el nombre para mostrar): los
-            # pide la ficha de datos personales (`/equipo/datosformulario`).
-            cur.execute("""
-                ALTER TABLE equipo_accesos
-                ADD COLUMN IF NOT EXISTS apellidos VARCHAR(80) NOT NULL DEFAULT ''
-            """)
-            # La inscripción de la que salió la cuenta (tabla `registrations`):
-            # así nombre, estudios y teléfono no se copian a mano de una a
-            # otra. Se rellena sola por email (`vincular_inscripciones`) y,
-            # cuando la persona se inscribió con otro correo, a mano. SET NULL:
-            # borrar una inscripción no se lleva la cuenta por delante.
-            cur.execute("""
-                ALTER TABLE equipo_accesos ADD COLUMN IF NOT EXISTS registro_id INTEGER
-                REFERENCES registrations(id) ON DELETE SET NULL
-            """)
-            # Vinculación automática: la inscripción más reciente con el mismo
-            # email. Solo rellena huecos, nunca pisa una vinculación a mano.
-            cur.execute("""
-                UPDATE equipo_accesos a SET registro_id = (
-                    SELECT r.id FROM registrations r
-                    WHERE lower(r.email) = lower(a.email)
-                    ORDER BY r.created_at DESC LIMIT 1
-                )
-                WHERE a.registro_id IS NULL
-                  AND EXISTS (SELECT 1 FROM registrations r WHERE lower(r.email) = lower(a.email))
-            """)
-            # Permiso de admin (grupo Admin de /equipo: inscripciones, cuentas,
-            # calendario del club), separado del departamento y del cargo. La
-            # columna nace sin default para que el UPDATE de abajo pueda
-            # distinguir las filas que ya existían (NULL) y darles exactamente
-            # el acceso que tenían antes: Ingeniería o un cargo de dirección.
-            # Desde ahí se quita o se da a mano en la tabla de Cuentas.
-            cur.execute("""
-                ALTER TABLE equipo_accesos ADD COLUMN IF NOT EXISTS es_admin BOOLEAN
-            """)
-            cur.execute("""
-                UPDATE equipo_accesos
-                SET es_admin = ('ingenieria' = ANY(equipos) OR cargo IN ('presidente', 'boardmember'))
-                WHERE es_admin IS NULL
-            """)
-            cur.execute("""
-                ALTER TABLE equipo_accesos ALTER COLUMN es_admin SET DEFAULT FALSE
-            """)
-            # La sección «Equipo» de la web pública sale de aquí (ver
-            # `listar_miembros_web`): la misma foto y el mismo nombre que en
-            # /equipo. `en_web` lo marca admin en Cuentas; nace sin default
-            # para que las filas que ya existían arranquen marcadas; en la web
-            # solo salen las que además tienen foto (`listar_miembros_web`).
-            cur.execute("""
-                ALTER TABLE equipo_accesos ADD COLUMN IF NOT EXISTS en_web BOOLEAN
-            """)
-            cur.execute("""
-                UPDATE equipo_accesos SET en_web = TRUE WHERE en_web IS NULL
-            """)
-            cur.execute("""
-                ALTER TABLE equipo_accesos ALTER COLUMN en_web SET DEFAULT FALSE
-            """)
-            cur.execute("""
-                CREATE TABLE IF NOT EXISTS calendario_eventos (
-                    id SERIAL PRIMARY KEY,
-                    titulo VARCHAR(150) NOT NULL,
-                    descripcion VARCHAR(500) NOT NULL DEFAULT '',
-                    fecha DATE NOT NULL,
-                    hora VARCHAR(5) NOT NULL DEFAULT '',
-                    created_at TIMESTAMP NOT NULL DEFAULT NOW()
-                )
-            """)
-            # Confirmación previa ("Voy") y check-in real el día del evento --
-            # dos listas de email porque son dos hechos distintos (ver
-            # `metricas_club`: la asistencia real es la que alimenta la
-            # métrica, no quien dijo que iba a venir).
-            cur.execute("""
-                ALTER TABLE calendario_eventos
-                ADD COLUMN IF NOT EXISTS confirmados TEXT[] NOT NULL DEFAULT '{}'
-            """)
-            cur.execute("""
-                ALTER TABLE calendario_eventos
-                ADD COLUMN IF NOT EXISTS asistio TEXT[] NOT NULL DEFAULT '{}'
-            """)
-            activar_rls(cur, "equipo_accesos", "calendario_eventos")
-        conn.commit()
+# La inscripción de la que sale una cuenta nueva: la más reciente con su email.
+# Quien se inscribió con otro correo se vincula a mano (`registro_id` en
+# `actualizar_equipo_acceso`).
+_INSCRIPCION = (
+    "(SELECT id FROM registrations WHERE lower(email) = %s ORDER BY created_at DESC LIMIT 1)"
+)
 
 
 def listar_directorio_club() -> list[dict]:
@@ -519,16 +367,17 @@ def crear_equipo_acceso(
                 return None
 
             cur.execute(
-                """
+                f"""
                 INSERT INTO equipo_accesos
-                    (email, password_hash, equipos, vp_de, cargo, nombre, es_admin, apellidos)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                    (email, password_hash, equipos, vp_de, cargo, nombre, es_admin, apellidos,
+                     registro_id)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, {_INSCRIPCION})
                 RETURNING id, email, equipos, vp_de, cargo, activo, created_at, nombre,
                           es_admin, apellidos
                 """,
                 (
                     email, generate_password_hash(password), equipos, vp_de, cargo, nombre,
-                    es_admin, (apellidos or "").strip(),
+                    es_admin, (apellidos or "").strip(), email,
                 ),
             )
             fila = cur.fetchone()
@@ -567,12 +416,12 @@ def registrar_equipo_acceso(email: str, password: str) -> bool:
     with _get_connection() as conn:
         with conn.cursor() as cur:
             cur.execute(
-                """
-                INSERT INTO equipo_accesos (email, password_hash, activo)
-                VALUES (%s, %s, FALSE)
+                f"""
+                INSERT INTO equipo_accesos (email, password_hash, activo, registro_id)
+                VALUES (%s, %s, FALSE, {_INSCRIPCION})
                 ON CONFLICT (email) DO NOTHING
                 """,
-                (email.strip().lower(), generate_password_hash(password)),
+                (email.strip().lower(), generate_password_hash(password), email.strip().lower()),
             )
             creado = cur.rowcount > 0
         conn.commit()
@@ -715,7 +564,7 @@ def listar_eventos_calendario() -> list[dict]:
             cur.execute(
                 """
                 SELECT id, titulo, descripcion, fecha, hora, confirmados, asistio
-                FROM calendario_eventos ORDER BY fecha, hora
+                FROM calendario_eventos_v ORDER BY fecha, hora
                 """
             )
             filas = cur.fetchall()
@@ -735,58 +584,40 @@ def listar_eventos_calendario() -> list[dict]:
 
 
 def confirmar_evento_calendario(evento_id: int, email: str, confirmar: bool) -> bool:
-    """"Voy" / "no voy" de la propia persona a un evento del club. Un TEXT[]
-    con array_append/array_remove en vez de una tabla de asistencia aparte:
-    es la misma cardinalidad que `reuniones.asistentes`, que ya vive así."""
-    email = email.strip().lower()
-    operacion = "array_append" if confirmar else "array_remove"
-    with _get_connection() as conn:
-        with conn.cursor() as cur:
-            cur.execute(
-                f"""
-                UPDATE calendario_eventos
-                SET confirmados = {operacion}(array_remove(confirmados, %s), %s)
-                WHERE id = %s
-                """
-                if confirmar
-                else f"""
-                UPDATE calendario_eventos SET confirmados = {operacion}(confirmados, %s)
-                WHERE id = %s
-                """,
-                (email, email, evento_id) if confirmar else (email, evento_id),
-            )
-            actualizado = cur.rowcount > 0
-        conn.commit()
-    return actualizado
+    """"Voy" / "no voy" de la propia persona a un evento del club."""
+    return _marcar_en_evento("evento_confirmados", evento_id, email, confirmar)
 
 
 def marcar_asistio_evento(evento_id: int, email: str, asistio: bool) -> bool:
     """Check-in real el día del evento -- lo marca quien gestiona la puerta
     (VP/admin, ver `_puede_editar_calendario_club`), no la propia persona.
     Alimenta `metricas_club` ("asistencia media"), a diferencia de
-    `confirmados`, que es solo la intención previa."""
-    email = email.strip().lower()
-    operacion = "array_append" if asistio else "array_remove"
+    `evento_confirmados`, que es solo la intención previa."""
+    return _marcar_en_evento("evento_asistentes", evento_id, email, asistio)
+
+
+def _marcar_en_evento(tabla: str, evento_id: int, email: str, poner: bool) -> bool:
+    """Pone o quita a una persona de una lista de un evento. False si el
+    evento no existe."""
     with _get_connection() as conn:
         with conn.cursor() as cur:
-            cur.execute(
-                f"""
-                UPDATE calendario_eventos
-                SET asistio = {operacion}(array_remove(asistio, %s), %s)
-                WHERE id = %s
-                """
-                if asistio
-                else f"""
-                UPDATE calendario_eventos SET asistio = {operacion}(asistio, %s)
-                WHERE id = %s
-                """,
-                (email, email, evento_id) if asistio else (email, evento_id),
-            )
-            actualizado = cur.rowcount > 0
+            cur.execute("SELECT 1 FROM calendario_eventos WHERE id = %s", (evento_id,))
+            if cur.fetchone() is None:
+                return False
+            (persona_id,) = ids_de_personas(cur, [email])
+            if poner:
+                cur.execute(
+                    f"INSERT INTO {tabla} (evento_id, persona_id) VALUES (%s, %s)"
+                    " ON CONFLICT DO NOTHING",
+                    (evento_id, persona_id),
+                )
+            else:
+                cur.execute(
+                    f"DELETE FROM {tabla} WHERE evento_id = %s AND persona_id = %s",
+                    (evento_id, persona_id),
+                )
         conn.commit()
-    return actualizado
-
-
+    return True
 
 
 def crear_evento_calendario(titulo: str, descripcion: str, fecha: str, hora: str) -> dict:

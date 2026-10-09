@@ -30,6 +30,7 @@ import backend.api.registros  # noqa: F401
 from backend.config import ADMIN_SESSION_LIFETIME_SECONDS
 from backend.schemas import build_response
 from backend.services import auditoria
+from backend.services.db import DatosInvalidos, migrar
 from backend.services.security import obtener_ip_real
 
 app = Flask(__name__)
@@ -74,6 +75,20 @@ def serve_frontend_index():
         abort(503, description="Frontend build not found. Run `npm run build` in `frontend/`.")
 
     return send_file(FRONTEND_INDEX_FILE)
+
+
+@app.before_request
+def preparar_base_de_datos():
+    # Las migraciones pendientes (backend/migrations/) se aplican una vez por
+    # instancia, en la primera petición a la API; las páginas estáticas no
+    # dependen de la base de datos y no esperan por ella.
+    if request.path.startswith("/api/"):
+        migrar()
+
+
+@app.errorhandler(DatosInvalidos)
+def datos_invalidos(error):
+    return jsonify(build_response(False, str(error))), 400
 
 
 @app.before_request
