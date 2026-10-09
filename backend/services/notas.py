@@ -12,6 +12,7 @@ import json
 import psycopg2
 from psycopg2.extras import Json, RealDictCursor
 
+from backend.services.db import activar_rls
 from backend.config import DATABASE_URL
 
 NOTA_COLUMNAS = ("titulo", "contenido", "departamento", "privada", "fijada", "proyecto_id")
@@ -51,6 +52,7 @@ def _crear_tablas():
             # Sin FK, como `responsables` en tasks: borrar un proyecto no debe
             # tocar ni romper sus notas, que siguen en Notas sin enlace.
             cur.execute("ALTER TABLE notas ADD COLUMN IF NOT EXISTS proyecto_id INTEGER")
+            activar_rls(cur, "notas")
         conn.commit()
 
 

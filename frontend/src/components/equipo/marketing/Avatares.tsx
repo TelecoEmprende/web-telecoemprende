@@ -5,6 +5,7 @@ import {
   AvatarGroupCount,
   AvatarImage,
 } from "@/components/ui/avatar";
+import { CON_FOTO } from "../../../data/fotosEquipo";
 import { useFotos } from "../DeptoApi";
 
 /**
@@ -18,18 +19,6 @@ import { useFotos } from "../DeptoApi";
  * las fotos que ya hay en `public/` -- así nadie se queda sin nombre ni foto
  * mientras se rellenan los perfiles.
  */
-
-/** Nombres con foto en `frontend/public/equipo-*.jpg`.
- *
- *  Cuando dos personas comparten nombre de pila la clave es `nombre-apellido`
- *  (`david-garcia`): con solo "david", David Martín salía con la cara de David
- *  García. Quien no tenga foto se queda en iniciales, que es mejor que la cara
- *  de otra persona -- para darle la suya basta con dejar el .jpg en `public/`
- *  con este mismo nombre y añadirlo a la lista. */
-const CON_FOTO = [
-  "abril", "alex", "david-garcia", "diego", "guillermo", "hammad",
-  "hugo", "iker", "jorge", "mamoun", "mariano", "marta",
-];
 
 /** La misma lista, del nombre más largo al más corto: así una entrada futura
  *  de "david" a secas no puede robarle el prefijo a "david-garcia". */

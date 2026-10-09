@@ -90,7 +90,7 @@ vi.mock("../../api/equipo", () => ({
       vp_de: vpDeSesion,
       cargo: "",
       nombre: "",
-      mentor_email: "",
+     
       admin: adminDeSesion,
     }),
   getEquipoCalendario: () => Promise.resolve({ ok: true, eventos: [] }),
@@ -685,7 +685,7 @@ describe("/equipo — panel de Marketing", () => {
         abiertas: 2,
         completadas: 12,
         campanas: 3,
-        mentor_email: "",
+       
         actividad: [
           {
             id: 1,

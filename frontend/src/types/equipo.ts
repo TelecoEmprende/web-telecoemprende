@@ -42,7 +42,6 @@ export type EquipoLoginResponse =
       vp_de: Team[];
       cargo: Cargo;
       nombre: string;
-      mentor_email: string;
       /** Permiso de admin: grupo Admin del sidebar. */
       admin: boolean;
     }
@@ -56,22 +55,18 @@ export type EquipoSessionResponse = {
   cargo: Cargo;
   email: string;
   nombre: string;
-  mentor_email: string;
   admin: boolean;
 };
 
 /** Fila del directorio del club entero ("Quién es quién") -- solo lo básico,
- *  visible a cualquier miembro. Nada de notas/onboarding, que son privados
- *  (ver `EquipoAcceso`, la versión completa que solo ve /admin). El mentor sí
- *  viaja aquí (no es privado): es lo que deja a "Mi semana" enseñar "Mi
- *  mentora" y "Tutoriza a" cruzando este directorio con la sesión propia. */
+ *  visible a cualquier miembro. Nada de notas ni datos personales (ver
+ *  `EquipoAcceso`, la versión completa que solo ve admin). */
 export type MiembroDirectorio = {
   email: string;
   equipos: Team[];
   vp_de: Team[];
   cargo: Cargo;
   nombre: string;
-  mentor_email: string;
 };
 
 export type EquipoAcceso = {
@@ -86,11 +81,24 @@ export type EquipoAcceso = {
   apellidos: string;
   dni: string;
   correo_personal: string;
-  mentor_email: string;
+  /** Inscripción de la que salió la cuenta (`registrations.id`), o null. */
+  registro_id: number | null;
   /** Foto como data URL, o "" para la de `public/` (ver `Avatares.tsx`). */
   foto: string;
   /** Permiso de admin, aparte del departamento y del cargo. */
   es_admin: boolean;
+  /** Sale en la sección «Equipo» de la web pública (ver `MiembroWeb`). */
+  en_web: boolean;
+};
+
+/** Una persona en la sección «Equipo» de la web pública
+ *  (`GET /api/equipo/miembros-web`): la misma cuenta que en /equipo. */
+export type MiembroWeb = {
+  nombre: string;
+  /** Primer apellido. */
+  apellido: string;
+  /** Data URL: solo salen quienes tienen foto subida en su cuenta. */
+  foto: string;
 };
 
 export type EventoCalendario = {

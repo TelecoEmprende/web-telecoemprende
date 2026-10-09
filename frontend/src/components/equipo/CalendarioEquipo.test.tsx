@@ -39,7 +39,7 @@ describe("CalendarioEquipo — tu agenda", () => {
   it("saluda y pide la agenda también con un solo departamento", async () => {
     getEquipoSession.mockResolvedValue({
       ok: true, authenticated: true, teams: ["marketing"], vp_de: [], cargo: "",
-      email: "abril@example.com", nombre: "Abril", mentor_email: "",
+      email: "abril@example.com", nombre: "Abril",
     });
     getMisTareas.mockResolvedValue({
       ok: true,
@@ -56,7 +56,7 @@ describe("CalendarioEquipo — tu agenda", () => {
   it("con varios departamentos, saluda y junta sus tareas por departamento", async () => {
     getEquipoSession.mockResolvedValue({
       ok: true, authenticated: true, teams: ["marketing", "eventos"], vp_de: [], cargo: "",
-      email: "abril@example.com", nombre: "Abril", mentor_email: "",
+      email: "abril@example.com", nombre: "Abril",
     });
     getMisTareas.mockResolvedValue({
       ok: true,
@@ -79,7 +79,7 @@ describe("CalendarioEquipo — tu agenda", () => {
   it("marca como vencida una tarea con deadline pasado", async () => {
     getEquipoSession.mockResolvedValue({
       ok: true, authenticated: true, teams: ["marketing", "eventos"], vp_de: [], cargo: "",
-      email: "abril@example.com", nombre: "Abril", mentor_email: "",
+      email: "abril@example.com", nombre: "Abril",
     });
     getMisTareas.mockResolvedValue({
       ok: true,

@@ -1,5 +1,4 @@
-"""Registros del workspace: recursos, presupuesto, anuncios, reuniones, alumni,
-decisiones técnicas y servicios (más el estado de la plataforma).
+"""Registros del workspace: presupuesto, reuniones y servicios (más el estado de la plataforma).
 
 Comparten CRUD (`services/registros.py`), así que lo que se prueba
 aquí es lo que las diferencia: el acotado por departamento, lo que es global,
@@ -35,10 +34,7 @@ class RegistrosTestCase(unittest.TestCase):
 
         conn = registros_service._get_connection()
         with conn.cursor() as cur:
-            for tabla in (
-                "recursos", "presupuesto_lineas", "anuncios", "reuniones", "alumni",
-                "decisiones", "servicios",
-            ):
+            for tabla in ("presupuesto_lineas", "reuniones", "servicios"):
                 cur.execute(f"DELETE FROM {tabla}")
             cur.execute("DELETE FROM equipo_accesos")
         conn.commit()
@@ -63,73 +59,54 @@ class RegistrosTestCase(unittest.TestCase):
         )
         self.assertEqual(respuesta.status_code, 200)
 
-    # --- Recursos ---
+    # --- CRUD y aislamiento (sobre reuniones) ---
 
-    def test_crud_de_recursos(self):
+    def test_crud_de_reuniones(self):
         self.login()
         crear = self.client.post(
-            "/api/eventos/recursos",
-            json={"titulo": "Plano de la feria", "tipo": "documento", "url": "https://x.es/a"},
+            "/api/eventos/reuniones",
+            json={"titulo": "Plano de la feria", "fecha": "2026-10-01"},
         )
         self.assertEqual(crear.status_code, 201, crear.get_json())
         fila_id = crear.get_json()["registro"]["id"]
 
-        listado = self.client.get("/api/eventos/recursos").get_json()["recursos"]
+        listado = self.client.get("/api/eventos/reuniones").get_json()["reuniones"]
         self.assertEqual([r["titulo"] for r in listado], ["Plano de la feria"])
 
-        self.client.put(f"/api/eventos/recursos/{fila_id}", json={"notas": "Pendiente firma"})
+        self.client.put(f"/api/eventos/reuniones/{fila_id}", json={"acta": "Pendiente firma"})
         self.assertEqual(
-            self.client.get("/api/eventos/recursos").get_json()["recursos"][0]["notas"],
+            self.client.get("/api/eventos/reuniones").get_json()["reuniones"][0]["acta"],
             "Pendiente firma",
         )
 
         self.assertEqual(
-            self.client.delete(f"/api/eventos/recursos/{fila_id}").status_code, 200
+            self.client.delete(f"/api/eventos/reuniones/{fila_id}").status_code, 200
         )
-        self.assertEqual(self.client.get("/api/eventos/recursos").get_json()["recursos"], [])
+        self.assertEqual(self.client.get("/api/eventos/reuniones").get_json()["reuniones"], [])
 
-    def test_un_recurso_de_eventos_no_se_ve_ni_se_toca_desde_ingenieria(self):
+    def test_una_reunion_de_eventos_no_se_ve_ni_se_toca_desde_ingenieria(self):
         self.login()
         fila_id = self.client.post(
-            "/api/eventos/recursos", json={"titulo": "Plano de la feria"}
+            "/api/eventos/reuniones", json={"titulo": "Plano de la feria"}
         ).get_json()["registro"]["id"]
 
-        self.assertEqual(self.client.get("/api/ingenieria/recursos").get_json()["recursos"], [])
+        self.assertEqual(self.client.get("/api/ingenieria/reuniones").get_json()["reuniones"], [])
         self.assertEqual(
             self.client.put(
-                f"/api/ingenieria/recursos/{fila_id}", json={"titulo": "Secuestrado"}
+                f"/api/ingenieria/reuniones/{fila_id}", json={"titulo": "Secuestrado"}
             ).status_code,
             404,
         )
         self.assertEqual(
-            self.client.delete(f"/api/ingenieria/recursos/{fila_id}").status_code, 404
+            self.client.delete(f"/api/ingenieria/reuniones/{fila_id}").status_code, 404
         )
 
     def test_el_titulo_es_obligatorio_al_crear(self):
         self.login()
         self.assertEqual(
-            self.client.post("/api/eventos/recursos", json={"notas": "solo notas"}).status_code,
+            self.client.post("/api/eventos/reuniones", json={"acta": "solo acta"}).status_code,
             400,
         )
-
-    # --- Anuncios: los únicos globales ---
-
-    def test_un_anuncio_se_ve_desde_cualquier_departamento(self):
-        self.login()
-        self.client.post(
-            "/api/eventos/anuncios", json={"titulo": "Reunión general el jueves"}
-        )
-
-        desde_ingenieria = self.client.get("/api/ingenieria/anuncios").get_json()["anuncios"]
-        self.assertEqual([a["titulo"] for a in desde_ingenieria], ["Reunión general el jueves"])
-
-    def test_los_anuncios_fijados_van_primero(self):
-        self.login()
-        self.client.post("/api/eventos/anuncios", json={"titulo": "Normal"})
-        self.client.post("/api/eventos/anuncios", json={"titulo": "Importante", "fijado": True})
-
-        titulos = [a["titulo"] for a in self.client.get("/api/eventos/anuncios").get_json()["anuncios"]]
-        self.assertEqual(titulos[0], "Importante")
 
     # --- Presupuesto ---
 
@@ -176,41 +153,23 @@ class RegistrosTestCase(unittest.TestCase):
         lineas = self.client.get("/api/eventos/presupuesto").get_json()["presupuesto"]
         self.assertEqual(lineas[0]["importe"], "12.50")
 
-    # --- Alumni y reuniones ---
+    # --- Reuniones ---
 
-    def test_alumni_y_reuniones_viven_en_ingenieria(self):
+    def test_reuniones_guardan_asistentes(self):
         self.login()
-        self.client.post(
-            "/api/ingenieria/alumni",
-            json={"nombre": "Marta Ruiz", "promocion": "2019", "empresa": "Telefónica"},
-        )
         self.client.post(
             "/api/ingenieria/reuniones",
-            json={"titulo": "Kickoff Alumni", "fecha": "2026-10-01",
+            json={"titulo": "Kickoff", "fecha": "2026-10-01",
                   "asistentes": ["iker@example.com"]},
         )
-
-        alumni = self.client.get("/api/ingenieria/alumni").get_json()["alumni"]
-        self.assertEqual(alumni[0]["empresa"], "Telefónica")
-        self.assertEqual(alumni[0]["estado"], "pendiente")
-
         reuniones = self.client.get("/api/ingenieria/reuniones").get_json()["reuniones"]
         self.assertEqual(reuniones[0]["asistentes"], ["iker@example.com"])
-
-    def test_un_estado_de_alumni_inventado_se_rechaza(self):
-        self.login()
-        respuesta = self.client.post(
-            "/api/ingenieria/alumni", json={"nombre": "Marta", "estado": "no-existe"}
-        )
-        self.assertEqual(respuesta.status_code, 400)
 
     # --- Enlaces: solo http(s) ---
 
     def test_un_enlace_que_no_es_http_se_rechaza_en_todos_los_campos_url(self):
         self.login()
         for ruta, base, clave in (
-            ("recursos", {"titulo": "X"}, "url"),
-            ("alumni", {"nombre": "X"}, "linkedin"),
             ("servicios", {"nombre": "X"}, "url"),
         ):
             for malo in ("javascript:alert(1)", "data:text/html,<b>x</b>", "github.com/x"):
@@ -223,66 +182,33 @@ class RegistrosTestCase(unittest.TestCase):
             )
             self.assertEqual(bueno.status_code, 201, (ruta, bueno.get_json()))
 
-    # --- Ingeniería: decisiones técnicas y servicios ---
+    # --- Ingeniería: servicios ---
 
-    def test_decisiones_y_servicios_viven_en_ingenieria(self):
+    def test_servicios_viven_en_ingenieria(self):
         self.login()
-        self.client.post(
-            "/api/ingenieria/decisiones",
-            json={"titulo": "Postgres en Supabase", "estado": "aceptada",
-                  "fecha": "2026-09-01", "contexto": "Hacía falta una BD.",
-                  "decision": "Supabase por el plan gratuito."},
-        )
         self.client.post(
             "/api/ingenieria/servicios",
             json={"nombre": "Vercel", "tipo": "alojamiento", "estado": "activo",
                   "url": "https://vercel.com", "renovacion": "2027-01-15",
                   "responsables": ["iker@example.com"]},
         )
-
-        decisiones = self.client.get("/api/ingenieria/decisiones").get_json()["decisiones"]
-        self.assertEqual(decisiones[0]["estado"], "aceptada")
-        self.assertEqual(decisiones[0]["fecha"], "2026-09-01")
-
         servicios = self.client.get("/api/ingenieria/servicios").get_json()["servicios"]
         self.assertEqual(servicios[0]["responsables"], ["iker@example.com"])
         self.assertEqual(servicios[0]["renovacion"], "2027-01-15")
 
-    def test_defaults_de_decisiones_y_servicios(self):
+    def test_defaults_de_servicios(self):
         self.login()
-        self.client.post("/api/ingenieria/decisiones", json={"titulo": "Usar Tailwind"})
         self.client.post("/api/ingenieria/servicios", json={"nombre": "GoDaddy"})
-        self.assertEqual(
-            self.client.get("/api/ingenieria/decisiones").get_json()["decisiones"][0]["estado"],
-            "propuesta",
-        )
         servicio = self.client.get("/api/ingenieria/servicios").get_json()["servicios"][0]
         self.assertEqual((servicio["estado"], servicio["tipo"]), ("activo", "otro"))
 
-    def test_estados_inventados_de_decisiones_y_servicios_se_rechazan(self):
+    def test_un_tipo_de_servicio_inventado_se_rechaza(self):
         self.login()
-        self.assertEqual(
-            self.client.post(
-                "/api/ingenieria/decisiones", json={"titulo": "X", "estado": "quizá"}
-            ).status_code,
-            400,
-        )
         self.assertEqual(
             self.client.post(
                 "/api/ingenieria/servicios", json={"nombre": "X", "tipo": "nube-magica"}
             ).status_code,
             400,
-        )
-
-    def test_una_decision_de_ingenieria_no_se_ve_desde_eventos(self):
-        self.login()
-        fila_id = self.client.post(
-            "/api/ingenieria/decisiones", json={"titulo": "Usar Tailwind"}
-        ).get_json()["registro"]["id"]
-
-        self.assertEqual(self.client.get("/api/eventos/decisiones").get_json()["decisiones"], [])
-        self.assertEqual(
-            self.client.delete(f"/api/eventos/decisiones/{fila_id}").status_code, 404
         )
 
     # --- Plataforma ---
@@ -328,12 +254,12 @@ class RegistrosTestCase(unittest.TestCase):
 
     def test_sin_pertenecer_al_departamento_no_se_entra(self):
         self.login(equipos=("eventos",))
-        self.assertEqual(self.client.get("/api/ingenieria/alumni").status_code, 401)
-        self.assertEqual(self.client.get("/api/eventos/recursos").status_code, 200)
+        self.assertEqual(self.client.get("/api/ingenieria/reuniones").status_code, 401)
+        self.assertEqual(self.client.get("/api/eventos/reuniones").status_code, 200)
 
     def test_sin_sesion_no_se_entra(self):
-        self.assertEqual(self.client.get("/api/eventos/recursos").status_code, 401)
-        self.assertEqual(self.client.get("/api/eventos/anuncios").status_code, 401)
+        self.assertEqual(self.client.get("/api/eventos/reuniones").status_code, 401)
+        self.assertEqual(self.client.get("/api/eventos/presupuesto").status_code, 401)
 
 
     # --- Accesos del club (Herramientas) ---

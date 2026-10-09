@@ -63,19 +63,6 @@ def _importe(datos: dict, clave: str) -> str:
 
 # Cada entrada: cómo se lee un campo del JSON. `parcial` marca si la petición
 # es un alta (donde el título es obligatorio) o una edición.
-def _campos_recurso(datos: dict) -> dict:
-    salida = {}
-    if "titulo" in datos:
-        salida["titulo"] = _texto(datos, "titulo", obligatorio=True, maximo=MAX_TITULO_LEN)
-    if "tipo" in datos:
-        salida["tipo"] = _opcion(datos, "tipo", reg.RECURSO_TIPOS, "enlace")
-    if "url" in datos:
-        salida["url"] = _url(datos, "url")
-    if "notas" in datos:
-        salida["notas"] = _texto(datos, "notas", maximo=MAX_TEXTO_LARGO_LEN, multilinea=True)
-    return salida
-
-
 def _campos_presupuesto(datos: dict) -> dict:
     salida = {}
     if "concepto" in datos:
@@ -95,19 +82,6 @@ def _campos_presupuesto(datos: dict) -> dict:
     return salida
 
 
-def _campos_anuncio(datos: dict) -> dict:
-    salida = {}
-    if "titulo" in datos:
-        salida["titulo"] = _texto(datos, "titulo", obligatorio=True, maximo=MAX_TITULO_LEN)
-    if "cuerpo" in datos:
-        salida["cuerpo"] = _texto(
-            datos, "cuerpo", maximo=MAX_TEXTO_LARGO_LEN, multilinea=True
-        )
-    if "fijado" in datos:
-        salida["fijado"] = bool(datos.get("fijado"))
-    return salida
-
-
 def _campos_reunion(datos: dict) -> dict:
     salida = {}
     if "titulo" in datos:
@@ -124,38 +98,6 @@ def _campos_reunion(datos: dict) -> dict:
         salida["asistentes"] = _lista_textos(datos, "asistentes", MAX_ENLACES)
     if "acta" in datos:
         salida["acta"] = _texto(datos, "acta", maximo=MAX_TEXTO_LARGO_LEN, multilinea=True)
-    return salida
-
-
-def _campos_alumni(datos: dict) -> dict:
-    salida = {}
-    if "nombre" in datos:
-        salida["nombre"] = _texto(datos, "nombre", obligatorio=True, maximo=120)
-    for clave, maximo in (
-        ("promocion", 20), ("empresa", 120), ("puesto", 120), ("email", 120),
-    ):
-        if clave in datos:
-            salida[clave] = _texto(datos, clave, maximo=maximo)
-    if "linkedin" in datos:
-        salida["linkedin"] = _url(datos, "linkedin")
-    if "estado" in datos:
-        salida["estado"] = _opcion(datos, "estado", reg.ALUMNI_ESTADOS, "pendiente")
-    if "notas" in datos:
-        salida["notas"] = _texto(datos, "notas", maximo=MAX_TEXTO_LARGO_LEN, multilinea=True)
-    return salida
-
-
-def _campos_decision(datos: dict) -> dict:
-    salida = {}
-    if "titulo" in datos:
-        salida["titulo"] = _texto(datos, "titulo", obligatorio=True, maximo=MAX_TITULO_LEN)
-    if "estado" in datos:
-        salida["estado"] = _opcion(datos, "estado", reg.DECISION_ESTADOS, "propuesta")
-    if "fecha" in datos:
-        salida["fecha"] = _fecha(datos, "fecha")
-    for clave in ("contexto", "decision"):
-        if clave in datos:
-            salida[clave] = _texto(datos, clave, maximo=MAX_TEXTO_LARGO_LEN, multilinea=True)
     return salida
 
 
@@ -187,7 +129,7 @@ def _montar_rutas(ruta: str, tabla: reg.Tabla, leer_campos, obligatorio: str):
     el concepto, el nombre): se comprueba aquí y no dentro de cada lector para
     que editar solo un campo suelto siga siendo posible.
     """
-    depto_de = lambda: departamento_actual() if tabla.por_departamento else None  # noqa: E731
+    depto_de = departamento_actual
 
     def listar():
         reg.init_registros_db()
@@ -230,12 +172,8 @@ def _montar_rutas(ruta: str, tabla: reg.Tabla, leer_campos, obligatorio: str):
         marketing_api.route(url, methods=[metodo])(requiere_equipo(func))
 
 
-_montar_rutas("recursos", reg.RECURSOS, _campos_recurso, "titulo")
 _montar_rutas("presupuesto", reg.PRESUPUESTO, _campos_presupuesto, "concepto")
-_montar_rutas("anuncios", reg.ANUNCIOS, _campos_anuncio, "titulo")
 _montar_rutas("reuniones", reg.REUNIONES, _campos_reunion, "titulo")
-_montar_rutas("alumni", reg.ALUMNI, _campos_alumni, "nombre")
-_montar_rutas("decisiones", reg.DECISIONES, _campos_decision, "titulo")
 _montar_rutas("servicios", reg.SERVICIOS, _campos_servicio, "nombre")
 
 

@@ -3,6 +3,7 @@ from io import BytesIO
 import psycopg2
 from openpyxl import Workbook
 
+from backend.services.db import activar_rls
 from backend.config import DATABASE_URL
 
 
@@ -56,6 +57,7 @@ def init_db():
                 ALTER TABLE registrations
                 ADD COLUMN IF NOT EXISTS notificado BOOLEAN NOT NULL DEFAULT FALSE
             """)
+            activar_rls(cur, "registrations")
         conn.commit()
 
 

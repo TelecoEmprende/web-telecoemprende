@@ -57,7 +57,7 @@ function valorInicial(campo: CampoSpec, registro: Registro | null): string {
 /**
  * El listado y el formulario de una entidad del workspace.
  *
- * Recursos, presupuesto, anuncios, reuniones, alumni, decisiones y servicios
+ * Presupuesto, reuniones y servicios
  * son la misma pantalla con campos distintos: un listado, un botón de nuevo,
  * un diálogo para crear y editar, y borrar con confirmación. Se describen con
  * `campos` en vez de escribirse siete veces, que es lo mismo que hace el

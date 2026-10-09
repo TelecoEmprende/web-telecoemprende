@@ -676,10 +676,12 @@
 
 /* ---------- 06 · Equipo ---------- */
 
+/* Tarjetas pequeñas que se reparten solas: ~6 por fila en escritorio, 2 en
+   móvil, sin puntos de corte propios. */
 .in-equipo {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 48px 24px;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 32px 20px;
   margin: 64px 0 0;
   padding: 0;
   list-style: none;
@@ -690,6 +692,9 @@
   width: 100%;
   aspect-ratio: 4 / 5;
   object-fit: cover;
+  /* La foto se guarda entera, sin recortar: la tarjeta enseña la franja de
+     arriba, donde suele estar la cara. */
+  object-position: 50% 25%;
   border-radius: var(--radius-md);
   filter: grayscale(1);
   transition: filter 300ms var(--ease-out);
@@ -700,8 +705,8 @@
 }
 
 .in-persona h3 {
-  margin: 16px 0 4px;
-  font-size: 1.1rem;
+  margin: 12px 0 0;
+  font-size: 1rem;
   font-weight: 700;
 }
 
@@ -785,10 +790,6 @@
     grid-template-columns: repeat(2, 1fr);
   }
 
-  .in-equipo {
-    grid-template-columns: repeat(3, 1fr);
-  }
-
   .in-cierre-rejilla {
     grid-template-columns: 1fr;
   }
@@ -835,11 +836,6 @@
 
   .in-evento:first-child {
     grid-column: auto;
-  }
-
-  .in-equipo {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 32px 16px;
   }
 
   .in-noticia {

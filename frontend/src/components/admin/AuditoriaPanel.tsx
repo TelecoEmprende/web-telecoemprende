@@ -20,10 +20,6 @@ const RECURSO: Record<string, string> = {
   reuniones: "la reunión",
   presupuesto: "una partida de presupuesto",
   servicios: "el servicio",
-  anuncios: "un aviso",
-  decisiones: "una decisión",
-  recursos: "un recurso",
-  alumni: "un alumni",
   miembros: "la ficha de un miembro",
   "datos-formulario": "sus datos personales",
 };

@@ -1126,40 +1126,6 @@ class SlackTestCase(MarketingTestCase):
         tareas = self.client.get("/api/marketing/tasks").get_json()["tasks"]
         self.assertEqual([t["titulo"] for t in tareas], ["Guion del reel"])
 
-    def test_completar_el_onboarding_avisa_a_slack(self):
-        self.login()
-        self.seed_acceso("hugo@telecoemprende.es", "x", ["marketing"])
-
-        # A medio checklist no avisa todavía.
-        self.client.put(
-            "/api/marketing/miembros/ficha",
-            json={"email": "hugo@telecoemprende.es", "onboarding": {"slack": True, "drive": False}},
-        )
-        self.assertEqual(self.enviados, [])
-
-        self.client.put(
-            "/api/marketing/miembros/ficha",
-            json={"email": "hugo@telecoemprende.es", "onboarding": {"slack": True, "drive": True}},
-        )
-        self.assertEqual(len(self.enviados), 1)
-        self.assertIn("hugo", self.enviados[0])
-        self.assertIn("marketing", self.enviados[0])
-
-    def test_reguardar_el_onboarding_completo_no_vuelve_a_avisar(self):
-        self.login()
-        self.seed_acceso("hugo@telecoemprende.es", "x", ["marketing"])
-        self.client.put(
-            "/api/marketing/miembros/ficha",
-            json={"email": "hugo@telecoemprende.es", "onboarding": {"slack": True}},
-        )
-        self.enviados.clear()
-
-        self.client.put(
-            "/api/marketing/miembros/ficha",
-            json={"email": "hugo@telecoemprende.es", "onboarding": {"slack": True}},
-        )
-        self.assertEqual(self.enviados, [])
-
 
 class FichaMiembroTestCase(MarketingTestCase):
     """Directorio y ficha: carga de trabajo calculada, perfil guardado."""
@@ -1408,56 +1374,3 @@ class SaludEquipoTestCase(MarketingTestCase):
 
         self.assertEqual(primero, segundo)
 
-
-class OnboardingTestCase(MarketingTestCase):
-    """Checklist de onboarding: el backend guarda el objeto, no lo interpreta."""
-
-    def test_se_guarda_y_se_lee_en_la_ficha(self):
-        self.login()
-        self.seed_acceso("nuevo@telecoemprende.es", "x", ["marketing"])
-
-        guardar = self.client.put(
-            "/api/marketing/miembros/ficha",
-            json={
-                "email": "nuevo@telecoemprende.es",
-                "onboarding": {"acceso_drive": True, "bienvenida": False},
-            },
-        )
-        self.assertEqual(guardar.status_code, 200)
-
-        ficha = self.client.get(
-            "/api/marketing/miembros/ficha?email=nuevo@telecoemprende.es"
-        ).get_json()["ficha"]
-        self.assertEqual(
-            ficha["onboarding"], {"acceso_drive": True, "bienvenida": False}
-        )
-
-    def test_valores_no_booleanos_se_convierten_a_booleano(self):
-        self.login()
-        self.seed_acceso("nuevo@telecoemprende.es", "x", ["marketing"])
-
-        self.client.put(
-            "/api/marketing/miembros/ficha",
-            json={"email": "nuevo@telecoemprende.es", "onboarding": {"paso": "si"}},
-        )
-
-        ficha = self.client.get(
-            "/api/marketing/miembros/ficha?email=nuevo@telecoemprende.es"
-        ).get_json()["ficha"]
-        self.assertEqual(ficha["onboarding"], {"paso": True})
-
-    def test_rechaza_entradas_invalidas(self):
-        self.login()
-        self.seed_acceso("nuevo@telecoemprende.es", "x", ["marketing"])
-
-        casos = {
-            "no es un objeto": ["si"],
-            "mas de veinte claves": {f"paso{i}": True for i in range(21)},
-        }
-        for motivo, onboarding in casos.items():
-            with self.subTest(motivo=motivo):
-                respuesta = self.client.put(
-                    "/api/marketing/miembros/ficha",
-                    json={"email": "nuevo@telecoemprende.es", "onboarding": onboarding},
-                )
-                self.assertEqual(respuesta.status_code, 400)

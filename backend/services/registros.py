@@ -1,5 +1,5 @@
-"""Registros del workspace: recursos, presupuesto, anuncios, reuniones, alumni
-y, para Ingeniería, decisiones técnicas y servicios.
+"""Registros del workspace: presupuesto, reuniones y, para Ingeniería,
+servicios.
 
 Todas son la misma operación (listar, crear, editar, borrar filas de
 una tabla, casi siempre acotadas a un departamento) sobre esquemas distintos.
@@ -18,6 +18,7 @@ from decimal import Decimal
 import psycopg2
 from psycopg2.extras import RealDictCursor
 
+from backend.services.db import activar_rls
 from backend.config import DATABASE_URL
 
 
@@ -37,15 +38,7 @@ class Tabla:
     nombre: str
     columnas: tuple[str, ...]
     orden: str
-    #: Los anuncios son del club entero; el resto vive dentro de un departamento.
-    por_departamento: bool = True
 
-
-RECURSOS = Tabla(
-    nombre="recursos",
-    columnas=("titulo", "tipo", "url", "notas"),
-    orden="created_at DESC, id DESC",
-)
 
 PRESUPUESTO = Tabla(
     nombre="presupuesto_lineas",
@@ -53,34 +46,10 @@ PRESUPUESTO = Tabla(
     orden="COALESCE(fecha, created_at::date) DESC, id DESC",
 )
 
-ANUNCIOS = Tabla(
-    nombre="anuncios",
-    columnas=("titulo", "cuerpo", "fijado"),
-    # Los fijados arriba: un anuncio se fija justamente para que no se pierda
-    # según llegan otros.
-    orden="fijado DESC, created_at DESC, id DESC",
-    por_departamento=False,
-)
-
 REUNIONES = Tabla(
     nombre="reuniones",
     columnas=("titulo", "fecha", "hora", "objetivo", "asistentes", "acta"),
     orden="fecha DESC, hora DESC, id DESC",
-)
-
-ALUMNI = Tabla(
-    nombre="alumni",
-    columnas=(
-        "nombre", "promocion", "empresa", "puesto", "email",
-        "linkedin", "estado", "notas",
-    ),
-    orden="nombre",
-)
-
-DECISIONES = Tabla(
-    nombre="decisiones",
-    columnas=("titulo", "estado", "fecha", "contexto", "decision"),
-    orden="COALESCE(fecha, created_at::date) DESC, id DESC",
 )
 
 SERVICIOS = Tabla(
@@ -92,11 +61,8 @@ SERVICIOS = Tabla(
     orden="nombre",
 )
 
-RECURSO_TIPOS = ("documento", "enlace", "carpeta", "plantilla", "otro")
 PRESUPUESTO_TIPOS = ("gasto", "ingreso")
 PRESUPUESTO_ESTADOS = ("previsto", "aprobado", "pagado", "cancelado")
-ALUMNI_ESTADOS = ("pendiente", "contactado", "en_conversacion", "colabora", "descartado")
-DECISION_ESTADOS = ("propuesta", "aceptada", "descartada", "reemplazada")
 SERVICIO_TIPOS = (
     "alojamiento", "base_datos", "dominio", "correo", "codigo", "mensajeria", "otro",
 )
@@ -123,19 +89,6 @@ def init_registros_db():
 def _crear_tablas_registros():
     with _get_connection() as conn:
         with conn.cursor() as cur:
-            cur.execute("""
-                CREATE TABLE IF NOT EXISTS recursos (
-                    id SERIAL PRIMARY KEY,
-                    departamento VARCHAR(20) NOT NULL,
-                    titulo VARCHAR(160) NOT NULL,
-                    tipo VARCHAR(20) NOT NULL DEFAULT 'enlace',
-                    url TEXT NOT NULL DEFAULT '',
-                    notas TEXT NOT NULL DEFAULT '',
-                    creado_por VARCHAR(120) NOT NULL DEFAULT '',
-                    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-                    updated_at TIMESTAMP NOT NULL DEFAULT NOW()
-                )
-            """)
             # NUMERIC y no float: el total de un presupuesto no puede depender
             # de cómo redondee el binario. Se serializa como texto por lo mismo.
             cur.execute("""
@@ -154,17 +107,6 @@ def _crear_tablas_registros():
                 )
             """)
             cur.execute("""
-                CREATE TABLE IF NOT EXISTS anuncios (
-                    id SERIAL PRIMARY KEY,
-                    titulo VARCHAR(160) NOT NULL,
-                    cuerpo TEXT NOT NULL DEFAULT '',
-                    fijado BOOLEAN NOT NULL DEFAULT FALSE,
-                    creado_por VARCHAR(120) NOT NULL DEFAULT '',
-                    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-                    updated_at TIMESTAMP NOT NULL DEFAULT NOW()
-                )
-            """)
-            cur.execute("""
                 CREATE TABLE IF NOT EXISTS reuniones (
                     id SERIAL PRIMARY KEY,
                     departamento VARCHAR(20) NOT NULL,
@@ -174,37 +116,6 @@ def _crear_tablas_registros():
                     objetivo TEXT NOT NULL DEFAULT '',
                     asistentes TEXT[] NOT NULL DEFAULT '{}',
                     acta TEXT NOT NULL DEFAULT '',
-                    creado_por VARCHAR(120) NOT NULL DEFAULT '',
-                    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-                    updated_at TIMESTAMP NOT NULL DEFAULT NOW()
-                )
-            """)
-            cur.execute("""
-                CREATE TABLE IF NOT EXISTS alumni (
-                    id SERIAL PRIMARY KEY,
-                    departamento VARCHAR(20) NOT NULL,
-                    nombre VARCHAR(120) NOT NULL,
-                    promocion VARCHAR(20) NOT NULL DEFAULT '',
-                    empresa VARCHAR(120) NOT NULL DEFAULT '',
-                    puesto VARCHAR(120) NOT NULL DEFAULT '',
-                    email VARCHAR(120) NOT NULL DEFAULT '',
-                    linkedin TEXT NOT NULL DEFAULT '',
-                    estado VARCHAR(20) NOT NULL DEFAULT 'pendiente',
-                    notas TEXT NOT NULL DEFAULT '',
-                    creado_por VARCHAR(120) NOT NULL DEFAULT '',
-                    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-                    updated_at TIMESTAMP NOT NULL DEFAULT NOW()
-                )
-            """)
-            cur.execute("""
-                CREATE TABLE IF NOT EXISTS decisiones (
-                    id SERIAL PRIMARY KEY,
-                    departamento VARCHAR(20) NOT NULL,
-                    titulo VARCHAR(160) NOT NULL,
-                    estado VARCHAR(20) NOT NULL DEFAULT 'propuesta',
-                    fecha DATE,
-                    contexto TEXT NOT NULL DEFAULT '',
-                    decision TEXT NOT NULL DEFAULT '',
                     creado_por VARCHAR(120) NOT NULL DEFAULT '',
                     created_at TIMESTAMP NOT NULL DEFAULT NOW(),
                     updated_at TIMESTAMP NOT NULL DEFAULT NOW()
@@ -232,11 +143,12 @@ def _crear_tablas_registros():
                 "ALTER TABLE servicios"
                 " ADD COLUMN IF NOT EXISTS visible_club BOOLEAN NOT NULL DEFAULT FALSE"
             )
-            for tabla in (RECURSOS, PRESUPUESTO, REUNIONES, ALUMNI, DECISIONES, SERVICIOS):
+            for tabla in (PRESUPUESTO, REUNIONES, SERVICIOS):
                 cur.execute(
                     f"CREATE INDEX IF NOT EXISTS {tabla.nombre}_depto_idx"
                     f" ON {tabla.nombre} (departamento)"
                 )
+            activar_rls(cur, "presupuesto_lineas", "reuniones", "servicios")
         conn.commit()
 
 
@@ -254,8 +166,6 @@ def _serializar(fila: dict) -> dict:
 
 def _alcance(tabla: Tabla, departamento: str | None) -> tuple[str, list]:
     """Cláusula y parámetros que acotan una fila a su departamento."""
-    if not tabla.por_departamento:
-        return "", []
     return " AND departamento = %s", [departamento]
 
 
@@ -277,9 +187,8 @@ def crear(tabla: Tabla, campos: dict, creado_por: str, departamento: str | None 
 
     columnas.append("creado_por")
     valores.append(creado_por)
-    if tabla.por_departamento:
-        columnas.append("departamento")
-        valores.append(departamento)
+    columnas.append("departamento")
+    valores.append(departamento)
 
     marcadores = ", ".join(["%s"] * len(columnas))
     with _get_connection() as conn:

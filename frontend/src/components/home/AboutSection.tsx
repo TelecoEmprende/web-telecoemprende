@@ -5,8 +5,8 @@ import { Contador } from "@/components/movimiento";
 import { CLUB_EVENTS } from "../../data/events";
 import { useTranslation } from "../../i18n/translations";
 import { ScrollRevealText } from "./ScrollRevealText";
-import { TEAM } from "./TeamSection";
 import { Aparece, TitularAnimado } from "./aparece";
+import { useMiembrosWeb } from "./useMiembrosWeb";
 
 export function AboutSection() {
   const { t } = useTranslation();
@@ -14,6 +14,7 @@ export function AboutSection() {
   const cifrasRef = useRef<HTMLDListElement>(null);
   // Las cifras ruedan desde 0 la primera vez que entran en pantalla.
   const visibles = useInView(cifrasRef, { once: true, margin: "0px 0px -20% 0px" }) || menos;
+  const miembros = useMiembrosWeb();
 
   const pilares = [
     { titulo: t.about.pilar1Titulo, texto: t.about.pilar1Texto },
@@ -24,7 +25,8 @@ export function AboutSection() {
   // Solo cifras que salen de los datos de la web: nada inventado.
   const cifras = [
     { valor: CLUB_EVENTS.length, texto: t.about.cifraEventos },
-    { valor: TEAM.length, texto: t.about.cifraEquipo },
+    // Las mismas personas que la sección «Equipo» (cuentas con «Sale en la web»).
+    { valor: miembros?.length ?? 0, texto: t.about.cifraEquipo },
     { valor: 3, texto: t.about.cifraDeptos },
   ];
 
