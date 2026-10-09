@@ -62,6 +62,8 @@ const es = {
     eyebrow: "Equipo",
     heading: "Las personas detrás.",
     photoAlt: "Foto de",
+    direccion: "Dirección",
+    miembros: "Equipo",
   },
   closing: {
     eyebrow: "Comunidad",
@@ -113,6 +115,7 @@ const es = {
     alumniLink: "Red de alumni ETSIT",
     privacyLink: "Política de privacidad",
     socialLabel: "Redes sociales de TelecoEmprende",
+    whatsappAria: "Comunidad de WhatsApp de TelecoEmprende",
     instagramAria: "TelecoEmprende en Instagram",
     linkedinAria: "TelecoEmprende en LinkedIn",
     note: "Hecho con ☕ entre clase y clase, desde la ETSIT para toda la UPM.",
@@ -179,6 +182,8 @@ const en = {
     eyebrow: "Team",
     heading: "The people behind it.",
     photoAlt: "Photo of",
+    direccion: "Leadership",
+    miembros: "Team",
   },
   closing: {
     eyebrow: "Community",
@@ -230,6 +235,7 @@ const en = {
     alumniLink: "ETSIT alumni network",
     privacyLink: "Privacy policy",
     socialLabel: "TelecoEmprende social media",
+    whatsappAria: "TelecoEmprende WhatsApp community",
     instagramAria: "TelecoEmprende on Instagram",
     linkedinAria: "TelecoEmprende on LinkedIn",
     note: "Made with ☕ between classes, from ETSIT for the whole UPM.",
