@@ -16,6 +16,7 @@ import psycopg2
 from psycopg2.extras import RealDictCursor
 
 from backend.config import DATABASE_URL
+from backend.services.db import activar_rls
 
 logger = logging.getLogger("telecoemprende.auditoria")
 
@@ -50,6 +51,7 @@ def _asegurar_tabla(cur) -> None:
         )
     """)
     cur.execute("CREATE INDEX IF NOT EXISTS auditoria_momento_idx ON auditoria (momento DESC)")
+    activar_rls(cur, "auditoria")
     _tabla_lista = True
 
 

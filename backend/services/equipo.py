@@ -6,9 +6,9 @@ from fpdf import FPDF
 from flask import session
 from openpyxl import Workbook
 from openpyxl.drawing.image import Image as XLImage
-from psycopg2.extras import Json
 from werkzeug.security import check_password_hash, generate_password_hash
 
+from backend.services.db import activar_rls
 from backend.config import (
     CARGOS_VALIDOS,
     DATABASE_URL,
@@ -38,6 +38,10 @@ def init_equipo_db():
 
 
 def _crear_tablas_equipo():
+    # `registro_id` apunta a `registrations`: tiene que existir antes.
+    from backend.services.registrations import init_db as init_registrations_db
+
+    init_registrations_db()
     with _get_connection() as conn:
         with conn.cursor() as cur:
             cur.execute("""
@@ -78,13 +82,6 @@ def _crear_tablas_equipo():
                 ALTER TABLE equipo_accesos
                 ADD COLUMN IF NOT EXISTS nombre VARCHAR(80) NOT NULL DEFAULT ''
             """)
-            # Checklist de onboarding, `{"clave": true/false}`. El backend no
-            # conoce las claves -- son copy de UI, viven en el frontend -- así
-            # que se guarda tal cual llega, sin validar su forma interna.
-            cur.execute("""
-                ALTER TABLE equipo_accesos
-                ADD COLUMN IF NOT EXISTS onboarding JSONB NOT NULL DEFAULT '{}'::jsonb
-            """)
             # DNI/NIE/pasaporte y correo personal: los rellena admin a mano
             # (no forman parte del alta ni del login), para tener con qué
             # identificar a la persona una vez pierda el correo de la UPM.
@@ -96,14 +93,9 @@ def _crear_tablas_equipo():
                 ALTER TABLE equipo_accesos
                 ADD COLUMN IF NOT EXISTS correo_personal VARCHAR(120) NOT NULL DEFAULT ''
             """)
-            # Mentor de un nuevo miembro: email de otro acceso, sin FK por el
-            # mismo motivo que `responsables` en tasks (ver marketing.py) --
-            # así la ficha de alguien no se rompe si a su mentor se le da de
-            # baja el acceso. Lo asigna admin (ver `EquipoAccesosPanel`), no
-            # el propio departamento (`actualizar_perfil`).
             # Foto de perfil propia, como data URL (`data:image/jpeg;base64,...`).
             # Va en la fila y no en un blob store porque la imagen llega ya
-            # reducida a 256px desde el navegador (~15 KB) y la CSP del sitio
+            # reducida a 800px de lado mayor desde el navegador (~70 KB) y la CSP del sitio
             # ya permite `data:` en img-src -- montar almacenamiento aparte
             # para eso sería más infraestructura que foto. Vacía = se usa la
             # que hay en `public/equipo-*.jpg` (ver `Avatares.tsx`).
@@ -117,9 +109,25 @@ def _crear_tablas_equipo():
                 ALTER TABLE equipo_accesos
                 ADD COLUMN IF NOT EXISTS apellidos VARCHAR(80) NOT NULL DEFAULT ''
             """)
+            # La inscripción de la que salió la cuenta (tabla `registrations`):
+            # así nombre, estudios y teléfono no se copian a mano de una a
+            # otra. Se rellena sola por email (`vincular_inscripciones`) y,
+            # cuando la persona se inscribió con otro correo, a mano. SET NULL:
+            # borrar una inscripción no se lleva la cuenta por delante.
             cur.execute("""
-                ALTER TABLE equipo_accesos
-                ADD COLUMN IF NOT EXISTS mentor_email VARCHAR(120) NOT NULL DEFAULT ''
+                ALTER TABLE equipo_accesos ADD COLUMN IF NOT EXISTS registro_id INTEGER
+                REFERENCES registrations(id) ON DELETE SET NULL
+            """)
+            # Vinculación automática: la inscripción más reciente con el mismo
+            # email. Solo rellena huecos, nunca pisa una vinculación a mano.
+            cur.execute("""
+                UPDATE equipo_accesos a SET registro_id = (
+                    SELECT r.id FROM registrations r
+                    WHERE lower(r.email) = lower(a.email)
+                    ORDER BY r.created_at DESC LIMIT 1
+                )
+                WHERE a.registro_id IS NULL
+                  AND EXISTS (SELECT 1 FROM registrations r WHERE lower(r.email) = lower(a.email))
             """)
             # Permiso de admin (grupo Admin de /equipo: inscripciones, cuentas,
             # calendario del club), separado del departamento y del cargo. La
@@ -137,6 +145,20 @@ def _crear_tablas_equipo():
             """)
             cur.execute("""
                 ALTER TABLE equipo_accesos ALTER COLUMN es_admin SET DEFAULT FALSE
+            """)
+            # La sección «Equipo» de la web pública sale de aquí (ver
+            # `listar_miembros_web`): la misma foto y el mismo nombre que en
+            # /equipo. `en_web` lo marca admin en Cuentas; nace sin default
+            # para que las filas que ya existían arranquen marcadas; en la web
+            # solo salen las que además tienen foto (`listar_miembros_web`).
+            cur.execute("""
+                ALTER TABLE equipo_accesos ADD COLUMN IF NOT EXISTS en_web BOOLEAN
+            """)
+            cur.execute("""
+                UPDATE equipo_accesos SET en_web = TRUE WHERE en_web IS NULL
+            """)
+            cur.execute("""
+                ALTER TABLE equipo_accesos ALTER COLUMN en_web SET DEFAULT FALSE
             """)
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS calendario_eventos (
@@ -160,21 +182,20 @@ def _crear_tablas_equipo():
                 ALTER TABLE calendario_eventos
                 ADD COLUMN IF NOT EXISTS asistio TEXT[] NOT NULL DEFAULT '{}'
             """)
+            activar_rls(cur, "equipo_accesos", "calendario_eventos")
         conn.commit()
 
 
 def listar_directorio_club() -> list[dict]:
     """Quién es quién del club entero, para el widget de "Mi semana" -- solo
-    lo básico (nombre, equipos, cargo, mentor). Nada de notas ni onboarding,
-    que son privados (ver `listar_equipo_accesos`, la versión completa de
-    /admin). El mentor sí viaja aquí: no es un dato privado y es lo que deja
-    a "Mi semana" enseñar "Mi mentora" y "Tutoriza a" sin una ruta aparte.
+    lo básico (nombre, equipos, cargo). Nada de notas ni datos personales
+    (ver `listar_equipo_accesos`, la versión completa de admin).
     """
     with _get_connection() as conn:
         with conn.cursor() as cur:
             cur.execute(
                 """
-                SELECT email, equipos, vp_de, cargo, nombre, mentor_email
+                SELECT email, equipos, vp_de, cargo, nombre
                 FROM equipo_accesos WHERE activo = TRUE ORDER BY nombre, email
                 """
             )
@@ -183,7 +204,7 @@ def listar_directorio_club() -> list[dict]:
     return [
         {
             "email": f[0], "equipos": f[1], "vp_de": f[2], "cargo": f[3],
-            "nombre": f[4], "mentor_email": f[5],
+            "nombre": f[4],
         }
         for f in filas
     ]
@@ -202,7 +223,7 @@ def login_equipo(email: str, password: str) -> dict | None:
         with conn.cursor() as cur:
             cur.execute(
                 """
-                SELECT password_hash, equipos, vp_de, cargo, nombre, mentor_email,
+                SELECT password_hash, equipos, vp_de, cargo, nombre,
                        COALESCE(es_admin, FALSE)
                 FROM equipo_accesos WHERE email = %s AND activo = TRUE
                 """,
@@ -220,8 +241,7 @@ def login_equipo(email: str, password: str) -> dict | None:
     vp_de = [e for e in row[2] if e in equipos]
     cargo = row[3] if row[3] in CARGOS_VALIDOS else ""
     nombre = row[4]
-    mentor_email = row[5]
-    es_admin = bool(row[6])
+    es_admin = bool(row[5])
 
     # session.clear() por higiene ante fijación de sesión.
     session.clear()
@@ -231,7 +251,6 @@ def login_equipo(email: str, password: str) -> dict | None:
     session["equipo_vp_de"] = vp_de
     session["equipo_cargo"] = cargo
     session["equipo_nombre"] = nombre
-    session["equipo_mentor_email"] = mentor_email
     session["equipo_admin"] = es_admin
     # Solo quien tiene el permiso de admin marcado (no el departamento ni el
     # cargo) recibe la sesión de admin: grupo Admin y rutas /api/admin/*.
@@ -239,7 +258,7 @@ def login_equipo(email: str, password: str) -> dict | None:
         session["admin_auth"] = True
     return {
         "teams": equipos, "vp_de": vp_de, "cargo": cargo, "nombre": nombre,
-        "mentor_email": mentor_email, "admin": es_admin,
+        "admin": es_admin,
     }
 
 
@@ -254,7 +273,6 @@ def equipo_session_info() -> dict:
         "cargo": session.get("equipo_cargo", ""),
         "email": session.get("equipo_email", ""),
         "nombre": session.get("equipo_nombre", ""),
-        "mentor_email": session.get("equipo_mentor_email", ""),
         "admin": session.get("equipo_admin", False),
     }
 
@@ -270,8 +288,9 @@ def listar_equipo_accesos() -> list[dict]:
             cur.execute(
                 """
                 SELECT id, email, equipos, vp_de, cargo, activo, created_at,
-                       tags, notas, nombre, onboarding, dni, correo_personal,
-                       mentor_email, foto, apellidos, COALESCE(es_admin, FALSE)
+                       tags, notas, nombre, dni, correo_personal,
+                       foto, apellidos, COALESCE(es_admin, FALSE),
+                       COALESCE(en_web, FALSE), registro_id
                 FROM equipo_accesos ORDER BY email
                 """
             )
@@ -289,14 +308,41 @@ def listar_equipo_accesos() -> list[dict]:
             "tags": f[7],
             "notas": f[8],
             "nombre": f[9],
-            "onboarding": f[10],
-            "dni": f[11],
-            "correo_personal": f[12],
-            "mentor_email": f[13],
-            "foto": f[14],
-            "apellidos": f[15],
-            "es_admin": f[16],
+            "dni": f[10],
+            "correo_personal": f[11],
+            "foto": f[12],
+            "apellidos": f[13],
+            "es_admin": f[14],
+            "en_web": f[15],
+            "registro_id": f[16],
         }
+        for f in filas
+    ]
+
+
+# Orden en la web: presidencia, board, VPs y luego el resto.
+_RANGO_WEB = {"presidente": 0, "boardmember": 1, "vicepresidente": 2}
+
+
+def listar_miembros_web() -> list[dict]:
+    """Quién sale en la sección «Equipo» de la web pública: cuentas marcadas
+    `en_web` y con foto subida. Ruta pública, así que solo viaja nombre,
+    primer apellido y foto; nada de email, DNI ni departamentos.
+    """
+    with _get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT nombre, apellidos, foto, cargo, vp_de
+                FROM equipo_accesos
+                WHERE en_web AND nombre <> '' AND foto <> ''
+                """
+            )
+            filas = cur.fetchall()
+
+    filas.sort(key=lambda f: (_RANGO_WEB.get(f[3], 2 if f[4] else 3), f[0].lower()))
+    return [
+        {"nombre": f[0], "apellido": (f[1].split() or [""])[0], "foto": f[2]}
         for f in filas
     ]
 
@@ -453,7 +499,6 @@ def crear_equipo_acceso(
     vp_de: list[str] | None = None,
     cargo: str = "",
     nombre: str = "",
-    mentor_email: str = "",
     es_admin: bool = False,
     apellidos: str = "",
 ) -> dict | None:
@@ -463,7 +508,6 @@ def crear_equipo_acceso(
     vp_de = sorted(set(vp_de or []))
     cargo = cargo or ""
     nombre = (nombre or "").strip()
-    mentor_email = (mentor_email or "").strip().lower()
 
     if not _acceso_valido(equipos, vp_de, cargo):
         return None
@@ -477,15 +521,14 @@ def crear_equipo_acceso(
             cur.execute(
                 """
                 INSERT INTO equipo_accesos
-                    (email, password_hash, equipos, vp_de, cargo, nombre, mentor_email, es_admin,
-                     apellidos)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    (email, password_hash, equipos, vp_de, cargo, nombre, es_admin, apellidos)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
                 RETURNING id, email, equipos, vp_de, cargo, activo, created_at, nombre,
-                          mentor_email, es_admin, apellidos
+                          es_admin, apellidos
                 """,
                 (
                     email, generate_password_hash(password), equipos, vp_de, cargo, nombre,
-                    mentor_email, es_admin, (apellidos or "").strip(),
+                    es_admin, (apellidos or "").strip(),
                 ),
             )
             fila = cur.fetchone()
@@ -500,9 +543,8 @@ def crear_equipo_acceso(
         "activo": fila[5],
         "created_at": fila[6].isoformat(),
         "nombre": fila[7],
-        "mentor_email": fila[8],
-        "es_admin": fila[9],
-        "apellidos": fila[10],
+        "es_admin": fila[8],
+        "apellidos": fila[9],
     }
 
 
@@ -549,9 +591,11 @@ def actualizar_equipo_acceso(
     apellidos: str | None = None,
     dni: str | None = None,
     correo_personal: str | None = None,
-    mentor_email: str | None = None,
+    email: str | None = None,
+    registro_id: int | None = None,
     es_admin: bool | None = None,
     foto: str | None = None,
+    en_web: bool | None = None,
 ) -> bool:
     """Actualiza solo los campos que se pasan. Devuelve False si el id no existe
     o si equipos/vp_de/cargo no son válidos.
@@ -615,9 +659,14 @@ def actualizar_equipo_acceso(
     if correo_personal is not None:
         campos.append("correo_personal = %s")
         valores.append(correo_personal.strip().lower())
-    if mentor_email is not None:
-        campos.append("mentor_email = %s")
-        valores.append(mentor_email.strip().lower())
+    if email is not None:
+        # El email es el login: único (la API traduce el choque a un 400).
+        campos.append("email = %s")
+        valores.append(email.strip().lower())
+    if registro_id is not None:
+        # 0 desvincula la cuenta de su inscripción.
+        campos.append("registro_id = %s")
+        valores.append(registro_id or None)
     if es_admin is not None:
         campos.append("es_admin = %s")
         valores.append(es_admin)
@@ -625,6 +674,9 @@ def actualizar_equipo_acceso(
         # Ya validada con `_foto` en la API; "" vuelve a la de `public/`.
         campos.append("foto = %s")
         valores.append(foto)
+    if en_web is not None:
+        campos.append("en_web = %s")
+        valores.append(en_web)
 
     if not campos:
         return False
@@ -793,10 +845,9 @@ def actualizar_perfil(
     email: str,
     tags: list[str] | None = None,
     notas: str | None = None,
-    onboarding: dict | None = None,
     foto: str | None = None,
 ) -> bool:
-    """Etiquetas de habilidad, nota y checklist de onboarding de una persona.
+    """Etiquetas de habilidad, nota y foto de una persona.
 
     Separado de `actualizar_equipo_acceso` a propósito: eso son permisos y solo
     lo toca quien administra; esto es contexto de trabajo y lo edita cualquiera
@@ -811,11 +862,6 @@ def actualizar_perfil(
     if notas is not None:
         campos.append("notas = %s")
         valores.append(notas.strip())
-    if onboarding is not None:
-        # Reemplazo completo, igual que tags/notas: el frontend siempre manda
-        # el objeto entero, no un parche.
-        campos.append("onboarding = %s")
-        valores.append(Json(onboarding))
     if foto is not None:
         # "" borra la foto propia y devuelve a la de `public/`, que es la
         # única forma de deshacer una subida.

@@ -1091,7 +1091,7 @@ span.mkt-dia-numero-react:hover {
 /* El aviso del board: una fila, con el borde teñido de azul para que pese
    más que las demás cajas sin llegar a ser una alerta. */
 
-/* La única caja oscura del boceto: la mentora. */
+/* La única caja oscura del Inicio: «A quién escribir». */
 .crm-c-oscura-react {
   border-color: var(--color-noche);
   background: var(--color-noche);

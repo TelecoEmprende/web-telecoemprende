@@ -117,13 +117,12 @@ export function apiDepto(depto: Team) {
       datos: {
         tags?: string[];
         notas?: string;
-        onboarding?: Record<string, boolean>;
         /** Data URL ya reducida (ver `utils/imagen.ts`); "" borra la propia. */
         foto?: string;
       },
     ) => put<ApiResult>("/miembros/ficha", { email, ...datos }),
 
-    // --- Registros (recursos, presupuesto, anuncios, reuniones, alumni...) ---
+    // --- Registros (presupuesto, reuniones, servicios) ---
     // Un solo juego de métodos para todos: el backend los sirve con el
     // mismo CRUD y solo cambian los campos que se le mandan.
 

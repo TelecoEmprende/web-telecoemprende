@@ -534,74 +534,47 @@ class ApiTestCase(unittest.TestCase):
         self.assertEqual(acceso["vp_de"], ["eventos"])
         self.assertEqual(acceso["cargo"], "boardmember")
 
-    def test_admin_equipo_create_with_mentor(self):
+    def test_admin_cambia_el_email_de_una_cuenta(self):
         self.login()
-        self.seed_equipo(email="mentora@example.com", equipos=["marketing"])
-
-        create = self.client.post(
-            "/api/admin/equipo",
-            json={
-                "email": "nuevo@example.com",
-                "password": "contrasena-larga",
-                "equipos": ["marketing", "eventos"],
-                "mentor_email": "mentora@example.com",
-            },
+        self.seed_equipo(email="provisional@example.com", equipos=["marketing"])
+        self.seed_equipo(email="otra@example.com", equipos=["marketing"])
+        acceso_id = next(
+            a["id"] for a in equipo_service.listar_equipo_accesos()
+            if a["email"] == "provisional@example.com"
         )
-        self.assertEqual(create.status_code, 201, create.get_json())
-        self.assertEqual(create.get_json()["acceso"]["mentor_email"], "mentora@example.com")
 
-    def test_admin_equipo_create_rejects_mentor_sin_forma_de_email(self):
+        choque = self.client.put(f"/api/admin/equipo/{acceso_id}", json={"email": "otra@example.com"})
+        self.assertEqual(choque.status_code, 409)
+        malo = self.client.put(f"/api/admin/equipo/{acceso_id}", json={"email": "sin-arroba"})
+        self.assertEqual(malo.status_code, 400)
+
+        bueno = self.client.put(f"/api/admin/equipo/{acceso_id}", json={"email": "Real@Example.com"})
+        self.assertEqual(bueno.status_code, 200)
+        self.assertIn("real@example.com", [a["email"] for a in equipo_service.listar_equipo_accesos()])
+
+    def test_la_cuenta_se_vincula_sola_a_su_inscripcion_por_email(self):
         self.login()
-
-        response = self.client.post(
-            "/api/admin/equipo",
-            json={
-                "email": "otro@example.com",
-                "password": "contrasena-larga",
-                "equipos": ["marketing"],
-                "mentor_email": "no-es-un-email",
-            },
-        )
-        self.assertEqual(response.status_code, 400)
-
-    def test_admin_equipo_update_mentor(self):
-        self.login()
-        self.seed_equipo(email="miembro@example.com", equipos=["marketing"])
-        acceso_id = equipo_service.listar_equipo_accesos()[0]["id"]
-
-        respuesta = self.client.put(
-            f"/api/admin/equipo/{acceso_id}", json={"mentor_email": "Mentora@Example.com"}
-        )
-        self.assertEqual(respuesta.status_code, 200)
-        self.assertEqual(
-            equipo_service.listar_equipo_accesos()[0]["mentor_email"], "mentora@example.com"
-        )
-
-    def test_directorio_incluye_el_mentor(self):
-        self.seed_equipo(email="mentora@example.com", equipos=["marketing"])
-        conn = registration_service._get_connection()
+        conn = equipo_service._get_connection()
         with conn.cursor() as cur:
             cur.execute(
-                "INSERT INTO equipo_accesos (email, password_hash, equipos, vp_de, mentor_email)"
-                " VALUES (%s, %s, %s, %s, %s)",
-                (
-                    "nueva@example.com",
-                    generate_password_hash("x"),
-                    ["marketing"],
-                    [],
-                    "mentora@example.com",
-                ),
+                "INSERT INTO registrations (nombre, apellidos, estudios, email, drive_link,"
+                " privacidad_aceptada, ip_registro, evento, departamento)"
+                " VALUES ('Ana', 'García', 'GISD', 'ana@alumnos.upm.es', 'https://drive.google.com/x',"
+                " TRUE, '127.0.0.1', 'telecoemprende-2026-27', 'Marketing') RETURNING id"
             )
+            registro_id = cur.fetchone()[0]
         conn.commit()
         conn.close()
+        self.seed_equipo(email="ana@alumnos.upm.es", equipos=["marketing"])
 
-        self.equipo_login(email="mentora@example.com")
-        respuesta = self.client.get("/api/equipo/directorio")
-        self.assertEqual(respuesta.status_code, 200)
-        nueva = next(
-            m for m in respuesta.get_json()["miembros"] if m["email"] == "nueva@example.com"
-        )
-        self.assertEqual(nueva["mentor_email"], "mentora@example.com")
+        equipo_service.init_equipo_db()
+        ana = next(a for a in equipo_service.listar_equipo_accesos() if a["email"] == "ana@alumnos.upm.es")
+        self.assertEqual(ana["registro_id"], registro_id)
+
+        # Y a mano, para quien se inscribió con otro correo; 0 desvincula.
+        self.client.put(f"/api/admin/equipo/{ana['id']}", json={"registro_id": 0})
+        ana = next(a for a in equipo_service.listar_equipo_accesos() if a["email"] == "ana@alumnos.upm.es")
+        self.assertIsNone(ana["registro_id"])
 
     def test_admin_calendario_endpoints_require_auth(self):
         self.assertEqual(self.client.get("/api/admin/calendario").status_code, 401)

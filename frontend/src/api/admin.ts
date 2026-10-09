@@ -64,7 +64,6 @@ export function createEquipoAcceso(datos: {
   cargo: Cargo;
   nombre: string;
   apellidos: string;
-  mentor_email: string;
   es_admin: boolean;
 }) {
   return apiRequest<ApiResult & { acceso: EquipoAcceso }>("/api/admin/equipo", {
@@ -85,10 +84,14 @@ export function updateEquipoAcceso(
     apellidos?: string;
     dni?: string;
     correo_personal?: string;
-    mentor_email?: string;
+    /** Para cambiar un email provisional; no el propio. */
+    email?: string;
+    /** Vincula la cuenta a una inscripción; 0 la desvincula. */
+    registro_id?: number | null;
     es_admin?: boolean;
-    /** Data URL ya reducida (`aAvatarCuadrado`), o "" para quitarla. */
+    /** Data URL ya reducida (`aFotoPerfil`), o "" para quitarla. */
     foto?: string;
+    en_web?: boolean;
   },
 ) {
   return apiRequest<ApiResult>(`/api/admin/equipo/${id}`, {

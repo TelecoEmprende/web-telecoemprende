@@ -428,7 +428,6 @@ def api_admin_crear_equipo():
     cargo = str(payload.get("cargo", "") or "")
     nombre = limpiar_texto(str(payload.get("nombre", "") or ""))
     apellidos = limpiar_texto(str(payload.get("apellidos", "") or ""))
-    mentor_email = limpiar_texto(str(payload.get("mentor_email", "") or "")).lower()
     es_admin = payload.get("es_admin", False)
 
     # No exigimos que sea correo UPM (puede ser gente externa colaborando en un
@@ -469,12 +468,9 @@ def api_admin_crear_equipo():
     if len(nombre) > MAX_NOMBRE_EQUIPO_LEN or len(apellidos) > MAX_NOMBRE_EQUIPO_LEN:
         return jsonify(build_response(False, "El nombre supera la longitud permitida.")), 400
 
-    if mentor_email and (len(mentor_email) > MAX_EMAIL_LEN or "@" not in mentor_email):
-        return jsonify(build_response(False, "El email del mentor no es válido.")), 400
-
     acceso = crear_equipo_acceso(
         email, password, equipos, vp_de=vp_de, cargo=cargo, nombre=nombre,
-        mentor_email=mentor_email, es_admin=es_admin, apellidos=apellidos,
+        es_admin=es_admin, apellidos=apellidos,
     )
     if acceso is None:
         return jsonify(build_response(False, "Ese email ya tiene acceso de equipo.")), 409
@@ -498,8 +494,12 @@ def api_admin_actualizar_equipo(acceso_id: int):
     apellidos = payload.get("apellidos")
     dni = payload.get("dni")
     correo_personal = payload.get("correo_personal")
-    mentor_email = payload.get("mentor_email")
+    nuevo_email = payload.get("email")
+    registro_id = payload.get("registro_id")
     es_admin = payload.get("es_admin")
+    en_web = payload.get("en_web")
+    if en_web is not None and not isinstance(en_web, bool):
+        return jsonify(build_response(False, "Valor de 'en_web' no válido.")), 400
     try:
         foto = _foto(payload) if "foto" in payload else None
     except DatosInvalidos as error:
@@ -560,10 +560,22 @@ def api_admin_actualizar_equipo(acceso_id: int):
         if len(correo_personal) > MAX_EMAIL_LEN:
             return jsonify(build_response(False, "El correo personal supera la longitud permitida.")), 400
 
-    if mentor_email is not None:
-        mentor_email = limpiar_texto(str(mentor_email)).lower()
-        if mentor_email and (len(mentor_email) > MAX_EMAIL_LEN or "@" not in mentor_email):
-            return jsonify(build_response(False, "El email del mentor no es válido.")), 400
+    if nuevo_email is not None:
+        nuevo_email = limpiar_texto(str(nuevo_email)).lower()
+        if "@" not in nuevo_email or len(nuevo_email) > MAX_EMAIL_LEN:
+            return jsonify(build_response(False, "Introduce un email válido.")), 400
+        # El email es el login de la sesión abierta: cambiarse el propio aquí
+        # la dejaría apuntando a una cuenta que ya no existe con ese nombre.
+        if any(
+            a["id"] == acceso_id and a["email"] == session.get("equipo_email")
+            for a in listar_equipo_accesos()
+        ):
+            return jsonify(build_response(False, "No puedes cambiar tu propio email.")), 400
+        if any(a["email"] == nuevo_email and a["id"] != acceso_id for a in listar_equipo_accesos()):
+            return jsonify(build_response(False, "Ese email ya tiene acceso de equipo.")), 409
+
+    if registro_id is not None and (isinstance(registro_id, bool) or not isinstance(registro_id, int)):
+        return jsonify(build_response(False, "Valor de 'registro_id' no válido.")), 400
 
     if actualizar_equipo_acceso(
         acceso_id,
@@ -576,9 +588,11 @@ def api_admin_actualizar_equipo(acceso_id: int):
         apellidos=apellidos,
         dni=dni,
         correo_personal=correo_personal,
-        mentor_email=mentor_email,
+        email=nuevo_email,
+        registro_id=registro_id,
         es_admin=es_admin,
         foto=foto,
+        en_web=en_web,
     ):
         logger.info("admin actualiza acceso equipo id=%s", acceso_id)
         return jsonify(build_response(True, "Acceso actualizado.")), 200

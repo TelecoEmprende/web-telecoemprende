@@ -35,7 +35,6 @@ from backend.schemas import build_response
 from backend.services.admin import is_admin_authenticated
 from backend.services.equipo import equipo_session_info, is_equipo_authenticated
 from backend.services.slack import (
-    onboarding_completado,
     tarea_cambia_estado,
     tarea_comentada,
     tarea_creada,
@@ -230,7 +229,7 @@ def _checklist(datos: dict) -> list[dict]:
 # Formatos que acepta una foto de perfil. La imagen llega ya reducida desde el
 # navegador; el límite de aquí es la última red, no la primera.
 _FOTO_RE = re.compile(r"^data:image/(jpeg|png|webp);base64,[A-Za-z0-9+/]+={0,2}$")
-MAX_FOTO_LEN = 300_000  # ~220 KB de imagen; 256px en JPEG son unos 15 KB.
+MAX_FOTO_LEN = 300_000  # ~220 KB de imagen; 800px de lado mayor en JPEG son unos 50-90 KB.
 
 
 def _foto(datos: dict) -> str:
@@ -719,9 +718,7 @@ def api_ficha_miembro():
         tags=acceso["tags"],
         notas=acceso["notas"],
         nombre=acceso["nombre"],
-        onboarding=acceso["onboarding"],
         desde=acceso["created_at"],
-        mentor_email=acceso["mentor_email"],
         foto=acceso["foto"],
         # Quién puede cambiar esta foto lo decide el servidor, no el frontend
         # (que solo lo usa para enseñar u ocultar el botón).
@@ -751,33 +748,14 @@ def api_actualizar_ficha_miembro():
         if "notas" in datos
         else None
     )
-    onboarding = None
-    if "onboarding" in datos:
-        onboarding = datos["onboarding"]
-        if not isinstance(onboarding, dict):
-            raise DatosInvalidos("'onboarding' debe ser un objeto.")
-        if len(onboarding) > 20:
-            raise DatosInvalidos("'onboarding' admite como mucho 20 claves.")
-        onboarding = {str(k): bool(v) for k, v in onboarding.items()}
-
     foto = None
     if "foto" in datos:
         if not _es_mi_ficha(email):
             return jsonify(build_response(False, "Solo puedes cambiar tu propia foto.")), 403
         foto = _foto(datos)
 
-    if tags is None and notas is None and onboarding is None and foto is None:
+    if tags is None and notas is None and foto is None:
         raise DatosInvalidos("No hay nada que actualizar.")
 
-    actualizar_perfil(email, tags=tags, notas=notas, onboarding=onboarding, foto=foto)
-
-    # Solo al cruzar de "no completo" a "completo" -- si no, cada punto
-    # marcado de la checklist avisaría por separado.
-    def _completo(o):
-        return bool(o) and all(o.values())
-
-    if onboarding is not None and _completo(onboarding) and not _completo(anterior["onboarding"]):
-        onboarding_completado(
-            anterior["nombre"] or email, departamento_actual(), anterior["mentor_email"]
-        )
+    actualizar_perfil(email, tags=tags, notas=notas, foto=foto)
     return jsonify(build_response(True, "Ficha actualizada.")), 200

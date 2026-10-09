@@ -8,7 +8,7 @@ import { EquipoAccesosPanel } from "./EquipoAccesosPanel";
 const cuenta = (id: number, nombre: string, apellidos: string, email: string) => ({
   id, email, nombre, apellidos, equipos: ["marketing", "eventos"], vp_de: [], cargo: "",
   activo: true, created_at: "2026-10-01T10:00:00", dni: "", correo_personal: "",
-  mentor_email: "", foto: "", es_admin: false,
+  foto: "", es_admin: false,
 });
 
 vi.mock("../../api/admin", () => ({
@@ -32,15 +32,15 @@ describe("Cuentas del equipo", () => {
         <EquipoAccesosPanel />
       </MemoryRouter>,
     );
-    await screen.findByText("lucia@example.com");
+    await screen.findByDisplayValue("lucia@example.com");
 
     await userEvent.type(screen.getByLabelText("Buscar cuentas"), "nunez");
-    expect(screen.queryByText("lucia@example.com")).not.toBeInTheDocument();
-    expect(screen.getByText("mario@example.com")).toBeInTheDocument();
+    expect(screen.queryByDisplayValue("lucia@example.com")).not.toBeInTheDocument();
+    expect(screen.getByDisplayValue("mario@example.com")).toBeInTheDocument();
 
     await userEvent.clear(screen.getByLabelText("Buscar cuentas"));
     await userEvent.type(screen.getByLabelText("Buscar cuentas"), "lucia garcia");
-    expect(screen.getByText("lucia@example.com")).toBeInTheDocument();
-    expect(screen.queryByText("mario@example.com")).not.toBeInTheDocument();
+    expect(screen.getByDisplayValue("lucia@example.com")).toBeInTheDocument();
+    expect(screen.queryByDisplayValue("mario@example.com")).not.toBeInTheDocument();
   });
 });

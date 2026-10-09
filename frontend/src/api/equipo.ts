@@ -7,6 +7,7 @@ import type {
   EventoCalendario,
   EventoLuma,
   MiembroDirectorio,
+  MiembroWeb,
   Team,
 } from "../types/equipo";
 import type { CalendarioItem, MetricasClub, ProyectoResumen, Task } from "../types/marketing";
@@ -38,6 +39,11 @@ export function getEquipoSession() {
 
 /** "Quién es quién": el club entero, no solo el departamento desde el que se
  *  mira. Cualquiera con sesión de equipo puede pedirlo (ver el backend). */
+/** Sección «Equipo» de la web pública; no necesita sesión. */
+export function getMiembrosWeb() {
+  return apiRequest<{ ok: true; miembros: MiembroWeb[] }>("/api/equipo/miembros-web");
+}
+
 export function getDirectorioClub() {
   return apiRequest<ApiResult & { miembros: MiembroDirectorio[] }>("/api/equipo/directorio");
 }

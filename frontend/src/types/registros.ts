@@ -1,18 +1,11 @@
-/** Registros del workspace: recursos, presupuesto, anuncios, reuniones, alumni
- *  y, de Ingeniería, decisiones técnicas y servicios.
+/** Registros del workspace: presupuesto, reuniones y, de Ingeniería,
+ *  servicios.
  *
  *  Comparten CRUD en el backend (`services/registros.py`) y aquí
  *  comparten panel, así que lo único propio de cada una es qué campos tiene.
  */
 
-export type Recurso =
-  | "recursos"
-  | "presupuesto"
-  | "anuncios"
-  | "reuniones"
-  | "alumni"
-  | "decisiones"
-  | "servicios";
+export type Recurso = "presupuesto" | "reuniones" | "servicios";
 
 /** Una fila cualquiera. Los campos concretos los declara cada `CampoSpec`. */
 export type Registro = {

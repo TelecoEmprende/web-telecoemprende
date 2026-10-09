@@ -209,27 +209,13 @@ export type FichaMiembro = {
   abiertas: number;
   completadas: number;
   campanas: number;
-  /** Vacío si no tiene mentor asignado. Lo asigna admin, no el propio
-   *  departamento (ver `EquipoAccesosPanel`). */
-  mentor_email: string;
   actividad: ActividadMiembro[];
-  /** Claves libres, ver ONBOARDING_PASOS: qué pasos ya se han marcado. */
-  onboarding: Record<string, boolean>;
   /** Foto propia (data URL), o "" si vale la de `public/equipo-*.jpg`. */
   foto: string;
   /** Si quien mira puede cambiar esta foto: su propia ficha, o admin. Lo
    *  decide el servidor; aquí solo sirve para enseñar u ocultar el botón. */
   es_tu_ficha: boolean;
 };
-
-/** Pasos del checklist de onboarding. El backend solo guarda el objeto
- *  `{clave: hecho}`; el copy y el orden viven aquí, en el frontend. */
-export const ONBOARDING_PASOS = [
-  { key: "github", label: "Acceso a GitHub" },
-  { key: "whatsapp", label: "Canal de WhatsApp del club" },
-  { key: "herramientas", label: "Acceso a herramientas del departamento" },
-  { key: "primera_tarea", label: "Primera tarea asignada" },
-] as const;
 
 type MiembroSalud = {
   email: string;

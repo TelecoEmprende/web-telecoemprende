@@ -17,6 +17,7 @@ from datetime import date, datetime, timedelta
 import psycopg2
 from psycopg2.extras import RealDictCursor
 
+from backend.services.db import activar_rls
 from backend.config import DATABASE_URL
 
 
@@ -161,6 +162,7 @@ def _crear_tablas_marketing():
             cur.execute(
                 "CREATE INDEX IF NOT EXISTS task_comments_task_idx ON task_comments (task_id)"
             )
+            activar_rls(cur, "campaigns", "contents", "tasks", "task_comments")
         conn.commit()
 
 

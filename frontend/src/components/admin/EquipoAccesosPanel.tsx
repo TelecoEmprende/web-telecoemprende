@@ -34,7 +34,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../ui/select";
-import { aAvatarCuadrado } from "../../utils/imagen";
+import { aFotoPerfil } from "../../utils/imagen";
 import { normalizar } from "../../utils/texto";
 import type { ApiFailure } from "../../types/api";
 import {
@@ -191,8 +191,30 @@ function CargoSelect({
   );
 }
 
+/** «Sale en la web» (sección «Equipo» de la web pública): nombre, primer
+ *  apellido y foto de la propia cuenta. Sin foto subida no sale aunque esté
+ *  marcada. */
+function EnLaWeb({
+  acceso,
+  onGuardar,
+}: {
+  acceso: EquipoAcceso;
+  onGuardar: (cambios: Partial<EquipoAcceso>) => void;
+}) {
+  return (
+    <label className="flex items-center gap-1.5">
+      <Checkbox
+        checked={acceso.en_web}
+        onCheckedChange={(marcado) => onGuardar({ en_web: marcado === true })}
+        aria-label={`Sale en la web: ${acceso.nombre || acceso.email}`}
+      />
+      <span className="text-xs">{acceso.en_web && !acceso.foto ? "Falta la foto" : "Sale en la web"}</span>
+    </label>
+  );
+}
+
 /** La foto de la persona; tocarla abre el selector de archivos. La imagen se
- *  reduce en el navegador a 256px (`aAvatarCuadrado`) antes de subirla. */
+ *  reduce en el navegador a 800px de lado mayor, sin recortar (`aFotoPerfil`) antes de subirla. */
 function FotoEditable({
   acceso,
   onFoto,
@@ -218,7 +240,7 @@ function FotoEditable({
         onChange={(event) => {
           const archivo = event.target.files?.[0];
           event.target.value = "";
-          if (archivo) void aAvatarCuadrado(archivo).then(onFoto);
+          if (archivo) void aFotoPerfil(archivo).then(onFoto);
         }}
       />
       {acceso.foto ? (
@@ -253,7 +275,6 @@ export function EquipoAccesosPanel() {
   const [nuevosEquipos, setNuevosEquipos] = useState<Team[]>([]);
   const [nuevoVpDe, setNuevoVpDe] = useState<Team[]>([]);
   const [nuevoCargo, setNuevoCargo] = useState<Cargo>("");
-  const [nuevoMentor, setNuevoMentor] = useState("");
   const [nuevoAdmin, setNuevoAdmin] = useState(false);
 
   // El prellenado puede apuntar a un email que ya tiene acceso: se avisa aquí
@@ -346,7 +367,6 @@ export function EquipoAccesosPanel() {
         cargo: nuevoCargo,
         nombre: nuevoNombre,
         apellidos: nuevosApellidos,
-        mentor_email: nuevoMentor,
         es_admin: nuevoAdmin,
       });
       if (response.ok) {
@@ -359,7 +379,6 @@ export function EquipoAccesosPanel() {
         setNuevosEquipos([]);
         setNuevoVpDe([]);
         setNuevoCargo("");
-        setNuevoMentor("");
         setNuevoAdmin(false);
         await cargar();
       }
@@ -427,7 +446,7 @@ export function EquipoAccesosPanel() {
                 <th className="px-2 font-medium">VP de</th>
                 <th className="px-2 font-medium">Cargo</th>
                 <th className="px-2 font-medium">Admin</th>
-                <th className="px-2 font-medium">Mentor</th>
+                <th className="px-2 font-medium">Web</th>
                 <th className="px-2 font-medium">DNI y correo personal</th>
                 <th className="px-2 font-medium">Estado</th>
               </tr>
@@ -470,7 +489,18 @@ export function EquipoAccesosPanel() {
                               }}
                             />
                           </div>
-                          <span className="truncate text-xs text-muted-foreground">{acceso.email}</span>
+                          {/* Editable para cambiar un email provisional; el
+                              propio no, que es el login de esta sesión. */}
+                          <Input
+                            defaultValue={acceso.email}
+                            type="email"
+                            aria-label={`Email de ${acceso.nombre || acceso.email}`}
+                            className="h-7 w-56 text-xs"
+                            onBlur={(event) => {
+                              const email = event.target.value.trim().toLowerCase();
+                              if (email && email !== acceso.email) void guardar(acceso, { email });
+                            }}
+                          />
                           <span className="flex flex-wrap gap-1">
                             {acceso.cargo ? <Badge variant="secondary">{CARGO_LABEL[acceso.cargo]}</Badge> : null}
                             {acceso.es_admin ? <Badge className="cuentas-badge-admin-react">Admin</Badge> : null}
@@ -510,27 +540,8 @@ export function EquipoAccesosPanel() {
                         <ShieldCheck aria-hidden="true" className="size-4 text-muted-foreground" />
                       </label>
                     </td>
-                    <td className="p-2" data-label="Mentor">
-                      <Select
-                        value={acceso.mentor_email || "none"}
-                        onValueChange={(value) =>
-                          void guardar(acceso, { mentor_email: value === "none" ? "" : value })
-                        }
-                      >
-                        <SelectTrigger size="sm" className="w-36">
-                          <SelectValue placeholder="Sin mentor" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none">Sin mentor</SelectItem>
-                          {accesos
-                            .filter((otro) => otro.id !== acceso.id)
-                            .map((otro) => (
-                              <SelectItem key={otro.id} value={otro.email}>
-                                {otro.nombre || otro.email}
-                              </SelectItem>
-                            ))}
-                        </SelectContent>
-                      </Select>
+                    <td className="p-2" data-label="Web">
+                      <EnLaWeb acceso={acceso} onGuardar={(cambios) => void guardar(acceso, cambios)} />
                     </td>
                     <td className="p-2" data-label="DNI y correo personal">
                       <div className="flex flex-col gap-1.5">
@@ -684,26 +695,6 @@ export function EquipoAccesosPanel() {
               </Label>
             </div>
           </div>
-        </div>
-
-        <div className="flex flex-col gap-1.5 sm:w-1/2">
-          <Label>Mentor</Label>
-          <Select
-            value={nuevoMentor || "none"}
-            onValueChange={(value) => setNuevoMentor(value === "none" ? "" : value)}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Sin mentor" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="none">Sin mentor</SelectItem>
-              {accesos.map((acceso) => (
-                <SelectItem key={acceso.id} value={acceso.email}>
-                  {acceso.nombre || acceso.email}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
         </div>
 
         <Button type="submit" disabled={isSaving || !nuevoValido || !!accesoExistente} className="sm:w-fit">
