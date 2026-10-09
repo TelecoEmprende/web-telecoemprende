@@ -1,10 +1,10 @@
 import { ArrowUpRight } from "lucide-react";
 
 import CircularText from "@/components/reactbits/CircularText";
+import { WHATSAPP_COMUNIDAD } from "../../data/redes";
 import { useTranslation } from "../../i18n/translations";
 import { Aparece, Iman, TitularAnimado } from "./aparece";
 
-const WHATSAPP_COMUNIDAD = "https://chat.whatsapp.com/DdllRrRTg3REkyYW248uFP";
 
 /** Cierre de la home: comunidad de WhatsApp, Instagram y contacto. */
 export function ClosingSection() {
