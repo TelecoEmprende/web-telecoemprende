@@ -48,14 +48,22 @@ class MiembrosWebTestCase(unittest.TestCase):
         self.alta("oculto@example.com", "Oculto", ["eventos", "marketing"], en_web=False, foto=FOTO)
         self.alta("sinfoto@example.com", "Sin", ["eventos", "marketing"])
 
-        self.assertEqual(self.miembros(), [{"nombre": "Ana", "apellido": "García", "foto": FOTO}])
+        self.assertEqual(
+            self.miembros(), [{"nombre": "Ana", "apellido": "García", "foto": FOTO, "puesto": None}]
+        )
 
     def test_orden_presidencia_board_vps_y_resto(self):
         self.alta("m@example.com", "Marta", ["eventos", "marketing"], foto=FOTO)
         self.alta("vp@example.com", "Vera", ["ingenieria", "eventos"], vp_de=["ingenieria"], foto=FOTO)
         self.alta("board@example.com", "Mariano", ["marketing", "eventos"], cargo="boardmember", foto=FOTO)
         self.alta("pres@example.com", "Pablo", ["eventos", "marketing"], cargo="presidente", foto=FOTO)
-        self.assertEqual([m["nombre"] for m in self.miembros()], ["Pablo", "Mariano", "Vera", "Marta"])
+        miembros = self.miembros()
+        self.assertEqual([m["nombre"] for m in miembros], ["Pablo", "Mariano", "Vera", "Marta"])
+        # Bajo el nombre: el puesto de presidencia, board y VPs; nada para el resto.
+        self.assertEqual(
+            [m["puesto"] and m["puesto"]["es"] for m in miembros],
+            ["Presidente", "Board member", "VP de Ingeniería", None],
+        )
 
     def test_la_foto_es_la_misma_que_en_equipo(self):
         acceso = self.alta("ana@example.com", "Ana", ["marketing", "eventos"])

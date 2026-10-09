@@ -716,6 +716,11 @@
   color: var(--color-text-muted);
 }
 
+.in-persona h3 + p {
+  margin-top: 2px;
+  font-size: 0.9rem;
+}
+
 .in-persona .in-persona-programa {
   margin-top: 8px;
   font-size: 0.72rem;
