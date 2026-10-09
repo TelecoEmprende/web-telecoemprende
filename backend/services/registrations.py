@@ -3,62 +3,11 @@ from io import BytesIO
 import psycopg2
 from openpyxl import Workbook
 
-from backend.services.db import activar_rls
 from backend.config import DATABASE_URL
 
 
 def _get_connection():
     return psycopg2.connect(DATABASE_URL)
-
-
-def init_db():
-    with _get_connection() as conn:
-        with conn.cursor() as cur:
-            cur.execute("""
-                CREATE TABLE IF NOT EXISTS registrations (
-                    id SERIAL PRIMARY KEY,
-                    nombre VARCHAR(60) NOT NULL,
-                    apellidos VARCHAR(100) NOT NULL,
-                    estudios VARCHAR(120) NOT NULL,
-                    email VARCHAR(120) NOT NULL,
-                    drive_link VARCHAR(300) NOT NULL DEFAULT '',
-                    privacidad_aceptada VARCHAR(10) NOT NULL,
-                    ip_registro VARCHAR(45) NOT NULL,
-                    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-                    evento VARCHAR(50) NOT NULL,
-                    CONSTRAINT registrations_email_evento_key UNIQUE (email, evento)
-                )
-            """)
-            cur.execute("""
-                ALTER TABLE registrations
-                ADD COLUMN IF NOT EXISTS drive_link VARCHAR(300) NOT NULL DEFAULT ''
-            """)
-            cur.execute("""
-                ALTER TABLE registrations
-                ADD COLUMN IF NOT EXISTS departamento VARCHAR(40) NOT NULL DEFAULT ''
-            """)
-            cur.execute("""
-                ALTER TABLE registrations
-                ADD COLUMN IF NOT EXISTS escuela VARCHAR(150) NOT NULL DEFAULT ''
-            """)
-            cur.execute("""
-                ALTER TABLE registrations
-                ADD COLUMN IF NOT EXISTS nivel VARCHAR(20) NOT NULL DEFAULT ''
-            """)
-            cur.execute("""
-                ALTER TABLE registrations
-                ADD COLUMN IF NOT EXISTS telefono VARCHAR(20) NOT NULL DEFAULT ''
-            """)
-            cur.execute("""
-                ALTER TABLE registrations
-                ADD COLUMN IF NOT EXISTS estado VARCHAR(20) NOT NULL DEFAULT 'pendiente'
-            """)
-            cur.execute("""
-                ALTER TABLE registrations
-                ADD COLUMN IF NOT EXISTS notificado BOOLEAN NOT NULL DEFAULT FALSE
-            """)
-            activar_rls(cur, "registrations")
-        conn.commit()
 
 
 def obtener_eventos() -> list[str]:

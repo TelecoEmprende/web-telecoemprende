@@ -2,7 +2,6 @@ import logging
 import re
 from datetime import date, timedelta
 
-import psycopg2
 from flask import Blueprint, jsonify, request, session
 
 from backend.api.admin import _validar_evento_calendario
@@ -26,7 +25,6 @@ from backend.services.equipo import (
     datos_formulario,
     equipo_session_info,
     guardar_datos_formulario,
-    init_equipo_db,
     is_equipo_authenticated,
     listar_directorio_club,
     listar_eventos_calendario,
@@ -38,7 +36,6 @@ from backend.services.equipo import (
 )
 from backend.services.marketing import (
     calendario_equipo,
-    init_marketing_db,
     metricas_club,
     mis_campanas,
     mis_tareas,
@@ -80,8 +77,6 @@ def _es_board_o_vp() -> bool:
 
 @equipo_api.route("/login", methods=["POST"])
 def api_equipo_login():
-    init_equipo_db()
-
     ip = obtener_ip_real()
     if demasiadas_peticiones(
         ip,
@@ -117,7 +112,6 @@ def api_equipo_registro():
     ponytail: temporal, mientras entra el equipo. Para quitarla, borrar esta
     ruta, `registrar_equipo_acceso` y el modo "crear cuenta" del login.
     """
-    init_equipo_db()
 
     ip = obtener_ip_real()
     if demasiadas_peticiones(
@@ -189,14 +183,7 @@ def api_equipo_miembros_web():
     """Sección «Equipo» de la web pública: sin sesión, solo lo que ya se ve en
     la web (ver `listar_miembros_web`). La misma fila que /equipo, así que una
     foto cambiada en Cuentas cambia también aquí."""
-    try:
-        miembros = listar_miembros_web()
-    except (psycopg2.errors.UndefinedColumn, psycopg2.errors.UndefinedTable):
-        # Primera visita tras desplegar, antes de que nada haya creado las
-        # columnas nuevas: se crean y se reintenta una vez.
-        init_equipo_db()
-        miembros = listar_miembros_web()
-    return jsonify({"ok": True, "miembros": miembros}), 200
+    return jsonify({"ok": True, "miembros": listar_miembros_web()}), 200
 
 
 @equipo_api.route("/calendario", methods=["GET"])
@@ -204,7 +191,6 @@ def api_equipo_calendario():
     if not is_equipo_authenticated():
         return jsonify(build_response(False, "No autorizado.")), 401
 
-    init_equipo_db()
     return jsonify({"ok": True, "eventos": listar_eventos_calendario()}), 200
 
 
@@ -222,9 +208,8 @@ def api_equipo_accesos():
     para todo el club (ver `accesos_club`). Cualquiera con sesión de equipo."""
     if not is_equipo_authenticated():
         return jsonify(build_response(False, "No autorizado.")), 401
-    from backend.services.registros import accesos_club, init_registros_db
+    from backend.services.registros import accesos_club
 
-    init_registros_db()
     return jsonify({"ok": True, "luma": LUMA_CALENDAR_URL, "accesos": accesos_club()}), 200
 
 
@@ -235,7 +220,6 @@ def api_equipo_crear_calendario():
     if not _puede_editar_calendario_club():
         return jsonify(build_response(False, "No autorizado.")), 401
 
-    init_equipo_db()
     payload = request.get_json(silent=True) or {}
     error = _validar_evento_calendario(payload)
     if error:
@@ -258,7 +242,6 @@ def api_equipo_confirmar_evento(evento_id: int):
     if not is_equipo_authenticated():
         return jsonify(build_response(False, "No autorizado.")), 401
 
-    init_equipo_db()
     payload = request.get_json(silent=True) or {}
     confirmar = bool(payload.get("confirmar", True))
     email = session.get("equipo_email", "")
@@ -276,7 +259,6 @@ def api_equipo_checkin_evento(evento_id: int):
     if not _puede_editar_calendario_club():
         return jsonify(build_response(False, "No autorizado.")), 401
 
-    init_equipo_db()
     payload = request.get_json(silent=True) or {}
     email = limpiar_texto(str(payload.get("email", ""))).lower()
     asistio = bool(payload.get("asistio", True))
@@ -300,12 +282,9 @@ def api_equipo_calendario_cruzado():
     if not is_equipo_authenticated() and not is_admin_authenticated():
         return jsonify(build_response(False, "No autorizado.")), 401
 
-    init_marketing_db()
     # `calendario_equipo()` también hace JOIN contra `reuniones` (ver el mismo
     # comentario en `requiere_equipo`, backend/api/marketing.py).
-    from backend.services.registros import init_registros_db
 
-    init_registros_db()
     args = request.args.to_dict()
     hoy = date.today()
 
@@ -341,7 +320,6 @@ def api_equipo_mis_tareas():
     if not is_equipo_authenticated():
         return jsonify(build_response(False, "No autorizado.")), 401
 
-    init_marketing_db()
     email = session.get("equipo_email", "")
     return jsonify({"ok": True, "tareas": mis_tareas(email)}), 200
 
@@ -353,7 +331,6 @@ def api_equipo_mis_proyectos():
     if not is_equipo_authenticated():
         return jsonify(build_response(False, "No autorizado.")), 401
 
-    init_marketing_db()
     email = session.get("equipo_email", "")
     return jsonify({"ok": True, "proyectos": mis_campanas(email)}), 200
 
@@ -368,8 +345,6 @@ def api_equipo_metricas():
     if not _es_board_o_vp():
         return jsonify(build_response(False, "No autorizado.")), 403
 
-    init_marketing_db()
-    init_equipo_db()
     try:
         dias = int(request.args.get("dias", "30"))
     except ValueError:
@@ -392,7 +367,6 @@ def api_equipo_datos_formulario():
     if not is_equipo_authenticated():
         return jsonify(build_response(False, "No autorizado.")), 401
 
-    init_equipo_db()
     email = session.get("equipo_email", "")
     datos = datos_formulario(email)
     if datos is None:
@@ -405,7 +379,6 @@ def api_equipo_guardar_datos_formulario():
     if not is_equipo_authenticated():
         return jsonify(build_response(False, "No autorizado.")), 401
 
-    init_equipo_db()
     payload = request.get_json(silent=True) or {}
     nombre = limpiar_texto(str(payload.get("nombre", "")))
     apellidos = limpiar_texto(str(payload.get("apellidos", "")))

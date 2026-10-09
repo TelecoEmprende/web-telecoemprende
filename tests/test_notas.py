@@ -17,6 +17,7 @@ import backend.services.equipo as equipo_service  # noqa: E402
 import backend.services.notas as notas_service  # noqa: E402
 import backend.services.security as security_service  # noqa: E402
 from werkzeug.security import generate_password_hash  # noqa: E402
+from backend.services.db import migrar  # noqa: E402
 
 DOC = [
     {"type": "heading", "content": [{"type": "text", "text": "Orden del día"}]},
@@ -28,8 +29,7 @@ DOC = [
 class NotasTestCase(unittest.TestCase):
     def setUp(self):
         security_service.request_log.clear()
-        equipo_service.init_equipo_db()
-        notas_service.init_notas_db()
+        migrar()
         conn = notas_service._get_connection()
         with conn.cursor() as cur:
             cur.execute("DELETE FROM notas")
@@ -110,7 +110,7 @@ class NotasTestCase(unittest.TestCase):
     def test_notas_enlazadas_a_un_proyecto(self):
         import backend.services.marketing as marketing_service
 
-        marketing_service.init_marketing_db()
+        migrar()
         conn = notas_service._get_connection()
         with conn.cursor() as cur:
             cur.execute(

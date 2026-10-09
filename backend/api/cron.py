@@ -13,7 +13,7 @@ from flask import Blueprint, jsonify, request
 
 from backend.config import CRON_SECRET, EQUIPOS_VALIDOS
 from backend.schemas import build_response
-from backend.services.marketing import init_marketing_db, salud_equipo, tareas_que_vencen
+from backend.services.marketing import salud_equipo, tareas_que_vencen
 from backend.services.slack import aviso_deadlines_manana, resumen_salud_equipo
 
 logger = logging.getLogger("telecoemprende.cron")
@@ -34,7 +34,6 @@ def api_avisar_deadlines():
     if not _autorizado():
         return jsonify(build_response(False, "No autorizado.")), 401
 
-    init_marketing_db()
     mañana = date.today() + timedelta(days=1)
     tareas = tareas_que_vencen(mañana)
     enviado = aviso_deadlines_manana(tareas)
@@ -49,7 +48,6 @@ def api_resumen_equipo():
     if not _autorizado():
         return jsonify(build_response(False, "No autorizado.")), 401
 
-    init_marketing_db()
     enviados = {}
     for departamento in sorted(EQUIPOS_VALIDOS):
         # Un departamento que falle (p. ej. un hipo de la base de datos) no

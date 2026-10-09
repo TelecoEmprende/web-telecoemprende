@@ -30,7 +30,6 @@ from backend.services.equipo import (
     eliminar_evento_calendario,
     generar_excel_equipo_en_memoria,
     generar_pdf_equipo_en_memoria,
-    init_equipo_db,
     listar_equipo_accesos,
     listar_eventos_calendario,
 )
@@ -39,7 +38,6 @@ from backend.services.registrations import (
     actualizar_registro,
     eliminar_registro,
     generar_excel_en_memoria,
-    init_db,
     marcar_notificado,
     obtener_eventos,
     obtener_pendientes_notificacion,
@@ -240,7 +238,6 @@ def api_admin_registrations():
     if not is_admin_authenticated():
         return access_denied_response("No autorizado.", 401)
 
-    init_db()
     evento = request.args.get("evento") or None
     registros = obtener_registros(evento)
     eventos = obtener_eventos()
@@ -400,7 +397,6 @@ def api_admin_listar_equipo():
     if not is_admin_authenticated():
         return jsonify(build_response(False, "No autorizado.")), 401
 
-    init_equipo_db()
     return jsonify({"ok": True, "accesos": listar_equipo_accesos()}), 200
 
 
@@ -419,7 +415,6 @@ def api_admin_crear_equipo():
     if not is_admin_authenticated():
         return jsonify(build_response(False, "No autorizado.")), 401
 
-    init_equipo_db()
     payload = request.get_json(silent=True) or {}
     email = limpiar_texto(str(payload.get("email", ""))).lower()
     password = str(payload.get("password", ""))
@@ -618,7 +613,6 @@ def api_admin_equipo_excel():
     if not is_admin_authenticated():
         return access_denied_response("No autorizado.", 401)
 
-    init_equipo_db()
     return send_file(
         generar_excel_equipo_en_memoria(),
         as_attachment=True,
@@ -677,7 +671,6 @@ def api_admin_listar_calendario():
     if not is_admin_authenticated():
         return jsonify(build_response(False, "No autorizado.")), 401
 
-    init_equipo_db()
     return jsonify({"ok": True, "eventos": listar_eventos_calendario()}), 200
 
 
@@ -686,7 +679,6 @@ def api_admin_crear_calendario():
     if not is_admin_authenticated():
         return jsonify(build_response(False, "No autorizado.")), 401
 
-    init_equipo_db()
     payload = request.get_json(silent=True) or {}
     error = _validar_evento_calendario(payload)
     if error:

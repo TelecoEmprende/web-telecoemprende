@@ -13,12 +13,13 @@ import backend.services.auditoria as auditoria  # noqa: E402
 import backend.services.equipo as equipo_service  # noqa: E402
 import backend.services.security as security_service  # noqa: E402
 from werkzeug.security import generate_password_hash  # noqa: E402
+from backend.services.db import migrar  # noqa: E402
 
 
 class AuditoriaTestCase(unittest.TestCase):
     def setUp(self):
         security_service.request_log.clear()
-        equipo_service.init_equipo_db()
+        migrar()
         auditoria.listar()  # crea la tabla
         conn = equipo_service._get_connection()
         with conn.cursor() as cur:

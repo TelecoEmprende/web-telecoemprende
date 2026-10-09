@@ -12,7 +12,6 @@ import json
 import psycopg2
 from psycopg2.extras import Json, RealDictCursor
 
-from backend.services.db import activar_rls
 from backend.config import DATABASE_URL
 
 NOTA_COLUMNAS = ("titulo", "contenido", "departamento", "privada", "fijada", "proyecto_id")
@@ -22,45 +21,16 @@ def _get_connection():
     return psycopg2.connect(DATABASE_URL)
 
 
-def init_notas_db():
-    # Mismo motivo que `init_registros_db`: varias peticiones a la vez sobre
-    # una base sin la tabla pueden chocar en el catálogo de Postgres.
-    try:
-        _crear_tablas()
-    except psycopg2.errors.UniqueViolation:
-        pass
-
-
-def _crear_tablas():
-    with _get_connection() as conn:
-        with conn.cursor() as cur:
-            cur.execute("""
-                CREATE TABLE IF NOT EXISTS notas (
-                    id SERIAL PRIMARY KEY,
-                    titulo VARCHAR(160) NOT NULL DEFAULT '',
-                    contenido JSONB NOT NULL DEFAULT '[]'::jsonb,
-                    departamento VARCHAR(20) NOT NULL DEFAULT '',
-                    privada BOOLEAN NOT NULL DEFAULT FALSE,
-                    fijada BOOLEAN NOT NULL DEFAULT FALSE,
-                    creado_por VARCHAR(120) NOT NULL DEFAULT '',
-                    editado_por VARCHAR(120) NOT NULL DEFAULT '',
-                    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-                    updated_at TIMESTAMP NOT NULL DEFAULT NOW()
-                )
-            """)
-            # Proyecto (`campaigns.id`) al que está enlazada la nota, o NULL.
-            # Sin FK, como `responsables` en tasks: borrar un proyecto no debe
-            # tocar ni romper sus notas, que siguen en Notas sin enlace.
-            cur.execute("ALTER TABLE notas ADD COLUMN IF NOT EXISTS proyecto_id INTEGER")
-            activar_rls(cur, "notas")
-        conn.commit()
+# La autoría es la cuenta (`creado_por_id`, `editado_por_id`); las consultas
+# reciben el email de la sesión y lo traducen aquí mismo.
+_YO = "(SELECT id FROM equipo_accesos WHERE email = %s)"
 
 
 def _visible(yo: str, teams: list[str]) -> tuple[str, list]:
     """Lo privado, solo para su autor; lo demás, si es del club o de uno de
     tus departamentos."""
     return (
-        " AND ((privada AND creado_por = %s)"
+        f" AND ((privada AND creado_por_id = {_YO})"
         " OR (NOT privada AND (departamento = '' OR departamento = ANY(%s))))",
         [yo, list(teams)],
     )
@@ -133,7 +103,7 @@ def listar_notas(yo: str, teams: list[str]) -> list[dict]:
     with _get_connection() as conn:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute(
-                f"SELECT * FROM notas WHERE TRUE{donde}"
+                f"SELECT * FROM notas_v WHERE TRUE{donde}"
                 " ORDER BY fijada DESC, updated_at DESC, id DESC",
                 valores,
             )
@@ -144,7 +114,7 @@ def obtener_nota(nota_id: int, yo: str, teams: list[str]) -> dict | None:
     donde, valores = _visible(yo, teams)
     with _get_connection() as conn:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute(f"SELECT * FROM notas WHERE id = %s{donde}", [nota_id, *valores])
+            cur.execute(f"SELECT * FROM notas_v WHERE id = %s{donde}", [nota_id, *valores])
             fila = cur.fetchone()
     return _serializar(fila) if fila else None
 
@@ -155,15 +125,17 @@ def _adaptar(campos: dict) -> dict:
 
 def crear_nota(campos: dict, yo: str) -> dict:
     campos = _adaptar(campos)
-    columnas = [c for c in NOTA_COLUMNAS if c in campos] + ["creado_por", "editado_por"]
-    valores = [campos[c] for c in NOTA_COLUMNAS if c in campos] + [yo, yo]
+    columnas = [c for c in NOTA_COLUMNAS if c in campos]
+    valores = [campos[c] for c in columnas] + [yo, yo]
+    marcadores = ["%s"] * len(columnas) + [_YO, _YO]
     with _get_connection() as conn:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute(
-                f"INSERT INTO notas ({', '.join(columnas)})"
-                f" VALUES ({', '.join(['%s'] * len(columnas))}) RETURNING *",
+                f"INSERT INTO notas ({', '.join(columnas + ['creado_por_id', 'editado_por_id'])})"
+                f" VALUES ({', '.join(marcadores)}) RETURNING id",
                 valores,
             )
+            cur.execute("SELECT * FROM notas_v WHERE id = %s", (cur.fetchone()["id"],))
             fila = cur.fetchone()
         conn.commit()
     return _serializar(fila)
@@ -175,13 +147,13 @@ def actualizar_nota(nota_id: int, campos: dict, yo: str, teams: list[str]) -> bo
     valores = [campos[c] for c in NOTA_COLUMNAS if c in campos]
     if not asignaciones:
         return False
-    asignaciones += ["editado_por = %s", "updated_at = NOW()"]
+    asignaciones += [f"editado_por_id = {_YO}", "updated_at = NOW()"]
     valores.append(yo)
     donde, valores_visible = _visible(yo, teams)
     if "privada" in campos:
         # Solo quien la escribió decide si es privada: si no, cualquiera
         # podría esconderle al resto una nota compartida.
-        donde += " AND creado_por = %s"
+        donde += f" AND creado_por_id = {_YO}"
         valores_visible.append(yo)
     with _get_connection() as conn:
         with conn.cursor() as cur:
