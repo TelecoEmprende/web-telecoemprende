@@ -716,15 +716,39 @@
   color: var(--color-text-muted);
 }
 
-.in-persona h3 + p {
-  margin-top: 2px;
-  font-size: 0.9rem;
+/* Dirección (presidencia, board, VPs) delante y más grande; el resto del
+   equipo debajo, en la rejilla pequeña. Cada bloque con su etiqueta. */
+.in-equipo-grupo {
+  margin: 64px 0 0;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--color-border);
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
 }
 
-.in-persona .in-persona-programa {
-  margin-top: 8px;
-  font-size: 0.72rem;
-  font-weight: 500;
+.in-equipo-grupo + .in-equipo {
+  margin-top: 28px;
+}
+
+.in-equipo-direccion {
+  /* Más grandes que el resto, pero nunca menos de dos por fila (móvil). */
+  grid-template-columns: repeat(auto-fill, minmax(min(220px, calc(50% - 12px)), 1fr));
+  gap: 40px 24px;
+}
+
+.in-equipo-direccion .in-persona h3 {
+  margin-top: 2px;
+  font-size: 1.2rem;
+}
+
+/* El puesto, como etiqueta del manual: Inter 600, mayúsculas, tracking. */
+.in-persona .in-persona-puesto {
+  margin-top: 14px;
+  font-size: 0.75rem;
+  font-weight: 600;
   letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--color-azul);

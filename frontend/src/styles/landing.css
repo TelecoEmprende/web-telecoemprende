@@ -681,12 +681,18 @@
 }
 
 /* El nombre del club a lo ancho del pie, como firma. Decorativo. */
+/* El ancho que manda es el del contenedor (`cqi`), no el de la ventana: así la
+   firma ocupa exactamente de margen a margen a cualquier tamaño. */
+.lp-footer-firma-caja {
+  container-type: inline-size;
+}
+
 .lp-footer-firma {
   margin: 0;
-  padding: 40px clamp(16px, 4vw, 48px) 0;
+  padding-top: 40px;
   overflow: hidden;
   font-family: var(--font-display);
-  font-size: 14.5vw;
+  font-size: 15.9cqi;
   line-height: 0.82;
   letter-spacing: -0.015em;
   text-transform: uppercase;

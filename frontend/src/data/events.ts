@@ -22,6 +22,10 @@ export const CLUB_EVENTS: ClubEvent[] = [
     id: "blanca-cena-2026",
     title: "Blanca Ceña",
     tag: { es: "Entrevista", en: "Interview" },
+    description: {
+      es: "Blanca Ceña, CEO de FibreCo y antes al frente de Vantage Towers España, repasando con el club su carrera en las telecomunicaciones.",
+      en: "Blanca Ceña, CEO of FibreCo and former head of Vantage Towers Spain, walking the club through her career in telecoms.",
+    },
     photo: { src: "/evento-blanca-cena.jpg", alt: "Entrevista a Blanca Ceña con dos miembros del club ante los micrófonos" },
   },
   {
