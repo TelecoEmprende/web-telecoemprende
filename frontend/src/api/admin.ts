@@ -92,6 +92,8 @@ export function updateEquipoAcceso(
     /** Data URL ya reducida (`aFotoPerfil`), o "" para quitarla. */
     foto?: string;
     en_web?: boolean;
+    /** https://…, o "" para quitarlo. */
+    linkedin?: string;
   },
 ) {
   return apiRequest<ApiResult>(`/api/admin/equipo/${id}`, {

@@ -138,7 +138,7 @@ def listar_equipo_accesos() -> list[dict]:
                 SELECT id, email, equipos, vp_de, cargo, activo, created_at,
                        tags, notas, nombre, dni, correo_personal,
                        foto, apellidos, COALESCE(es_admin, FALSE),
-                       COALESCE(en_web, FALSE), registro_id
+                       COALESCE(en_web, FALSE), registro_id, linkedin
                 FROM equipo_accesos ORDER BY email
                 """
             )
@@ -163,6 +163,7 @@ def listar_equipo_accesos() -> list[dict]:
             "es_admin": f[14],
             "en_web": f[15],
             "registro_id": f[16],
+            "linkedin": f[17],
         }
         for f in filas
     ]
@@ -199,14 +200,14 @@ def puesto_web(cargo: str, vp_de: list[str]) -> dict | None:
 def listar_miembros_web() -> list[dict]:
     """Quién sale en la sección «Equipo» de la web pública: cuentas marcadas
     `en_web` y con foto subida. Ruta pública, así que solo viaja nombre,
-    primer apellido, foto y, si lo tiene, su puesto (`puesto_web`); nada de
+    primer apellido, foto, LinkedIn y, si lo tiene, su puesto (`puesto_web`); nada de
     email, DNI ni departamentos.
     """
     with _get_connection() as conn:
         with conn.cursor() as cur:
             cur.execute(
                 """
-                SELECT nombre, apellidos, foto, cargo, vp_de
+                SELECT nombre, apellidos, foto, cargo, vp_de, linkedin
                 FROM equipo_accesos
                 WHERE en_web AND nombre <> '' AND foto <> ''
                 """
@@ -220,6 +221,7 @@ def listar_miembros_web() -> list[dict]:
             "apellido": (f[1].split() or [""])[0],
             "foto": f[2],
             "puesto": puesto_web(f[3], f[4]),
+            "linkedin": f[5],
         }
         for f in filas
     ]
@@ -475,6 +477,7 @@ def actualizar_equipo_acceso(
     es_admin: bool | None = None,
     foto: str | None = None,
     en_web: bool | None = None,
+    linkedin: str | None = None,
 ) -> bool:
     """Actualiza solo los campos que se pasan. Devuelve False si el id no existe
     o si equipos/vp_de/cargo no son válidos.
@@ -556,6 +559,10 @@ def actualizar_equipo_acceso(
     if en_web is not None:
         campos.append("en_web = %s")
         valores.append(en_web)
+    if linkedin is not None:
+        # Ya validado en la API: http(s) o "".
+        campos.append("linkedin = %s")
+        valores.append(linkedin)
 
     if not campos:
         return False
