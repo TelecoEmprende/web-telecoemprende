@@ -447,7 +447,7 @@ export function EquipoAccesosPanel() {
                 <th className="px-2 font-medium">Cargo</th>
                 <th className="px-2 font-medium">Admin</th>
                 <th className="px-2 font-medium">Web</th>
-                <th className="px-2 font-medium">DNI y correo personal</th>
+                <th className="px-2 font-medium">DNI, LinkedIn y correo</th>
                 <th className="px-2 font-medium">Estado</th>
               </tr>
             </thead>
@@ -543,7 +543,7 @@ export function EquipoAccesosPanel() {
                     <td className="p-2" data-label="Web">
                       <EnLaWeb acceso={acceso} onGuardar={(cambios) => void guardar(acceso, cambios)} />
                     </td>
-                    <td className="p-2" data-label="DNI y correo personal">
+                    <td className="p-2" data-label="DNI, LinkedIn y correo">
                       <div className="flex flex-col gap-1.5">
                         <Input
                           defaultValue={acceso.dni}
@@ -553,6 +553,17 @@ export function EquipoAccesosPanel() {
                           onBlur={(event) => {
                             const dni = event.target.value.trim();
                             if (dni !== acceso.dni) void guardar(acceso, { dni });
+                          }}
+                        />
+                        <Input
+                          type="url"
+                          defaultValue={acceso.linkedin}
+                          placeholder="LinkedIn (https://…)"
+                          aria-label={`LinkedIn de ${acceso.email}`}
+                          className="h-8 w-40"
+                          onBlur={(event) => {
+                            const linkedin = event.target.value.trim();
+                            if (linkedin !== acceso.linkedin) void guardar(acceso, { linkedin });
                           }}
                         />
                         <Input

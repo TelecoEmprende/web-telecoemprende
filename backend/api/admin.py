@@ -495,6 +495,13 @@ def api_admin_actualizar_equipo(acceso_id: int):
     en_web = payload.get("en_web")
     if en_web is not None and not isinstance(en_web, bool):
         return jsonify(build_response(False, "Valor de 'en_web' no válido.")), 400
+    linkedin = payload.get("linkedin")
+    if linkedin is not None:
+        # Sin limpiar_texto: escaparía los & de la URL. Acaba en un <a href>
+        # de la web pública, así que solo https (nada de javascript:).
+        linkedin = str(linkedin).strip()
+        if len(linkedin) > 600 or (linkedin and not linkedin.lower().startswith("https://")):
+            return jsonify(build_response(False, "El LinkedIn tiene que ser un enlace https://.")), 400
     try:
         foto = _foto(payload) if "foto" in payload else None
     except DatosInvalidos as error:
@@ -588,6 +595,7 @@ def api_admin_actualizar_equipo(acceso_id: int):
         es_admin=es_admin,
         foto=foto,
         en_web=en_web,
+        linkedin=linkedin,
     ):
         logger.info("admin actualiza acceso equipo id=%s", acceso_id)
         return jsonify(build_response(True, "Acceso actualizado.")), 200

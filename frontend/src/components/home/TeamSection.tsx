@@ -16,7 +16,13 @@ export function TeamSection() {
     const nombre = `${miembro.nombre} ${miembro.apellido}`.trim();
     return (
       <Aparece como="li" className="in-persona" key={`${nombre}-${i}`} retraso={(i % 4) * 0.07}>
-        <img src={miembro.foto} alt={`${t.team.photoAlt} ${nombre}`} loading="lazy" />
+        {miembro.linkedin ? (
+          <a href={miembro.linkedin} target="_blank" rel="noopener noreferrer" aria-label={`${t.team.linkedin} ${nombre}`}>
+            <img src={miembro.foto} alt={`${t.team.photoAlt} ${nombre}`} loading="lazy" />
+          </a>
+        ) : (
+          <img src={miembro.foto} alt={`${t.team.photoAlt} ${nombre}`} loading="lazy" />
+        )}
         {destacada && miembro.puesto ? (
           <p className="in-persona-puesto">{miembro.puesto[language]}</p>
         ) : null}

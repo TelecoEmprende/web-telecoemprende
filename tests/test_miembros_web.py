@@ -49,7 +49,7 @@ class MiembrosWebTestCase(unittest.TestCase):
         self.alta("sinfoto@example.com", "Sin", ["eventos", "marketing"])
 
         self.assertEqual(
-            self.miembros(), [{"nombre": "Ana", "apellido": "García", "foto": FOTO, "puesto": None}]
+            self.miembros(), [{"nombre": "Ana", "apellido": "García", "foto": FOTO, "puesto": None, "linkedin": ""}]
         )
 
     def test_orden_presidencia_board_vps_y_resto(self):
@@ -74,6 +74,17 @@ class MiembrosWebTestCase(unittest.TestCase):
         self.assertEqual(self.miembros()[0]["foto"], FOTO)
         equipo_service.actualizar_equipo_acceso(acceso["id"], foto="")
         self.assertEqual(self.miembros(), [])
+
+    def test_linkedin_solo_https(self):
+        acceso = self.alta("ana@example.com", "Ana", ["marketing", "eventos"], foto=FOTO)
+        with self.client.session_transaction() as sesion:
+            sesion["admin_auth"] = True
+        url = f"/api/admin/equipo/{acceso['id']}"
+        perfil = "https://www.linkedin.com/in/ana-garc%C3%ADa/?a=1&b=2"
+        self.assertEqual(self.client.put(url, json={"linkedin": "javascript:alert(1)"}).status_code, 400)
+        self.assertEqual(self.client.put(url, json={"linkedin": perfil}).status_code, 200)
+        self.assertEqual(self.miembros()[0]["linkedin"], perfil)
+
 
 if __name__ == "__main__":
     unittest.main()

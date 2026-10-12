@@ -89,6 +89,8 @@ export type EquipoAcceso = {
   es_admin: boolean;
   /** Sale en la sección «Equipo» de la web pública (ver `MiembroWeb`). */
   en_web: boolean;
+  /** Perfil de LinkedIn (https), o "". La foto de la web enlaza a él. */
+  linkedin: string;
 };
 
 /** Una persona en la sección «Equipo» de la web pública
@@ -101,6 +103,8 @@ export type MiembroWeb = {
   foto: string;
   /** Presidente, board o VP de su departamento; null para el resto. */
   puesto: { es: string; en: string } | null;
+  /** Perfil de LinkedIn, o "": con él, la foto enlaza ahí. */
+  linkedin: string;
 };
 
 export type EventoCalendario = {
