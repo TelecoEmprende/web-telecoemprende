@@ -136,7 +136,7 @@ export function CalendarioPanel() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           {/* El título ya está en la barra superior. */}
-          <p>Eventos del club: los ve todo el equipo en su Inicio y en el Calendario.</p>
+          <p className="crm-s">Eventos del club: los ve todo el equipo en su Inicio y en el Calendario.</p>
         </div>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>

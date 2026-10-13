@@ -779,7 +779,7 @@ class ApiTestCase(unittest.TestCase):
     def test_metricas_requiere_sesion(self):
         self.assertEqual(self.client.get("/api/equipo/metricas").status_code, 401)
 
-    def test_metricas_rechaza_a_quien_no_es_board_ni_vp(self):
+    def test_metricas_rechaza_a_quien_no_tiene_cargo_ni_vp_ni_es_admin(self):
         self.seed_equipo(vp_de=[])
         self.equipo_login()
         self.assertEqual(self.client.get("/api/equipo/metricas").status_code, 403)

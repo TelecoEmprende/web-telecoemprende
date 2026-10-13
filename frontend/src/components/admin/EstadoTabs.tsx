@@ -56,7 +56,7 @@ export function EstadoTabs({ registros, estadoActivo, onEstadoChange }: EstadoTa
             type="button"
             role="tab"
             aria-selected={activo}
-            className={`relative cursor-pointer rounded-full border px-4 py-2.5 text-sm font-bold ${
+            className={`relative cursor-pointer rounded-full border px-3 py-1.5 text-xs font-semibold ${
               activo
                 ? ESTADO_ACTIVO_TRAZO[estado]
                 : "border-[var(--color-paper-line)] bg-white text-muted-foreground"
@@ -75,7 +75,7 @@ export function EstadoTabs({ registros, estadoActivo, onEstadoChange }: EstadoTa
             ) : null}
             <span className="relative">
               {ESTADO_LABELS[estado]}{" "}
-              <Contador valor={count} className="font-bold opacity-70" />
+              <Contador valor={count} className="font-semibold opacity-70" />
             </span>
           </button>
         );

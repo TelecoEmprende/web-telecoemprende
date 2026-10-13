@@ -1,5 +1,7 @@
-import { motion } from "motion/react";
-import { FormEvent, useEffect, useRef, useState } from "react";
+import {
+  LayoutGroup, motion, useMotionValue, useReducedMotion, useSpring, useTransform, useVelocity,
+} from "motion/react";
+import { FormEvent, useEffect, useRef, useState, type ReactNode } from "react";
 
 import { AvataresDeResponsables } from "./Avatares";
 import { SelectorMiembros } from "./SelectorMiembros";
@@ -11,6 +13,7 @@ import { ContadorCaracteres } from "../../feedback/ContadorCaracteres";
 import { Esqueleto } from "../../feedback/Esqueleto";
 import { Badge } from "@/components/ui/badge";
 import { Contador, useEntradaDeFila } from "../../movimiento";
+import { SPRING_DEFAULT } from "@/components/smoothui/lib/animation";
 import type { ApiFailure } from "../../../types/api";
 import { DEPTO_LABEL, TEAMS, type Team } from "../../../types/equipo";
 import {
@@ -28,7 +31,6 @@ import {
 
 /** Tipo MIME propio para no confundir un drag de tarea con un drag de
  *  archivo o de texto suelto que caiga sobre el tablero por error. */
-const TASK_MIME = "application/x-teleco-task-id";
 
 const ORDEN_PRIORIDAD: Record<Prioridad, number> = { alta: 0, media: 1, baja: 2 };
 
@@ -98,7 +100,7 @@ export function TasksPanel({ deptos, teams, vpDe, puedeAsignarEnTodo }: Props) {
   const [archivadas, setArchivadas] = useState<Task[]>([]);
   const [cargandoArchivadas, setCargandoArchivadas] = useState(false);
   const [abierta, setAbierta] = useState<Task | null>(null);
-  const [arrastrando, setArrastrando] = useState<Task | null>(null);
+  const movidaRef = useRef<number | null>(null);
   const [sobreColumna, setSobreColumna] = useState<TaskEstado | null>(null);
   const [ultimoMovimiento, setUltimoMovimiento] = useState<{
     taskId: number;
@@ -284,7 +286,7 @@ export function TasksPanel({ deptos, teams, vpDe, puedeAsignarEnTodo }: Props) {
           aria-label="Buscar tareas por título"
           onChange={(event) => setBusqueda(event.target.value)}
         />
-        <label className={`crm-tag crm-tag-check-react${soloMias ? " crm-tag-azul-react" : ""}`}>
+        <label className={`crm-tag crm-tag-check-react${soloMias ? " crm-tag-activo-react" : ""}`}>
           <input
             type="checkbox"
             className="crm-check"
@@ -295,7 +297,7 @@ export function TasksPanel({ deptos, teams, vpDe, puedeAsignarEnTodo }: Props) {
         </label>
         <button
           type="button"
-          className={`crm-tag${verArchivadas ? " crm-tag-azul-react" : ""}`}
+          className={`crm-tag${verArchivadas ? " crm-tag-activo-react" : ""}`}
           aria-pressed={verArchivadas}
           onClick={alternarArchivadas}
         >
@@ -323,7 +325,7 @@ export function TasksPanel({ deptos, teams, vpDe, puedeAsignarEnTodo }: Props) {
                   return (
                     <label
                       key={d}
-                      className={`crm-tag crm-tag-check-react${elegido ? " crm-tag-azul-react" : ""}`}
+                      className={`crm-tag crm-tag-check-react${elegido ? " crm-tag-activo-react" : ""}`}
                     >
                       <input
                         type="checkbox"
@@ -497,6 +499,7 @@ export function TasksPanel({ deptos, teams, vpDe, puedeAsignarEnTodo }: Props) {
         </p>
       ) : null}
 
+      <LayoutGroup id="tablero-tareas">
       <div className="mkt-tablero-react">
         {TASK_ESTADOS.map((estado) => {
           const columna = visibles
@@ -508,30 +511,6 @@ export function TasksPanel({ deptos, teams, vpDe, puedeAsignarEnTodo }: Props) {
               key={estado}
               className={`mkt-columna-react${sobreColumna === estado ? " mkt-columna-sobre-react" : ""}`}
               data-estado={estado}
-              onDragOver={(event) => {
-                // El tipo MIME viaja siempre, aunque `getData` no se pueda
-                // leer hasta soltar: así el `preventDefault` (necesario para
-                // que "drop" llegue a disparar) no depende del estado de
-                // React, que en un drag real puede no haberse repintado
-                // todavía cuando llega el primer "dragover".
-                if (!event.dataTransfer.types.includes(TASK_MIME)) return;
-                event.preventDefault();
-                if (sobreColumna !== estado) setSobreColumna(estado);
-              }}
-              onDragLeave={() => setSobreColumna((actual) => (actual === estado ? null : actual))}
-              onDrop={(event) => {
-                event.preventDefault();
-                setSobreColumna(null);
-                // No basta con "onDragEnd" para limpiar `arrastrando`: al
-                // cambiar de columna la tarjeta se desmonta de esta lista y
-                // se monta en la de al lado, y el navegador no siempre llega
-                // a disparar "dragend" sobre un nodo que ya no está donde
-                // empezó el arrastre. Se limpia aquí, que sí se dispara.
-                setArrastrando(null);
-                const id = Number(event.dataTransfer.getData(TASK_MIME));
-                const task = tasks.find((t) => t.id === id);
-                if (task) void moverA(task, estado);
-              }}
             >
               <h4>
                 {TASK_ESTADO_LABEL[estado]}
@@ -554,21 +533,35 @@ export function TasksPanel({ deptos, teams, vpDe, puedeAsignarEnTodo }: Props) {
                     // arrastre y nunca llegan al DOM: el tablero usa el drag
                     // nativo del navegador, así que anima el envoltorio y la
                     // tarjeta se queda siendo un <button> normal.
-                    <motion.div key={`${task.departamento}-${task.id}`} {...entradaTarjeta(indice)}>
+                    <Arrastrable
+                      key={`${task.departamento}-${task.id}`}
+                      llave={`tarea-${task.departamento}-${task.id}`}
+                      indice={indice}
+                      recienMovida={movidaRef.current === task.id}
+                      onSobre={setSobreColumna}
+                      onSoltar={(destino) => {
+                        if (destino && destino !== task.estado) {
+                          movidaRef.current = task.id;
+                          void moverA(task, destino);
+                        }
+                      }}
+                    >
                       <button
                         type="button"
-                        className={`mkt-task-card-react${arrastrando?.id === task.id ? " mkt-task-card-arrastrando-react" : ""}`}
-                        draggable
-                        onDragStart={(event) => {
-                          event.dataTransfer.setData(TASK_MIME, String(task.id));
-                          event.dataTransfer.effectAllowed = "move";
-                          setArrastrando(task);
-                        }}
-                        onDragEnd={() => {
-                          setArrastrando(null);
-                          setSobreColumna(null);
-                        }}
+                        className="mkt-task-card-react"
+                        aria-keyshortcuts="Alt+ArrowLeft Alt+ArrowRight"
                         onClick={() => setAbierta(task)}
+                        onKeyDown={(event) => {
+                          // Alternativa al arrastre: Alt + ←/→ pasa la tarea a la
+                          // columna de al lado.
+                          if (!event.altKey) return;
+                          const paso = event.key === "ArrowRight" ? 1 : event.key === "ArrowLeft" ? -1 : 0;
+                          const destino = TASK_ESTADOS[TASK_ESTADOS.indexOf(task.estado) + paso];
+                          if (!paso || !destino) return;
+                          event.preventDefault();
+                          movidaRef.current = task.id;
+                          void moverA(task, destino);
+                        }}
                       >
                         {variosDeptos ? (
                           <span className="mkt-etiquetas-react">
@@ -626,7 +619,7 @@ export function TasksPanel({ deptos, teams, vpDe, puedeAsignarEnTodo }: Props) {
                           />
                         </span>
                       </button>
-                    </motion.div>
+                    </Arrastrable>
                   );
                 })
               )}
@@ -634,6 +627,7 @@ export function TasksPanel({ deptos, teams, vpDe, puedeAsignarEnTodo }: Props) {
           );
         })}
       </div>
+      </LayoutGroup>
         </>
       )}
 
@@ -653,5 +647,77 @@ export function TasksPanel({ deptos, teams, vpDe, puedeAsignarEnTodo }: Props) {
         </DeptoProvider>
       ) : null}
     </section>
+  );
+}
+
+/** La columna (`data-estado`) que hay bajo el puntero, o `null`. */
+function estadoBajo(event: MouseEvent | TouchEvent | PointerEvent): TaskEstado | null {
+  const punto = "changedTouches" in event ? event.changedTouches[0] : event;
+  const columna = document
+    .elementsFromPoint(punto.clientX, punto.clientY)
+    .find((el): el is HTMLElement => el instanceof HTMLElement && !!el.dataset.estado);
+  return (columna?.dataset.estado as TaskEstado | undefined) ?? null;
+}
+
+type ArrastrableProps = {
+  llave: string;
+  /** Posición en la columna, para escalonar la entrada. */
+  indice: number;
+  /** La tarjeta recién movida ya viene animada desde donde se soltó: no se
+   *  vuelve a fundir. */
+  recienMovida: boolean;
+  onSobre: (estado: TaskEstado | null) => void;
+  onSoltar: (estado: TaskEstado | null) => void;
+  children: ReactNode;
+};
+
+/**
+ * Tarjeta del tablero que se arrastra con el puntero: se levanta, se inclina
+ * según la velocidad horizontal y, al soltarla en otra columna, se acomoda en
+ * su hueco (`layoutId` compartido) mientras las demás se recolocan (`layout`).
+ * Solo `transform`; con movimiento reducido se queda en un arrastre sin
+ * inclinación ni escala. Con puntero táctil no arrastra (el dedo es para
+ * hacer scroll): ahí se cambia de estado desde la tarea abierta.
+ */
+function Arrastrable({ llave, indice, recienMovida, onSobre, onSoltar, children }: ArrastrableProps) {
+  const menos = useReducedMotion();
+  const x = useMotionValue(0);
+  const giro = useSpring(useTransform(useVelocity(x), [-1200, 0, 1200], [-5, 0, 5], { clamp: true }), {
+    stiffness: 300, damping: 30,
+  });
+  const arrastrado = useRef(false);
+  const [fino] = useState(
+    () => typeof window.matchMedia === "function" && window.matchMedia("(pointer: fine)").matches,
+  );
+
+  return (
+    <motion.div
+      layoutId={llave}
+      layout
+      // `y` y no `transform: "translateY()"`: un `transform` en texto pisaría
+      // el `x`/`rotate`/`scale` del arrastre y la tarjeta no seguiría al puntero.
+      initial={recienMovida ? false : menos ? { opacity: 0 } : { opacity: 0, y: 6 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ ...SPRING_DEFAULT, delay: menos ? 0 : Math.min(indice * 0.03, 0.2) }}
+      drag={fino}
+      dragSnapToOrigin
+      dragMomentum={false}
+      dragElastic={0.12}
+      whileDrag={menos ? { zIndex: 30 } : { scale: 1.03, zIndex: 30 }}
+      style={{ x, rotate: menos ? 0 : giro, position: "relative", zIndex: 0 }}
+      onDragStart={() => { arrastrado.current = true; }}
+      onDrag={(event) => onSobre(estadoBajo(event))}
+      onDragEnd={(event) => {
+        onSobre(null);
+        onSoltar(estadoBajo(event));
+        // El `click` llega justo después de soltar: que no abra la tarea.
+        window.setTimeout(() => { arrastrado.current = false; }, 50);
+      }}
+      onClickCapture={(event) => {
+        if (arrastrado.current) { event.stopPropagation(); event.preventDefault(); }
+      }}
+    >
+      {children}
+    </motion.div>
   );
 }

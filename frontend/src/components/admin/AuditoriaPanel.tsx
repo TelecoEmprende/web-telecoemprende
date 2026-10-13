@@ -96,7 +96,7 @@ export function AuditoriaPanel() {
 
   return (
     <section className="admin-card-react shadcn-scope">
-      <p className="max-w-[72ch]">
+      <p className="crm-s max-w-[72ch]">
         Cada cambio hecho en /equipo, las entradas y salidas y las descargas de datos personales.
         Se guarda quién, qué y cuándo, nunca lo que se escribió.
       </p>

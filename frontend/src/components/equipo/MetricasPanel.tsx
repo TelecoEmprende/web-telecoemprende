@@ -64,8 +64,7 @@ export function MetricasPanel() {
   return (
     <>
       <header className="crm-cabecera-react">
-        <h3 className="crm-h1">Salud del club</h3>
-        <span className="crm-s">Últimos {metricas.dias_periodo} días</span>
+        <span className="crm-s ml-auto">Últimos {metricas.dias_periodo} días</span>
       </header>
 
       <div className="mkt-tiles-react">

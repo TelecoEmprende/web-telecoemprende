@@ -9,6 +9,8 @@ resuelve `_montar_rutas`, que es la misma para todas. Aquí cuelga también
 `/plataforma`, que no es un registro pero comparte blueprint y autorización.
 """
 
+from functools import wraps
+
 from flask import jsonify
 
 from backend.api.marketing import (
@@ -20,6 +22,7 @@ from backend.api.marketing import (
     _payload,
     _texto,
     departamento_actual,
+    es_cargo_vp_o_admin,
     marketing_api,
     requiere_equipo,
 )
@@ -122,7 +125,21 @@ def _campos_servicio(datos: dict) -> dict:
     return salida
 
 
-def _montar_rutas(ruta: str, tabla: reg.Tabla, leer_campos, obligatorio: str):
+def _solo_cargo_o_admin(func):
+    """Además de ser del departamento: cargo, VP o admin (Presupuesto)."""
+
+    @wraps(func)
+    def envoltorio(*args, **kwargs):
+        if not es_cargo_vp_o_admin():
+            return jsonify(build_response(False, "No autorizado.")), 403
+        return func(*args, **kwargs)
+
+    return envoltorio
+
+
+def _montar_rutas(
+    ruta: str, tabla: reg.Tabla, leer_campos, obligatorio: str, solo_cargo: bool = False
+):
     """Las cuatro rutas CRUD de una entidad.
 
     `obligatorio` es el campo sin el cual el alta no tiene sentido (el título,
@@ -165,16 +182,19 @@ def _montar_rutas(ruta: str, tabla: reg.Tabla, leer_campos, obligatorio: str):
     ):
         func.__name__ = f"api_{ruta}_{sufijo}"
         url = f"/{ruta}/<int:fila_id>" if con_id else f"/{ruta}"
+        if solo_cargo:
+            func = _solo_cargo_o_admin(func)
         marketing_api.route(url, methods=[metodo])(requiere_equipo(func))
 
 
-_montar_rutas("presupuesto", reg.PRESUPUESTO, _campos_presupuesto, "concepto")
+_montar_rutas("presupuesto", reg.PRESUPUESTO, _campos_presupuesto, "concepto", solo_cargo=True)
 _montar_rutas("reuniones", reg.REUNIONES, _campos_reunion, "titulo")
 _montar_rutas("servicios", reg.SERVICIOS, _campos_servicio, "nombre")
 
 
 @marketing_api.route("/presupuesto/resumen", methods=["GET"])
 @requiere_equipo
+@_solo_cargo_o_admin
 def api_presupuesto_resumen():
     return jsonify({"ok": True, "resumen": reg.resumen_presupuesto(departamento_actual())}), 200
 

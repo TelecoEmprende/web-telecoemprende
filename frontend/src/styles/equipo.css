@@ -24,8 +24,8 @@
    cualquier regla sin capa le gana, que es justo lo que hace falta cuando el
    selector apunta al MISMO elemento. */
 .workspace-react {
-  --color-background: var(--color-paper);
-  --color-border: var(--color-paper-line);
+  --color-background: var(--color-papel);
+  --color-border: var(--color-papel-hueso);
   --radius-lg: 20px;
   --radius-md: 14px;
   --radius-xl: 28px;
@@ -33,22 +33,22 @@
   /* Propuesta "blanco y azul": Azul TE pasa de fondo de marca a color de
      acento — botones y estado activo, no losas de color. */
   --primary: var(--color-azul);
-  --primary-foreground: #ffffff;
+  --primary-foreground: var(--color-blanco);
   --ring: var(--color-azul);
 
   /* Sidebar blanco, a juego con el área de trabajo. El item activo se marca
      con un velo Azul TE y la barra de acento (ver más abajo) también pasa a
      azul: ya no hay una losa de color separando sidebar y contenido. */
   --sidebar: var(--color-surface);
-  --sidebar-foreground: var(--color-navy);
+  --sidebar-foreground: var(--color-noche);
   --sidebar-primary: var(--color-azul);
-  --sidebar-primary-foreground: #ffffff;
+  --sidebar-primary-foreground: var(--color-blanco);
   --sidebar-accent: rgba(var(--color-azul-rgb), 0.08);
   --sidebar-accent-foreground: var(--color-azul-profundo);
   /* El boceto rellena el item activo en azul con el texto en blanco; el
      hover se queda en el velo suave de arriba. */
   --sidebar-activo: var(--color-azul);
-  --sidebar-border: var(--color-paper-line);
+  --sidebar-border: var(--color-papel-hueso);
   --sidebar-ring: var(--color-azul);
 
   min-height: 100vh;
@@ -60,7 +60,7 @@
    depender de la herencia, porque es el único control para llegar a la
    navegación en móvil. */
 .workspace-react [data-slot="sidebar-trigger"] {
-  color: var(--color-navy);
+  color: var(--color-noche);
 }
 
 /* El texto del sidebar sale en `text-sm` (0.875rem), pequeño para una nav que
@@ -84,13 +84,13 @@
    Solo en /equipo: `/admin` comparte este chasis y no entra en el rediseño. */
 .crm-react [data-slot="sidebar-menu-button"][data-active="true"] {
   background: var(--sidebar-activo);
-  color: #fff;
+  color: var(--color-blanco);
   border-radius: 7px;
 }
 
 .crm-react [data-slot="sidebar-menu-button"][data-active="true"]:hover {
   background: var(--sidebar-activo);
-  color: #fff;
+  color: var(--color-blanco);
 }
 
 /* La columna de trabajo del boceto: cajas apiladas con un hueco fijo entre
@@ -188,7 +188,7 @@
 .workspace-perfil-texto-react strong {
   font-size: 0.82rem;
   font-weight: 600;
-  color: var(--color-navy);
+  color: var(--color-noche);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -244,7 +244,7 @@
   font-weight: 400;
   letter-spacing: var(--tracking-display);
   line-height: 1;
-  color: var(--color-navy);
+  color: var(--color-noche);
 }
 
 /* Selector de departamento para un panel compartido (Tareas, Proyectos...)
@@ -304,7 +304,7 @@
   font-weight: 400;
   letter-spacing: var(--tracking-display);
   line-height: 1;
-  color: var(--color-navy);
+  color: var(--color-noche);
 }
 
 .equipo-vacio-react {
@@ -324,7 +324,7 @@
   margin: 0 0 6px;
   font-size: 1rem;
   font-weight: 700;
-  color: var(--color-navy);
+  color: var(--color-noche);
 }
 
 .equipo-tarjeta-react p {
@@ -343,9 +343,9 @@
   min-height: 44px;
   padding: 8px 16px;
   border: 1px solid var(--color-border);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   background: var(--color-surface);
-  color: var(--color-navy);
+  color: var(--color-noche);
   font-size: 0.86rem;
   font-weight: 700;
   text-decoration: none;
@@ -353,7 +353,7 @@
 }
 
 .equipo-enlace-react:hover {
-  border-color: var(--color-orange);
+  border-color: var(--color-impulso);
 }
 
 /* ---------- Inicio del club ---------- */
@@ -427,7 +427,7 @@ span.mkt-dia-numero-react:hover {
 
 .equipo-aviso-board-cuerpo-react strong {
   display: block;
-  color: var(--color-navy);
+  color: var(--color-noche);
   font-size: 0.98rem;
 }
 
@@ -472,7 +472,7 @@ span.mkt-dia-numero-react:hover {
 
 .equipo-evento-titulo-react {
   display: block;
-  color: var(--color-navy);
+  color: var(--color-noche);
   font-size: 0.95rem;
   font-weight: 700;
   line-height: 1.4;
@@ -1082,10 +1082,9 @@ span.mkt-dia-numero-react:hover {
   gap: 12px;
   min-width: 0;
   padding: 16px 18px;
-  border: 1px solid rgba(var(--color-noche-rgb), 0.09);
-  border-radius: 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
   background: var(--color-surface);
-  box-shadow: 0 1px 2px rgba(var(--color-noche-rgb), 0.04);
 }
 
 /* El aviso del board: una fila, con el borde teñido de azul para que pese
@@ -1095,34 +1094,34 @@ span.mkt-dia-numero-react:hover {
 .crm-c-oscura-react {
   border-color: var(--color-noche);
   background: var(--color-noche);
-  color: #fff;
+  color: var(--color-blanco);
 }
 
 .crm-c-oscura-react .crm-k {
-  color: rgba(255, 255, 255, 0.55);
+  color: rgba(var(--color-blanco-rgb), 0.55);
 }
 
 .crm-c-oscura-react .crm-t {
-  color: #fff;
+  color: var(--color-blanco);
 }
 
 .crm-c-oscura-react .crm-s {
-  color: rgba(255, 255, 255, 0.7);
+  color: rgba(var(--color-blanco-rgb), 0.7);
 }
 
 /* Sobre Noche, el filete y las cajitas se dan la vuelta: un separador claro
    translúcido y pastillas de fondo claro sobre texto blanco. */
 .crm-c-oscura-react .crm-row {
-  border-top-color: rgba(255, 255, 255, 0.12);
+  border-top-color: rgba(var(--color-blanco-rgb), 0.12);
 }
 
 .crm-c-oscura-react .crm-tag {
-  background: rgba(255, 255, 255, 0.12);
-  color: rgba(255, 255, 255, 0.92);
+  background: rgba(var(--color-blanco-rgb), 0.12);
+  color: rgba(var(--color-blanco-rgb), 0.92);
 }
 
 .crm-c-oscura-react a.crm-tag:hover {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(var(--color-blanco-rgb), 0.2);
 }
 
 .crm-k {
@@ -1155,7 +1154,7 @@ span.mkt-dia-numero-react:hover {
   font-weight: 700;
   line-height: 1.15;
   letter-spacing: -0.015em;
-  color: var(--color-navy);
+  color: var(--color-noche);
 }
 
 .crm-sub {
@@ -1168,7 +1167,7 @@ span.mkt-dia-numero-react:hover {
   font-size: 0.875rem;
   font-weight: 600;
   line-height: 1.3;
-  color: var(--color-navy);
+  color: var(--color-noche);
   /* Un correo o un título largo no tiene por dónde partir: sin esto se sale
      de la fila en un móvil estrecho. */
   overflow-wrap: break-word;
@@ -1243,6 +1242,13 @@ button.crm-row-cuerpo-react {
   color: var(--color-azul);
 }
 
+/* Filtro activo: Noche con texto blanco, como el chip de /news. */
+.crm-tag.crm-tag-activo-react,
+button.crm-tag.crm-tag-activo-react:hover {
+  background: var(--color-noche);
+  color: var(--color-blanco);
+}
+
 .crm-tag-ambar-react {
   background: rgba(var(--color-impulso-rgb), 0.12);
   color: var(--color-info-text);
@@ -1284,9 +1290,9 @@ button.crm-tag-azul-react:hover {
 .crm-btn {
   padding: 9px 13px;
   border: 0;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   background: var(--color-impulso);
-  color: #fff;
+  color: var(--color-blanco);
   font-family: inherit;
   font-size: 0.78rem;
   font-weight: 600;
@@ -1297,7 +1303,7 @@ button.crm-tag-azul-react:hover {
 .crm-btn-ghost-react {
   border: 1px solid rgba(var(--color-noche-rgb), 0.14);
   background: var(--color-surface);
-  color: var(--color-navy);
+  color: var(--color-noche);
 }
 
 .crm-btn-ghost-react:hover {
@@ -1341,7 +1347,7 @@ a.crm-tag:focus-visible,
   padding: 0;
   border: 0;
   background: none;
-  color: var(--color-impulso);
+  color: var(--color-azul);
   font-family: inherit;
   font-size: 0.78rem;
   font-weight: 600;
@@ -1371,7 +1377,7 @@ a.crm-tag:focus-visible,
   width: 4px;
   height: 8px;
   margin: 1px auto 0;
-  border: solid #fff;
+  border: solid var(--color-blanco);
   border-width: 0 2px 2px 0;
   transform: rotate(45deg);
 }
@@ -1389,8 +1395,8 @@ a.crm-tag:focus-visible,
 }
 
 .crm-c-oscura-react .crm-av [data-slot="avatar-fallback"] {
-  background: rgba(255, 255, 255, 0.14);
-  color: #fff;
+  background: rgba(var(--color-blanco-rgb), 0.14);
+  color: var(--color-blanco);
 }
 
 .crm-bar {
@@ -1489,9 +1495,9 @@ a.crm-tag:focus-visible,
   margin-right: auto;
   padding: 9px 12px;
   border: 1px solid rgba(var(--color-noche-rgb), 0.14);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   background: var(--color-surface);
-  color: var(--color-navy);
+  color: var(--color-noche);
   font-family: inherit;
   font-size: 0.82rem;
 }
@@ -1615,7 +1621,7 @@ a.crm-tag:focus-visible,
 .crm-react .crm-c {
   padding: 18px 20px;
   border-color: rgba(var(--color-noche-rgb), 0.07);
-  border-radius: 16px;
+  border-radius: var(--radius-md);
   box-shadow:
     0 1px 2px rgba(var(--color-noche-rgb), 0.04),
     0 12px 32px -18px rgba(var(--color-noche-rgb), 0.18);
@@ -1677,9 +1683,9 @@ a.crm-tag:focus-visible,
 .crm-select-react {
   padding: 8px 10px;
   border: 1px solid rgba(var(--color-noche-rgb), 0.14);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   background: var(--color-surface);
-  color: var(--color-navy);
+  color: var(--color-noche);
   font-family: inherit;
   font-size: 0.8rem;
   font-weight: 500;
@@ -1719,10 +1725,8 @@ kbd {
   color: var(--color-text-on-dark);
 }
 
-/* Los círculos de la marca: uno grande en Impulso saliendo por la esquina y
-   uno pequeño en Chispa, como en la portada. */
-.inicio-hero-react::before,
-.inicio-hero-react::after {
+/* El disco de la marca: uno solo, en Impulso, saliendo por la esquina. */
+.inicio-hero-react::before {
   content: "";
   position: absolute;
   z-index: -1;
@@ -1735,14 +1739,6 @@ kbd {
   right: -60px;
   top: -150px;
   background: var(--color-impulso);
-}
-
-.inicio-hero-react::after {
-  width: 54px;
-  height: 54px;
-  right: 196px;
-  top: 18px;
-  background: var(--color-chispa);
 }
 
 .inicio-hero-texto-react {
@@ -1796,9 +1792,9 @@ kbd {
 /* Botón secundario sobre azul: velo claro, texto blanco. */
 .inicio-btn-claro-react {
   padding: 11px 16px;
-  border: 1px solid rgba(255, 255, 255, 0.28);
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(var(--color-blanco-rgb), 0.28);
+  border-radius: var(--radius-md);
+  background: rgba(var(--color-blanco-rgb), 0.1);
   color: var(--color-text-on-dark);
   font-family: inherit;
   font-size: 0.78rem;
@@ -1810,7 +1806,7 @@ kbd {
 }
 
 .inicio-btn-claro-react:hover {
-  background: rgba(255, 255, 255, 0.18);
+  background: rgba(var(--color-blanco-rgb), 0.18);
 }
 
 .inicio-btn-claro-react:focus-visible,
@@ -1835,7 +1831,7 @@ kbd {
   min-width: 0;
   padding: 16px 18px;
   border: 1px solid rgba(var(--color-noche-rgb), 0.07);
-  border-radius: 16px;
+  border-radius: var(--radius-md);
   background: var(--color-surface);
   box-shadow: 0 1px 2px rgba(var(--color-noche-rgb), 0.04);
   font-family: inherit;
@@ -1935,7 +1931,7 @@ kbd {
   justify-content: center;
   width: 44px;
   height: 46px;
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   background: rgba(var(--color-azul-rgb), 0.08);
   color: var(--color-azul);
   line-height: 1;
@@ -2050,10 +2046,6 @@ kbd {
     right: -45px;
   }
 
-  .inicio-hero-react::after {
-    display: none;
-  }
-
   .inicio-kpi-num-react {
     font-size: 2rem;
   }
@@ -2083,7 +2075,7 @@ kbd {
   gap: 8px;
   padding: 0 10px;
   border: 1px solid rgba(var(--color-noche-rgb), 0.12);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   color: var(--color-text-muted);
 }
 
@@ -2130,7 +2122,7 @@ kbd {
   width: 100%;
   padding: 10px 10px;
   border: 0;
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   background: none;
   font: inherit;
   color: inherit;
@@ -2699,36 +2691,6 @@ kbd {
   font-size: 0.92rem;
 }
 
-.cal-anadir-react {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 11px 20px;
-  border: 0;
-  border-radius: 999px;
-  background: var(--color-azul);
-  color: var(--color-text-on-dark);
-  font-family: inherit;
-  font-size: 0.88rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: transform var(--dur-press) var(--ease-out),
-    background var(--dur-fast) var(--ease-out);
-}
-
-.cal-anadir-react span {
-  font-size: 1.15rem;
-  line-height: 1;
-}
-
-.cal-anadir-react:hover {
-  background: var(--color-azul-profundo);
-}
-
-.cal-anadir-react:active {
-  transform: scale(0.97);
-}
-
 .cal-tarjeta-react {
   display: flex;
   flex-direction: column;
@@ -2837,7 +2799,7 @@ kbd {
   box-shadow: 0 1px 3px rgba(var(--color-noche-rgb), 0.14);
 }
 
-.cal-v3-react :is(.cal-flecha-react, .cal-hoy-react, .cal-segmentos-react button, .cal-capa-react, .cal-numero-react, .cal-mas-react, .cal-anadir-react):focus-visible {
+.cal-v3-react :is(.cal-flecha-react, .cal-hoy-react, .cal-segmentos-react button, .cal-capa-react, .cal-numero-react, .cal-mas-react):focus-visible {
   outline: 2px solid var(--color-azul);
   outline-offset: 2px;
 }
@@ -2913,7 +2875,7 @@ span.cal-capa-react {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
   border: 1px solid var(--cal-linea);
-  border-radius: 16px;
+  border-radius: var(--radius-md);
   overflow: hidden;
 }
 

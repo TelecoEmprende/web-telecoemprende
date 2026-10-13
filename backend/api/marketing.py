@@ -245,6 +245,22 @@ def _autor() -> str:
     return session.get("equipo_email", "admin")
 
 
+def es_cargo_vp_o_admin() -> bool:
+    """Cargo, VP de cualquier departamento o admin: quien ve Métricas y
+    Presupuesto."""
+    if is_admin_authenticated():
+        return True
+    sesion = equipo_session_info()
+    return sesion["cargo"] in CARGOS_VALIDOS or len(sesion["vp_de"]) > 0
+
+
+def _equipos_visibles(equipos: list[str]) -> list[str]:
+    """`equipos` va ordenado por preferencia (1ª, 2ª...): eso solo lo ve quien
+    asigna tareas (`SelectorMiembros`). El resto recibe los mismos
+    departamentos pero en orden alfabético."""
+    return equipos if _puede_asignar_tareas() else sorted(equipos)
+
+
 def _puede_asignar_tareas(departamento: str | None = None) -> bool:
     """Solo board y VPs del departamento asignan.
 
@@ -647,7 +663,7 @@ def api_miembros():
     miembros = [
         {
             "email": a["email"],
-            "equipos": a["equipos"],
+            "equipos": _equipos_visibles(a["equipos"]),
             "activo": a["activo"],
             "tags": a["tags"],
             "nombre": a["nombre"],
@@ -695,7 +711,7 @@ def api_ficha_miembro():
     ficha = ficha_miembro(email, departamento_actual())
     ficha.update(
         email=acceso["email"],
-        equipos=acceso["equipos"],
+        equipos=_equipos_visibles(acceso["equipos"]),
         vp_de=acceso["vp_de"],
         cargo=acceso["cargo"],
         tags=acceso["tags"],

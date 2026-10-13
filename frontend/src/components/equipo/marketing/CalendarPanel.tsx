@@ -590,7 +590,7 @@ export function CalendarPanel({
         {vista === "mes" ? (
           <button
             type="button"
-            className="cal-anadir-react"
+            className="crm-btn"
             onClick={() => {
               const ahora = new Date();
               setCursor(new Date(ahora.getFullYear(), ahora.getMonth(), 1));
@@ -598,7 +598,7 @@ export function CalendarPanel({
               setDiaAbierto(hoy);
             }}
           >
-            <span aria-hidden="true">+</span> Añadir
+            + Añadir
           </button>
         ) : null}
       </header>
