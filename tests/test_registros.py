@@ -43,13 +43,18 @@ class RegistrosTestCase(unittest.TestCase):
         app.app.config["TESTING"] = True
         self.client = app.app.test_client()
 
-    def login(self, equipos=("eventos", "ingenieria")):
+    def login(self, equipos=("eventos", "ingenieria"), cargo="boardmember"):
         conn = equipo_service._get_connection()
         with conn.cursor() as cur:
             cur.execute(
-                "INSERT INTO equipo_accesos (email, password_hash, equipos)"
-                " VALUES (%s, %s, %s)",
-                ("iker@example.com", generate_password_hash("test-equipo"), list(equipos)),
+                "INSERT INTO equipo_accesos (email, password_hash, equipos, cargo)"
+                " VALUES (%s, %s, %s, %s)",
+                (
+                    "iker@example.com",
+                    generate_password_hash("test-equipo"),
+                    list(equipos),
+                    cargo,
+                ),
             )
         conn.commit()
         conn.close()
@@ -109,6 +114,11 @@ class RegistrosTestCase(unittest.TestCase):
         )
 
     # --- Presupuesto ---
+
+    def test_presupuesto_exige_cargo_vp_o_admin(self):
+        self.login(cargo="")
+        self.assertEqual(self.client.get("/api/eventos/presupuesto").status_code, 403)
+        self.assertEqual(self.client.get("/api/eventos/presupuesto/resumen").status_code, 403)
 
     def test_los_totales_del_presupuesto_salen_exactos(self):
         self.login()

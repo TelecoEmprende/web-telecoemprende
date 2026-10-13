@@ -5,9 +5,8 @@ from datetime import date, timedelta
 from flask import Blueprint, jsonify, request, session
 
 from backend.api.admin import _validar_evento_calendario
-from backend.api.marketing import DatosInvalidos, _foto
+from backend.api.marketing import DatosInvalidos, _foto, es_cargo_vp_o_admin
 from backend.config import (
-    CARGOS_VALIDOS,
     EQUIPOS_VALIDOS,
     LOGIN_BLOCK_WINDOW_SECONDS,
     LUMA_CALENDAR_URL,
@@ -60,19 +59,6 @@ def _puede_editar_calendario_club() -> bool:
     return is_admin_authenticated() or (
         is_equipo_authenticated() and len(equipo_session_info()["vp_de"]) > 0
     )
-
-
-def _es_board_o_vp() -> bool:
-    """Board del club (cargo de dirección) o VP de cualquier departamento, o
-    admin. Igual que `_puede_editar_calendario_club` pero sumando el cargo:
-    las métricas las ve quien decide sobre el club entero, no solo quien
-    edita el calendario."""
-    if is_admin_authenticated():
-        return True
-    if not is_equipo_authenticated():
-        return False
-    sesion = equipo_session_info()
-    return sesion["cargo"] in CARGOS_VALIDOS or len(sesion["vp_de"]) > 0
 
 
 @equipo_api.route("/login", methods=["POST"])
@@ -339,10 +325,10 @@ def api_equipo_mis_proyectos():
 def api_equipo_metricas():
     """Salud del club entero para el board: mismo semáforo que la de cada
     departamento, cruzando los tres, más productividad por persona. Ver
-    `metricas_club` -- gated a board/VP."""
+    `metricas_club` -- gated a cargo/VP/admin."""
     if not is_equipo_authenticated() and not is_admin_authenticated():
         return jsonify(build_response(False, "No autorizado.")), 401
-    if not _es_board_o_vp():
+    if not es_cargo_vp_o_admin():
         return jsonify(build_response(False, "No autorizado.")), 403
 
     try:
