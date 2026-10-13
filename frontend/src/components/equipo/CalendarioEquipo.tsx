@@ -436,7 +436,7 @@ export function CalendarioEquipo({ onIrA, onAbrirNota }: Props) {
               <div className="crm-tags-react" role="group" aria-label="Filtrar tareas">
                 <button
                   type="button"
-                  className={`crm-tag${filtroTareas === "mias" ? " crm-tag-azul-react" : ""}`}
+                  className={`crm-tag${filtroTareas === "mias" ? " crm-tag-activo-react" : ""}`}
                   aria-pressed={filtroTareas === "mias"}
                   onClick={() => setFiltroTareas("mias")}
                 >
@@ -444,7 +444,7 @@ export function CalendarioEquipo({ onIrA, onAbrirNota }: Props) {
                 </button>
                 <button
                   type="button"
-                  className={`crm-tag${filtroTareas === "departamentos" ? " crm-tag-azul-react" : ""}`}
+                  className={`crm-tag${filtroTareas === "departamentos" ? " crm-tag-activo-react" : ""}`}
                   aria-pressed={filtroTareas === "departamentos"}
                   onClick={() => setFiltroTareas("departamentos")}
                 >

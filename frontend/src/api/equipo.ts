@@ -112,7 +112,7 @@ export function checkinEventoCalendario(eventoId: number, email: string, asistio
   });
 }
 
-/** Solo board/VP (ver `_es_board_o_vp` en el backend) -- 403 para cualquier
+/** Solo cargo, VP o admin (ver `es_cargo_vp_o_admin` en el backend) -- 403 para cualquier
  *  otra persona. `MetricasPanel` no la llama si la sesión no cumple. */
 export function getMetricas() {
   return apiRequest<ApiResult & { metricas: MetricasClub }>("/api/equipo/metricas?dias=30");

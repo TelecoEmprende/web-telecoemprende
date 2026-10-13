@@ -8,7 +8,7 @@
   font-weight: 400;
   letter-spacing: var(--tracking-display);
   line-height: 1;
-  color: var(--color-navy);
+  color: var(--color-noche);
 }
 
 .mkt-detalle-header-react {
@@ -91,9 +91,9 @@
   min-height: 44px;
   padding: 6px 14px;
   border: 1px solid var(--color-border);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   background: var(--color-surface);
-  color: var(--color-navy);
+  color: var(--color-noche);
   font-family: inherit;
   font-size: 0.82rem;
   font-weight: 700;
@@ -102,7 +102,7 @@
 }
 
 .mkt-btn-mini-react:hover:not(:disabled) {
-  border-color: var(--color-orange);
+  border-color: var(--color-impulso);
 }
 
 .mkt-btn-mini-peligro-react {
@@ -133,7 +133,7 @@
 }
 
 .mkt-volver-react:hover {
-  color: var(--color-orange);
+  color: var(--color-impulso);
 }
 
 /* ---------- Formularios ---------- */
@@ -188,7 +188,7 @@
 .mkt-form-react input[type="time"]:focus,
 .mkt-form-react textarea:focus,
 .mkt-form-react select:focus {
-  outline: 2px solid var(--color-orange);
+  outline: 2px solid var(--color-impulso);
   outline-offset: 1px;
 }
 
@@ -216,7 +216,7 @@
 }
 
 .mkt-selector-miembros-react:focus-visible {
-  outline: 2px solid var(--color-orange);
+  outline: 2px solid var(--color-impulso);
   outline-offset: 1px;
 }
 
@@ -319,14 +319,14 @@
 }
 
 .mkt-campaign-card-react:hover {
-  border-color: var(--color-orange);
+  border-color: var(--color-impulso);
   box-shadow: var(--shadow-soft);
 }
 
 .mkt-campaign-nombre-react {
   font-size: 1.05rem;
   font-weight: 700;
-  color: var(--color-navy);
+  color: var(--color-noche);
 }
 
 .mkt-campaign-objetivo-react {
@@ -356,7 +356,7 @@
   width: 100%;
   height: 100%;
   border-radius: 999px;
-  background: var(--color-orange);
+  background: var(--color-impulso);
   transform-origin: left;
   /* Sin `transition`: la barra la anima motion (ver `movimiento.tsx`) y las
      dos capas peleándose por `transform` dejaban el avance a medio camino. */
@@ -403,7 +403,7 @@
   margin: 0;
   font-size: 1.05rem;
   font-weight: 700;
-  color: var(--color-navy);
+  color: var(--color-noche);
 }
 
 .mkt-content-acciones-react {
@@ -416,7 +416,7 @@
   min-height: 44px;
   padding: 6px 10px;
   border: 1px solid var(--color-border);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   background: var(--color-surface);
   color: var(--color-text);
   font-family: inherit;
@@ -463,7 +463,7 @@
   width: 22px;
   height: 22px;
   flex-shrink: 0;
-  accent-color: var(--color-orange);
+  accent-color: var(--color-impulso);
   cursor: pointer;
 }
 
@@ -482,7 +482,7 @@
   min-height: 44px;
   padding: 9px 12px;
   border: 1px solid var(--color-border);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   background: var(--color-surface);
   color: var(--color-text);
   font-family: inherit;
@@ -490,7 +490,7 @@
 }
 
 .mkt-tarea-nueva-react input:focus {
-  outline: 2px solid var(--color-orange);
+  outline: 2px solid var(--color-impulso);
   outline-offset: 1px;
 }
 
@@ -505,7 +505,7 @@
 
 .mkt-chip-por_revisar-react {
   background: rgba(var(--color-azul-rgb), 0.28);
-  color: var(--color-navy);
+  color: var(--color-noche);
 }
 
 .mkt-chip-acabado-react {
@@ -537,54 +537,52 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
-  padding: 10px;
+  padding: 12px;
   min-height: 160px;
-  border: 1px dashed rgba(var(--color-noche-rgb), 0.16);
-  border-radius: 10px;
-  background: rgba(var(--color-noche-rgb), 0.02);
-  transition: border-color var(--dur-fast) var(--ease-out);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: rgba(var(--color-papel-hueso-rgb), 0.4);
+  transition: border-color var(--dur-fast) var(--ease-out),
+    background-color var(--dur-fast) var(--ease-out);
 }
 
 /* Zona de destino mientras se arrastra una tarjeta encima. */
 .mkt-columna-sobre-react {
-  border-style: solid;
-  border-color: var(--color-orange);
+  border-color: var(--color-azul);
+  background: rgba(var(--color-azul-rgb), 0.06);
 }
 
-/* Las columnas del boceto son todas iguales: el color lo ponen las cajitas de
-   las tarjetas, no el fondo de la columna. Cuatro fondos de colores detrás de
-   unas tarjetas que ya llevan sus propias etiquetas era ruido sobre ruido. */
+/* Cabecera de columna: nombre a la izquierda, recuento en pastilla a la derecha. */
 .mkt-columna-react h4 {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 6px;
   margin: 0 0 2px;
   padding: 0 2px;
-  font-size: 0.66rem;
+  font-size: 0.8rem;
   font-weight: 700;
-  letter-spacing: var(--tracking-label);
-  text-transform: uppercase;
-  color: rgba(var(--color-noche-rgb), 0.62);
+  color: var(--color-noche);
 }
 
-/* El contador va pegado al rótulo ("Por hacer · 5"), no como pastilla suelta. */
 .mkt-contador-react {
-  padding: 0;
-  border: 0;
-  background: none;
-  color: inherit;
-  font: inherit;
-}
-
-.mkt-contador-react::before {
-  content: "· ";
+  min-width: 24px;
+  height: 22px;
+  padding: 0 8px;
+  justify-content: center;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-circle);
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  font-size: 0.72rem;
+  font-weight: 700;
 }
 
 .mkt-task-titulo-react {
   margin: 0;
   font-size: 0.92rem;
   font-weight: 700;
-  color: var(--color-navy);
+  color: var(--color-noche);
   line-height: 1.45;
 }
 
@@ -718,7 +716,7 @@
 
 .mkt-dia-hoy-react {
   border-style: solid;
-  border-color: var(--color-orange);
+  border-color: var(--color-impulso);
 }
 
 .mkt-dia-numero-react {
@@ -821,7 +819,7 @@
 
 .mkt-miembro-react:hover,
 .mkt-miembro-react:focus-visible {
-  border-color: var(--color-orange);
+  border-color: var(--color-impulso);
 }
 
 /* La fila del directorio, ahora con acciones rápidas fuera del botón de la
@@ -861,8 +859,8 @@
 
 .mkt-icon-btn-react:hover,
 .mkt-icon-btn-react:focus-visible {
-  border-color: var(--color-orange);
-  color: var(--color-orange);
+  border-color: var(--color-impulso);
+  color: var(--color-impulso);
 }
 
 .mkt-miembro-datos-react {
@@ -876,7 +874,7 @@
 .mkt-miembro-nombre-react {
   font-size: 0.98rem;
   font-weight: 700;
-  color: var(--color-navy);
+  color: var(--color-noche);
 }
 
 /* ---------- Habilidades y carga ---------- */
@@ -1091,7 +1089,7 @@
   font-family: var(--font-body);
   font-size: 1.1rem;
   font-weight: 700;
-  color: var(--color-navy);
+  color: var(--color-noche);
 }
 
 .mkt-ficha-skills-react {
@@ -1128,7 +1126,7 @@
 .mkt-ficha-asignar-react input {
   width: 100%;
   padding: 8px 10px;
-  border: 1px solid var(--color-orange);
+  border: 1px solid var(--color-impulso);
   border-radius: var(--radius-md);
   background: var(--color-surface);
   color: var(--color-text);
@@ -1166,7 +1164,7 @@
   font-size: 1.6rem;
   font-weight: 400;
   line-height: 1.1;
-  color: var(--color-navy);
+  color: var(--color-noche);
   font-variant-numeric: tabular-nums;
 }
 
@@ -1213,7 +1211,7 @@
 }
 
 .mkt-ficha-actividad-texto-react b {
-  color: var(--color-navy);
+  color: var(--color-noche);
 }
 
 .mkt-ficha-actividad-texto-react em {
@@ -1235,12 +1233,12 @@
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: var(--color-steel);
+  background: var(--color-azul-claro);
   align-self: center;
 }
 
-.mkt-punto-en_progreso-react { background: var(--color-gold); }
-.mkt-punto-por_revisar-react { background: var(--color-orange); }
+.mkt-punto-en_progreso-react { background: var(--color-chispa); }
+.mkt-punto-por_revisar-react { background: var(--color-impulso); }
 .mkt-punto-acabado-react { background: var(--color-success-text); }
 
 .mkt-ficha-acciones-react {
@@ -1318,7 +1316,7 @@
   font-size: 1.3rem;
   font-weight: 700;
   letter-spacing: -0.03em;
-  color: var(--color-navy);
+  color: var(--color-noche);
 }
 
 .mkt-modal-acciones-react {
@@ -1440,7 +1438,7 @@
      principal, pero sin llegar a `opacity` + borde transparente, que en
      reposo se leía como deshabilitado en vez de secundario. */
   border: 1px solid var(--color-border);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   background: none;
   color: var(--color-text-muted);
   font-family: inherit;
@@ -1507,14 +1505,14 @@
 
 .mkt-dia-numero-react:hover {
   background: var(--color-background);
-  color: var(--color-navy);
+  color: var(--color-noche);
 }
 
 .mkt-dia-mas-react {
   opacity: 0;
   font-size: 1rem;
   line-height: 1;
-  color: var(--color-orange);
+  color: var(--color-impulso);
 }
 
 .mkt-dia-react:hover .mkt-dia-mas-react,
@@ -1572,7 +1570,7 @@ button.mkt-evento-react:active {
   width: 100%;
   min-width: 0;
   padding: 6px 8px;
-  border: 1px solid var(--color-orange);
+  border: 1px solid var(--color-impulso);
   border-radius: 6px;
   background: var(--color-surface);
   color: var(--color-text);
@@ -1618,7 +1616,7 @@ button.mkt-evento-react:active {
 .mkt-semana-react {
   margin-top: 16px;
   border: 1px solid var(--color-border);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   overflow: hidden;
   background: var(--color-surface);
 }
@@ -1681,7 +1679,7 @@ button.mkt-evento-react:active {
 
 .mkt-semana-dia-cabecera-react:hover {
   background: var(--color-background);
-  color: var(--color-navy);
+  color: var(--color-noche);
 }
 
 .mkt-semana-dia-hoy-react .mkt-semana-dia-cabecera-react {
@@ -1930,35 +1928,26 @@ button.mkt-evento-react:active {
   align-items: stretch;
   gap: 6px;
   width: 100%;
-  padding: 10px 11px;
-  border: 1px solid rgba(var(--color-noche-rgb), 0.09);
-  border-radius: 10px;
+  padding: 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
   background: var(--color-surface);
   text-align: left;
   font-family: inherit;
   cursor: pointer;
-  box-shadow: 0 1px 2px rgba(var(--color-noche-rgb), 0.04);
-  transition: border-color var(--dur-fast) var(--ease-out),
-    box-shadow var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out);
+  transition: border-color var(--dur-fast) var(--ease-out);
 }
 
-.mkt-task-card-react:hover {
-  border-color: var(--color-orange);
-  box-shadow: 0 6px 16px rgba(var(--color-noche-rgb), 0.1);
-  transform: translateY(-1px);
-}
-
-/* La tarjeta que se está arrastrando: el navegador ya pinta un "fantasma"
-   con el aspecto original, así que esta se queda atenuada en su columna de
-   origen para que se vea claro que es la que se está moviendo. */
-.mkt-task-card-arrastrando-react {
-  opacity: 0.4;
+@media (hover: hover) and (pointer: fine) {
+  .mkt-task-card-react:hover {
+    border-color: var(--color-azul-claro);
+  }
 }
 
 .mkt-task-card-react .mkt-task-titulo-react {
   font-size: 0.875rem;
   font-weight: 600;
-  color: var(--color-navy);
+  color: var(--color-noche);
   line-height: 1.4;
 }
 
@@ -2013,7 +2002,7 @@ button.mkt-evento-react:active {
   font-size: 1.8rem;
   font-weight: 700;
   letter-spacing: -0.03em;
-  color: var(--color-navy);
+  color: var(--color-noche);
   line-height: 1.1;
 }
 
@@ -2136,7 +2125,7 @@ button.mkt-evento-react {
 .mkt-checklist-fila-react input[type="checkbox"] {
   width: 20px;
   height: 20px;
-  accent-color: var(--color-orange);
+  accent-color: var(--color-impulso);
   cursor: pointer;
 }
 
@@ -2199,7 +2188,7 @@ button.mkt-evento-react {
   margin: 0;
   font-size: 1rem;
   font-weight: 700;
-  color: var(--color-navy);
+  color: var(--color-noche);
   overflow-wrap: anywhere;
 }
 
@@ -2238,7 +2227,7 @@ button.mkt-evento-react {
 }
 
 .reg-item-cuerpo-react b {
-  color: var(--color-navy);
+  color: var(--color-noche);
 }
 
 /* Actas y mensajes largos: se escriben con saltos de línea y así se leen. */
@@ -2363,7 +2352,7 @@ button.mkt-evento-react {
   letter-spacing: var(--tracking-display);
   font-size: 1.35rem;
   font-weight: 400;
-  color: var(--color-navy);
+  color: var(--color-noche);
   font-variant-numeric: tabular-nums;
 }
 
@@ -2416,15 +2405,15 @@ button.mkt-evento-react {
 
 .mkt-semana-dia-react {
   padding: 8px 4px;
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   text-align: center;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
 }
 
 .mkt-semana-dia-hoy-react {
-  border-color: var(--color-orange);
-  background: color-mix(in srgb, var(--color-orange) 10%, var(--color-surface));
+  border-color: var(--color-impulso);
+  background: color-mix(in srgb, var(--color-impulso) 10%, var(--color-surface));
 }
 
 /* ---------- Selector de miembros: preferencia y carga ---------- */

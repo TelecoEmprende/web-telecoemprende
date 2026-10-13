@@ -120,19 +120,14 @@ export function MembersPanel({ deptos }: Props) {
       {error ? <AlertBanner variant="error" message={error} /> : null}
 
       <header className="crm-cabecera-react">
-        <h3 className="crm-h1">
-          {filtroDepto ?? (deptos.length === 1 ? deptos[0] : null)
-            ? `Miembros de ${DEPTO_LABEL[(filtroDepto ?? deptos[0]) as Team]}`
-            : "Miembros del club"}
-        </h3>
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="ml-auto flex flex-wrap items-center gap-3">
           {deptos.length > 1 ? (
             <div className="crm-tags-react" role="group" aria-label="Filtrar por departamento">
               {[null, ...deptos].map((d) => (
                 <button
                   key={d ?? "todos"}
                   type="button"
-                  className={`crm-tag${filtroDepto === d ? " crm-tag-azul-react" : ""}`}
+                  className={`crm-tag${filtroDepto === d ? " crm-tag-activo-react" : ""}`}
                   aria-pressed={filtroDepto === d}
                   onClick={() => setFiltroDepto(d)}
                 >
@@ -145,7 +140,7 @@ export function MembersPanel({ deptos }: Props) {
             <div className="crm-tags-react" role="group" aria-label="Filtrar por habilidad">
               <button
                 type="button"
-                className={`crm-tag${filtro === null ? " crm-tag-azul-react" : ""}`}
+                className={`crm-tag${filtro === null ? " crm-tag-activo-react" : ""}`}
                 aria-pressed={filtro === null}
                 onClick={() => setFiltro(null)}
               >
@@ -155,7 +150,7 @@ export function MembersPanel({ deptos }: Props) {
                 <button
                   key={tag}
                   type="button"
-                  className={`crm-tag${filtro === tag ? " crm-tag-azul-react" : ""}`}
+                  className={`crm-tag${filtro === tag ? " crm-tag-activo-react" : ""}`}
                   aria-pressed={filtro === tag}
                   onClick={() => setFiltro(filtro === tag ? null : tag)}
                 >

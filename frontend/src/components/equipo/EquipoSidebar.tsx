@@ -190,7 +190,7 @@ export function EquipoSidebar({
   const [proximo, setProximo] = useState<Proximo | null>(null);
 
   const ayuda = (label: string) => (state === "collapsed" ? label : undefined);
-  const esBoardOVp = cargo !== "" || vpDe.length > 0;
+  const esCargoOAdmin = cargo !== "" || vpDe.length > 0 || tieneAccesoAdmin;
   const tienePresupuesto = equiposConPanel("presupuesto", teams).length > 0;
 
   // Los numeritos de al lado (tareas abiertas, notas) y la tarjeta del
@@ -262,8 +262,8 @@ export function EquipoSidebar({
   // gestión, no de trabajo diario: un solo grupo "Admin" en vez de mezclarlas
   // con Tareas/Proyectos/Miembros o repartirlas sueltas por el sidebar.
   const itemsAdmin: Omit<Item, "grupo">[] = [
-    ...(esBoardOVp ? [{ id: "metricas" as const, label: "Métricas", icono: BarChart3 }] : []),
-    ...(tienePresupuesto
+    ...(esCargoOAdmin ? [{ id: "metricas" as const, label: "Métricas", icono: BarChart3 }] : []),
+    ...(esCargoOAdmin && tienePresupuesto
       ? [{ id: "presupuesto" as const, label: "Presupuesto", icono: Wallet }]
       : []),
     ...(tieneAccesoAdmin
