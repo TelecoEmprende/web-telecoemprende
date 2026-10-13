@@ -399,7 +399,7 @@ export function EquipoAccesosPanel() {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           {/* El título ya está en la barra superior. */}
-          <p className="max-w-[72ch]">
+          <p className="crm-s max-w-[72ch]">
             Cada persona va en dos departamentos como mínimo: la <strong>1ª preferencia</strong> es
             donde se le proponen antes las tareas. El cargo es un título; el acceso al grupo
             Admin se da aparte, con la casilla <strong>Admin</strong>.

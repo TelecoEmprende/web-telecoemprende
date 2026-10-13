@@ -1,6 +1,6 @@
 import { motion } from "motion/react";
 import { FormEvent, ReactNode, useCallback, useEffect, useState } from "react";
-import { Pencil, Plus, Trash2 } from "lucide-react";
+import { Pencil, Trash2 } from "lucide-react";
 
 import { useApi } from "../DeptoApi";
 import { AlertBanner } from "../../feedback/AlertBanner";
@@ -126,7 +126,7 @@ export function RegistrosPanel({
           className="crm-btn"
           onClick={() => setCreando(true)}
         >
-          <Plus aria-hidden="true" /> {etiquetaNuevo}
+          + {etiquetaNuevo}
         </button>
       </header>
 

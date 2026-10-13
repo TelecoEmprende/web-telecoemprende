@@ -209,7 +209,7 @@ export function NotasPanel({ email, teams, notaInicial, onNotaAbierta }: Props) 
             <button
               key={f.id}
               type="button"
-              className={`crm-tag${filtro === f.id ? " crm-tag-azul-react" : ""}`}
+              className={`crm-tag${filtro === f.id ? " crm-tag-activo-react" : ""}`}
               aria-pressed={filtro === f.id}
               onClick={() => setFiltro(f.id)}
             >

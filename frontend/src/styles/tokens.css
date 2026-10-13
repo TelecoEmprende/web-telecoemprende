@@ -28,6 +28,8 @@
   --color-papel-rgb: 247, 245, 241;
   --color-papel-hueso: #ede9e2;    /* secciones alternas y tarjetas */
   --color-papel-hueso-rgb: 237, 233, 226;
+  --color-blanco: #ffffff;         /* texto sobre Noche/Azul y capas translúcidas */
+  --color-blanco-rgb: 255, 255, 255;
   --color-azul-profundo: #0e43a0;  /* capas y formas sobre Azul TE */
   --color-azul-claro: #a9c4f0;     /* etiquetas y texto secundario sobre azul */
 

@@ -747,7 +747,7 @@ export function CampaignsPanel({ deptos, campaignInicial, onCampaignAbierta, onA
         <div className="crm-tags-react">
           {archivadasCount > 0 ? (
             <label
-              className={`crm-tag crm-tag-check-react${mostrarArchivadas ? " crm-tag-azul-react" : ""}`}
+              className={`crm-tag crm-tag-check-react${mostrarArchivadas ? " crm-tag-activo-react" : ""}`}
             >
               <input
                 type="checkbox"

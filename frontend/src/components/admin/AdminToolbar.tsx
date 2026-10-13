@@ -47,7 +47,7 @@ export function AdminToolbar({
       <div className="mb-4 flex items-start justify-between gap-[18px] max-[720px]:flex-col">
         <div>
           {/* El título ("Inscripciones") ya está en la barra superior. */}
-          <p className="text-[0.92rem] leading-[1.7] text-muted-foreground">
+          <p className="text-[0.78rem] leading-[1.4] text-muted-foreground">
             {mostrados === total ? (
               <>
                 Total actual: <strong>{total}</strong>
@@ -65,7 +65,7 @@ export function AdminToolbar({
             type="button"
             variant="outline"
             size="lg"
-            className="h-12 px-[18px] font-bold max-[720px]:w-full"
+            className="h-8 px-3 text-[0.78rem] font-semibold max-[720px]:w-full"
             disabled={emails === 0}
             onClick={onCopiarEmails}
             title="Copia los emails de las filas que estás viendo"
@@ -73,7 +73,7 @@ export function AdminToolbar({
             <ClipboardCopy />
             Copiar emails ({emails})
           </Button>
-          <Button asChild variant="outline" size="lg" className="h-12 px-[18px] font-bold max-[720px]:w-full">
+          <Button asChild variant="outline" size="lg" className="h-8 px-3 text-[0.78rem] font-semibold max-[720px]:w-full">
             <a href={downloadUrl}>Descargar Excel</a>
           </Button>
         </div>
@@ -91,7 +91,7 @@ export function AdminToolbar({
           onChange={(event) => onBusquedaChange(event.target.value)}
           placeholder="Buscar por nombre, email, escuela..."
           aria-label="Buscar inscripciones"
-          className="h-11 pl-10"
+          className="h-9 pl-10"
         />
       </div>
 
@@ -127,7 +127,7 @@ function EventoTab({
       type="button"
       role="tab"
       aria-selected={activo}
-      className={`relative cursor-pointer rounded-full border px-4 py-2.5 text-sm font-bold ${
+      className={`relative cursor-pointer rounded-full border px-3 py-1.5 text-xs font-semibold ${
         activo
           ? "border-[var(--color-navy)] text-white"
           : "border-[var(--color-paper-line)] bg-white text-muted-foreground"

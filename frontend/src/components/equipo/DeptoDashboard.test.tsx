@@ -352,7 +352,7 @@ describe("/equipo — panel de Marketing", () => {
     expect(screen.queryByRole("button", { name: /Escribir guion/ })).not.toBeInTheDocument();
   });
 
-  it("arrastrar una tarea a otra columna deja deshacer el movimiento", async () => {
+  it("mover una tarea a otra columna deja deshacer el movimiento", async () => {
     getTasks.mockResolvedValue({
       ok: true,
       usuario: YO,
@@ -363,25 +363,11 @@ describe("/equipo — panel de Marketing", () => {
     await renderMarketing();
     await userEvent.click(screen.getByRole("button", { name: "Tareas" }));
     const tarjeta = await screen.findByRole("button", { name: /Escribir guion/ });
-    const destino = document.querySelector('[data-estado="en_progreso"]') as HTMLElement;
 
-    // jsdom no implementa DataTransfer: un objeto mínimo con las mismas
-    // formas de leer/escribir que usa el tablero real basta para el test.
-    const datos: Record<string, string> = {};
-    const dataTransfer = {
-      setData: (tipo: string, valor: string) => {
-        datos[tipo] = valor;
-      },
-      getData: (tipo: string) => datos[tipo] ?? "",
-      get types() {
-        return Object.keys(datos);
-      },
-      effectAllowed: "",
-    };
-
-    fireEvent.dragStart(tarjeta, { dataTransfer });
-    fireEvent.dragOver(destino, { dataTransfer });
-    fireEvent.drop(destino, { dataTransfer });
+    // El arrastre con puntero no se puede simular en jsdom (sin `pointer: fine`
+    // ni geometría): el teclado hace el mismo movimiento.
+    tarjeta.focus();
+    await userEvent.keyboard("{Alt>}{ArrowRight}{/Alt}");
 
     await waitFor(() => expect(updateTask).toHaveBeenCalledWith(1, { estado: "en_progreso" }));
     expect(
@@ -606,9 +592,6 @@ describe("/equipo — panel de Marketing", () => {
     await renderMarketing();
     await userEvent.click(screen.getByRole("button", { name: "Miembros" }));
 
-    expect(
-      await screen.findByRole("heading", { name: "Miembros de Marketing" }),
-    ).toBeInTheDocument();
     // El directorio enseña el nombre, no el email en crudo.
     expect(await screen.findByText("Abril")).toBeInTheDocument();
     expect(screen.getByText("Libre")).toBeInTheDocument();
