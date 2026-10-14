@@ -17,6 +17,11 @@ import {
   type Seccion,
 } from "../components/equipo/EquipoSidebar";
 import { EquipoLoginForm, type ModoAcceso } from "../components/equipo/EquipoLoginForm";
+import {
+  CambiarClaveObligatorio,
+  ElegirClaveNueva,
+  PedirEnlaceClave,
+} from "../components/equipo/RecuperarClave";
 import { DeptoDashboard } from "../components/equipo/DeptoDashboard";
 import { MesaPanel } from "../components/equipo/club/MesaPanel";
 import { PapeleraPanel } from "../components/equipo/club/PapeleraPanel";
@@ -76,6 +81,24 @@ export function EquipoPage() {
   // La nota que "Notas" abre al montar (desde el Inicio).
   const [notaInicial, setNotaInicial] = useState<number | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
+  // Recuperar la contraseña: el enlace del correo trae `?recuperar=<token>`, y
+  // «¿Olvidaste tu contraseña?» pide ese enlace.
+  const tokenRecuperar = searchParams.get("recuperar") ?? "";
+  const [pidiendoEnlace, setPidiendoEnlace] = useState(false);
+  // La contraseña con la que se entró la puso un admin: hay que cambiarla.
+  const [cambiarClave, setCambiarClave] = useState(false);
+
+  function salirDeRecuperar() {
+    setPidiendoEnlace(false);
+    setSearchParams(
+      (actuales) => {
+        const siguientes = new URLSearchParams(actuales);
+        siguientes.delete("recuperar");
+        return siguientes;
+      },
+      { replace: true },
+    );
+  }
 
   useEffect(() => {
     let active = true;
@@ -91,6 +114,7 @@ export function EquipoPage() {
           setVpDe(session.vp_de);
           setCargo(session.cargo);
           setEsAdmin(session.admin);
+          setCambiarClave(session.cambiar_clave);
           setPerfil({ nombre: session.nombre, email: session.email });
           setDeptosFiltro(session.teams);
         }
@@ -162,6 +186,7 @@ export function EquipoPage() {
         setVpDe(response.vp_de);
         setCargo(response.cargo);
         setEsAdmin(response.admin);
+        setCambiarClave(response.cambiar_clave);
         // La respuesta del login no repite el email: es el que se acaba de
         // teclear.
         setPerfil({ nombre: response.nombre, email });
@@ -194,6 +219,7 @@ export function EquipoPage() {
       setVpDe([]);
       setCargo("");
       setEsAdmin(false);
+      setCambiarClave(false);
       setPerfil({ nombre: "", email: "" });
       setSeccion("club");
       setDeptosFiltro([]);
@@ -220,7 +246,7 @@ export function EquipoPage() {
   // asigna en cualquier departamento; un VP, solo en el suyo.
   const puedeAsignarEnTodo = esAdmin || cargo !== "";
 
-  if (!isAuthenticated) {
+  if (!isAuthenticated || cambiarClave) {
     return (
       // Fuera de sesión, la portada de la web: plano Azul TE, titular Anton y
       // el círculo Impulso entrando por la esquina (ver `.in-hero`). La carga
@@ -265,13 +291,22 @@ export function EquipoPage() {
                 formulario y "cuenta creada" son dos <section> distintas y,
                 animadas ellas, cambiar de una a otra repetía la entrada. */}
             <div className="acceso-tarjeta-react">
-              <EquipoLoginForm
-                isSubmitting={isSubmitting}
-                errorMessage={loginError}
-                successMessage={registroMessage}
-                onSubmit={handleLogin}
-                onModeChange={limpiarMensajes}
-              />
+              {isAuthenticated && cambiarClave ? (
+                <CambiarClaveObligatorio onHecho={() => setCambiarClave(false)} />
+              ) : tokenRecuperar ? (
+                <ElegirClaveNueva token={tokenRecuperar} onHecho={salirDeRecuperar} />
+              ) : pidiendoEnlace ? (
+                <PedirEnlaceClave onVolver={salirDeRecuperar} />
+              ) : (
+                <EquipoLoginForm
+                  isSubmitting={isSubmitting}
+                  errorMessage={loginError}
+                  successMessage={registroMessage}
+                  onSubmit={handleLogin}
+                  onModeChange={limpiarMensajes}
+                  onOlvide={() => setPidiendoEnlace(true)}
+                />
+              )}
             </div>
           </main>
         )}

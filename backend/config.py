@@ -42,6 +42,13 @@ MIN_EQUIPOS_POR_PERSONA = len(EQUIPOS_ORDEN_POR_DEFECTO)
 # departamento (asignar tareas en cualquiera, calendario del club).
 CARGOS_VALIDOS = {"presidente", "vicepresidente", "boardmember"}
 
+# Dirección pública de la web: de aquí salen los enlaces que van por email (el
+# de recuperar la contraseña). Fija y no la del Host de la petición: con esa,
+# quien manda la petición decidiría a dónde apunta el enlace de otra persona.
+URL_PUBLICA = os.environ.get("PUBLIC_BASE_URL", "https://telecoemprende.es").rstrip("/")
+# Minutos que vale el enlace de recuperar la contraseña.
+MINUTOS_ENLACE_CLAVE = 60
+
 # Envío de email transaccional (Resend, https://resend.com). Si RESEND_API_KEY
 # no está configurada, el envío se salta en silencio (ver services/email.py).
 RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "")

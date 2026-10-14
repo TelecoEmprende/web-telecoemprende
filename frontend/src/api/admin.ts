@@ -154,3 +154,11 @@ export function getAuditoria(q = "") {
   const qs = q ? `?q=${encodeURIComponent(q)}` : "";
   return apiRequest<ApiResult & { registros: RegistroAuditoria[] }>(`/api/admin/auditoria${qs}`);
 }
+
+/** Pone una contraseña provisional a una cuenta (para quien no puede recibir el
+ *  enlace por correo). Viene una sola vez, y la persona la cambia al entrar. */
+export function ponerClaveProvisional(id: number) {
+  return apiRequest<ApiResult & { password: string }>(`/api/admin/equipo/${id}/clave-provisional`, {
+    method: "POST",
+  });
+}

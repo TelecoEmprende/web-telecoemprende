@@ -145,3 +145,20 @@ export function cambiarPassword(actual: string, nueva: string) {
     body: JSON.stringify({ actual, nueva }),
   });
 }
+
+/** «¿Olvidaste tu contraseña?»: pide el enlace por correo. Responde siempre lo
+ *  mismo, exista o no la cuenta. */
+export function olvideClave(email: string) {
+  return apiRequest<ApiResult>("/api/equipo/olvide-clave", {
+    method: "POST",
+    body: JSON.stringify({ email }),
+  });
+}
+
+/** Elegir contraseña nueva con el enlace que llegó por correo. */
+export function restablecerClave(token: string, nueva: string) {
+  return apiRequest<ApiResult>("/api/equipo/restablecer-clave", {
+    method: "POST",
+    body: JSON.stringify({ token, nueva }),
+  });
+}

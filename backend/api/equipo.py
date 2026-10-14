@@ -15,6 +15,8 @@ from backend.api.marketing import (
 )
 from backend.config import (
     EQUIPOS_VALIDOS,
+    MINUTOS_ENLACE_CLAVE,
+    URL_PUBLICA,
     LOGIN_BLOCK_WINDOW_SECONDS,
     LUMA_CALENDAR_URL,
     MAX_DNI_LEN,
@@ -26,9 +28,13 @@ from backend.config import (
 )
 from backend.schemas import build_response
 from backend.services.admin import is_admin_authenticated
+from backend.services import auditoria
+from backend.services.email import enviar_recuperacion_clave
 from backend.services.luma import eventos_luma
 from backend.services.equipo import (
     cambiar_password,
+    canjear_token_recuperacion,
+    crear_token_recuperacion,
     confirmar_evento_calendario,
     crear_evento_calendario,
     datos_formulario,
@@ -150,6 +156,68 @@ def api_equipo_registro():
     )
 
 
+# La misma respuesta exista o no la cuenta: distinguirlas convertiría esta ruta
+# en un enumerador de qué correos están dados de alta.
+_ENLACE_ENVIADO = "Si hay una cuenta con ese correo, te hemos enviado un enlace para elegir otra contraseña."
+
+
+@equipo_api.route("/olvide-clave", methods=["POST"])
+def api_equipo_olvide_clave():
+    """Pide el enlace para elegir contraseña nueva. Siempre responde lo mismo;
+    lo que pasa de verdad (cuenta inexistente, enlace pedido hace nada, fallo de
+    envío) solo queda en el registro."""
+    ip = obtener_ip_real()
+    if demasiadas_peticiones(
+        ip,
+        max_requests=MAX_LOGIN_ATTEMPTS_PER_WINDOW,
+        window_seconds=LOGIN_BLOCK_WINDOW_SECONDS,
+        bucket="equipo_olvide_clave",
+    ):
+        return jsonify(build_response(False, "Demasiados intentos. Espera unos minutos.")), 429
+
+    payload = request.get_json(silent=True) or {}
+    email = limpiar_texto(str(payload.get("email", ""))).lower()
+    if not email or "@" not in email or len(email) > MAX_EMAIL_LEN:
+        return jsonify(build_response(False, "Introduce un email válido.")), 400
+
+    creado = crear_token_recuperacion(email)
+    if creado is not None:
+        token, nombre = creado
+        enlace = f"{URL_PUBLICA}/equipo?recuperar={token}"
+        if not enviar_recuperacion_clave(email, nombre, enlace, MINUTOS_ENLACE_CLAVE):
+            # Aquí no se traga: quien pidió el enlace se queda sin entrada, y
+            # un admin tiene que poder verlo (Auditoría) y ponerle una
+            # contraseña provisional.
+            auditoria.registrar(email, "EMAIL", "/api/equipo/olvide-clave (el correo no salió)", 502, ip)
+    logger.info("equipo olvide-clave ip=%s enviado=%s", ip, creado is not None)
+    return jsonify(build_response(True, _ENLACE_ENVIADO)), 200
+
+
+@equipo_api.route("/restablecer-clave", methods=["POST"])
+def api_equipo_restablecer_clave():
+    """Elige contraseña nueva con el enlace del correo."""
+    ip = obtener_ip_real()
+    if demasiadas_peticiones(
+        ip,
+        max_requests=MAX_LOGIN_ATTEMPTS_PER_WINDOW,
+        window_seconds=LOGIN_BLOCK_WINDOW_SECONDS,
+        bucket="equipo_restablecer_clave",
+    ):
+        return jsonify(build_response(False, "Demasiados intentos. Espera unos minutos.")), 429
+
+    payload = request.get_json(silent=True) or {}
+    token = str(payload.get("token", ""))
+    nueva = str(payload.get("nueva", ""))
+    if len(nueva) < 8:
+        return jsonify(build_response(False, "La contraseña debe tener al menos 8 caracteres.")), 400
+    if not token or not canjear_token_recuperacion(token, nueva):
+        return jsonify(build_response(
+            False, "El enlace no vale: ha caducado o ya se usó. Pide otro desde «¿Olvidaste tu contraseña?»."
+        )), 400
+    logger.info("equipo restablece su contraseña ip=%s", ip)
+    return jsonify(build_response(True, "Contraseña cambiada. Ya puedes entrar.")), 200
+
+
 @equipo_api.route("/logout", methods=["POST"])
 def api_equipo_logout():
     logout_equipo()
@@ -162,7 +230,10 @@ def api_equipo_session():
     info = (
         equipo_session_info()
         if authenticated
-        else {"teams": [], "vp_de": [], "cargo": "", "email": "", "nombre": "", "admin": False}
+        else {
+            "teams": [], "vp_de": [], "cargo": "", "email": "", "nombre": "", "admin": False,
+            "cambiar_clave": False,
+        }
     )
     return jsonify({"ok": True, "authenticated": authenticated, **info}), 200
 
@@ -427,6 +498,7 @@ def api_equipo_cambiar_password():
 
     if not cambiar_password(session.get("equipo_email", ""), actual, nueva):
         return jsonify(build_response(False, "La contraseña actual no es correcta.")), 400
+    session["equipo_cambiar_clave"] = False
     logger.info("equipo cambia su contraseña")
     return jsonify(build_response(True, "Contraseña cambiada.")), 200
 

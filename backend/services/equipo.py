@@ -1,4 +1,6 @@
 import base64
+import hashlib
+import secrets
 from io import BytesIO
 
 import psycopg2
@@ -13,6 +15,7 @@ from backend.config import (
     CARGOS_VALIDOS,
     DATABASE_URL,
     EQUIPOS_ORDEN_POR_DEFECTO,
+    MINUTOS_ENLACE_CLAVE,
     EQUIPOS_VALIDOS,
 )
 from backend.services.registrations import _celda_segura
@@ -80,7 +83,7 @@ def login_equipo(email: str, password: str) -> dict | None:
             cur.execute(
                 """
                 SELECT password_hash, equipos, vp_de, cargo, nombre,
-                       COALESCE(es_admin, FALSE)
+                       COALESCE(es_admin, FALSE), debe_cambiar_clave
                 FROM equipo_accesos WHERE email = %s AND activo = TRUE
                 """,
                 (email,),
@@ -98,6 +101,7 @@ def login_equipo(email: str, password: str) -> dict | None:
     cargo = row[3] if row[3] in CARGOS_VALIDOS else ""
     nombre = row[4]
     es_admin = bool(row[5])
+    cambiar_clave = bool(row[6])
 
     # session.clear() por higiene ante fijación de sesión.
     session.clear()
@@ -108,13 +112,14 @@ def login_equipo(email: str, password: str) -> dict | None:
     session["equipo_cargo"] = cargo
     session["equipo_nombre"] = nombre
     session["equipo_admin"] = es_admin
+    session["equipo_cambiar_clave"] = cambiar_clave
     # Solo quien tiene el permiso de admin marcado (no el departamento ni el
     # cargo) recibe la sesión de admin: grupo Admin y rutas /api/admin/*.
     if es_admin:
         session["admin_auth"] = True
     return {
         "teams": equipos, "vp_de": vp_de, "cargo": cargo, "nombre": nombre,
-        "admin": es_admin,
+        "admin": es_admin, "cambiar_clave": cambiar_clave,
     }
 
 
@@ -132,6 +137,7 @@ def equipo_session_info() -> dict:
         "email": session.get("equipo_email", ""),
         "nombre": session.get("equipo_nombre", ""),
         "admin": session.get("equipo_admin", False),
+        "cambiar_clave": session.get("equipo_cambiar_clave", False),
     }
 
 
@@ -328,11 +334,89 @@ def cambiar_password(email: str, actual: str, nueva: str) -> bool:
             if fila is None or not check_password_hash(fila[0], actual):
                 return False
             cur.execute(
-                "UPDATE equipo_accesos SET password_hash = %s WHERE email = %s",
+                "UPDATE equipo_accesos SET password_hash = %s, debe_cambiar_clave = FALSE"
+                " WHERE email = %s",
                 (generate_password_hash(nueva), email),
             )
         conn.commit()
     return True
+
+
+def _hash_token(token: str) -> str:
+    return hashlib.sha256(token.encode("utf-8")).hexdigest()
+
+
+def crear_token_recuperacion(email: str) -> tuple[str, str] | None:
+    """Un enlace de un solo uso para elegir contraseña nueva: devuelve
+    `(token, nombre)`, o None si no hay cuenta activa con ese correo o ya se
+    pidió hace nada (dos minutos: así nadie llena un buzón ajeno a base de
+    peticiones). Pedir uno nuevo anula los anteriores."""
+    email = email.strip().lower()
+    with _get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT id, nombre FROM equipo_accesos WHERE email = %s AND activo = TRUE", (email,)
+            )
+            fila = cur.fetchone()
+            if fila is None:
+                return None
+            persona_id, nombre = fila
+            cur.execute(
+                "SELECT 1 FROM recuperacion_clave WHERE persona_id = %s"
+                " AND creado_en > NOW() - interval '2 minutes'",
+                (persona_id,),
+            )
+            if cur.fetchone() is not None:
+                return None
+            token = secrets.token_urlsafe(32)
+            cur.execute("DELETE FROM recuperacion_clave WHERE persona_id = %s", (persona_id,))
+            cur.execute(
+                "INSERT INTO recuperacion_clave (token_hash, persona_id, expira)"
+                " VALUES (%s, %s, NOW() + make_interval(mins => %s))",
+                (_hash_token(token), persona_id, MINUTOS_ENLACE_CLAVE),
+            )
+        conn.commit()
+    return token, nombre
+
+
+def canjear_token_recuperacion(token: str, nueva: str) -> bool:
+    """Pone la contraseña nueva si el enlace es de verdad, no ha caducado y no
+    se ha usado. Se gasta al usarlo."""
+    with _get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "DELETE FROM recuperacion_clave WHERE token_hash = %s AND expira > NOW()"
+                " RETURNING persona_id",
+                (_hash_token(token),),
+            )
+            fila = cur.fetchone()
+            if fila is None:
+                return False
+            cur.execute(
+                "UPDATE equipo_accesos SET password_hash = %s, debe_cambiar_clave = FALSE"
+                " WHERE id = %s AND activo = TRUE",
+                (generate_password_hash(nueva), fila[0]),
+            )
+            # Cualquier otro enlace pendiente de esa cuenta también se gasta.
+            cur.execute("DELETE FROM recuperacion_clave WHERE persona_id = %s", (fila[0],))
+        conn.commit()
+    return True
+
+
+def poner_clave_provisional(acceso_id: int) -> str | None:
+    """Para quien no puede usar el enlace por correo: un admin le pone una
+    contraseña provisional y la persona tiene que cambiarla al entrar. Se
+    devuelve una sola vez; en la base solo queda su hash."""
+    provisional = secrets.token_urlsafe(9)
+    with _get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "UPDATE equipo_accesos SET password_hash = %s, debe_cambiar_clave = TRUE WHERE id = %s",
+                (generate_password_hash(provisional), acceso_id),
+            )
+            hecho = cur.rowcount > 0
+        conn.commit()
+    return provisional if hecho else None
 
 
 def datos_formulario(email: str) -> dict | None:
@@ -423,8 +507,8 @@ def crear_equipo_acceso(
                 f"""
                 INSERT INTO equipo_accesos
                     (email, password_hash, equipos, vp_de, cargo, nombre, es_admin, apellidos,
-                     registro_id)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, {_INSCRIPCION})
+                     debe_cambiar_clave, registro_id)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, TRUE, {_INSCRIPCION})
                 RETURNING id, email, equipos, vp_de, cargo, activo, created_at, nombre,
                           es_admin, apellidos
                 """,
@@ -547,8 +631,10 @@ def actualizar_equipo_acceso(
         campos.append("activo = %s")
         valores.append(activo)
     if password:
+        # La que pone un admin la conoce un admin: se cambia al entrar.
         campos.append("password_hash = %s")
         valores.append(generate_password_hash(password))
+        campos.append("debe_cambiar_clave = TRUE")
     if nombre is not None:
         campos.append("nombre = %s")
         valores.append(nombre.strip())

@@ -32,6 +32,7 @@ from backend.services.equipo import (
     generar_pdf_equipo_en_memoria,
     listar_equipo_accesos,
     listar_eventos_calendario,
+    poner_clave_provisional,
 )
 from backend.services.registrations import (
     actualizar_estado,
@@ -464,6 +465,20 @@ def api_admin_crear_equipo():
 
     logger.info("admin crea acceso equipo email=%s equipos=%s", email, equipos)
     return jsonify(build_response(True, "Acceso creado.", acceso=acceso)), 201
+
+
+@admin_api.route("/equipo/<int:acceso_id>/clave-provisional", methods=["POST"])
+def api_admin_clave_provisional(acceso_id: int):
+    """Para quien no puede recuperar la contraseña por correo: una provisional
+    que se enseña una sola vez y que la persona cambia al entrar."""
+    if not is_admin_authenticated():
+        return jsonify(build_response(False, "No autorizado.")), 401
+
+    provisional = poner_clave_provisional(acceso_id)
+    if provisional is None:
+        return jsonify(build_response(False, "Acceso no encontrado.")), 404
+    logger.info("admin pone clave provisional a id=%s", acceso_id)
+    return jsonify(build_response(True, "Contraseña provisional creada.", password=provisional)), 200
 
 
 @admin_api.route("/equipo/<int:acceso_id>", methods=["PUT"])

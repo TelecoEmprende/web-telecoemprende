@@ -3527,3 +3527,29 @@ span.cal-capa-react {
     justify-content: flex-start;
   }
 }
+
+/* Recuperar la contraseña (mismo lenguaje que el acceso). */
+.equipo-login-react .acceso-subtitulo-react {
+  margin: 0 0 6px;
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+.equipo-login-react .acceso-enlace-react {
+  align-self: center;
+  padding: 6px 4px;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-size: 0.9rem;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+  opacity: 0.85;
+}
+
+.equipo-login-react .acceso-enlace-react:hover,
+.equipo-login-react .acceso-enlace-react:focus-visible {
+  opacity: 1;
+}

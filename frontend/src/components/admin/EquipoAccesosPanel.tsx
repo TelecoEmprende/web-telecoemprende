@@ -7,6 +7,7 @@ import {
   createEquipoAcceso,
   deleteEquipoAcceso,
   getEquipoAccesos,
+  ponerClaveProvisional,
   updateEquipoAcceso,
 } from "../../api/admin";
 import { AvatarResponsable } from "../equipo/marketing/Avatares";
@@ -312,6 +313,21 @@ export function EquipoAccesosPanel() {
     void guardar(acceso, { equipos });
   }
 
+  async function darClaveProvisional(acceso: EquipoAcceso) {
+    try {
+      const response = await ponerClaveProvisional(acceso.id);
+      if (response.ok) {
+        setMessageVariant("success");
+        setMessage(
+          `Contraseña provisional de ${acceso.nombre || acceso.email}: ${response.password} — ` +
+            "solo se enseña ahora; tendrá que cambiarla al entrar.",
+        );
+      }
+    } catch (error) {
+      avisarError(error, "No se pudo crear la contraseña provisional.");
+    }
+  }
+
   async function handleEliminar(acceso: EquipoAcceso) {
     setBorrando(null);
     try {
@@ -539,6 +555,15 @@ export function EquipoAccesosPanel() {
                           onClick={() => void guardar(acceso, { activo: !acceso.activo })}
                         >
                           {acceso.activo ? "Desactivar" : "Activar"}
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          title="Para quien no puede recuperarla por correo: tendrá que cambiarla al entrar"
+                          onClick={() => void darClaveProvisional(acceso)}
+                        >
+                          Contraseña provisional
                         </Button>
                         <Button
                           type="button"
