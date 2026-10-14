@@ -80,7 +80,6 @@ export type EquipoAcceso = {
   nombre: string;
   apellidos: string;
   dni: string;
-  correo_personal: string;
   /** Inscripción de la que salió la cuenta (`registrations.id`), o null. */
   registro_id: number | null;
   /** Foto como data URL, o "" para la de `public/` (ver `Avatares.tsx`). */

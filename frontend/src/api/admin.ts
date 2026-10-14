@@ -83,7 +83,6 @@ export function updateEquipoAcceso(
     nombre?: string;
     apellidos?: string;
     dni?: string;
-    correo_personal?: string;
     /** Para cambiar un email provisional; no el propio. */
     email?: string;
     /** Vincula la cuenta a una inscripción; 0 la desvincula. */

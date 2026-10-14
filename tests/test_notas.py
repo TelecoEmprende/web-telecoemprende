@@ -65,7 +65,9 @@ class NotasTestCase(unittest.TestCase):
         titulos = lambda c: sorted(n["titulo"] for n in c.get("/api/equipo/notas").get_json()["notas"])  # noqa: E731
         self.assertEqual(titulos(ana), ["Club", "Mkt", "Mía"])
         self.assertEqual(titulos(bea), ["Club", "Mkt"])
-        self.assertEqual(titulos(carlos), ["Club"])
+        # Todos somos de los tres departamentos: una nota de departamento la ve todo
+        # el club. Solo las privadas se quedan con su autor.
+        self.assertEqual(titulos(carlos), ["Club", "Mkt"])
 
         club = next(n for n in ana.get("/api/equipo/notas").get_json()["notas"] if n["titulo"] == "Club")
         self.assertEqual((club["checks_pendientes"], club["checks_hechos"]), (1, 1))
@@ -73,13 +75,13 @@ class NotasTestCase(unittest.TestCase):
         self.assertIn("Orden del día", club["resumen"])
         self.assertNotIn("contenido", club)
 
-    def test_no_se_escribe_fuera_de_tus_departamentos(self):
+    def test_las_notas_privadas_son_solo_del_autor(self):
         ana, carlos = self.como("ana@example.com"), self.como("carlos@example.com")
         r = ana.post("/api/equipo/notas", json={"titulo": "x", "departamento": "eventos", "contenido": []})
-        self.assertEqual(r.status_code, 400)
+        self.assertEqual(r.status_code, 201)
 
         nota_id = ana.post(
-            "/api/equipo/notas", json={"titulo": "Mkt", "departamento": "marketing", "contenido": []}
+            "/api/equipo/notas", json={"titulo": "Mía", "privada": True, "contenido": []}
         ).get_json()["nota"]["id"]
         self.assertEqual(carlos.put(f"/api/equipo/notas/{nota_id}", json={"titulo": "hack"}).status_code, 404)
         self.assertEqual(carlos.delete(f"/api/equipo/notas/{nota_id}").status_code, 404)

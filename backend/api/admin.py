@@ -401,12 +401,12 @@ def api_admin_listar_equipo():
 
 
 def _error_equipos(equipos: list) -> str | None:
-    """Cada persona va en al menos dos departamentos, sin repetir: el primero
-    es su 1ª preferencia y el segundo la 2ª (el orden se guarda tal cual)."""
+    """Todos somos de los tres departamentos: cada persona los ordena del 1º al
+    3º, sin repetir (el orden se guarda tal cual)."""
     if len(set(equipos)) != len(equipos):
         return "No repitas departamento entre preferencias."
     if len(equipos) < MIN_EQUIPOS_POR_PERSONA:
-        return "Cada persona necesita una 1ª y una 2ª preferencia de departamento."
+        return "Ordena los tres departamentos: 1ª, 2ª y 3ª preferencia."
     return None
 
 
@@ -437,17 +437,9 @@ def api_admin_crear_equipo():
         return jsonify(build_response(False, "La contraseña debe tener al menos 8 caracteres.")), 400
 
     if not isinstance(equipos, list) or any(e not in EQUIPOS_VALIDOS for e in equipos):
-        return jsonify(build_response(False, "Selecciona al menos un equipo válido.")), 400
+        return jsonify(build_response(False, "Selecciona departamentos válidos.")), 400
 
-    # Sin departamento se permite solo si hay cargo de dirección: ese acceso ya
-    # vale por sí mismo (board member sin equipo). Sin ninguno de los dos, la
-    # cuenta no daría acceso a nada.
-    if not equipos and not cargo:
-        return jsonify(build_response(
-            False, "Elige su 1ª y 2ª preferencia de departamento, o asigna un cargo."
-        )), 400
-
-    error = _error_equipos(equipos) if equipos else None
+    error = _error_equipos(equipos)
     if error:
         return jsonify(build_response(False, error)), 400
 
@@ -488,7 +480,6 @@ def api_admin_actualizar_equipo(acceso_id: int):
     nombre = payload.get("nombre")
     apellidos = payload.get("apellidos")
     dni = payload.get("dni")
-    correo_personal = payload.get("correo_personal")
     nuevo_email = payload.get("email")
     registro_id = payload.get("registro_id")
     es_admin = payload.get("es_admin")
@@ -557,11 +548,6 @@ def api_admin_actualizar_equipo(acceso_id: int):
         if len(dni) > MAX_DNI_LEN:
             return jsonify(build_response(False, "El DNI supera la longitud permitida.")), 400
 
-    if correo_personal is not None:
-        correo_personal = limpiar_texto(str(correo_personal))
-        if len(correo_personal) > MAX_EMAIL_LEN:
-            return jsonify(build_response(False, "El correo personal supera la longitud permitida.")), 400
-
     if nuevo_email is not None:
         nuevo_email = limpiar_texto(str(nuevo_email)).lower()
         if "@" not in nuevo_email or len(nuevo_email) > MAX_EMAIL_LEN:
@@ -589,7 +575,6 @@ def api_admin_actualizar_equipo(acceso_id: int):
         nombre=nombre,
         apellidos=apellidos,
         dni=dni,
-        correo_personal=correo_personal,
         email=nuevo_email,
         registro_id=registro_id,
         es_admin=es_admin,

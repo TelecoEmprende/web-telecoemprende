@@ -245,8 +245,8 @@ class RegistrosTestCase(unittest.TestCase):
         self.login(equipos=("eventos",))
         # Su propio departamento: la ruta existe pero no es suya.
         self.assertEqual(self.client.get("/api/eventos/plataforma").status_code, 404)
-        # El de Ingeniería: ni se entra.
-        self.assertEqual(self.client.get("/api/ingenieria/plataforma").status_code, 401)
+        # La de Ingeniería la ve todo el club: todos somos de los tres departamentos.
+        self.assertEqual(self.client.get("/api/ingenieria/plataforma").status_code, 200)
 
     def test_plataforma_sin_sesion_no_se_entra(self):
         self.assertEqual(self.client.get("/api/ingenieria/plataforma").status_code, 401)
@@ -262,9 +262,9 @@ class RegistrosTestCase(unittest.TestCase):
 
     # --- Autorización ---
 
-    def test_sin_pertenecer_al_departamento_no_se_entra(self):
+    def test_todos_entran_en_los_tres_departamentos(self):
         self.login(equipos=("eventos",))
-        self.assertEqual(self.client.get("/api/ingenieria/reuniones").status_code, 401)
+        self.assertEqual(self.client.get("/api/ingenieria/reuniones").status_code, 200)
         self.assertEqual(self.client.get("/api/eventos/reuniones").status_code, 200)
 
     def test_sin_sesion_no_se_entra(self):

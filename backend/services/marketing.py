@@ -805,28 +805,45 @@ def _eliminar(tabla: str, fila_id: int, departamento: str) -> bool:
 # --------------------------------------------------------------------------
 
 def carga_por_miembro(departamento: str) -> dict[str, int]:
-    """Tareas sin acabar por persona, en un solo GROUP BY.
+    """Tareas sin acabar por persona en un departamento, en un solo GROUP BY.
 
     `responsables` llega de `tasks_v` como lista, así que se desenrolla con
     unnest en vez de traerse todas las tareas y contarlas en Python: el tablero de un
     departamento con doscientas tareas seguiría siendo una consulta.
     """
+    return {email: por[departamento] for email, por in carga_club().items() if por[departamento]}
+
+
+def carga_club() -> dict[str, dict[str, int]]:
+    """Tareas sin acabar por persona y departamento: `{email: {depto: n}}`.
+    Con todos en los tres departamentos, la carga que importa es la del club
+    entero (la suma) y a la vez la de cada departamento (para proponer a quién
+    asignar algo de ese departamento)."""
+    from backend.config import EQUIPOS_ORDEN_POR_DEFECTO
+
     with _get_connection() as conn:
         with conn.cursor() as cur:
             cur.execute(
                 """
-                SELECT responsable, COUNT(*)
+                SELECT responsable, departamento, COUNT(*)
                 FROM tasks_v, unnest(responsables) AS responsable
-                WHERE departamento = %s AND estado <> 'acabado'
-                GROUP BY responsable
-                """,
-                (departamento,),
+                WHERE estado <> 'acabado'
+                GROUP BY responsable, departamento
+                """
             )
-            return {fila[0]: fila[1] for fila in cur.fetchall()}
+            filas = cur.fetchall()
+    carga: dict[str, dict[str, int]] = {}
+    for email, depto, n in filas:
+        carga.setdefault(email, dict.fromkeys(EQUIPOS_ORDEN_POR_DEFECTO, 0))[depto] = n
+    return {
+        email: {**por, "total": sum(por.values())} for email, por in carga.items()
+    }
 
 
-def ficha_miembro(email: str, departamento: str) -> dict:
-    """Los tres números de la ficha y su actividad reciente.
+def ficha_miembro(email: str) -> dict:
+    """Lo que enseña la ficha de una persona, de todos los departamentos: tres
+    números, sus tareas abiertas (con plazo y departamento) y su actividad
+    reciente.
 
     La actividad no necesita tabla de eventos: el estado actual de sus tareas
     ordenado por `updated_at` ya cuenta la historia, y así no hay un registro
@@ -842,32 +859,56 @@ def ficha_miembro(email: str, departamento: str) -> dict:
                     COUNT(DISTINCT campaign_id) FILTER (WHERE campaign_id IS NOT NULL)
                         AS campanas
                 FROM tasks_v
-                WHERE departamento = %s AND %s = ANY(responsables)
+                WHERE %s = ANY(responsables)
                 """,
-                (departamento, email),
+                (email,),
             )
             totales = cur.fetchone()
 
             cur.execute(
                 """
-                SELECT t.id, t.titulo, t.estado, t.updated_at,
+                SELECT t.id, t.titulo, t.estado, t.updated_at, t.deadline, t.departamento,
                        COALESCE(co.titulo, c.nombre) AS padre
                 FROM tasks_v t
                 LEFT JOIN contents co ON co.id = t.content_id
                 LEFT JOIN campaigns c ON c.id = t.campaign_id
-                WHERE t.departamento = %s AND %s = ANY(t.responsables)
+                WHERE %s = ANY(t.responsables)
                 ORDER BY t.updated_at DESC
                 LIMIT 8
                 """,
-                (departamento, email),
+                (email,),
             )
             actividad = [_serializar(f) for f in cur.fetchall()]
 
+            cur.execute(
+                """
+                SELECT t.id, t.titulo, t.estado, t.deadline, t.departamento,
+                       COALESCE(co.titulo, c.nombre) AS padre
+                FROM tasks_v t
+                LEFT JOIN contents co ON co.id = t.content_id
+                LEFT JOIN campaigns c ON c.id = t.campaign_id
+                WHERE %s = ANY(t.responsables) AND t.estado <> 'acabado'
+                ORDER BY COALESCE(t.deadline, '9999-12-31'::date), t.id
+                LIMIT 10
+                """,
+                (email,),
+            )
+            pendientes = [_serializar(f) for f in cur.fetchall()]
+
+            cur.execute("SELECT COUNT(*) FROM equipo_accesos WHERE activo")
+            activos = cur.fetchone()["count"]
+
+    carga = carga_club()
     return {
         "abiertas": totales["abiertas"],
         "completadas": totales["completadas"],
         "campanas": totales["campanas"],
         "actividad": actividad,
+        "pendientes": pendientes,
+        "abiertas_por_depto": carga.get(email, {}),
+        # Tareas abiertas por persona activa, incluidas las que están a cero:
+        # es la vara con la que se mide si alguien va cargado.
+        "media_club": round(sum(c["total"] for c in carga.values()) / activos, 1) if activos else 0,
     }
 
 
@@ -1088,6 +1129,22 @@ def metricas_club(dias_periodo: int = 30) -> dict:
             )
             ultimo_cierre_depto = dict(cur.fetchall())
 
+            # Trabajo abierto y atrasado por departamento: la otra mitad de
+            # «de qué pata cojea el club» (la primera es cuánta gente lo
+            # prefiere, ver `balance` más abajo).
+            cur.execute(
+                """
+                SELECT departamento,
+                       COUNT(*) FILTER (WHERE estado <> 'acabado'),
+                       COUNT(*) FILTER (
+                           WHERE estado <> 'acabado' AND deadline IS NOT NULL AND deadline < %s
+                       )
+                FROM tasks GROUP BY departamento
+                """,
+                (hoy,),
+            )
+            trabajo_depto = {fila[0]: (fila[1], fila[2]) for fila in cur.fetchall()}
+
     miembros = []
     for acceso in activos:
         email = acceso["email"]
@@ -1135,8 +1192,24 @@ def metricas_club(dias_periodo: int = 30) -> dict:
         if dias is None or dias >= 10
     ]
 
+    # Por departamento: cuánta gente lo tiene como 1ª, 2ª o 3ª preferencia, y
+    # cuánto trabajo abierto y atrasado hay. Un departamento con mucho trabajo
+    # y poca gente que lo prefiere es de lo que cojea el club.
+    balance = {
+        depto: {
+            "preferencias": [
+                sum(1 for a in activos if a["equipos"][posicion] == depto)
+                for posicion in range(len(EQUIPOS_VALIDOS))
+            ],
+            "abiertas": trabajo_depto.get(depto, (0, 0))[0],
+            "vencidas": trabajo_depto.get(depto, (0, 0))[1],
+        }
+        for depto in sorted(EQUIPOS_VALIDOS)
+    }
+
     return {
         "dias_periodo": dias_periodo,
+        "balance_departamentos": balance,
         "total_activos": len(activos),
         "sobrecargados": sum(1 for m in miembros if m["abiertas"] >= 4),
         "inactivos": sum(1 for m in miembros if m["dias_inactivo"] is not None and m["dias_inactivo"] >= 15),

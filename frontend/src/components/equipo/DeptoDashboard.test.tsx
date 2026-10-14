@@ -35,6 +35,11 @@ vi.mock("../../api/notas", () => ({
 }));
 
 vi.mock("../../api/marketing", () => ({
+  // Todos somos de los tres departamentos: el directorio y la ficha son del
+  // club y se piden fuera de `apiDepto`.
+  getMiembrosClub: (...args: unknown[]) => getMiembros(...args),
+  getFichaMiembro: (...args: unknown[]) => getFichaMiembro(...args),
+  updateFichaMiembro: (...args: unknown[]) => updateFichaMiembro(...args),
   apiDepto: (depto: string) => {
     deptosPedidos.push(depto);
     return {
@@ -574,15 +579,15 @@ describe("/equipo — panel de Marketing", () => {
     expect(document.querySelectorAll(".mkt-semana-columna-react").length).toBe(7);
   });
 
-  it("lista los miembros del departamento con su carga", async () => {
+  it("lista los miembros del club con su orden de preferencia y su carga", async () => {
     getMiembros.mockResolvedValue({
       ok: true,
       miembros: [
-        { email: YO, equipos: ["marketing"], activo: true, tags: ["Copy"], abiertas: 0 },
+        { email: YO, equipos: ["marketing", "eventos", "ingenieria"], cargo: "", vp_de: [], nombre: "", apellidos: "", foto: "", abiertas_por_depto: { marketing: 0, eventos: 0, ingenieria: 0 }, tags: ["Copy"], abiertas: 0 },
         {
           email: "hugo@telecoemprende.es",
-          equipos: ["marketing"],
-          activo: true,
+          equipos: ["marketing", "eventos", "ingenieria"],
+          cargo: "", vp_de: [], nombre: "", apellidos: "", foto: "", abiertas_por_depto: { marketing: 0, eventos: 0, ingenieria: 0 },
           tags: ["Reels"],
           abiertas: 5,
         },
@@ -595,7 +600,13 @@ describe("/equipo — panel de Marketing", () => {
     // El directorio enseña el nombre, no el email en crudo.
     expect(await screen.findByText("Abril")).toBeInTheDocument();
     expect(screen.getByText("Libre")).toBeInTheDocument();
-    expect(screen.getByText("5 tareas abiertas")).toBeInTheDocument();
+    expect(screen.getByText(/5 tareas abiertas/)).toBeInTheDocument();
+    // Con una media de 2,5 por persona, 5 es sobrecarga.
+    expect(screen.getByText(/sobrecargado/)).toBeInTheDocument();
+    // Todos somos de los tres departamentos: se ve el orden, no «solo Marketing».
+    const lista = within(document.querySelector(".mkt-directorio-react") as HTMLElement);
+    expect(lista.getAllByText("1ª Marketing").length).toBe(2);
+    expect(lista.getAllByText("3ª Ingeniería").length).toBe(2);
   });
 
   it("los más libres salen primero, para saber a quién asignar", async () => {
@@ -604,12 +615,12 @@ describe("/equipo — panel de Marketing", () => {
       miembros: [
         {
           email: "hugo@telecoemprende.es",
-          equipos: ["marketing"],
-          activo: true,
+          equipos: ["marketing", "eventos", "ingenieria"],
+          cargo: "", vp_de: [], nombre: "", apellidos: "", foto: "", abiertas_por_depto: { marketing: 0, eventos: 0, ingenieria: 0 },
           tags: [],
           abiertas: 5,
         },
-        { email: YO, equipos: ["marketing"], activo: true, tags: [], abiertas: 0 },
+        { email: YO, equipos: ["marketing", "eventos", "ingenieria"], cargo: "", vp_de: [], nombre: "", apellidos: "", foto: "", abiertas_por_depto: { marketing: 0, eventos: 0, ingenieria: 0 }, tags: [], abiertas: 0 },
       ],
     });
 
@@ -627,11 +638,11 @@ describe("/equipo — panel de Marketing", () => {
     getMiembros.mockResolvedValue({
       ok: true,
       miembros: [
-        { email: YO, equipos: ["marketing"], activo: true, tags: ["Copy"], abiertas: 0 },
+        { email: YO, equipos: ["marketing", "eventos", "ingenieria"], cargo: "", vp_de: [], nombre: "", apellidos: "", foto: "", abiertas_por_depto: { marketing: 0, eventos: 0, ingenieria: 0 }, tags: ["Copy"], abiertas: 0 },
         {
           email: "hugo@telecoemprende.es",
-          equipos: ["marketing"],
-          activo: true,
+          equipos: ["marketing", "eventos", "ingenieria"],
+          cargo: "", vp_de: [], nombre: "", apellidos: "", foto: "", abiertas_por_depto: { marketing: 0, eventos: 0, ingenieria: 0 },
           tags: ["Reels"],
           abiertas: 1,
         },
@@ -652,23 +663,39 @@ describe("/equipo — panel de Marketing", () => {
     getMiembros.mockResolvedValue({
       ok: true,
       miembros: [
-        { email: YO, equipos: ["marketing"], activo: true, tags: ["Copy"], abiertas: 2 },
+        { email: YO, equipos: ["marketing", "eventos", "ingenieria"], cargo: "", vp_de: [], nombre: "", apellidos: "", foto: "", abiertas_por_depto: { marketing: 0, eventos: 0, ingenieria: 0 }, tags: ["Copy"], abiertas: 2 },
       ],
     });
     getFichaMiembro.mockResolvedValue({
       ok: true,
       ficha: {
         email: YO,
-        equipos: ["marketing"],
+        equipos: ["marketing", "eventos", "ingenieria"],
         vp_de: [],
         cargo: "",
         tags: ["Copy"],
         notas: "Mejor una cosa a la vez.",
+        nombre: "",
+        apellidos: "",
         desde: "2026-01-15T10:00:00",
         abiertas: 2,
         completadas: 12,
         campanas: 3,
-       
+        media_club: 1.5,
+        abiertas_por_depto: { marketing: 2, eventos: 0, ingenieria: 0 },
+        foto: "",
+        es_tu_ficha: false,
+        es_yo: false,
+        pendientes: [
+          {
+            id: 7,
+            titulo: "Maquetar el cartel",
+            estado: "pendiente" as TaskEstado,
+            deadline: "2026-12-01",
+            padre: null,
+            departamento: "eventos",
+          },
+        ],
         actividad: [
           {
             id: 1,
@@ -676,6 +703,7 @@ describe("/equipo — panel de Marketing", () => {
             estado: "acabado" as TaskEstado,
             updated_at: new Date().toISOString(),
             padre: "Vuelta al cole",
+            departamento: "marketing",
           },
         ],
       },
@@ -687,6 +715,11 @@ describe("/equipo — panel de Marketing", () => {
 
     const dialogo = await screen.findByRole("dialog");
     expect(within(dialogo).getByText("12")).toBeInTheDocument();
+    // Lo pendiente, con su departamento, y el orden de preferencia: no hay
+    // correo ni botón de escribirle.
+    expect(within(dialogo).getByText("Maquetar el cartel")).toBeInTheDocument();
+    expect(within(dialogo).getByLabelText("Orden de preferencia")).toBeInTheDocument();
+    expect(within(dialogo).queryByText(YO)).not.toBeInTheDocument();
     expect(within(dialogo).getByText("Grabar reel de apertura", { exact: false }))
       .toBeInTheDocument();
     // La nota sale de solo lectura por defecto; el textarea para editarla

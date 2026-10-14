@@ -42,9 +42,7 @@ from backend.services.slack import (
 )
 from backend.services.marketing import (
     actualizar_campaign,
-    carga_por_miembro,
     crear_task_comment,
-    ficha_miembro,
     actualizar_content,
     actualizar_task,
     calendario,
@@ -252,13 +250,6 @@ def es_cargo_vp_o_admin() -> bool:
         return True
     sesion = equipo_session_info()
     return sesion["cargo"] in CARGOS_VALIDOS or len(sesion["vp_de"]) > 0
-
-
-def _equipos_visibles(equipos: list[str]) -> list[str]:
-    """`equipos` va ordenado por preferencia (1ª, 2ª...): eso solo lo ve quien
-    asigna tareas (`SelectorMiembros`). El resto recibe los mismos
-    departamentos pero en orden alfabético."""
-    return equipos if _puede_asignar_tareas() else sorted(equipos)
 
 
 def _puede_asignar_tareas(departamento: str | None = None) -> bool:
@@ -646,115 +637,3 @@ def api_calendario():
     }), 200
 
 
-# --------------------------------------------------------------------------
-# Miembros del departamento
-# --------------------------------------------------------------------------
-
-@marketing_api.route("/miembros", methods=["GET"])
-@requiere_equipo
-def api_miembros():
-    """Directorio del departamento: quién está, qué sabe hacer y cuánto lleva
-    encima. Las etiquetas salen de `equipo_accesos` (perfil de la persona); la
-    carga se calcula sobre las tareas del departamento, no se guarda."""
-    from backend.services.equipo import miembros_activos
-
-    depto = departamento_actual()
-    carga = carga_por_miembro(depto)
-    miembros = [
-        {
-            "email": a["email"],
-            "equipos": _equipos_visibles(a["equipos"]),
-            "activo": a["activo"],
-            "tags": a["tags"],
-            "nombre": a["nombre"],
-            "foto": a["foto"],
-            "abiertas": carga.get(a["email"], 0),
-        }
-        for a in miembros_activos(depto)
-    ]
-    return jsonify({"ok": True, "miembros": miembros}), 200
-
-
-def _es_mi_ficha(email: str) -> bool:
-    """La foto de perfil la cambia cada cual la suya. Admin también, para poder
-    quitar una que no debería estar ahí."""
-    from flask import session
-
-    return is_admin_authenticated() or session.get("equipo_email", "") == email
-
-
-def _miembro_del_departamento(email: str) -> dict | None:
-    """La persona, solo si está en el departamento de la petición: sin esto,
-    la ficha sería una forma de leer las notas de cualquiera del club."""
-    from backend.services.equipo import listar_equipo_accesos
-
-    return next(
-        (
-            a
-            for a in listar_equipo_accesos()
-            if a["email"] == email and departamento_actual() in a["equipos"]
-        ),
-        None,
-    )
-
-
-@marketing_api.route("/miembros/ficha", methods=["GET"])
-@requiere_equipo
-def api_ficha_miembro():
-    """El email va en query y no en la ruta: lleva `@` y puntos, y meterlo en el
-    path obliga a escaparlo en los dos lados para no ganar nada."""
-    email = request.args.get("email", "").strip().lower()
-    acceso = _miembro_del_departamento(email)
-    if acceso is None:
-        return jsonify(build_response(False, "Miembro no encontrado.")), 404
-
-    ficha = ficha_miembro(email, departamento_actual())
-    ficha.update(
-        email=acceso["email"],
-        equipos=_equipos_visibles(acceso["equipos"]),
-        vp_de=acceso["vp_de"],
-        cargo=acceso["cargo"],
-        tags=acceso["tags"],
-        notas=acceso["notas"],
-        nombre=acceso["nombre"],
-        desde=acceso["created_at"],
-        foto=acceso["foto"],
-        # Quién puede cambiar esta foto lo decide el servidor, no el frontend
-        # (que solo lo usa para enseñar u ocultar el botón).
-        es_tu_ficha=_es_mi_ficha(email),
-    )
-    return jsonify({"ok": True, "ficha": ficha}), 200
-
-
-@marketing_api.route("/miembros/ficha", methods=["PUT"])
-@requiere_equipo
-def api_actualizar_ficha_miembro():
-    """Solo etiquetas y nota: los permisos (equipos, vp, cargo) siguen siendo
-    cosa de /admin."""
-    from backend.services.equipo import actualizar_perfil
-
-    datos = _payload()
-    email = _texto(datos, "email", obligatorio=True).lower()
-    anterior = _miembro_del_departamento(email)
-    if anterior is None:
-        return jsonify(build_response(False, "Miembro no encontrado.")), 404
-
-    tags = (
-        _lista_textos(datos, "tags", MAX_RESPONSABLES) if "tags" in datos else None
-    )
-    notas = (
-        _texto(datos, "notas", maximo=MAX_TEXTO_LARGO_LEN, multilinea=True)
-        if "notas" in datos
-        else None
-    )
-    foto = None
-    if "foto" in datos:
-        if not _es_mi_ficha(email):
-            return jsonify(build_response(False, "Solo puedes cambiar tu propia foto.")), 403
-        foto = _foto(datos)
-
-    if tags is None and notas is None and foto is None:
-        raise DatosInvalidos("No hay nada que actualizar.")
-
-    actualizar_perfil(email, tags=tags, notas=notas, foto=foto)
-    return jsonify(build_response(True, "Ficha actualizada.")), 200

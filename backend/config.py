@@ -32,9 +32,10 @@ DEPARTAMENTOS_VALIDOS = {
 ESTADOS_VALIDOS = {"pendiente", "aceptado", "rechazado", "waitlist"}
 
 EQUIPOS_VALIDOS = {"marketing", "eventos", "ingenieria"}
-# Mínimo de departamentos por persona: el primero de `equipos` es su 1ª
-# preferencia, el segundo la 2ª (ver `ordenar_equipos`).
-MIN_EQUIPOS_POR_PERSONA = 2
+# Todos somos de los tres departamentos: `equipos` es el orden de preferencia
+# (1ª, 2ª, 3ª) y siempre lleva los tres (ver `completar_equipos`).
+EQUIPOS_ORDEN_POR_DEFECTO = ("marketing", "eventos", "ingenieria")
+MIN_EQUIPOS_POR_PERSONA = len(EQUIPOS_ORDEN_POR_DEFECTO)
 
 # Cargos de dirección: un título, independiente del departamento y del permiso
 # de admin (`equipo_accesos.es_admin`). Siguen dando permisos de gestión de

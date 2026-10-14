@@ -79,7 +79,7 @@ export function DeptoDashboard({
             onAbrirCampaign={onAbrirCampaign}
           />
         ) : null}
-        {seccion === "miembros" ? <MembersPanel deptos={teams} /> : null}
+        {seccion === "miembros" ? <MembersPanel /> : null}
         {seccion === "presupuesto" ? <PresupuestoPanel /> : null}
         {seccion === "reuniones" ? <ReunionesPanel /> : null}
       </DirectorioProvider>

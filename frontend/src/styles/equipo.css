@@ -1227,7 +1227,7 @@ button.crm-row-cuerpo-react {
   display: inline-block;
   padding: 5px 9px;
   border: 0;
-  border-radius: 6px;
+  border-radius: var(--radius-circle);
   background: rgba(var(--color-noche-rgb), 0.05);
   color: rgba(var(--color-noche-rgb), 0.78);
   font-family: inherit;
@@ -2488,7 +2488,7 @@ kbd {
   flex-direction: column;
   gap: 10px;
   padding: 12px;
-  border-radius: 22px;
+  border-radius: var(--radius-lg);
   background: var(--color-chispa);
   color: var(--color-noche);
 }
@@ -2970,7 +2970,7 @@ span.cal-capa-react {
   padding: 4px 7px 4px 8px;
   border: 0;
   border-left: 3px solid var(--franja);
-  border-radius: 6px;
+  border-radius: var(--radius-circle);
   font-size: 0.74rem;
   font-weight: 600;
   line-height: 1.25;
@@ -3016,7 +3016,7 @@ span.cal-capa-react {
   align-self: flex-start;
   padding: 1px 6px;
   border: 0;
-  border-radius: 6px;
+  border-radius: var(--radius-circle);
   background: none;
   color: var(--color-text-muted);
   font-family: inherit;
@@ -3037,7 +3037,7 @@ span.cal-capa-react {
 @container (max-width: 760px) {
   .cal-tarjeta-react {
     padding: 14px 12px 14px;
-    border-radius: 22px;
+    border-radius: var(--radius-lg);
   }
 
   .cal-dia-largo-react {
@@ -3097,7 +3097,7 @@ span.cal-capa-react {
   min-width: 0;
   padding: 12px 12px 12px 12px;
   border: 1px solid rgba(var(--color-noche-rgb), 0.07);
-  border-radius: 18px;
+  border-radius: var(--radius-lg);
   background: var(--color-surface);
   color: var(--color-noche);
   text-decoration: none;
@@ -3181,4 +3181,142 @@ span.cal-capa-react {
   flex-direction: column;
   gap: 10px;
   margin-top: 6px;
+}
+
+/* Campos nativos del CRM con la misma esquina que el resto (14px). `:where`
+   deja la especificidad en cero: cualquier campo con su propio radio gana. */
+:where(.shadcn-scope) :where(select, textarea, input:not([type="checkbox"], [type="radio"], [type="file"], [type="color"], [type="range"])) {
+  border-radius: var(--radius-md);
+}
+
+/* ---------- Gráficas del club (Métricas) ---------- */
+
+.graf-tartas-react {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 18px;
+  margin: 14px 0 4px;
+}
+
+.graf-tarta-react {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  padding: 14px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+}
+
+.graf-tarta-react svg {
+  width: 132px;
+  height: 132px;
+}
+
+.graf-tarta-vacia-react {
+  fill: none;
+  stroke: var(--color-border);
+  stroke-width: 8;
+}
+
+.graf-leyenda-react {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 0.84rem;
+}
+
+.graf-leyenda-react li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.graf-leyenda-react i,
+.graf-comparativa-depto-react i {
+  flex: 0 0 auto;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.graf-leyenda-react b {
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+}
+
+.graf-subtitulo-react {
+  margin: 22px 0 8px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.graf-comparativa-react {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+}
+
+.graf-comparativa-fila-react {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.graf-comparativa-depto-react {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+}
+
+.graf-barras-react {
+  display: grid;
+  grid-template-columns: auto minmax(60px, 1fr) auto;
+  align-items: center;
+  gap: 6px 10px;
+  font-size: 0.82rem;
+}
+
+.graf-barras-pista-react {
+  display: block;
+  height: 10px;
+  border-radius: var(--radius-circle);
+  background: rgba(var(--color-noche-rgb), 0.06);
+  overflow: hidden;
+}
+
+.graf-barras-pista-react i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--color-azul);
+  transform-origin: left;
+}
+
+.graf-barras-pista-react i.is-suave {
+  background: var(--color-azul-claro);
+}
+
+.graf-barras-valor-react {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.graf-cojera-react {
+  margin: 16px 0 0;
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  background: var(--color-info-bg);
+  color: var(--color-info-text);
+  font-size: 0.9rem;
 }

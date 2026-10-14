@@ -2,8 +2,7 @@ import { ChevronDown, Sparkles } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 import { useApi, useDepto } from "../DeptoApi";
-import { apiDepto } from "../../../api/marketing";
-import { AvatarResponsable, etiquetaDe } from "./Avatares";
+import { AvatarResponsable, etiquetaDe, mediaAbiertas, sobrecargado } from "./Avatares";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import type { Team } from "../../../types/equipo";
@@ -13,13 +12,14 @@ type Props = {
   id?: string;
   seleccionados: string[];
   onCambiar: (emails: string[]) => void;
-  /** De qué departamentos sale el roster. Por defecto, el del contexto
-   *  (`useApi`); se pasa explícitamente cuando lo que se está editando no es
-   *  del departamento que se está viendo -- crear una tarea para Eventos
-   *  desde el tablero de Marketing ofrecía la gente de Marketing. */
+  /** Departamento (o departamentos) de lo que se está asignando: de ahí sale
+   *  la preferencia que se enseña y con la que se ordena. Por defecto, el del
+   *  contexto (`useDepto`); se pasa explícitamente cuando lo que se edita no
+   *  es del departamento que se está viendo. Todos somos de los tres, así que
+   *  el roster es siempre el club entero. */
   deptos?: Team[];
-  /** Al asignar tareas: propone a la persona con menos tareas abiertas,
-   *  empezando por quien tiene el departamento como 1ª preferencia. */
+  /** Al asignar tareas: propone a quien tiene el departamento como mejor
+   *  preferencia, salvo que vaya sobrecargado (ver `sobrecargado`). */
   proponer?: boolean;
 };
 
@@ -33,11 +33,14 @@ function preferencia(m: Miembro, deptos: Team[]): number {
   return posiciones.length ? Math.min(...posiciones) : ORDINAL.length;
 }
 
-/** Primero la 1ª preferencia, luego la 2ª...; dentro de cada una, quien
- *  menos tareas abiertas lleva. */
+/** Primero la 1ª preferencia, luego la 2ª y la 3ª; dentro de cada una, quien
+ *  menos tareas abiertas lleva. Quien va sobrecargado baja al final, pero
+ *  sigue en la lista: se le puede elegir a mano. */
 export function ordenarParaAsignar(miembros: Miembro[], deptos: Team[]): Miembro[] {
+  const media = mediaAbiertas(miembros);
   return [...miembros].sort(
     (a, b) =>
+      Number(sobrecargado(a.abiertas, media)) - Number(sobrecargado(b.abiertas, media)) ||
       preferencia(a, deptos) - preferencia(b, deptos) ||
       a.abiertas - b.abiertas ||
       (a.nombre || a.email).localeCompare(b.nombre || b.email),
@@ -61,26 +64,14 @@ export function SelectorMiembros({
   const { getMiembros } = useApi();
   const deptoActual = useDepto();
   const [miembros, setMiembros] = useState<Miembro[]>([]);
+  // Solo decide la preferencia que se enseña, no quién sale en la lista.
   const deptosRoster = deptos?.length ? deptos : [deptoActual];
 
   useEffect(() => {
     let activo = true;
-    // Con varios departamentos el roster es la unión de los suyos, sin
-    // repetir a quien esté en más de uno.
-    const peticiones = deptos?.length
-      ? deptos.map((d) => apiDepto(d).getMiembros())
-      : [getMiembros()];
-    void Promise.all(peticiones)
-      .then((respuestas) => {
-        if (!activo) return;
-        // Las tareas abiertas son por departamento: con varios, se suman.
-        const porEmail = new Map<string, Miembro>();
-        for (const r of respuestas)
-          for (const m of r.miembros) {
-            const previo = porEmail.get(m.email);
-            porEmail.set(m.email, previo ? { ...m, abiertas: previo.abiertas + m.abiertas } : m);
-          }
-        setMiembros([...porEmail.values()]);
+    void getMiembros()
+      .then((r) => {
+        if (activo) setMiembros(r.miembros);
       })
       .catch(() => {
         // Sin roster no hay picker que ofrecer; no bloquea el formulario.
@@ -88,8 +79,7 @@ export function SelectorMiembros({
     return () => {
       activo = false;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [getMiembros, deptos?.join(",")]);
+  }, [getMiembros]);
 
   function alternar(email: string) {
     onCambiar(
@@ -109,6 +99,7 @@ export function SelectorMiembros({
     [miembros, deptosRoster.join(",")],
   );
   // La propuesta es el primero del orden: mejor preferencia y menos carga.
+  const media = useMemo(() => mediaAbiertas(miembros), [miembros]);
   const propuesta = proponer && seleccionados.length === 0 ? ordenados[0] : undefined;
 
   return (
@@ -156,6 +147,7 @@ export function SelectorMiembros({
                         </span>
                       ) : null}
                       <span className="mkt-selector-carga-react">
+                        {sobrecargado(m.abiertas, media) ? "sobrecargado · " : ""}
                         {m.abiertas} {m.abiertas === 1 ? "abierta" : "abiertas"}
                       </span>
                     </label>

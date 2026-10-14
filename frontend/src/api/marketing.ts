@@ -18,6 +18,28 @@ import type {
   ResumenPresupuesto,
 } from "../types/registros";
 
+export const getMiembrosClub = () =>
+  apiRequest<{ ok: true; miembros: Miembro[] }>("/api/equipo/miembros");
+
+export const getFichaMiembro = (email: string) =>
+  apiRequest<{ ok: true; ficha: FichaMiembro }>(
+    `/api/equipo/miembros/ficha?email=${encodeURIComponent(email)}`,
+  );
+
+export const updateFichaMiembro = (
+  email: string,
+  datos: {
+    tags?: string[];
+    notas?: string;
+    /** Data URL ya reducida (ver `utils/imagen.ts`); "" borra la propia. */
+    foto?: string;
+  },
+) =>
+  apiRequest<ApiResult>("/api/equipo/miembros/ficha", {
+    method: "PUT",
+    body: JSON.stringify({ email, ...datos }),
+  });
+
 /**
  * Cliente del workspace de un departamento.
  *
@@ -105,22 +127,12 @@ export function apiDepto(depto: Team) {
         `${BASE}/calendario?desde=${desde}&hasta=${hasta}`,
       ),
 
-    getMiembros: () => apiRequest<{ ok: true; miembros: Miembro[] }>(`${BASE}/miembros`),
-
-    getFichaMiembro: (email: string) =>
-      apiRequest<{ ok: true; ficha: FichaMiembro }>(
-        `${BASE}/miembros/ficha?email=${encodeURIComponent(email)}`,
-      ),
-
-    updateFichaMiembro: (
-      email: string,
-      datos: {
-        tags?: string[];
-        notas?: string;
-        /** Data URL ya reducida (ver `utils/imagen.ts`); "" borra la propia. */
-        foto?: string;
-      },
-    ) => put<ApiResult>("/miembros/ficha", { email, ...datos }),
+    // Todos somos de los tres departamentos: el directorio es del club y no
+    // cuelga del departamento. Aquí solo para que los paneles lo pidan por
+    // `useApi()` como todo lo demás.
+    getMiembros: getMiembrosClub,
+    getFichaMiembro,
+    updateFichaMiembro,
 
     // --- Registros (presupuesto, reuniones, servicios) ---
     // Un solo juego de métodos para todos: el backend los sirve con el
