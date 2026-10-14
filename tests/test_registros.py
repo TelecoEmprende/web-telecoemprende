@@ -78,16 +78,37 @@ class RegistrosTestCase(unittest.TestCase):
         listado = self.client.get("/api/eventos/reuniones").get_json()["reuniones"]
         self.assertEqual([r["titulo"] for r in listado], ["Plano de la feria"])
 
-        self.client.put(f"/api/eventos/reuniones/{fila_id}", json={"acta": "Pendiente firma"})
+        acta = [{"type": "paragraph", "content": [{"type": "text", "text": "Pendiente firma"}]}]
+        guardar = self.client.put(f"/api/eventos/reuniones/{fila_id}", json={"contenido": acta})
+        self.assertEqual(guardar.status_code, 200, guardar.get_json())
         self.assertEqual(
-            self.client.get("/api/eventos/reuniones").get_json()["reuniones"][0]["acta"],
-            "Pendiente firma",
+            self.client.get("/api/eventos/reuniones").get_json()["reuniones"][0]["contenido"], acta
         )
 
         self.assertEqual(
             self.client.delete(f"/api/eventos/reuniones/{fila_id}").status_code, 200
         )
         self.assertEqual(self.client.get("/api/eventos/reuniones").get_json()["reuniones"], [])
+
+    def test_el_acta_rechaza_enlaces_peligrosos(self):
+        self.login()
+        fila_id = self.client.post(
+            "/api/eventos/reuniones", json={"titulo": "Plano de la feria"}
+        ).get_json()["registro"]["id"]
+        mala = [{"type": "paragraph", "content": [
+            {"type": "link", "href": "javascript:alert(1)", "content": [{"type": "text", "text": "x"}]}
+        ]}]
+        respuesta = self.client.put(f"/api/eventos/reuniones/{fila_id}", json={"contenido": mala})
+        self.assertEqual(respuesta.status_code, 400)
+
+    def test_una_reunion_de_todo_el_club_se_ve_desde_cualquier_departamento(self):
+        self.login()
+        self.client.post(
+            "/api/eventos/reuniones", json={"titulo": "Reunión semanal", "club": True}
+        )
+        for depto in ("eventos", "marketing", "ingenieria"):
+            titulos = [r["titulo"] for r in self.client.get(f"/api/{depto}/reuniones").get_json()["reuniones"]]
+            self.assertEqual(titulos, ["Reunión semanal"], depto)
 
     def test_una_reunion_de_eventos_no_se_ve_ni_se_toca_desde_ingenieria(self):
         self.login()

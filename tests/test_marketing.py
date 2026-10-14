@@ -639,10 +639,40 @@ class TaskAsignacionTests(MarketingTestCase):
             json={"titulo": "Escribir guion", "instrucciones": "Ver notas.", **campos},
         )
 
-    def test_miembro_raso_no_puede_crear_tareas(self):
+    def test_miembro_raso_crea_tareas_sin_dueno_o_para_si(self):
         self.login(vp_de=[])
-        respuesta = self.crear_task_directo()
+        self.assertEqual(self.crear_task_directo().status_code, 201)
+        self.assertEqual(
+            self.crear_task_directo(responsables=["marketing@example.com"]).status_code, 201
+        )
+
+    def test_miembro_raso_no_puede_asignar_tareas_a_otros(self):
+        self.login(vp_de=[])
+        self.seed_acceso("otra@example.com")
+        respuesta = self.crear_task_directo(responsables=["otra@example.com"])
         self.assertEqual(respuesta.status_code, 403)
+
+    def test_miembro_raso_se_queda_una_tarea_sin_dueno_pero_no_la_de_otro(self):
+        self.login(vp_de=["marketing"])
+        self.seed_acceso("otra@example.com")
+        libre = self.crear_task_directo().get_json()["task"]
+        ajena = self.crear_task_directo(responsables=["otra@example.com"]).get_json()["task"]
+
+        self.client.post("/api/equipo/logout")
+        self.login(email="raso@example.com", vp_de=[])
+        cogida = self.client.put(
+            f"/api/marketing/tasks/{libre['id']}", json={"responsables": ["raso@example.com"]}
+        )
+        self.assertEqual(cogida.status_code, 200)
+        robada = self.client.put(
+            f"/api/marketing/tasks/{ajena['id']}", json={"responsables": ["raso@example.com"]}
+        )
+        self.assertEqual(robada.status_code, 403)
+        # Y puede soltar la suya.
+        soltada = self.client.put(
+            f"/api/marketing/tasks/{libre['id']}", json={"responsables": []}
+        )
+        self.assertEqual(soltada.status_code, 200)
 
     def test_vp_puede_crear_tareas(self):
         self.login(vp_de=["marketing"])

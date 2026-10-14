@@ -13,6 +13,7 @@ import psycopg2
 from psycopg2.extras import Json, RealDictCursor
 
 from backend.config import DATABASE_URL
+from backend.services import historial
 
 NOTA_COLUMNAS = ("titulo", "contenido", "departamento", "privada", "fijada", "proyecto_id")
 
@@ -137,11 +138,19 @@ def crear_nota(campos: dict, yo: str) -> dict:
             )
             cur.execute("SELECT * FROM notas_v WHERE id = %s", (cur.fetchone()["id"],))
             fila = cur.fetchone()
+            historial.registrar(
+                cur, "nota", fila["id"], "crear", fila["titulo"], yo, fila["proyecto_id"]
+            )
         conn.commit()
     return _serializar(fila)
 
 
+def _plano_contenido(contenido) -> str:
+    return json.dumps(contenido, sort_keys=True, ensure_ascii=False)
+
+
 def actualizar_nota(nota_id: int, campos: dict, yo: str, teams: list[str]) -> bool:
+    nuevo = dict(campos)
     campos = _adaptar(campos)
     asignaciones = [f"{c} = %s" for c in NOTA_COLUMNAS if c in campos]
     valores = [campos[c] for c in NOTA_COLUMNAS if c in campos]
@@ -156,30 +165,53 @@ def actualizar_nota(nota_id: int, campos: dict, yo: str, teams: list[str]) -> bo
         donde += f" AND creado_por_id = {_YO}"
         valores_visible.append(yo)
     with _get_connection() as conn:
-        with conn.cursor() as cur:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(f"SELECT * FROM notas_v WHERE id = %s{donde}", [nota_id, *valores_visible])
+            antes = cur.fetchone()
+            if antes is None:
+                return False
             cur.execute(
                 f"UPDATE notas SET {', '.join(asignaciones)} WHERE id = %s{donde}",
                 [*valores, nota_id, *valores_visible],
             )
             actualizado = cur.rowcount > 0
+            if actualizado:
+                # Se guarda sola cada pocos segundos: el contenido solo consta
+                # como «cambió» (sin copiarlo) y a lo sumo una vez cada media
+                # hora por persona; título, privacidad y proyecto sí con valor.
+                cambios = historial.diferencias(
+                    dict(antes), {c: v for c, v in nuevo.items() if c != "contenido"},
+                    ("titulo", "departamento", "privada", "fijada", "proyecto_id"),
+                )
+                if "contenido" in nuevo and _plano_contenido(antes["contenido"]) != _plano_contenido(nuevo["contenido"]):
+                    cambios.append({"campo": "contenido", "antes": None, "despues": None})
+                if cambios:
+                    historial.registrar(
+                        cur, "nota", nota_id, "editar", antes["titulo"], yo,
+                        antes["proyecto_id"], cambios, agrupar_minutos=30,
+                    )
         conn.commit()
     return actualizado
 
 
 def eliminar_nota(nota_id: int, yo: str, teams: list[str]) -> bool:
+    """A la papelera: se restaura durante 30 días (ver `services/historial.py`)."""
     donde, valores = _visible(yo, teams)
     with _get_connection() as conn:
-        with conn.cursor() as cur:
-            cur.execute(f"DELETE FROM notas WHERE id = %s{donde}", [nota_id, *valores])
-            eliminado = cur.rowcount > 0
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            enviada = historial.mandar_a_papelera(
+                cur, "nota", nota_id, donde.removeprefix(" AND "), valores, yo
+            )
         conn.commit()
-    return eliminado
+    return enviada is not None
 
 
 def proyecto_existe(proyecto_id: int) -> bool:
     with _get_connection() as conn:
         with conn.cursor() as cur:
-            cur.execute("SELECT 1 FROM campaigns WHERE id = %s", (proyecto_id,))
+            cur.execute(
+                "SELECT 1 FROM campaigns WHERE id = %s AND deleted_at IS NULL", (proyecto_id,)
+            )
             return cur.fetchone() is not None
 
 

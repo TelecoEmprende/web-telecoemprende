@@ -159,13 +159,20 @@ class RelacionesPorIdTestCase(unittest.TestCase):
         )
         self.assertEqual(respuesta.status_code, 400)
 
-    def test_borrar_un_proyecto_desvincula_sus_notas(self):
+    def test_la_nota_sigue_con_su_proyecto_en_la_papelera_y_se_desvincula_al_vaciarla(self):
         proyecto = self.client.post("/api/marketing/campaigns", json={"nombre": "Feria"}).get_json()
         proyecto_id = proyecto["campaign"]["id"]
         nota = self.client.post(
             "/api/equipo/notas", json={"titulo": "Contactos", "proyecto_id": proyecto_id}
         ).get_json()["nota"]
         self.client.delete(f"/api/marketing/campaigns/{proyecto_id}")
+        # A la papelera, no borrado: restaurar el proyecto devuelve el enlace.
+        leida = self.client.get(f"/api/equipo/notas/{nota['id']}").get_json()["nota"]
+        self.assertEqual(leida["proyecto_id"], proyecto_id)
+
+        from backend.services import historial
+
+        historial.vaciar_papelera("proyecto", proyecto_id)
         leida = self.client.get(f"/api/equipo/notas/{nota['id']}").get_json()["nota"]
         self.assertIsNone(leida["proyecto_id"])
 

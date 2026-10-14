@@ -142,3 +142,36 @@ def resumen_salud_equipo(salud: dict, departamento: str) -> bool:
         f":bar_chart: *Salud de {departamento}*: {salud['sobrecargados']} sobrecargado(s), "
         f"{salud['inactivos']} inactivo(s) +15 días, {a_tiempo}"
     )
+
+
+def resumen_mesa(mesa: dict) -> bool:
+    """El resumen del lunes para la reunión semanal: lo atrasado, lo que no
+    tiene dueño y los proyectos que no se mueven. Sin nada que contar no
+    manda nada: un «todo en orden» cada lunes acaba silenciado."""
+    atrasadas = mesa.get("atrasadas", [])
+    sin_dueno = mesa.get("sin_dueno", [])
+    estancados = [p for p in mesa.get("proyectos", []) if p.get("estancado")]
+    sin_responsable = [p for p in mesa.get("proyectos", []) if not p.get("responsable")]
+    if not (atrasadas or sin_dueno or estancados or sin_responsable):
+        return False
+
+    lineas = [":calendar: *Mesa del club — lo que toca mirar esta semana*"]
+    if atrasadas:
+        lineas.append(f":rotating_light: *{len(atrasadas)} tarea(s) atrasada(s):*")
+        for t in atrasadas[:8]:
+            quien = ", ".join(_quien(r) for r in t.get("responsables") or []) or "sin dueño"
+            lineas.append(f"• {t['titulo']} ({t['departamento']}) — {quien}, venció el {t['deadline']}")
+    if sin_dueno:
+        lineas.append(f":raising_hand: *{len(sin_dueno)} tarea(s) sin dueño* — ¿quién se la queda?")
+        for t in sin_dueno[:8]:
+            lineas.append(f"• {t['titulo']} ({t['departamento']})")
+    if estancados:
+        lineas.append(f":hourglass: *{len(estancados)} proyecto(s) sin moverse* en {mesa.get('dias_estancado', 14)}+ días:")
+        for p in estancados[:8]:
+            lineas.append(f"• {p['nombre']} — {p.get('responsable') and _quien(p['responsable']) or 'sin responsable'}")
+    if sin_responsable:
+        lineas.append(
+            f":bust_in_silhouette: *{len(sin_responsable)} proyecto(s) sin responsable:* "
+            + ", ".join(p["nombre"] for p in sin_responsable[:8])
+        )
+    return enviar("\n".join(lineas))

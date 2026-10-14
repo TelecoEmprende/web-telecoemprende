@@ -16,7 +16,7 @@ from dataclasses import dataclass
 from decimal import Decimal
 
 import psycopg2
-from psycopg2.extras import RealDictCursor
+from psycopg2.extras import Json, RealDictCursor
 
 from backend.config import DATABASE_URL
 from backend.services.db import PERSONAS, fijar_personas, id_de_persona
@@ -38,6 +38,12 @@ class Tabla:
     nombre: str
     columnas: tuple[str, ...]
     orden: str
+    # Columnas JSONB: un `list` de Python se adaptaría a ARRAY, así que van
+    # envueltas en `Json` al escribir.
+    json: tuple[str, ...] = ()
+    # Además de las del departamento, enseña las del club (`departamento = ''`):
+    # la reunión semanal de todos no es de ningún departamento.
+    incluye_club: bool = False
 
 
 PRESUPUESTO = Tabla(
@@ -48,8 +54,10 @@ PRESUPUESTO = Tabla(
 
 REUNIONES = Tabla(
     nombre="reuniones",
-    columnas=("titulo", "fecha", "hora", "objetivo", "asistentes", "acta"),
+    columnas=("titulo", "fecha", "hora", "objetivo", "asistentes", "contenido"),
     orden="fecha DESC, hora DESC, id DESC",
+    json=("contenido",),
+    incluye_club=True,
 )
 
 SERVICIOS = Tabla(
@@ -83,7 +91,13 @@ def _serializar(fila: dict) -> dict:
 
 def _alcance(tabla: Tabla, departamento: str | None) -> tuple[str, list]:
     """Cláusula y parámetros que acotan una fila a su departamento."""
+    if tabla.incluye_club:
+        return " AND departamento IN (%s, '')", [departamento]
     return " AND departamento = %s", [departamento]
+
+
+def _adaptar(tabla: Tabla, campos: dict) -> dict:
+    return {c: Json(v) if c in tabla.json else v for c, v in campos.items()}
 
 
 def listar(tabla: Tabla, departamento: str | None = None) -> list[dict]:
@@ -100,6 +114,7 @@ def listar(tabla: Tabla, departamento: str | None = None) -> list[dict]:
 
 def crear(tabla: Tabla, campos: dict, creado_por: str, departamento: str | None = None) -> dict:
     campo_personas = _campo_personas(tabla)
+    campos = _adaptar(tabla, campos)
     columnas = [c for c in tabla.columnas if c in campos and c != campo_personas]
     valores = [campos[c] for c in columnas]
 
@@ -138,6 +153,7 @@ def actualizar(
     fila de otro departamento no actualiza nada, sin SELECT previo."""
     campo_personas = _campo_personas(tabla)
     personas = campos.get(campo_personas) if campo_personas else None
+    campos = _adaptar(tabla, campos)
     columnas = [c for c in tabla.columnas if c in campos and c != campo_personas]
     asignaciones = [f"{c} = %s" for c in columnas]
     valores = [campos[c] for c in columnas]

@@ -26,6 +26,7 @@ from backend.api.marketing import (
     marketing_api,
     requiere_equipo,
 )
+from backend.api.notas import contenido_valido
 from backend.config import (
     MAX_ENLACES,
     MAX_RESPONSABLES,
@@ -99,8 +100,11 @@ def _campos_reunion(datos: dict) -> dict:
         )
     if "asistentes" in datos:
         salida["asistentes"] = _lista_textos(datos, "asistentes", MAX_ENLACES)
-    if "acta" in datos:
-        salida["acta"] = _texto(datos, "acta", maximo=MAX_TEXTO_LARGO_LEN, multilinea=True)
+    if "contenido" in datos:
+        salida["contenido"] = contenido_valido(datos["contenido"])
+    if datos.get("club"):
+        # Reunión de todo el club (no de un departamento): la lee `crear`.
+        salida["club"] = True
     return salida
 
 
@@ -156,11 +160,14 @@ def _montar_rutas(
         campos = leer_campos(datos)
         if obligatorio not in campos:
             raise DatosInvalidos(f"Falta «{obligatorio}».")
-        fila = reg.crear(tabla, campos, _autor(), depto_de())
+        # Solo las reuniones traen `club`: la de todos no es de un departamento.
+        departamento = "" if campos.pop("club", False) else depto_de()
+        fila = reg.crear(tabla, campos, _autor(), departamento)
         return jsonify(build_response(True, "Creado.", registro=fila)), 201
 
     def actualizar(fila_id: int):
         campos = leer_campos(_payload())
+        campos.pop("club", None)
         if not campos:
             raise DatosInvalidos("No hay nada que actualizar.")
         if not reg.actualizar(tabla, fila_id, campos, depto_de()):

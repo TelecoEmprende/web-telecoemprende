@@ -17,7 +17,8 @@ import psycopg2
 from psycopg2.extras import RealDictCursor
 
 from backend.config import DATABASE_URL
-from backend.services.db import PERSONAS, fijar_personas, id_de_persona
+from backend.services import historial
+from backend.services.db import DatosInvalidos, PERSONAS, fijar_personas, id_de_persona, ids_de_personas
 
 
 def _get_connection():
@@ -38,19 +39,21 @@ def _serializar(fila: dict) -> dict:
 # --------------------------------------------------------------------------
 
 def listar_campaigns(departamento: str) -> list[dict]:
+    """Los proyectos cuyo ámbito incluye el departamento: los suyos, los que
+    comparte con otros y los de todo el club."""
     with _get_connection() as conn:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute("""
                 SELECT c.*,
-                       (SELECT COUNT(*) FROM contents co WHERE co.campaign_id = c.id)
+                       (SELECT COUNT(*) FROM contents_v co WHERE co.campaign_id = c.id)
                            AS total_contents,
-                       (SELECT COUNT(*) FROM tasks t WHERE t.campaign_id = c.id)
+                       (SELECT COUNT(*) FROM tasks_v t WHERE t.campaign_id = c.id)
                            AS total_tasks,
-                       (SELECT COUNT(*) FROM tasks t
+                       (SELECT COUNT(*) FROM tasks_v t
                             WHERE t.campaign_id = c.id AND t.estado = 'acabado')
                            AS tareas_acabadas
                 FROM campaigns_v c
-                WHERE c.departamento = %s
+                WHERE %s = ANY(c.departamentos)
                 ORDER BY COALESCE(c.fecha, c.created_at::date) DESC, c.id DESC
             """, (departamento,))
             return [_serializar(f) for f in cur.fetchall()]
@@ -67,11 +70,11 @@ def mis_campanas(email: str) -> list[dict]:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute(
                 """
-                SELECT c.id, c.nombre, c.departamento,
+                SELECT c.id, c.nombre, c.departamentos[1] AS departamento,
                        COUNT(t.id) AS total_tasks,
                        COUNT(t.id) FILTER (WHERE t.estado = 'acabado') AS tareas_acabadas
-                FROM campaigns c
-                JOIN tasks t ON t.campaign_id = c.id
+                FROM campaigns_v c
+                JOIN tasks_v t ON t.campaign_id = c.id
                 WHERE c.archivado = FALSE
                   -- El progreso es del proyecto entero, no solo de "mis"
                   -- tareas dentro de él (por eso el JOIN cuenta todas las de
@@ -81,8 +84,8 @@ def mis_campanas(email: str) -> list[dict]:
                       SELECT 1 FROM tasks_v t2
                       WHERE t2.campaign_id = c.id AND %s = ANY(t2.responsables)
                   )
-                GROUP BY c.id
-                ORDER BY c.departamento, c.nombre
+                GROUP BY c.id, c.nombre, c.departamentos
+                ORDER BY c.departamentos[1], c.nombre
                 """,
                 (email,),
             )
@@ -94,7 +97,7 @@ def obtener_campaign(campaign_id: int, departamento: str) -> dict | None:
     with _get_connection() as conn:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute(
-                "SELECT * FROM campaigns_v WHERE id = %s AND departamento = %s",
+                "SELECT * FROM campaigns_v WHERE id = %s AND %s = ANY(departamentos)",
                 (campaign_id, departamento),
             )
             campaign = cur.fetchone()
@@ -131,6 +134,18 @@ def obtener_campaign(campaign_id: int, departamento: str) -> dict | None:
     return campaign
 
 
+ESTADOS_PROYECTO = ("idea", "activo", "pausado", "cerrado")
+
+
+def _responsable_id(cur, email: str) -> int | None:
+    """Id del responsable de un proyecto (una sola persona); "" = sin
+    responsable. Un email sin cuenta es un error, no algo que guardar suelto."""
+    email = (email or "").strip().lower()
+    if not email:
+        return None
+    return ids_de_personas(cur, [email])[0]
+
+
 def crear_campaign(
     nombre: str,
     objetivo: str,
@@ -138,33 +153,47 @@ def crear_campaign(
     fecha: date | None,
     creado_por: str,
     departamento: str,
+    departamentos: list[str] | None = None,
+    estado: str = "activo",
+    responsable: str = "",
 ) -> dict:
+    """`departamentos` es el ámbito del proyecto (uno, varios o los tres =
+    todo el club); por defecto, el departamento desde el que se crea."""
+    ambito = list(dict.fromkeys(departamentos or [departamento]))
     with _get_connection() as conn:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute(
                 """
                 INSERT INTO campaigns
-                    (nombre, objetivo, audiencia, fecha, creado_por_id, departamento)
-                VALUES (%s, %s, %s, %s, %s, %s)
+                    (nombre, objetivo, audiencia, fecha, creado_por_id, departamento,
+                     departamentos, estado, responsable_id)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
                 RETURNING id
                 """,
-                (nombre, objetivo, audiencia, fecha, id_de_persona(cur, creado_por), departamento),
+                (
+                    nombre, objetivo, audiencia, fecha, id_de_persona(cur, creado_por),
+                    ambito[0], ambito, estado, _responsable_id(cur, responsable),
+                ),
             )
             nueva_id = cur.fetchone()["id"]
             cur.execute("SELECT * FROM campaigns_v WHERE id = %s", (nueva_id,))
             fila = cur.fetchone()
+            historial.registrar(cur, "proyecto", nueva_id, "crear", nombre, creado_por, nueva_id)
         conn.commit()
     return _serializar(fila)
 
 
-def actualizar_campaign(campaign_id: int, departamento: str, **campos) -> bool:
-    permitidos = ("nombre", "objetivo", "audiencia", "fecha", "archivado")
-    return _actualizar("campaigns", campaign_id, permitidos, campos, departamento)
+def actualizar_campaign(campaign_id: int, departamento: str, autor: str = "", **campos) -> bool:
+    permitidos = (
+        "nombre", "objetivo", "audiencia", "fecha", "archivado", "estado",
+        "departamentos", "responsable",
+    )
+    return _actualizar("campaigns", campaign_id, permitidos, campos, departamento, autor)
 
 
-def eliminar_campaign(campaign_id: int, departamento: str) -> bool:
-    """El ON DELETE CASCADE se lleva contenidos y tareas por delante."""
-    return _eliminar("campaigns", campaign_id, departamento)
+def eliminar_campaign(campaign_id: int, departamento: str, autor: str = "") -> bool:
+    """A la papelera, con sus entregables y tareas: se restaura de una vez."""
+    return _eliminar("campaigns", campaign_id, departamento, autor)
 
 
 def duplicar_campaign(campaign_id: int, departamento: str, creado_por: str) -> dict | None:
@@ -188,6 +217,9 @@ def duplicar_campaign(campaign_id: int, departamento: str, creado_por: str) -> d
         fecha=None,
         creado_por=creado_por,
         departamento=departamento,
+        departamentos=original["departamentos"],
+        estado="idea",
+        responsable=original["responsable"],
     )
 
     def _tarea_en_blanco(tarea: dict) -> dict:
@@ -243,11 +275,12 @@ def duplicar_campaign(campaign_id: int, departamento: str, creado_por: str) -> d
 # Contents
 # --------------------------------------------------------------------------
 
-def crear_content(campaign_id: int, departamento: str, **campos) -> dict | None:
+def crear_content(campaign_id: int, departamento: str, autor: str = "", **campos) -> dict | None:
     with _get_connection() as conn:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute(
-                "SELECT 1 FROM campaigns WHERE id = %s AND departamento = %s",
+                "SELECT 1 FROM campaigns WHERE id = %s AND %s = ANY(departamentos)"
+                " AND deleted_at IS NULL",
                 (campaign_id, departamento),
             )
             if cur.fetchone() is None:
@@ -281,6 +314,9 @@ def crear_content(campaign_id: int, departamento: str, **campos) -> dict | None:
             fijar_personas(cur, "contents", nuevo_id, campos.get("responsables", []))
             cur.execute("SELECT * FROM contents_v WHERE id = %s", (nuevo_id,))
             fila = cur.fetchone()
+            historial.registrar(
+                cur, "entregable", nuevo_id, "crear", fila["titulo"], autor, campaign_id
+            )
         conn.commit()
 
     content = _serializar(fila)
@@ -294,7 +330,7 @@ def obtener_content(content_id: int, departamento: str) -> dict | None:
             cur.execute(
                 "SELECT co.* FROM contents_v co"
                 " JOIN campaigns c ON c.id = co.campaign_id"
-                " WHERE co.id = %s AND c.departamento = %s",
+                " WHERE co.id = %s AND %s = ANY(c.departamentos)",
                 (content_id, departamento),
             )
             fila = cur.fetchone()
@@ -311,12 +347,12 @@ def obtener_content(content_id: int, departamento: str) -> dict | None:
     return content
 
 
-def actualizar_content(content_id: int, departamento: str, **campos) -> bool:
+def actualizar_content(content_id: int, departamento: str, autor: str = "", **campos) -> bool:
     permitidos = (
         "titulo", "tipo", "plataforma", "fecha_publicacion", "estado", "script",
         "copy_texto", "cta", "hashtags", "idea_visual", "responsables", "enlaces",
     )
-    actualizado = _actualizar("contents", content_id, permitidos, campos, departamento)
+    actualizado = _actualizar("contents", content_id, permitidos, campos, departamento, autor)
 
     # Publicar un contenido cierra solo sus tareas todavía abiertas: antes
     # "publicado" y "tareas acabadas" eran dos cosas que había que marcar por
@@ -328,6 +364,7 @@ def actualizar_content(content_id: int, departamento: str, **campos) -> bool:
                     """
                     UPDATE tasks SET estado = 'acabado', updated_at = NOW()
                     WHERE content_id = %s AND departamento = %s AND estado != 'acabado'
+                      AND deleted_at IS NULL
                     """,
                     (content_id, departamento),
                 )
@@ -336,8 +373,8 @@ def actualizar_content(content_id: int, departamento: str, **campos) -> bool:
     return actualizado
 
 
-def eliminar_content(content_id: int, departamento: str) -> bool:
-    return _eliminar("contents", content_id, departamento)
+def eliminar_content(content_id: int, departamento: str, autor: str = "") -> bool:
+    return _eliminar("contents", content_id, departamento, autor)
 
 
 # --------------------------------------------------------------------------
@@ -471,7 +508,8 @@ def crear_task(**campos) -> dict | None:
                 cur.execute(
                     "SELECT co.campaign_id FROM contents co"
                     " JOIN campaigns c ON c.id = co.campaign_id"
-                    " WHERE co.id = %s AND c.departamento = %s",
+                    " WHERE co.id = %s AND %s = ANY(c.departamentos)"
+                    " AND co.deleted_at IS NULL AND c.deleted_at IS NULL",
                     (content_id, departamento),
                 )
                 fila = cur.fetchone()
@@ -480,7 +518,8 @@ def crear_task(**campos) -> dict | None:
                 campaign_id = fila["campaign_id"]
             elif campaign_id is not None:
                 cur.execute(
-                    "SELECT 1 FROM campaigns WHERE id = %s AND departamento = %s",
+                    "SELECT 1 FROM campaigns WHERE id = %s AND %s = ANY(departamentos)"
+                    " AND deleted_at IS NULL",
                     (campaign_id, departamento),
                 )
                 if cur.fetchone() is None:
@@ -517,11 +556,15 @@ def crear_task(**campos) -> dict | None:
             fijar_personas(cur, "tasks", nueva_id, campos.get("responsables", []))
             cur.execute("SELECT * FROM tasks_v WHERE id = %s", (nueva_id,))
             nueva = cur.fetchone()
+            historial.registrar(
+                cur, "tarea", nueva_id, "crear", nueva["titulo"], campos.get("creado_por", ""),
+                campaign_id,
+            )
         conn.commit()
     return _serializar(nueva)
 
 
-def actualizar_task(task_id: int, departamento_actual: str, **campos) -> bool:
+def actualizar_task(task_id: int, departamento_actual: str, autor: str = "", **campos) -> bool:
     """`departamento_actual` es el departamento donde vive la fila ahora (para
     el WHERE); si se está moviendo la tarea, el destino va en
     `campos["departamento"]` -- distinto nombre a propósito, porque
@@ -550,11 +593,11 @@ def actualizar_task(task_id: int, departamento_actual: str, **campos) -> bool:
             campos = dict(campos, completado_en=datetime.now())
         elif campos["estado"] != "acabado" and ya_acabada:
             campos = dict(campos, completado_en=None)
-    return _actualizar("tasks", task_id, permitidos, campos, departamento_actual)
+    return _actualizar("tasks", task_id, permitidos, campos, departamento_actual, autor)
 
 
-def eliminar_task(task_id: int, departamento: str) -> bool:
-    return _eliminar("tasks", task_id, departamento)
+def eliminar_task(task_id: int, departamento: str, autor: str = "") -> bool:
+    return _eliminar("tasks", task_id, departamento, autor)
 
 
 # --------------------------------------------------------------------------
@@ -616,9 +659,9 @@ def calendario(desde: date, hasta: date, departamento: str) -> list[dict]:
                            NULL AS prioridad, c.nombre AS padre,
                            co.responsables, NULL::varchar AS hora
                     FROM contents_v co
-                    JOIN campaigns c ON c.id = co.campaign_id
+                    JOIN campaigns_v c ON c.id = co.campaign_id
                     WHERE co.fecha_publicacion BETWEEN %(desde)s AND %(hasta)s
-                      AND c.departamento = %(departamento)s
+                      AND %(departamento)s = ANY(c.departamentos)
                     UNION ALL
                     SELECT 'task' AS origen, t.id, t.titulo,
                            t.deadline AS fecha, t.estado,
@@ -638,7 +681,7 @@ def calendario(desde: date, hasta: date, departamento: str) -> list[dict]:
                            r.asistentes AS responsables, NULLIF(r.hora, '') AS hora
                     FROM reuniones_v r
                     WHERE r.fecha BETWEEN %(desde)s AND %(hasta)s
-                      AND r.departamento = %(departamento)s
+                      AND r.departamento IN (%(departamento)s, '')
                 ) x
                 ORDER BY fecha,
                          -- La publicación ancla el día; después las tareas por
@@ -676,9 +719,9 @@ def calendario_equipo(desde: date, hasta: date, departamentos: list[str]) -> lis
                            co.responsables, NULL::varchar AS hora,
                            c.departamento
                     FROM contents_v co
-                    JOIN campaigns c ON c.id = co.campaign_id
+                    JOIN campaigns_v c ON c.id = co.campaign_id
                     WHERE co.fecha_publicacion BETWEEN %(desde)s AND %(hasta)s
-                      AND c.departamento = ANY(%(departamentos)s)
+                      AND c.departamentos && %(departamentos)s
                     UNION ALL
                     SELECT 'task' AS origen, t.id, t.titulo,
                            t.deadline AS fecha, t.estado,
@@ -700,7 +743,7 @@ def calendario_equipo(desde: date, hasta: date, departamentos: list[str]) -> lis
                            r.departamento
                     FROM reuniones_v r
                     WHERE r.fecha BETWEEN %(desde)s AND %(hasta)s
-                      AND r.departamento = ANY(%(departamentos)s)
+                      AND (r.departamento = ANY(%(departamentos)s) OR r.departamento = '')
                     UNION ALL
                     -- Los eventos que pone el club desde /admin (charlas de
                     -- alumni, feria, asambleas...). Sin filtro de
@@ -734,19 +777,31 @@ def calendario_equipo(desde: date, hasta: date, departamentos: list[str]) -> lis
 # Helpers compartidos
 # --------------------------------------------------------------------------
 
-# De qué departamento es una fila, por tabla. `contents` no tiene columna
-# propia: hereda la de su campaña, que es lo que la hace de un departamento u
-# otro. Va en el WHERE del propio UPDATE/DELETE en vez de en un SELECT previo,
-# así no hay hueco entre comprobar y escribir.
+# De qué departamento es una fila, por tabla. Un proyecto es de todos los
+# departamentos de su ámbito; `contents` no tiene columna propia y hereda la de
+# su proyecto. Va en el WHERE del propio UPDATE/DELETE en vez de en un SELECT
+# previo, así no hay hueco entre comprobar y escribir. Lo que está en la
+# papelera no se toca: se restaura primero.
 _ALCANCE_DEPTO = {
-    "campaigns": "departamento = %s",
-    "tasks": "departamento = %s",
-    "contents": "campaign_id IN (SELECT id FROM campaigns WHERE departamento = %s)",
+    "campaigns": "%s = ANY(departamentos) AND deleted_at IS NULL",
+    "tasks": "departamento = %s AND deleted_at IS NULL",
+    "contents": (
+        "campaign_id IN (SELECT id FROM campaigns WHERE %s = ANY(departamentos))"
+        " AND deleted_at IS NULL"
+    ),
 }
+
+_ENTIDAD = {"campaigns": "proyecto", "contents": "entregable", "tasks": "tarea"}
+_TITULO = {"campaigns": "nombre", "contents": "titulo", "tasks": "titulo"}
+
+
+def _proyecto_de(fila: dict, tabla: str) -> int | None:
+    return fila["id"] if tabla == "campaigns" else fila.get("campaign_id")
 
 
 def _actualizar(
-    tabla: str, fila_id: int, permitidos: tuple, campos: dict, departamento: str
+    tabla: str, fila_id: int, permitidos: tuple, campos: dict, departamento: str,
+    autor: str = "",
 ) -> bool:
     """UPDATE parcial: solo toca las claves presentes en `campos`.
 
@@ -755,7 +810,8 @@ def _actualizar(
     SQL, así que la interpolación del nombre de columna no es inyectable.
 
     `departamento` acota la fila: pasar el id de una tarea de otro
-    departamento no actualiza nada y devuelve False.
+    departamento no actualiza nada y devuelve False. Cada cambio queda en el
+    historial con el valor anterior y el nuevo.
     """
     # Las personas no son una columna de la fila: van a su tabla aparte.
     campo_personas = PERSONAS[tabla][2] if tabla in PERSONAS else None
@@ -764,40 +820,155 @@ def _actualizar(
     asignaciones = []
     valores: list = []
     for clave in permitidos:
-        if clave in campos and clave != campo_personas:
+        if clave in campos and clave not in (campo_personas, "responsable"):
             asignaciones.append(f"{clave} = %s")
             valores.append(campos[clave])
 
-    if not asignaciones and personas is None:
-        return False
-
-    asignaciones.append("updated_at = NOW()")
-    valores += [fila_id, departamento]
-
     with _get_connection() as conn:
-        with conn.cursor() as cur:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            if "responsable" in campos and tabla == "campaigns":
+                # Una sola persona, que va como id: se traduce aquí.
+                asignaciones.append("responsable_id = %s")
+                valores.append(_responsable_id(cur, campos["responsable"]))
+
+            if not asignaciones and personas is None:
+                return False
+
+            # Lo que había, para el historial: de la vista, que ya trae las
+            # personas como emails.
+            cur.execute(
+                f"SELECT * FROM {tabla}_v WHERE id = %s AND {_ALCANCE_DEPTO[tabla].replace(' AND deleted_at IS NULL', '')}",
+                (fila_id, departamento),
+            )
+            antes = cur.fetchone()
+            if antes is None:
+                return False
+
+            asignaciones.append("updated_at = NOW()")
             cur.execute(
                 f"UPDATE {tabla} SET {', '.join(asignaciones)}"
                 f" WHERE id = %s AND {_ALCANCE_DEPTO[tabla]}",
-                valores,
+                [*valores, fila_id, departamento],
             )
             actualizado = cur.rowcount > 0
             if actualizado and personas is not None:
                 fijar_personas(cur, tabla, fila_id, personas)
+            if actualizado:
+                despues = {
+                    k: (json.loads(v) if k == "checklist" and isinstance(v, str) else v)
+                    for k, v in campos.items()
+                }
+                cambios = historial.diferencias(dict(antes), despues, permitidos)
+                if cambios:
+                    historial.registrar(
+                        cur, _ENTIDAD[tabla], fila_id, "editar", antes[_TITULO[tabla]],
+                        autor, _proyecto_de(antes, tabla), cambios,
+                    )
         conn.commit()
     return actualizado
 
 
-def _eliminar(tabla: str, fila_id: int, departamento: str) -> bool:
+def _eliminar(tabla: str, fila_id: int, departamento: str, autor: str = "") -> bool:
+    """A la papelera, no borrado de verdad: ver `services/historial.py`."""
     with _get_connection() as conn:
-        with conn.cursor() as cur:
-            cur.execute(
-                f"DELETE FROM {tabla} WHERE id = %s AND {_ALCANCE_DEPTO[tabla]}",
-                (fila_id, departamento),
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            enviado = historial.mandar_a_papelera(
+                cur, _ENTIDAD[tabla], fila_id, _ALCANCE_DEPTO[tabla], [departamento], autor
             )
-            eliminado = cur.rowcount > 0
         conn.commit()
-    return eliminado
+    return enviado is not None
+
+
+# --------------------------------------------------------------------------
+# Mesa del club
+# --------------------------------------------------------------------------
+
+DIAS_ESTANCADO = 14
+
+
+def mesa_del_club() -> dict:
+    """Todo lo que hay sobre la mesa en la reunión semanal: los proyectos que
+    siguen vivos (con responsable, siguiente paso y cuánto llevan sin moverse),
+    las tareas sin dueño y las atrasadas. Se calcula al momento sobre lo que
+    ya hay; no se guarda nada aparte."""
+    hoy = date.today()
+    with _get_connection() as conn:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(
+                """
+                SELECT c.id, c.nombre, c.estado, c.departamentos, c.responsable, c.fecha,
+                       COALESCE(a.total, 0) AS total_tasks,
+                       COALESCE(a.acabadas, 0) AS tareas_acabadas,
+                       GREATEST(c.updated_at, a.ultima) AS ultima_actividad,
+                       n.titulo AS siguiente_titulo, n.deadline AS siguiente_deadline,
+                       n.responsables AS siguiente_responsables
+                FROM campaigns_v c
+                LEFT JOIN LATERAL (
+                    SELECT COUNT(*) AS total,
+                           COUNT(*) FILTER (WHERE estado = 'acabado') AS acabadas,
+                           MAX(updated_at) AS ultima
+                    FROM tasks_v WHERE campaign_id = c.id
+                ) a ON TRUE
+                LEFT JOIN LATERAL (
+                    SELECT titulo, deadline, responsables FROM tasks_v
+                    WHERE campaign_id = c.id AND estado <> 'acabado'
+                    ORDER BY COALESCE(deadline, '9999-12-31'::date), id LIMIT 1
+                ) n ON TRUE
+                WHERE NOT c.archivado AND c.estado <> 'cerrado'
+                ORDER BY CASE c.estado WHEN 'activo' THEN 0 WHEN 'idea' THEN 1 ELSE 2 END,
+                         c.nombre
+                """
+            )
+            proyectos = []
+            for f in cur.fetchall():
+                ultima = f["ultima_actividad"]
+                dias = (hoy - ultima.date()).days if ultima is not None else None
+                proyecto = _serializar(f)
+                proyecto["dias_sin_movimiento"] = dias
+                # Solo «estancado» lo que debería moverse: un proyecto en pausa
+                # o en idea no se queja de no tener actividad.
+                proyecto["estancado"] = (
+                    f["estado"] == "activo" and dias is not None and dias >= DIAS_ESTANCADO
+                )
+                proyectos.append(proyecto)
+
+            cur.execute(
+                """
+                SELECT t.id, t.titulo, t.departamento, t.deadline, t.prioridad,
+                       COALESCE(co.titulo, c.nombre) AS padre
+                FROM tasks_v t
+                LEFT JOIN contents co ON co.id = t.content_id
+                LEFT JOIN campaigns c ON c.id = t.campaign_id
+                WHERE t.estado <> 'acabado' AND cardinality(t.responsables) = 0
+                ORDER BY COALESCE(t.deadline, '9999-12-31'::date), t.id
+                LIMIT 40
+                """
+            )
+            sin_dueno = [_serializar(f) for f in cur.fetchall()]
+
+            cur.execute(
+                """
+                SELECT t.id, t.titulo, t.departamento, t.deadline, t.responsables,
+                       COALESCE(co.titulo, c.nombre) AS padre
+                FROM tasks_v t
+                LEFT JOIN contents co ON co.id = t.content_id
+                LEFT JOIN campaigns c ON c.id = t.campaign_id
+                WHERE t.estado <> 'acabado' AND t.deadline < %s
+                ORDER BY t.deadline, t.id
+                LIMIT 40
+                """,
+                (hoy,),
+            )
+            atrasadas = [_serializar(f) for f in cur.fetchall()]
+
+    return {
+        "proyectos": proyectos,
+        "sin_dueno": sin_dueno,
+        "atrasadas": atrasadas,
+        "sin_responsable": sum(1 for p in proyectos if not p["responsable"]),
+        "estancados": sum(1 for p in proyectos if p["estancado"]),
+        "dias_estancado": DIAS_ESTANCADO,
+    }
 
 
 # --------------------------------------------------------------------------
@@ -948,7 +1119,7 @@ def salud_equipo(departamento: str) -> dict:
                 SELECT COUNT(*) FILTER (
                            WHERE COALESCE(completado_en, updated_at)::date <= deadline
                        ), COUNT(*)
-                FROM tasks
+                FROM tasks_v
                 WHERE departamento = %s AND estado = 'acabado' AND deadline IS NOT NULL
                 """,
                 (departamento,),
@@ -1094,7 +1265,7 @@ def metricas_club(dias_periodo: int = 30) -> dict:
                         WHERE COALESCE(completado_en, updated_at)::date <= deadline
                     ),
                     COUNT(*)
-                FROM tasks
+                FROM tasks_v
                 WHERE estado = 'acabado' AND deadline IS NOT NULL
                       AND COALESCE(completado_en, updated_at) >= %s
                 """,
@@ -1108,7 +1279,7 @@ def metricas_club(dias_periodo: int = 30) -> dict:
             cur.execute(
                 """
                 SELECT date_trunc('week', COALESCE(completado_en, updated_at))::date AS semana, COUNT(*)
-                FROM tasks
+                FROM tasks_v
                 WHERE estado = 'acabado' AND COALESCE(completado_en, updated_at) >= %s
                 GROUP BY semana ORDER BY semana
                 """,
@@ -1123,7 +1294,7 @@ def metricas_club(dias_periodo: int = 30) -> dict:
             cur.execute(
                 """
                 SELECT departamento, MAX(COALESCE(completado_en, updated_at))
-                FROM tasks WHERE estado = 'acabado'
+                FROM tasks_v WHERE estado = 'acabado'
                 GROUP BY departamento
                 """
             )
@@ -1139,7 +1310,7 @@ def metricas_club(dias_periodo: int = 30) -> dict:
                        COUNT(*) FILTER (
                            WHERE estado <> 'acabado' AND deadline IS NOT NULL AND deadline < %s
                        )
-                FROM tasks GROUP BY departamento
+                FROM tasks_v GROUP BY departamento
                 """,
                 (hoy,),
             )
