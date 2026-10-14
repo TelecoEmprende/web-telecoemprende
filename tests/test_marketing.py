@@ -115,7 +115,6 @@ class AutorizacionTests(MarketingTestCase):
         ("PUT", "/api/marketing/tasks/1"),
         ("DELETE", "/api/marketing/tasks/1"),
         ("GET", "/api/marketing/calendario"),
-        ("GET", "/api/marketing/miembros"),
     )
 
     def test_todas_las_rutas_rechazan_sin_sesion(self):
@@ -124,13 +123,20 @@ class AutorizacionTests(MarketingTestCase):
                 respuesta = self.client.open(ruta, method=metodo, json={})
                 self.assertEqual(respuesta.status_code, 401)
 
-    def test_miembro_de_otro_equipo_no_entra(self):
+    def test_todos_somos_de_los_tres_departamentos(self):
+        # Una cuenta guardada con un solo departamento entra en los tres: el
+        # orden de preferencia no recorta el acceso.
         self.login(email="eventos@example.com", equipos=["eventos"])
 
-        for metodo, ruta in self.RUTAS:
-            with self.subTest(ruta=f"{metodo} {ruta}"):
-                respuesta = self.client.open(ruta, method=metodo, json={})
-                self.assertEqual(respuesta.status_code, 401)
+        for depto in ("marketing", "eventos", "ingenieria"):
+            with self.subTest(depto=depto):
+                self.assertEqual(self.client.get(f"/api/{depto}/campaigns").status_code, 200)
+
+    def test_el_orden_de_preferencia_se_completa_con_los_que_faltan(self):
+        self.login(email="eventos@example.com", equipos=["eventos"])
+
+        sesion = self.client.get("/api/equipo/session").get_json()
+        self.assertEqual(sesion["teams"], ["eventos", "marketing", "ingenieria"])
 
     def test_miembro_de_marketing_entra(self):
         self.login()
@@ -151,12 +157,6 @@ class AutorizacionTests(MarketingTestCase):
 
         respuesta = self.client.get("/api/marketing/campaigns")
         self.assertEqual(respuesta.status_code, 200)
-
-    def test_ingenieria_sin_permiso_de_admin_no_entra_en_otro_departamento(self):
-        self.login(email="dev@example.com", equipos=["ingenieria"])
-
-        respuesta = self.client.get("/api/marketing/campaigns")
-        self.assertEqual(respuesta.status_code, 401)
 
     def test_logout_corta_el_acceso(self):
         self.login()
@@ -639,10 +639,40 @@ class TaskAsignacionTests(MarketingTestCase):
             json={"titulo": "Escribir guion", "instrucciones": "Ver notas.", **campos},
         )
 
-    def test_miembro_raso_no_puede_crear_tareas(self):
+    def test_miembro_raso_crea_tareas_sin_dueno_o_para_si(self):
         self.login(vp_de=[])
-        respuesta = self.crear_task_directo()
+        self.assertEqual(self.crear_task_directo().status_code, 201)
+        self.assertEqual(
+            self.crear_task_directo(responsables=["marketing@example.com"]).status_code, 201
+        )
+
+    def test_miembro_raso_no_puede_asignar_tareas_a_otros(self):
+        self.login(vp_de=[])
+        self.seed_acceso("otra@example.com")
+        respuesta = self.crear_task_directo(responsables=["otra@example.com"])
         self.assertEqual(respuesta.status_code, 403)
+
+    def test_miembro_raso_se_queda_una_tarea_sin_dueno_pero_no_la_de_otro(self):
+        self.login(vp_de=["marketing"])
+        self.seed_acceso("otra@example.com")
+        libre = self.crear_task_directo().get_json()["task"]
+        ajena = self.crear_task_directo(responsables=["otra@example.com"]).get_json()["task"]
+
+        self.client.post("/api/equipo/logout")
+        self.login(email="raso@example.com", vp_de=[])
+        cogida = self.client.put(
+            f"/api/marketing/tasks/{libre['id']}", json={"responsables": ["raso@example.com"]}
+        )
+        self.assertEqual(cogida.status_code, 200)
+        robada = self.client.put(
+            f"/api/marketing/tasks/{ajena['id']}", json={"responsables": ["raso@example.com"]}
+        )
+        self.assertEqual(robada.status_code, 403)
+        # Y puede soltar la suya.
+        soltada = self.client.put(
+            f"/api/marketing/tasks/{libre['id']}", json={"responsables": []}
+        )
+        self.assertEqual(soltada.status_code, 200)
 
     def test_vp_puede_crear_tareas(self):
         self.login(vp_de=["marketing"])
@@ -795,21 +825,21 @@ class FotoPerfilTestCase(MarketingTestCase):
 
     def _put(self, email, foto):
         return self.client.put(
-            "/api/marketing/miembros/ficha", json={"email": email, "foto": foto}
+            "/api/equipo/miembros/ficha", json={"email": email, "foto": foto}
         )
 
     def test_cambia_su_propia_foto_y_sale_en_el_directorio(self):
         respuesta = self._put("marketing@example.com", self.JPEG)
         self.assertEqual(respuesta.status_code, 200, respuesta.get_json())
 
-        miembros = self.client.get("/api/marketing/miembros").get_json()["miembros"]
+        miembros = self.client.get("/api/equipo/miembros").get_json()["miembros"]
         self.assertEqual(miembros[0]["foto"], self.JPEG)
 
     def test_vaciarla_devuelve_a_la_foto_por_defecto(self):
         self._put("marketing@example.com", self.JPEG)
         self.assertEqual(self._put("marketing@example.com", "").status_code, 200)
 
-        miembros = self.client.get("/api/marketing/miembros").get_json()["miembros"]
+        miembros = self.client.get("/api/equipo/miembros").get_json()["miembros"]
         self.assertEqual(miembros[0]["foto"], "")
 
     def test_no_puede_cambiar_la_foto_de_otra_persona(self):
@@ -839,13 +869,13 @@ class FotoPerfilTestCase(MarketingTestCase):
 
     def test_la_ficha_dice_si_es_la_tuya(self):
         mia = self.client.get(
-            "/api/marketing/miembros/ficha?email=marketing@example.com"
+            "/api/equipo/miembros/ficha?email=marketing@example.com"
         ).get_json()["ficha"]
         self.assertTrue(mia["es_tu_ficha"])
 
         self.seed_acceso(email="otra@example.com")
         suya = self.client.get(
-            "/api/marketing/miembros/ficha?email=otra@example.com"
+            "/api/equipo/miembros/ficha?email=otra@example.com"
         ).get_json()["ficha"]
         self.assertFalse(suya["es_tu_ficha"])
 
@@ -935,21 +965,29 @@ class CalendarioTests(MarketingTestCase):
 
 
 class MiembrosTests(MarketingTestCase):
-    def test_lista_solo_los_de_marketing_activos(self):
+    def test_lista_a_todos_los_activos_con_su_orden_de_preferencia(self):
         self.login()
-        self.seed_acceso("hugo@example.com", equipos=["marketing", "eventos"])
+        self.seed_acceso("hugo@example.com", equipos=["eventos", "marketing"])
         self.seed_acceso("solo.eventos@example.com", equipos=["eventos"])
 
-        miembros = self.client.get("/api/marketing/miembros").get_json()["miembros"]
-        emails = {m["email"] for m in miembros}
+        miembros = self.client.get("/api/equipo/miembros").get_json()["miembros"]
+        por_email = {m["email"]: m for m in miembros}
 
-        self.assertEqual(emails, {"marketing@example.com", "hugo@example.com"})
+        self.assertEqual(
+            set(por_email),
+            {"marketing@example.com", "hugo@example.com", "solo.eventos@example.com"},
+        )
+        self.assertEqual(por_email["hugo@example.com"]["equipos"], ["eventos", "marketing", "ingenieria"])
+        self.assertEqual(
+            por_email["solo.eventos@example.com"]["equipos"], ["eventos", "marketing", "ingenieria"]
+        )
 
-    def test_no_expone_el_hash_de_la_contrasena(self):
+    def test_no_expone_el_hash_ni_el_dni(self):
         self.login()
 
-        miembros = self.client.get("/api/marketing/miembros").get_json()["miembros"]
+        miembros = self.client.get("/api/equipo/miembros").get_json()["miembros"]
         self.assertNotIn("password_hash", miembros[0])
+        self.assertNotIn("dni", miembros[0])
 
 
 if __name__ == "__main__":
@@ -1026,23 +1064,6 @@ class AislamientoDepartamentoTestCase(MarketingTestCase):
             json={"titulo": "Colada", "instrucciones": "Ver notas.", "campaign_id": campaign_id},
         )
         self.assertEqual(respuesta.status_code, 404)
-
-    def test_estar_en_marketing_no_da_acceso_a_eventos(self):
-        self.login(equipos=["marketing"])
-
-        self.assertEqual(self.client.get("/api/eventos/tasks").status_code, 401)
-        self.assertEqual(self.client.get("/api/eventos/campaigns").status_code, 401)
-        self.assertEqual(self.client.get("/api/marketing/tasks").status_code, 200)
-
-    def test_miembros_son_los_del_departamento_de_la_ruta(self):
-        self.login(equipos=["marketing", "eventos"])
-        self.seed_acceso("solo-eventos@example.com", "x", ["eventos"])
-
-        de_eventos = self.client.get("/api/eventos/miembros").get_json()["miembros"]
-        self.assertIn("solo-eventos@example.com", [m["email"] for m in de_eventos])
-
-        de_marketing = self.client.get("/api/marketing/miembros").get_json()["miembros"]
-        self.assertNotIn("solo-eventos@example.com", [m["email"] for m in de_marketing])
 
 
 
@@ -1160,12 +1181,12 @@ class FichaMiembroTestCase(MarketingTestCase):
         ).get_json()["task"]["id"]
         self.client.put(f"/api/marketing/tasks/{acabada}", json={"estado": "acabado"})
 
-        miembros = self.client.get("/api/marketing/miembros").get_json()["miembros"]
+        miembros = self.client.get("/api/equipo/miembros").get_json()["miembros"]
         hugo = next(m for m in miembros if m["email"] == "hugo@telecoemprende.es")
         # Solo cuenta lo que sigue abierto: la acabada ya no pesa.
         self.assertEqual(hugo["abiertas"], 1)
 
-    def test_la_carga_no_mezcla_departamentos(self):
+    def test_la_carga_se_cuenta_en_total_y_por_departamento(self):
         self.login(equipos=["marketing", "eventos"])
         self.seed_acceso("hugo@telecoemprende.es", "x", ["marketing", "eventos"])
         self.client.post(
@@ -1176,13 +1197,12 @@ class FichaMiembroTestCase(MarketingTestCase):
             },
         )
 
-        en_marketing = self.client.get("/api/marketing/miembros").get_json()["miembros"]
-        hugo = next(m for m in en_marketing if m["email"] == "hugo@telecoemprende.es")
-        self.assertEqual(hugo["abiertas"], 0)
-
-        en_eventos = self.client.get("/api/eventos/miembros").get_json()["miembros"]
-        hugo = next(m for m in en_eventos if m["email"] == "hugo@telecoemprende.es")
+        miembros = self.client.get("/api/equipo/miembros").get_json()["miembros"]
+        hugo = next(m for m in miembros if m["email"] == "hugo@telecoemprende.es")
         self.assertEqual(hugo["abiertas"], 1)
+        self.assertEqual(
+            hugo["abiertas_por_depto"], {"marketing": 0, "eventos": 1, "ingenieria": 0}
+        )
 
     def test_la_ficha_trae_totales_y_actividad(self):
         self.login()
@@ -1199,7 +1219,7 @@ class FichaMiembroTestCase(MarketingTestCase):
         )
 
         ficha = self.client.get(
-            "/api/marketing/miembros/ficha?email=hugo@telecoemprende.es"
+            "/api/equipo/miembros/ficha?email=hugo@telecoemprende.es"
         ).get_json()["ficha"]
 
         self.assertEqual(ficha["abiertas"], 1)
@@ -1212,7 +1232,7 @@ class FichaMiembroTestCase(MarketingTestCase):
         self.seed_acceso("hugo@telecoemprende.es", "x", ["marketing"])
 
         guardar = self.client.put(
-            "/api/marketing/miembros/ficha",
+            "/api/equipo/miembros/ficha",
             json={
                 "email": "hugo@telecoemprende.es",
                 "tags": ["Reels", "Fotografía", "  "],
@@ -1222,26 +1242,49 @@ class FichaMiembroTestCase(MarketingTestCase):
         self.assertEqual(guardar.status_code, 200)
 
         ficha = self.client.get(
-            "/api/marketing/miembros/ficha?email=hugo@telecoemprende.es"
+            "/api/equipo/miembros/ficha?email=hugo@telecoemprende.es"
         ).get_json()["ficha"]
         # La etiqueta en blanco se descarta y el resto queda ordenado.
         self.assertEqual(ficha["tags"], ["Fotografía", "Reels"])
         self.assertEqual(ficha["notas"], "Mejor una cosa a la vez.")
 
-    def test_no_se_lee_la_ficha_de_alguien_de_otro_departamento(self):
-        self.login(equipos=["marketing"])
-        self.seed_acceso("solo-eventos@example.com", "x", ["eventos"])
+    def test_ficha_de_alguien_inexistente_o_inactivo_da_404(self):
+        self.login()
+        self.seed_acceso("baja@example.com", "x", ["eventos"])
+        conn = marketing_service._get_connection()
+        with conn.cursor() as cur:
+            cur.execute("UPDATE equipo_accesos SET activo = FALSE WHERE email = 'baja@example.com'")
+        conn.commit()
+        conn.close()
 
-        leer = self.client.get(
-            "/api/marketing/miembros/ficha?email=solo-eventos@example.com"
-        )
-        self.assertEqual(leer.status_code, 404)
+        for email in ("baja@example.com", "nadie@example.com"):
+            leer = self.client.get(f"/api/equipo/miembros/ficha?email={email}")
+            self.assertEqual(leer.status_code, 404)
+            escribir = self.client.put(
+                "/api/equipo/miembros/ficha", json={"email": email, "notas": "colada"}
+            )
+            self.assertEqual(escribir.status_code, 404)
 
-        escribir = self.client.put(
-            "/api/marketing/miembros/ficha",
-            json={"email": "solo-eventos@example.com", "notas": "colada"},
+    def test_la_ficha_trae_lo_pendiente_con_su_plazo_y_la_media_del_club(self):
+        self.login()
+        self.seed_acceso("hugo@telecoemprende.es", "x", ["marketing"])
+        self.client.post(
+            "/api/marketing/tasks",
+            json={
+                "titulo": "Guion", "instrucciones": "Ver notas.",
+                "deadline": "2026-12-01", "responsables": ["hugo@telecoemprende.es"],
+            },
         )
-        self.assertEqual(escribir.status_code, 404)
+
+        ficha = self.client.get(
+            "/api/equipo/miembros/ficha?email=hugo@telecoemprende.es"
+        ).get_json()["ficha"]
+        self.assertEqual([t["titulo"] for t in ficha["pendientes"]], ["Guion"])
+        self.assertEqual(ficha["pendientes"][0]["deadline"], "2026-12-01")
+        self.assertEqual(ficha["abiertas_por_depto"]["marketing"], 1)
+        # 1 tarea abierta entre 2 personas activas.
+        self.assertEqual(ficha["media_club"], 0.5)
+        self.assertEqual(ficha["equipos"], ["marketing", "eventos", "ingenieria"])
 
 
 class SaludEquipoTestCase(MarketingTestCase):

@@ -44,7 +44,7 @@ class EquipoRegistroTestCase(unittest.TestCase):
         accesos = equipo_service.listar_equipo_accesos()
         self.assertEqual(len(accesos), 1)
         self.assertEqual(accesos[0]["email"], "nuevo@example.com")
-        self.assertEqual(accesos[0]["equipos"], [])
+        self.assertEqual(accesos[0]["equipos"], ["marketing", "eventos", "ingenieria"])
         self.assertEqual(accesos[0]["cargo"], "")
         self.assertFalse(accesos[0]["activo"])
 
@@ -65,7 +65,7 @@ class EquipoRegistroTestCase(unittest.TestCase):
             json={"email": "nuevo@example.com", "password": "contrasena-larga"},
         )
         self.assertEqual(respuesta.status_code, 200)
-        self.assertEqual(respuesta.get_json()["teams"], ["marketing"])
+        self.assertEqual(respuesta.get_json()["teams"], ["marketing", "eventos", "ingenieria"])
 
     def test_email_ya_dado_de_alta_no_pisa_la_cuenta_existente(self):
         self.registro()
@@ -78,7 +78,7 @@ class EquipoRegistroTestCase(unittest.TestCase):
 
         accesos = equipo_service.listar_equipo_accesos()
         self.assertEqual(len(accesos), 1)
-        self.assertEqual(accesos[0]["equipos"], ["eventos"])
+        self.assertEqual(accesos[0]["equipos"], ["eventos", "marketing", "ingenieria"])
         self.assertTrue(accesos[0]["activo"])
         respuesta = self.client.post(
             "/api/equipo/login",

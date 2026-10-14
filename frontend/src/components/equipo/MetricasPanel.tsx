@@ -5,6 +5,7 @@ import { getMetricas } from "../../api/equipo";
 import { AlertBanner } from "../feedback/AlertBanner";
 import { Esqueleto } from "../feedback/Esqueleto";
 import { AvatarResponsable, etiquetaDe } from "./marketing/Avatares";
+import { GraficasClub } from "./GraficasClub";
 import { Contador, FilaAnimada } from "../movimiento";
 import { SPRING_DEFAULT } from "@/components/smoothui/lib/animation";
 import type { ApiFailure } from "../../types/api";
@@ -90,6 +91,8 @@ export function MetricasPanel() {
           />
         </div>
       </div>
+
+      <GraficasClub balance={metricas.balance_departamentos} />
 
       {(metricas.alertas_inactividad.length > 0 || metricas.alertas_departamento.length > 0) && (
         <div className="crm-c mkt-grupo-react">

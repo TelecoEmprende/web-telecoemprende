@@ -5,27 +5,45 @@ from datetime import date, timedelta
 from flask import Blueprint, jsonify, request, session
 
 from backend.api.admin import _validar_evento_calendario
-from backend.api.marketing import DatosInvalidos, _foto, es_cargo_vp_o_admin
+from backend.api.marketing import (
+    DatosInvalidos,
+    _foto,
+    _lista_textos,
+    _payload,
+    _texto,
+    es_cargo_vp_o_admin,
+)
 from backend.config import (
     EQUIPOS_VALIDOS,
+    MINUTOS_ENLACE_CLAVE,
+    URL_PUBLICA,
     LOGIN_BLOCK_WINDOW_SECONDS,
     LUMA_CALENDAR_URL,
     MAX_DNI_LEN,
     MAX_EMAIL_LEN,
     MAX_LOGIN_ATTEMPTS_PER_WINDOW,
     MAX_NOMBRE_EQUIPO_LEN,
+    MAX_RESPONSABLES,
+    MAX_TEXTO_LARGO_LEN,
 )
 from backend.schemas import build_response
 from backend.services.admin import is_admin_authenticated
+from backend.services import auditoria
+from backend.services.email import enviar_recuperacion_clave
 from backend.services.luma import eventos_luma
 from backend.services.equipo import (
+    cambiar_password,
+    canjear_token_recuperacion,
+    crear_token_recuperacion,
     confirmar_evento_calendario,
     crear_evento_calendario,
     datos_formulario,
     equipo_session_info,
     guardar_datos_formulario,
+    actualizar_perfil,
     is_equipo_authenticated,
     listar_directorio_club,
+    listar_equipo_accesos,
     listar_eventos_calendario,
     listar_miembros_web,
     login_equipo,
@@ -35,13 +53,14 @@ from backend.services.equipo import (
 )
 from backend.services.marketing import (
     calendario_equipo,
+    carga_club,
+    ficha_miembro,
     metricas_club,
     mis_campanas,
     mis_tareas,
 )
 from backend.services.security import (
     demasiadas_peticiones,
-    email_valido,
     limpiar_texto,
     obtener_ip_real,
 )
@@ -137,6 +156,68 @@ def api_equipo_registro():
     )
 
 
+# La misma respuesta exista o no la cuenta: distinguirlas convertiría esta ruta
+# en un enumerador de qué correos están dados de alta.
+_ENLACE_ENVIADO = "Si hay una cuenta con ese correo, te hemos enviado un enlace para elegir otra contraseña."
+
+
+@equipo_api.route("/olvide-clave", methods=["POST"])
+def api_equipo_olvide_clave():
+    """Pide el enlace para elegir contraseña nueva. Siempre responde lo mismo;
+    lo que pasa de verdad (cuenta inexistente, enlace pedido hace nada, fallo de
+    envío) solo queda en el registro."""
+    ip = obtener_ip_real()
+    if demasiadas_peticiones(
+        ip,
+        max_requests=MAX_LOGIN_ATTEMPTS_PER_WINDOW,
+        window_seconds=LOGIN_BLOCK_WINDOW_SECONDS,
+        bucket="equipo_olvide_clave",
+    ):
+        return jsonify(build_response(False, "Demasiados intentos. Espera unos minutos.")), 429
+
+    payload = request.get_json(silent=True) or {}
+    email = limpiar_texto(str(payload.get("email", ""))).lower()
+    if not email or "@" not in email or len(email) > MAX_EMAIL_LEN:
+        return jsonify(build_response(False, "Introduce un email válido.")), 400
+
+    creado = crear_token_recuperacion(email)
+    if creado is not None:
+        token, nombre = creado
+        enlace = f"{URL_PUBLICA}/equipo?recuperar={token}"
+        if not enviar_recuperacion_clave(email, nombre, enlace, MINUTOS_ENLACE_CLAVE):
+            # Aquí no se traga: quien pidió el enlace se queda sin entrada, y
+            # un admin tiene que poder verlo (Auditoría) y ponerle una
+            # contraseña provisional.
+            auditoria.registrar(email, "EMAIL", "/api/equipo/olvide-clave (el correo no salió)", 502, ip)
+    logger.info("equipo olvide-clave ip=%s enviado=%s", ip, creado is not None)
+    return jsonify(build_response(True, _ENLACE_ENVIADO)), 200
+
+
+@equipo_api.route("/restablecer-clave", methods=["POST"])
+def api_equipo_restablecer_clave():
+    """Elige contraseña nueva con el enlace del correo."""
+    ip = obtener_ip_real()
+    if demasiadas_peticiones(
+        ip,
+        max_requests=MAX_LOGIN_ATTEMPTS_PER_WINDOW,
+        window_seconds=LOGIN_BLOCK_WINDOW_SECONDS,
+        bucket="equipo_restablecer_clave",
+    ):
+        return jsonify(build_response(False, "Demasiados intentos. Espera unos minutos.")), 429
+
+    payload = request.get_json(silent=True) or {}
+    token = str(payload.get("token", ""))
+    nueva = str(payload.get("nueva", ""))
+    if len(nueva) < 8:
+        return jsonify(build_response(False, "La contraseña debe tener al menos 8 caracteres.")), 400
+    if not token or not canjear_token_recuperacion(token, nueva):
+        return jsonify(build_response(
+            False, "El enlace no vale: ha caducado o ya se usó. Pide otro desde «¿Olvidaste tu contraseña?»."
+        )), 400
+    logger.info("equipo restablece su contraseña ip=%s", ip)
+    return jsonify(build_response(True, "Contraseña cambiada. Ya puedes entrar.")), 200
+
+
 @equipo_api.route("/logout", methods=["POST"])
 def api_equipo_logout():
     logout_equipo()
@@ -149,7 +230,10 @@ def api_equipo_session():
     info = (
         equipo_session_info()
         if authenticated
-        else {"teams": [], "vp_de": [], "cargo": "", "email": "", "nombre": "", "admin": False}
+        else {
+            "teams": [], "vp_de": [], "cargo": "", "email": "", "nombre": "", "admin": False,
+            "cambiar_clave": False,
+        }
     )
     return jsonify({"ok": True, "authenticated": authenticated, **info}), 200
 
@@ -346,10 +430,10 @@ def api_equipo_metricas():
 _DOCUMENTO_RE = re.compile(rf"^[A-Z0-9]{{5,{MAX_DNI_LEN}}}$")
 
 
-@equipo_api.route("/datos-formulario", methods=["GET"])
-def api_equipo_datos_formulario():
-    """Ficha de datos personales de la propia persona (`/equipo/datosformulario`).
-    Solo la suya: el email sale de la sesión, nunca del payload."""
+@equipo_api.route("/perfil", methods=["GET"])
+def api_equipo_perfil():
+    """El perfil de la propia persona. Solo el suyo: el email sale de la
+    sesión, nunca del payload. El DNI no sale de aquí hacia nadie más."""
     if not is_equipo_authenticated():
         return jsonify(build_response(False, "No autorizado.")), 401
 
@@ -360,8 +444,10 @@ def api_equipo_datos_formulario():
     return jsonify({"ok": True, "email": email, **datos}), 200
 
 
-@equipo_api.route("/datos-formulario", methods=["PUT"])
-def api_equipo_guardar_datos_formulario():
+@equipo_api.route("/perfil", methods=["PUT"])
+def api_equipo_guardar_perfil():
+    """Cada cual corrige lo suyo: nombre, apellidos, documento, LinkedIn y
+    foto. Cargo, departamentos, permisos y «Sale en la web» son de admin."""
     if not is_equipo_authenticated():
         return jsonify(build_response(False, "No autorizado.")), 401
 
@@ -369,16 +455,18 @@ def api_equipo_guardar_datos_formulario():
     nombre = limpiar_texto(str(payload.get("nombre", "")))
     apellidos = limpiar_texto(str(payload.get("apellidos", "")))
     dni = re.sub(r"[\s-]", "", str(payload.get("dni", ""))).upper()
-    correo = limpiar_texto(str(payload.get("correo", ""))).lower()
+    # Sin limpiar_texto: escaparía los & de la URL. Acaba en un <a href> de la
+    # web pública, así que solo https (nada de javascript:).
+    linkedin = str(payload.get("linkedin", "")).strip()
 
     if not nombre or not apellidos:
         return jsonify(build_response(False, "Nombre y apellidos son obligatorios.")), 400
     if len(nombre) > MAX_NOMBRE_EQUIPO_LEN or len(apellidos) > MAX_NOMBRE_EQUIPO_LEN:
         return jsonify(build_response(False, "Nombre o apellidos demasiado largos.")), 400
-    if not _DOCUMENTO_RE.match(dni):
+    if dni and not _DOCUMENTO_RE.match(dni):
         return jsonify(build_response(False, "Introduce un DNI, NIE o pasaporte válido.")), 400
-    if not email_valido(correo) or len(correo) > MAX_EMAIL_LEN:
-        return jsonify(build_response(False, "Introduce un correo válido.")), 400
+    if len(linkedin) > 600 or (linkedin and not linkedin.lower().startswith("https://")):
+        return jsonify(build_response(False, "El LinkedIn tiene que ser un enlace https://.")), 400
 
     try:
         # Sin `foto` en el payload se conserva la que ya había.
@@ -387,9 +475,152 @@ def api_equipo_guardar_datos_formulario():
         return jsonify(build_response(False, str(error))), 400
 
     email = session.get("equipo_email", "")
-    if not guardar_datos_formulario(email, nombre, apellidos, dni, correo, foto):
+    if not guardar_datos_formulario(email, nombre, apellidos, dni, linkedin, foto):
         return jsonify(build_response(False, "Cuenta no encontrada.")), 404
     # Que el pie del sidebar enseñe ya el nombre nuevo, sin volver a entrar.
     session["equipo_nombre"] = nombre
-    logger.info("equipo guarda datos formulario")
-    return jsonify(build_response(True, "Datos guardados. ¡Gracias!")), 200
+    logger.info("equipo guarda su perfil")
+    return jsonify(build_response(True, "Perfil guardado.")), 200
+
+
+@equipo_api.route("/password", methods=["PUT"])
+def api_equipo_cambiar_password():
+    """Cambio de contraseña de la propia persona: pide la actual, así una
+    sesión olvidada abierta no basta para quedarse con la cuenta."""
+    if not is_equipo_authenticated():
+        return jsonify(build_response(False, "No autorizado.")), 401
+
+    payload = request.get_json(silent=True) or {}
+    actual = str(payload.get("actual", ""))
+    nueva = str(payload.get("nueva", ""))
+    if len(nueva) < 8:
+        return jsonify(build_response(False, "La contraseña debe tener al menos 8 caracteres.")), 400
+
+    if not cambiar_password(session.get("equipo_email", ""), actual, nueva):
+        return jsonify(build_response(False, "La contraseña actual no es correcta.")), 400
+    session["equipo_cambiar_clave"] = False
+    logger.info("equipo cambia su contraseña")
+    return jsonify(build_response(True, "Contraseña cambiada.")), 200
+
+
+# --------------------------------------------------------------------------
+# Miembros del club
+# --------------------------------------------------------------------------
+# Todos somos de los tres departamentos, así que el directorio es uno solo y
+# ya no cuelga de cada departamento. Lo que cambia de una persona a otra es el
+# orden de preferencia (`equipos`) y su carga.
+
+
+def _hay_sesion() -> bool:
+    return is_equipo_authenticated() or is_admin_authenticated()
+
+
+def _acceso_activo(email: str) -> dict | None:
+    return next(
+        (a for a in listar_equipo_accesos() if a["email"] == email and a["activo"]), None
+    )
+
+
+def _es_mi_ficha(email: str) -> bool:
+    """La foto y el perfil los cambia cada cual el suyo. Admin también, para
+    poder quitar una foto que no debería estar ahí."""
+    return is_admin_authenticated() or session.get("equipo_email", "") == email
+
+
+@equipo_api.route("/miembros", methods=["GET"])
+def api_equipo_miembros():
+    """Directorio del club: quién está, en qué orden prefiere cada
+    departamento, qué sabe hacer y cuánto lleva encima (en total y por
+    departamento). Sin DNI ni nada personal: solo lo de trabajo."""
+    if not _hay_sesion():
+        return jsonify(build_response(False, "No autorizado.")), 401
+
+    carga = carga_club()
+    miembros = [
+        {
+            "email": a["email"],
+            "nombre": a["nombre"],
+            "apellidos": a["apellidos"],
+            "foto": a["foto"],
+            "equipos": a["equipos"],
+            "cargo": a["cargo"],
+            "vp_de": a["vp_de"],
+            "tags": a["tags"],
+            "abiertas": carga.get(a["email"], {}).get("total", 0),
+            "abiertas_por_depto": {
+                d: carga.get(a["email"], {}).get(d, 0) for d in EQUIPOS_VALIDOS
+            },
+        }
+        for a in listar_equipo_accesos()
+        if a["activo"]
+    ]
+    return jsonify({"ok": True, "miembros": miembros}), 200
+
+
+@equipo_api.route("/miembros/ficha", methods=["GET"])
+def api_equipo_ficha_miembro():
+    """El email va en query y no en la ruta: lleva `@` y puntos, y meterlo en el
+    path obliga a escaparlo en los dos lados para no ganar nada."""
+    if not _hay_sesion():
+        return jsonify(build_response(False, "No autorizado.")), 401
+
+    email = request.args.get("email", "").strip().lower()
+    acceso = _acceso_activo(email)
+    if acceso is None:
+        return jsonify(build_response(False, "Miembro no encontrado.")), 404
+
+    ficha = ficha_miembro(email)
+    ficha.update(
+        email=acceso["email"],
+        equipos=acceso["equipos"],
+        vp_de=acceso["vp_de"],
+        cargo=acceso["cargo"],
+        tags=acceso["tags"],
+        notas=acceso["notas"],
+        nombre=acceso["nombre"],
+        apellidos=acceso["apellidos"],
+        desde=acceso["created_at"],
+        foto=acceso["foto"],
+        # Quién puede editar esta ficha lo decide el servidor, no el frontend
+        # (que solo lo usa para enseñar u ocultar el botón).
+        es_tu_ficha=_es_mi_ficha(email),
+        # Tus datos personales (nombre, documento, contraseña) solo los cambias
+        # tú, también los admins: aquí no vale `_es_mi_ficha`.
+        es_yo=session.get("equipo_email", "") == email,
+    )
+    return jsonify({"ok": True, "ficha": ficha}), 200
+
+
+@equipo_api.route("/miembros/ficha", methods=["PUT"])
+def api_equipo_actualizar_ficha_miembro():
+    """Habilidades y nota de equipo (las edita cualquiera, para repartir mejor)
+    y la foto (solo la tuya). Departamentos, cargo y permisos siguen siendo
+    cosa de Cuentas."""
+    if not _hay_sesion():
+        return jsonify(build_response(False, "No autorizado.")), 401
+
+    try:
+        datos = _payload()
+        email = _texto(datos, "email", obligatorio=True).lower()
+        if _acceso_activo(email) is None:
+            return jsonify(build_response(False, "Miembro no encontrado.")), 404
+
+        tags = _lista_textos(datos, "tags", MAX_RESPONSABLES) if "tags" in datos else None
+        notas = (
+            _texto(datos, "notas", maximo=MAX_TEXTO_LARGO_LEN, multilinea=True)
+            if "notas" in datos
+            else None
+        )
+        foto = None
+        if "foto" in datos:
+            if not _es_mi_ficha(email):
+                return jsonify(build_response(False, "Solo puedes cambiar tu propia foto.")), 403
+            foto = _foto(datos)
+
+        if tags is None and notas is None and foto is None:
+            raise DatosInvalidos("No hay nada que actualizar.")
+    except DatosInvalidos as error:
+        return jsonify(build_response(False, str(error))), 400
+
+    actualizar_perfil(email, tags=tags, notas=notas, foto=foto)
+    return jsonify(build_response(True, "Ficha actualizada.")), 200

@@ -102,6 +102,83 @@ class MigracionPersonasTestCase(unittest.TestCase):
                 )
 
 
+    def test_los_datos_de_produccion_sobreviven_a_las_migraciones_0005_a_0009(self):
+        """Lo que ya hay (proyectos de un departamento, cuentas con dos
+        departamentos, reuniones con el acta en texto, tareas con responsables)
+        llega entero al esquema nuevo."""
+        with psycopg2.connect(self.url) as conn:
+            with conn.cursor() as cur:
+                for version in (
+                    "0001_esquema_base", "0002_personas_por_id", "0003_fuera_emails_de_personas",
+                    "0004_linkedin_equipo",
+                ):
+                    self.aplicar(cur, version)
+                cur.execute(
+                    "INSERT INTO equipo_accesos (email, password_hash, equipos, correo_personal)"
+                    " VALUES ('ana@x.es', 'h', '{eventos,marketing}', 'ana@gmail.com'),"
+                    "        ('bea@x.es', 'h', '{ingenieria}', ''),"
+                    "        ('nueva@x.es', 'h', '{}', '')"
+                )
+                cur.execute(
+                    "INSERT INTO campaigns (nombre, departamento) VALUES ('Feria', 'eventos') RETURNING id"
+                )
+                proyecto = cur.fetchone()[0]
+                cur.execute(
+                    "INSERT INTO tasks (titulo, departamento, campaign_id) VALUES ('Cartel', 'eventos', %s)"
+                    " RETURNING id",
+                    (proyecto,),
+                )
+                tarea = cur.fetchone()[0]
+                cur.execute(
+                    "INSERT INTO reuniones (departamento, titulo, acta)"
+                    " VALUES ('eventos', 'Semanal', E'Se acordó la feria\\n\\nPendiente: carteles'),"
+                    "        ('eventos', 'Sin acta', '')"
+                )
+
+                for version in (
+                    "0005_todos_en_los_tres_departamentos",
+                    "0006_proyectos_ambito_historial_papelera",
+                    "0007_reuniones_en_la_papelera",
+                    "0008_recuperar_clave",
+                    "0009_fuera_columnas_sin_uso",
+                ):
+                    self.aplicar(cur, version)
+
+                # Todos en los tres departamentos, respetando el orden que había.
+                cur.execute("SELECT email, equipos FROM equipo_accesos ORDER BY email")
+                self.assertEqual(
+                    cur.fetchall(),
+                    [
+                        ("ana@x.es", ["eventos", "marketing", "ingenieria"]),
+                        ("bea@x.es", ["ingenieria", "marketing", "eventos"]),
+                        ("nueva@x.es", ["marketing", "eventos", "ingenieria"]),
+                    ],
+                )
+                # El proyecto de un departamento pasa a tener ese ámbito y sigue
+                # abriéndose por él; sus tareas siguen colgando de él.
+                cur.execute(
+                    "SELECT departamentos, departamento, estado, responsable FROM campaigns_v WHERE id = %s",
+                    (proyecto,),
+                )
+                self.assertEqual(cur.fetchone(), (["eventos"], "eventos", "activo", ""))
+                cur.execute("SELECT campaign_id FROM tasks_v WHERE id = %s", (tarea,))
+                self.assertEqual(cur.fetchone(), (proyecto,))
+                # El acta de texto pasa a párrafos, una línea cada uno.
+                cur.execute("SELECT titulo, contenido FROM reuniones_v")
+                actas = dict(cur.fetchall())
+                textos = ["".join(t["text"] for t in b["content"]) for b in actas["Semanal"]]
+                self.assertEqual(textos, ["Se acordó la feria", "", "Pendiente: carteles"])
+                self.assertEqual(actas["Sin acta"], [])
+                # Y las columnas sin uso ya no están.
+                cur.execute(
+                    "SELECT table_name, column_name FROM information_schema.columns"
+                    " WHERE (table_name, column_name) IN"
+                    " (('equipo_accesos', 'correo_personal'), ('campaigns', 'departamento'),"
+                    "  ('reuniones', 'acta'))"
+                )
+                self.assertEqual(cur.fetchall(), [])
+
+
 class RelacionesPorIdTestCase(unittest.TestCase):
     def setUp(self):
         db.migrar()
@@ -159,13 +236,20 @@ class RelacionesPorIdTestCase(unittest.TestCase):
         )
         self.assertEqual(respuesta.status_code, 400)
 
-    def test_borrar_un_proyecto_desvincula_sus_notas(self):
+    def test_la_nota_sigue_con_su_proyecto_en_la_papelera_y_se_desvincula_al_vaciarla(self):
         proyecto = self.client.post("/api/marketing/campaigns", json={"nombre": "Feria"}).get_json()
         proyecto_id = proyecto["campaign"]["id"]
         nota = self.client.post(
             "/api/equipo/notas", json={"titulo": "Contactos", "proyecto_id": proyecto_id}
         ).get_json()["nota"]
         self.client.delete(f"/api/marketing/campaigns/{proyecto_id}")
+        # A la papelera, no borrado: restaurar el proyecto devuelve el enlace.
+        leida = self.client.get(f"/api/equipo/notas/{nota['id']}").get_json()["nota"]
+        self.assertEqual(leida["proyecto_id"], proyecto_id)
+
+        from backend.services import historial
+
+        historial.vaciar_papelera("proyecto", proyecto_id)
         leida = self.client.get(f"/api/equipo/notas/{nota['id']}").get_json()["nota"]
         self.assertIsNone(leida["proyecto_id"])
 

@@ -44,6 +44,8 @@ export type EquipoLoginResponse =
       nombre: string;
       /** Permiso de admin: grupo Admin del sidebar. */
       admin: boolean;
+      /** La contraseña es una que puso un admin: hay que cambiarla ya. */
+      cambiar_clave: boolean;
     }
   | { ok: false; message: string };
 
@@ -56,6 +58,7 @@ export type EquipoSessionResponse = {
   email: string;
   nombre: string;
   admin: boolean;
+  cambiar_clave: boolean;
 };
 
 /** Fila del directorio del club entero ("Quién es quién") -- solo lo básico,
@@ -80,7 +83,6 @@ export type EquipoAcceso = {
   nombre: string;
   apellidos: string;
   dni: string;
-  correo_personal: string;
   /** Inscripción de la que salió la cuenta (`registrations.id`), o null. */
   registro_id: number | null;
   /** Foto como data URL, o "" para la de `public/` (ver `Avatares.tsx`). */

@@ -21,6 +21,16 @@ export function useApi(): ApiDepto {
   return useMemo(() => apiDepto(depto), [depto]);
 }
 
+/** Quién ha entrado (su email): lo necesitan los paneles para ofrecer «Me la
+ *  quedo» y para saber qué tareas son suyas. */
+const YoContext = createContext("");
+
+export const YoProvider = YoContext.Provider;
+
+export function useYo(): string {
+  return useContext(YoContext);
+}
+
 /** email → nombre real del directorio de ESTE departamento. Se pide una sola
  *  vez por departamento y se comparte, en vez de que cada panel que pinta
  *  avatares (tareas, calendario, reuniones...) vuelva a pedir `getMiembros()`

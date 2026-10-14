@@ -13,8 +13,9 @@ from flask import Blueprint, jsonify, request
 
 from backend.config import CRON_SECRET, EQUIPOS_VALIDOS
 from backend.schemas import build_response
-from backend.services.marketing import salud_equipo, tareas_que_vencen
-from backend.services.slack import aviso_deadlines_manana, resumen_salud_equipo
+from backend.services import historial
+from backend.services.marketing import mesa_del_club, salud_equipo, tareas_que_vencen
+from backend.services.slack import aviso_deadlines_manana, resumen_mesa, resumen_salud_equipo
 
 logger = logging.getLogger("telecoemprende.cron")
 
@@ -38,15 +39,30 @@ def api_avisar_deadlines():
     tareas = tareas_que_vencen(mañana)
     enviado = aviso_deadlines_manana(tareas)
     logger.info("cron avisar-deadlines: %s tarea(s), enviado=%s", len(tareas), enviado)
-    return jsonify({"ok": True, "tareas": len(tareas), "enviado": enviado}), 200
+
+    # De paso, una vez al día: lo que lleva más de 30 días en la papelera se
+    # borra de verdad. Un fallo aquí no tapa el aviso, que ya está enviado.
+    vaciadas = 0
+    try:
+        vaciadas = historial.vaciar_papelera()
+    except Exception:
+        logger.exception("cron avisar-deadlines: fallo vaciando la papelera")
+    return jsonify({"ok": True, "tareas": len(tareas), "enviado": enviado, "vaciadas": vaciadas}), 200
 
 
 @cron_api.route("/resumen-equipo", methods=["POST"])
 def api_resumen_equipo():
-    """Un resumen de salud por departamento, una vez a la semana. Se salta el
-    que no tiene miembros -- no hay a quién avisar de qué."""
+    """El resumen del lunes: la Mesa del club (atrasadas, sin dueño, proyectos
+    estancados) y un resumen de salud por departamento. Se salta el
+    departamento sin miembros -- no hay a quién avisar de qué."""
     if not _autorizado():
         return jsonify(build_response(False, "No autorizado.")), 401
+
+    try:
+        mesa_enviada = resumen_mesa(mesa_del_club())
+    except Exception:
+        logger.exception("cron resumen-equipo: fallo en la mesa del club")
+        mesa_enviada = False
 
     enviados = {}
     for departamento in sorted(EQUIPOS_VALIDOS):
@@ -60,5 +76,5 @@ def api_resumen_equipo():
         except Exception:
             logger.exception("cron resumen-equipo: fallo en %s", departamento)
 
-    logger.info("cron resumen-equipo: %s", enviados)
-    return jsonify({"ok": True, "enviados": enviados}), 200
+    logger.info("cron resumen-equipo: mesa=%s %s", mesa_enviada, enviados)
+    return jsonify({"ok": True, "mesa": mesa_enviada, "enviados": enviados}), 200

@@ -117,3 +117,48 @@ export function checkinEventoCalendario(eventoId: number, email: string, asistio
 export function getMetricas() {
   return apiRequest<ApiResult & { metricas: MetricasClub }>("/api/equipo/metricas?dias=30");
 }
+
+/** El perfil de la propia persona: lo que puede corregir ella misma. */
+export type Perfil = {
+  email: string;
+  nombre: string;
+  apellidos: string;
+  dni: string;
+  linkedin: string;
+  foto: string;
+};
+
+export function getPerfil() {
+  return apiRequest<ApiResult & Perfil>("/api/equipo/perfil");
+}
+
+export function guardarPerfil(datos: Omit<Perfil, "email" | "foto"> & { foto?: string }) {
+  return apiRequest<ApiResult>("/api/equipo/perfil", {
+    method: "PUT",
+    body: JSON.stringify(datos),
+  });
+}
+
+export function cambiarPassword(actual: string, nueva: string) {
+  return apiRequest<ApiResult>("/api/equipo/password", {
+    method: "PUT",
+    body: JSON.stringify({ actual, nueva }),
+  });
+}
+
+/** «¿Olvidaste tu contraseña?»: pide el enlace por correo. Responde siempre lo
+ *  mismo, exista o no la cuenta. */
+export function olvideClave(email: string) {
+  return apiRequest<ApiResult>("/api/equipo/olvide-clave", {
+    method: "POST",
+    body: JSON.stringify({ email }),
+  });
+}
+
+/** Elegir contraseña nueva con el enlace que llegó por correo. */
+export function restablecerClave(token: string, nueva: string) {
+  return apiRequest<ApiResult>("/api/equipo/restablecer-clave", {
+    method: "POST",
+    body: JSON.stringify({ token, nueva }),
+  });
+}

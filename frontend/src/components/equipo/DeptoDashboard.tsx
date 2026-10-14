@@ -1,13 +1,11 @@
-import { DeptoProvider, DirectorioProvider } from "./DeptoApi";
+import { DeptoProvider, DirectorioProvider, YoProvider } from "./DeptoApi";
 import type { Panel } from "./EquipoSidebar";
 import { CalendarPanel } from "./marketing/CalendarPanel";
 import { CampaignsPanel } from "./marketing/CampaignsPanel";
 import { MembersPanel } from "./marketing/MembersPanel";
 import { TasksPanel } from "./marketing/TasksPanel";
-import {
-  PresupuestoPanel,
-  ReunionesPanel,
-} from "./registros/paneles";
+import { PresupuestoPanel } from "./registros/paneles";
+import { ReunionesPanel } from "./registros/ReunionesPanel";
 import type { Team } from "../../types/equipo";
 
 type Props = {
@@ -38,6 +36,8 @@ type Props = {
   puedeAsignarEnTodo: boolean;
   /** Abre una nota en Notas (desde las notas enlazadas a un proyecto). */
   onAbrirNota: (id: number) => void;
+  /** Email de quien ha entrado. */
+  yo?: string;
 };
 
 /**
@@ -50,10 +50,11 @@ type Props = {
  */
 export function DeptoDashboard({
   depto, deptos, seccion, teams, campaignInicial, onCampaignAbierta, onAbrirCampaign, vpDe, puedeAsignarEnTodo,
-  onAbrirNota,
+  onAbrirNota, yo = "",
 }: Props) {
   return (
     <DeptoProvider value={depto}>
+      <YoProvider value={yo}>
       <DirectorioProvider>
         {seccion === "campanas" ? (
           <CampaignsPanel
@@ -79,10 +80,11 @@ export function DeptoDashboard({
             onAbrirCampaign={onAbrirCampaign}
           />
         ) : null}
-        {seccion === "miembros" ? <MembersPanel deptos={teams} /> : null}
+        {seccion === "miembros" ? <MembersPanel /> : null}
         {seccion === "presupuesto" ? <PresupuestoPanel /> : null}
-        {seccion === "reuniones" ? <ReunionesPanel /> : null}
+        {seccion === "reuniones" ? <ReunionesPanel deptos={deptos} /> : null}
       </DirectorioProvider>
+      </YoProvider>
     </DeptoProvider>
   );
 }

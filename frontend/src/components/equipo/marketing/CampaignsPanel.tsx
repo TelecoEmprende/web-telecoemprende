@@ -1,10 +1,16 @@
 import { motion, useReducedMotion } from "motion/react";
 import { FormEvent, useCallback, useEffect, useState } from "react";
 
+import { restaurar } from "../../../api/club";
 import { apiDepto } from "../../../api/marketing";
 import { AlertBanner } from "../../feedback/AlertBanner";
 import { ContadorCaracteres } from "../../feedback/ContadorCaracteres";
 import { Esqueleto } from "../../feedback/Esqueleto";
+import { AmbitoChips, etiquetaAmbito } from "../club/AmbitoChips";
+import { HistorialCargado } from "../club/HistorialLista";
+import { ResponsableSelect } from "../club/ResponsableSelect";
+import { AvatarResponsable, etiquetaDe } from "./Avatares";
+import { useDirectorio } from "../DeptoApi";
 import { AdjuntosDeContent } from "./AdjuntosDeContent";
 import { ContentEditor } from "./ContentEditor";
 import { NotasDelProyecto } from "./NotasDelProyecto";
@@ -12,10 +18,13 @@ import { Badge } from "@/components/ui/badge";
 import { useEntradaDeFila } from "../../movimiento";
 import { SPRING_DEFAULT } from "@/components/smoothui/lib/animation";
 import type { ApiFailure } from "../../../types/api";
-import { DEPTO_LABEL, type Team } from "../../../types/equipo";
+import type { Team } from "../../../types/equipo";
 import {
   CONTENT_ESTADOS,
   CONTENT_ESTADO_LABEL,
+  PROYECTO_ESTADOS,
+  PROYECTO_ESTADO_LABEL,
+  type ProyectoEstado,
   MAX_TEXTO_LARGO_LEN,
   MAX_TITULO_LEN,
   TASK_ESTADO_LABEL,
@@ -156,6 +165,37 @@ function EnlaceNuevo({ onAñadir }: { onAñadir: (enlace: string) => void }) {
   );
 }
 
+/** Lo que sitúa un proyecto de un vistazo: de quién es, en qué punto está y
+ *  quién lo lleva. Va igual en el listado y en el detalle. */
+function FichaProyecto({
+  proyecto,
+  directorio,
+}: {
+  proyecto: Pick<CampaignResumen, "departamentos" | "estado" | "responsable">;
+  directorio: Record<string, string>;
+}) {
+  return (
+    <span className="mkt-ficha-proyecto-react">
+      {etiquetaAmbito(proyecto.departamentos).map((e) => (
+        <Badge key={e} variant="outline">
+          {e}
+        </Badge>
+      ))}
+      <Badge variant="secondary" className={`mkt-estado-proyecto-react is-${proyecto.estado}`}>
+        {PROYECTO_ESTADO_LABEL[proyecto.estado]}
+      </Badge>
+      {proyecto.responsable ? (
+        <span className="mkt-responsable-react">
+          <AvatarResponsable email={proyecto.responsable} nombre={directorio[proyecto.responsable]} />
+          {etiquetaDe(proyecto.responsable, directorio[proyecto.responsable])}
+        </span>
+      ) : (
+        <span className="mkt-responsable-react is-vacio">Sin responsable</span>
+      )}
+    </span>
+  );
+}
+
 type Props = {
   /** Departamentos que se ven a la vez en el listado -- el filtro de la
    *  barra decide cuáles (ver `EquipoPage.tsx`). */
@@ -173,16 +213,13 @@ export function CampaignsPanel({ deptos, campaignInicial, onCampaignAbierta, onA
   const menosMovimiento = useReducedMotion();
   const entradaFila = useEntradaDeFila();
   const [campaigns, setCampaigns] = useState<CampaignResumen[]>([]);
-  const [deptoNuevaCampaign, setDeptoNuevaCampaign] = useState<Team>(deptos[0]);
   const [detalle, setDetalle] = useState<CampaignDetalle | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [editando, setEditando] = useState<Content | null>(null);
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
   const [editandoCampaign, setEditandoCampaign] = useState(false);
-  const [confirmando, setConfirmando] = useState<number | null>(null);
   const [duplicando, setDuplicando] = useState<number | null>(null);
   const [enlaceCopiado, setEnlaceCopiado] = useState<number | null>(null);
-  const [confirmandoContent, setConfirmandoContent] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [mostrarArchivadas, setMostrarArchivadas] = useState(false);
   const [archivando, setArchivando] = useState(false);
@@ -191,6 +228,16 @@ export function CampaignsPanel({ deptos, campaignInicial, onCampaignAbierta, onA
   const [objetivo, setObjetivo] = useState("");
   const [audiencia, setAudiencia] = useState("");
   const [fecha, setFecha] = useState("");
+  // De qué es el proyecto, en qué punto está y quién lo lleva: por defecto, del
+  // departamento que se está mirando, activo y sin responsable.
+  const [ambito, setAmbito] = useState<Team[]>([deptos[0]]);
+  const [estadoProyecto, setEstadoProyecto] = useState<ProyectoEstado>("activo");
+  const [responsable, setResponsable] = useState("");
+  const [filtroEstado, setFiltroEstado] = useState<"" | ProyectoEstado>("");
+  const [verHistorial, setVerHistorial] = useState(false);
+  // Lo borrado va a la papelera, no se pierde: el aviso trae el «Deshacer».
+  const [aviso, setAviso] = useState<{ texto: string; deshacer?: () => Promise<void> } | null>(null);
+  const directorio = useDirectorio();
 
   const abrir = useCallback(async (id: number, depto: Team) => {
     try {
@@ -206,7 +253,9 @@ export function CampaignsPanel({ deptos, campaignInicial, onCampaignAbierta, onA
     setIsLoading(true);
     try {
       const respuestas = await Promise.all(deptos.map((d) => apiDepto(d).getCampaigns()));
-      setCampaigns(respuestas.flatMap((r) => r.campaigns));
+      // Un proyecto de varios departamentos sale en cada uno: una sola vez.
+      const todas = respuestas.flatMap((r) => r.campaigns);
+      setCampaigns([...new Map(todas.map((c) => [c.id, c])).values()]);
       setError(null);
     } catch (err) {
       setError(mensajeDeError(err, "No se pudieron cargar los proyectos."));
@@ -219,11 +268,6 @@ export function CampaignsPanel({ deptos, campaignInicial, onCampaignAbierta, onA
   useEffect(() => {
     void cargarCampaigns();
   }, [cargarCampaigns]);
-
-  useEffect(() => {
-    if (!deptos.includes(deptoNuevaCampaign)) setDeptoNuevaCampaign(deptos[0]);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [deptos.join(",")]);
 
   useEffect(() => {
     // El departamento de una campaña que llega por enlace o desde el
@@ -245,13 +289,22 @@ export function CampaignsPanel({ deptos, campaignInicial, onCampaignAbierta, onA
     if (!nombre.trim()) return;
 
     try {
-      await apiDepto(deptoNuevaCampaign).createCampaign({
-        nombre, objetivo, audiencia, fecha: fecha || null,
+      await apiDepto(ambito[0]).createCampaign({
+        nombre,
+        objetivo,
+        audiencia,
+        fecha: fecha || null,
+        departamentos: ambito,
+        estado: estadoProyecto,
+        responsable,
       });
       setNombre("");
       setObjetivo("");
       setAudiencia("");
       setFecha("");
+      setAmbito([deptos[0]]);
+      setEstadoProyecto("activo");
+      setResponsable("");
       setMostrarFormulario(false);
       await cargarCampaigns();
     } catch (err) {
@@ -269,9 +322,14 @@ export function CampaignsPanel({ deptos, campaignInicial, onCampaignAbierta, onA
         objetivo,
         audiencia,
         fecha: fecha || null,
+        departamentos: ambito,
+        estado: estadoProyecto,
+        responsable,
       });
       setEditandoCampaign(false);
-      await abrir(detalle.id, detalle.departamento);
+      // Si el departamento desde el que se abrió ya no es del ámbito, el
+      // proyecto se vuelve a abrir por uno que sí lo es.
+      await abrir(detalle.id, ambito.includes(detalle.departamento) ? detalle.departamento : ambito[0]);
       await cargarCampaigns();
     } catch (err) {
       setError(mensajeDeError(err, "No se pudo guardar el proyecto."));
@@ -284,15 +342,24 @@ export function CampaignsPanel({ deptos, campaignInicial, onCampaignAbierta, onA
     setObjetivo(detalle.objetivo);
     setAudiencia(detalle.audiencia);
     setFecha(detalle.fecha ?? "");
+    setAmbito(detalle.departamentos);
+    setEstadoProyecto(detalle.estado);
+    setResponsable(detalle.responsable);
     setEditandoCampaign(true);
   }
 
   async function borrarCampaign(campaign: CampaignResumen | CampaignDetalle) {
     try {
       await apiDepto(campaign.departamento).deleteCampaign(campaign.id);
-      setConfirmando(null);
       if (detalle?.id === campaign.id) setDetalle(null);
       await cargarCampaigns();
+      setAviso({
+        texto: `«${campaign.nombre}» está en la papelera (30 días).`,
+        deshacer: async () => {
+          await restaurar("proyecto", campaign.id);
+          await cargarCampaigns();
+        },
+      });
     } catch (err) {
       setError(mensajeDeError(err, "No se pudo eliminar el proyecto."));
     }
@@ -366,8 +433,14 @@ export function CampaignsPanel({ deptos, campaignInicial, onCampaignAbierta, onA
     if (!detalle) return;
     try {
       await apiDepto(detalle.departamento).deleteContent(content.id);
-      setConfirmandoContent(null);
       await recargarDetalle();
+      setAviso({
+        texto: `«${content.titulo}» está en la papelera (30 días).`,
+        deshacer: async () => {
+          await restaurar("entregable", content.id);
+          await recargarDetalle();
+        },
+      });
     } catch (err) {
       setError(mensajeDeError(err, "No se pudo eliminar el entregable."));
     }
@@ -424,6 +497,25 @@ export function CampaignsPanel({ deptos, campaignInicial, onCampaignAbierta, onA
     return <Esqueleto filas={3} alto={92} />;
   }
 
+  const avisoBanner = aviso ? (
+    <AlertBanner
+      variant="success"
+      message={aviso.texto}
+      action={
+        aviso.deshacer
+          ? {
+              label: "Deshacer",
+              onClick: () => {
+                const deshacer = aviso.deshacer;
+                setAviso(null);
+                void deshacer?.().catch(() => setError("No se pudo restaurar."));
+              },
+            }
+          : undefined
+      }
+    />
+  ) : null;
+
   // --- Detalle de una campaña ---
   if (detalle) {
     const todasLasTareas = [
@@ -434,6 +526,7 @@ export function CampaignsPanel({ deptos, campaignInicial, onCampaignAbierta, onA
     return (
       <section className="mkt-panel-react">
         {error ? <AlertBanner variant="error" message={error} /> : null}
+        {avisoBanner}
 
         <button
           type="button"
@@ -486,6 +579,30 @@ export function CampaignsPanel({ deptos, campaignInicial, onCampaignAbierta, onA
                 />
               </div>
             </div>
+            <div className="field-group-react">
+              <label htmlFor="mkt-edit-ambito">De quién es</label>
+              <AmbitoChips value={ambito} onChange={setAmbito} idPrefix="mkt-edit-ambito" />
+            </div>
+            <div className="mkt-form-fila-react">
+              <div className="field-group-react">
+                <label htmlFor="mkt-edit-estado">Estado</label>
+                <select
+                  id="mkt-edit-estado"
+                  value={estadoProyecto}
+                  onChange={(event) => setEstadoProyecto(event.target.value as ProyectoEstado)}
+                >
+                  {PROYECTO_ESTADOS.map((e) => (
+                    <option key={e} value={e}>
+                      {PROYECTO_ESTADO_LABEL[e]}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="field-group-react">
+                <label htmlFor="mkt-edit-responsable">Responsable</label>
+                <ResponsableSelect id="mkt-edit-responsable" value={responsable} onChange={setResponsable} />
+              </div>
+            </div>
             <div className="mkt-modal-acciones-react">
               <button type="submit" className="mkt-btn-react" disabled={!nombre.trim()}>
                 Guardar
@@ -511,6 +628,7 @@ export function CampaignsPanel({ deptos, campaignInicial, onCampaignAbierta, onA
                 ) : null}
               </h3>
               {detalle.objetivo ? <p>{detalle.objetivo}</p> : null}
+              <FichaProyecto proyecto={detalle} directorio={directorio} />
               <p className="mkt-meta-react">
                 {detalle.audiencia ? `Para: ${detalle.audiencia}` : null}
                 {detalle.audiencia && detalle.fecha ? " · " : null}
@@ -621,32 +739,13 @@ export function CampaignsPanel({ deptos, campaignInicial, onCampaignAbierta, onA
                     >
                       Editar
                     </button>
-                    {confirmandoContent === content.id ? (
-                      <>
-                        <button
-                          type="button"
-                          className="mkt-btn-mini-peligro-react"
-                          onClick={() => void borrarContent(content)}
-                        >
-                          Sí, borrar
-                        </button>
-                        <button
-                          type="button"
-                          className="mkt-btn-mini-react"
-                          onClick={() => setConfirmandoContent(null)}
-                        >
-                          No
-                        </button>
-                      </>
-                    ) : (
-                      <button
-                        type="button"
-                        className="mkt-btn-borrar-react"
-                        onClick={() => setConfirmandoContent(content.id)}
-                      >
-                        Eliminar
-                      </button>
-                    )}
+                    <button
+                      type="button"
+                      className="mkt-btn-borrar-react"
+                      onClick={() => void borrarContent(content)}
+                    >
+                      Eliminar
+                    </button>
                   </div>
                 </header>
 
@@ -685,35 +784,27 @@ export function CampaignsPanel({ deptos, campaignInicial, onCampaignAbierta, onA
           </article>
         ) : null}
 
+        <details
+          className="mkt-historial-react"
+          open={verHistorial}
+          onToggle={(e) => setVerHistorial((e.currentTarget as HTMLDetailsElement).open)}
+        >
+          <summary>Historial del proyecto</summary>
+          {verHistorial ? <HistorialCargado proyectoId={detalle.id} /> : null}
+        </details>
+
         <div className="mkt-zona-peligro-react">
-          {confirmando === detalle.id ? (
-            <p className="mkt-confirmar-react">
-              Se borran también {detalle.contents.length} entregables y{" "}
-              {todasLasTareas.length} tareas. Esto no se puede deshacer.
-              <button
-                type="button"
-                className="mkt-btn-mini-peligro-react"
-                onClick={() => void borrarCampaign(detalle)}
-              >
-                Sí, eliminar
-              </button>
-              <button
-                type="button"
-                className="mkt-btn-mini-react"
-                onClick={() => setConfirmando(null)}
-              >
-                Cancelar
-              </button>
-            </p>
-          ) : (
-            <button
-              type="button"
-              className="mkt-btn-borrar-react"
-              onClick={() => setConfirmando(detalle.id)}
-            >
-              Eliminar proyecto
-            </button>
-          )}
+          <button
+            type="button"
+            className="mkt-btn-borrar-react"
+            onClick={() => void borrarCampaign(detalle)}
+          >
+            Enviar proyecto a la papelera
+          </button>
+          <p className="mkt-meta-react">
+            Se lleva sus {detalle.contents.length} entregables y {todasLasTareas.length} tareas, y se
+            puede restaurar durante 30 días.
+          </p>
         </div>
 
         {editando ? (
@@ -731,12 +822,15 @@ export function CampaignsPanel({ deptos, campaignInicial, onCampaignAbierta, onA
   }
 
   // --- Listado ---
-  const visibles = campaigns.filter((c) => mostrarArchivadas || !c.archivado);
+  const visibles = campaigns
+    .filter((c) => mostrarArchivadas || !c.archivado)
+    .filter((c) => filtroEstado === "" || c.estado === filtroEstado);
   const archivadasCount = campaigns.filter((c) => c.archivado).length;
 
   return (
     <section className="mkt-panel-react">
       {error ? <AlertBanner variant="error" message={error} /> : null}
+      {avisoBanner}
 
       <header className="crm-cabecera-react">
         <h3 className="crm-h1">
@@ -745,6 +839,18 @@ export function CampaignsPanel({ deptos, campaignInicial, onCampaignAbierta, onA
             : `${visibles.length} ${visibles.length === 1 ? "proyecto" : "proyectos"}`}
         </h3>
         <div className="crm-tags-react">
+          <select
+            value={filtroEstado}
+            aria-label="Filtrar por estado"
+            onChange={(event) => setFiltroEstado(event.target.value as "" | ProyectoEstado)}
+          >
+            <option value="">Cualquier estado</option>
+            {PROYECTO_ESTADOS.map((e) => (
+              <option key={e} value={e}>
+                {PROYECTO_ESTADO_LABEL[e]}
+              </option>
+            ))}
+          </select>
           {archivadasCount > 0 ? (
             <label
               className={`crm-tag crm-tag-check-react${mostrarArchivadas ? " crm-tag-activo-react" : ""}`}
@@ -770,22 +876,6 @@ export function CampaignsPanel({ deptos, campaignInicial, onCampaignAbierta, onA
 
       {mostrarFormulario ? (
         <form className="mkt-form-react" onSubmit={enviarNueva}>
-          {deptos.length > 1 ? (
-            <div className="field-group-react">
-              <label htmlFor="mkt-depto">Departamento</label>
-              <select
-                id="mkt-depto"
-                value={deptoNuevaCampaign}
-                onChange={(event) => setDeptoNuevaCampaign(event.target.value as Team)}
-              >
-                {deptos.map((d) => (
-                  <option key={d} value={d}>
-                    {DEPTO_LABEL[d]}
-                  </option>
-                ))}
-              </select>
-            </div>
-          ) : null}
           <div className="field-group-react">
             <label htmlFor="mkt-nombre">Nombre</label>
             <input
@@ -830,6 +920,30 @@ export function CampaignsPanel({ deptos, campaignInicial, onCampaignAbierta, onA
               />
             </div>
           </div>
+          <div className="field-group-react">
+            <label htmlFor="mkt-ambito">De quién es</label>
+            <AmbitoChips value={ambito} onChange={setAmbito} idPrefix="mkt-ambito" />
+          </div>
+          <div className="mkt-form-fila-react">
+            <div className="field-group-react">
+              <label htmlFor="mkt-estado">Estado</label>
+              <select
+                id="mkt-estado"
+                value={estadoProyecto}
+                onChange={(event) => setEstadoProyecto(event.target.value as ProyectoEstado)}
+              >
+                {PROYECTO_ESTADOS.map((e) => (
+                  <option key={e} value={e}>
+                    {PROYECTO_ESTADO_LABEL[e]}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="field-group-react">
+              <label htmlFor="mkt-responsable">Responsable</label>
+              <ResponsableSelect id="mkt-responsable" value={responsable} onChange={setResponsable} />
+            </div>
+          </div>
           <button type="submit" className="mkt-btn-react" disabled={!nombre.trim()}>
             Crear proyecto
           </button>
@@ -853,15 +967,13 @@ export function CampaignsPanel({ deptos, campaignInicial, onCampaignAbierta, onA
               >
                 <span className="mkt-campaign-nombre-react">
                   {campaign.nombre}
-                  {deptos.length > 1 ? (
-                    <Badge variant="outline">{DEPTO_LABEL[campaign.departamento]}</Badge>
-                  ) : null}
                   {campaign.archivado ? (
                     <Badge variant="secondary" className="mkt-archivada-badge-react">
                       Archivada
                     </Badge>
                   ) : null}
                 </span>
+                <FichaProyecto proyecto={campaign} directorio={directorio} />
                 {campaign.objetivo ? (
                   <span className="mkt-campaign-objetivo-react">{campaign.objetivo}</span>
                 ) : null}

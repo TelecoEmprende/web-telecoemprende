@@ -41,10 +41,9 @@ from backend.services.slack import (
     tarea_creada,
 )
 from backend.services.marketing import (
+    ESTADOS_PROYECTO,
     actualizar_campaign,
-    carga_por_miembro,
     crear_task_comment,
-    ficha_miembro,
     actualizar_content,
     actualizar_task,
     calendario,
@@ -211,6 +210,19 @@ def _checklist(datos: dict) -> list[dict]:
     return items
 
 
+def _ambito(datos: dict, por_defecto: list[str] | None = None) -> list[str]:
+    """Ámbito de un proyecto: de uno, de varios o de los tres departamentos
+    (= todo el club). Sin repetir y sin ninguno inventado."""
+    if "departamentos" not in datos:
+        return por_defecto or []
+    valor = datos.get("departamentos")
+    if not isinstance(valor, list) or not valor:
+        raise DatosInvalidos("Elige al menos un departamento, o todo el club.")
+    if any(d not in DEPARTAMENTOS for d in valor):
+        raise DatosInvalidos("Departamento no válido.")
+    return list(dict.fromkeys(valor))
+
+
 # Formatos que acepta una foto de perfil. La imagen llega ya reducida desde el
 # navegador; el límite de aquí es la última red, no la primera.
 _FOTO_RE = re.compile(r"^data:image/(jpeg|png|webp);base64,[A-Za-z0-9+/]+={0,2}$")
@@ -254,13 +266,6 @@ def es_cargo_vp_o_admin() -> bool:
     return sesion["cargo"] in CARGOS_VALIDOS or len(sesion["vp_de"]) > 0
 
 
-def _equipos_visibles(equipos: list[str]) -> list[str]:
-    """`equipos` va ordenado por preferencia (1ª, 2ª...): eso solo lo ve quien
-    asigna tareas (`SelectorMiembros`). El resto recibe los mismos
-    departamentos pero en orden alfabético."""
-    return equipos if _puede_asignar_tareas() else sorted(equipos)
-
-
 def _puede_asignar_tareas(departamento: str | None = None) -> bool:
     """Solo board y VPs del departamento asignan.
 
@@ -273,6 +278,17 @@ def _puede_asignar_tareas(departamento: str | None = None) -> bool:
     sesion = equipo_session_info()
     depto = departamento or departamento_actual()
     return sesion["cargo"] in CARGOS_VALIDOS or depto in sesion["vp_de"]
+
+
+def _puede_repartir(anteriores: list[str], nuevos: list[str]) -> bool:
+    """Board y VPs reparten tareas como quieran. Los demás solo pueden
+    cogerse una sin dueño o soltar la suya: el cambio de responsables tiene que
+    afectar únicamente a ellos mismos."""
+    if _puede_asignar_tareas():
+        return True
+    yo = _autor().lower()
+    cambiados = set(map(str.lower, anteriores)) ^ set(map(str.lower, nuevos))
+    return cambiados <= {yo}
 
 
 # --------------------------------------------------------------------------
@@ -296,6 +312,9 @@ def api_crear_campaign():
         fecha=_fecha(datos, "fecha"),
         creado_por=_autor(),
         departamento=departamento_actual(),
+        departamentos=_ambito(datos, [departamento_actual()]),
+        estado=_opcion(datos, "estado", ESTADOS_PROYECTO, "activo"),
+        responsable=_texto(datos, "responsable", maximo=120).lower(),
     )
     logger.info("marketing crea campaign id=%s", campaign["id"])
     return jsonify(build_response(True, "Campaña creada.", campaign=campaign)), 201
@@ -325,8 +344,14 @@ def api_actualizar_campaign(campaign_id: int):
         campos["fecha"] = _fecha(datos, "fecha")
     if "archivado" in datos:
         campos["archivado"] = bool(datos["archivado"])
+    if "estado" in datos:
+        campos["estado"] = _opcion(datos, "estado", ESTADOS_PROYECTO, "activo")
+    if "departamentos" in datos:
+        campos["departamentos"] = _ambito(datos)
+    if "responsable" in datos:
+        campos["responsable"] = _texto(datos, "responsable", maximo=120).lower()
 
-    if not actualizar_campaign(campaign_id, departamento_actual(), **campos):
+    if not actualizar_campaign(campaign_id, departamento_actual(), autor=_autor(), **campos):
         return jsonify(build_response(False, "Campaña no encontrada o sin cambios.")), 404
     return jsonify(build_response(True, "Campaña actualizada.")), 200
 
@@ -334,10 +359,12 @@ def api_actualizar_campaign(campaign_id: int):
 @marketing_api.route("/campaigns/<int:campaign_id>", methods=["DELETE"])
 @requiere_equipo
 def api_eliminar_campaign(campaign_id: int):
-    if not eliminar_campaign(campaign_id, departamento_actual()):
+    if not eliminar_campaign(campaign_id, departamento_actual(), _autor()):
         return jsonify(build_response(False, "Campaña no encontrada.")), 404
     logger.info("marketing elimina campaign id=%s", campaign_id)
-    return jsonify(build_response(True, "Campaña eliminada.")), 200
+    return jsonify(build_response(
+        True, "Proyecto enviado a la papelera: puedes restaurarlo durante 30 días."
+    )), 200
 
 
 @marketing_api.route("/campaigns/<int:campaign_id>/duplicar", methods=["POST"])
@@ -391,7 +418,7 @@ def _campos_content(datos: dict, *, parcial: bool) -> dict:
 def api_crear_content(campaign_id: int):
     datos = _payload()
     content = crear_content(
-        campaign_id, departamento_actual(), **_campos_content(datos, parcial=False)
+        campaign_id, departamento_actual(), _autor(), **_campos_content(datos, parcial=False)
     )
     if content is None:
         return jsonify(build_response(False, "Campaña no encontrada.")), 404
@@ -412,7 +439,7 @@ def api_obtener_content(content_id: int):
 @requiere_equipo
 def api_actualizar_content(content_id: int):
     campos = _campos_content(_payload(), parcial=True)
-    if not actualizar_content(content_id, departamento_actual(), **campos):
+    if not actualizar_content(content_id, departamento_actual(), _autor(), **campos):
         return jsonify(build_response(False, "Contenido no encontrado o sin cambios.")), 404
     return jsonify(build_response(True, "Contenido actualizado.")), 200
 
@@ -420,10 +447,10 @@ def api_actualizar_content(content_id: int):
 @marketing_api.route("/contents/<int:content_id>", methods=["DELETE"])
 @requiere_equipo
 def api_eliminar_content(content_id: int):
-    if not eliminar_content(content_id, departamento_actual()):
+    if not eliminar_content(content_id, departamento_actual(), _autor()):
         return jsonify(build_response(False, "Contenido no encontrado.")), 404
     logger.info("marketing elimina content id=%s", content_id)
-    return jsonify(build_response(True, "Contenido eliminado.")), 200
+    return jsonify(build_response(True, "Entregable enviado a la papelera.")), 200
 
 
 # --------------------------------------------------------------------------
@@ -454,10 +481,12 @@ def api_listar_tasks_archivadas():
 @marketing_api.route("/tasks", methods=["POST"])
 @requiere_equipo
 def api_crear_task():
-    if not _puede_asignar_tareas():
-        return jsonify(build_response(False, "Solo board y VPs pueden asignar tareas.")), 403
-
     datos = _payload()
+    # Cualquiera crea una tarea (y la deja sin dueño, o se la queda). Asignarla
+    # a otra persona es cosa de board y VPs: ver `_puede_repartir`.
+    responsables = _lista_textos(datos, "responsables", MAX_RESPONSABLES)
+    if not _puede_repartir([], responsables):
+        return jsonify(build_response(False, "Solo board y VPs pueden asignar tareas a otras personas.")), 403
 
     def id_opcional(clave):
         valor = datos.get(clave)
@@ -483,7 +512,7 @@ def api_crear_task():
         prioridad=_opcion(datos, "prioridad", TASK_PRIORIDADES, "media"),
         deadline=_fecha(datos, "deadline"),
         hora=_texto(datos, "hora", maximo=5),
-        responsables=_lista_textos(datos, "responsables", MAX_RESPONSABLES),
+        responsables=responsables,
         tags=_lista_textos(datos, "tags", MAX_RESPONSABLES),
         checklist=_checklist(datos),
         enlaces=_lista_textos(datos, "enlaces", MAX_ENLACES),
@@ -539,11 +568,7 @@ def api_actualizar_task(task_id: int):
         # guardado; por eso se compara contra lo guardado, no solo la
         # presencia de la clave).
         anterior = obtener_task(task_id, departamento_actual())
-        if (
-            anterior is not None
-            and sorted(nuevos) != sorted(anterior["responsables"])
-            and not _puede_asignar_tareas()
-        ):
+        if anterior is not None and not _puede_repartir(anterior["responsables"], nuevos):
             return jsonify(build_response(False, "Solo board y VPs pueden reasignar tareas.")), 403
         campos["responsables"] = nuevos
     if "tags" in datos:
@@ -565,7 +590,7 @@ def api_actualizar_task(task_id: int):
                 )), 403
             campos["departamento"] = destino
 
-    if not actualizar_task(task_id, departamento_actual(), **campos):
+    if not actualizar_task(task_id, departamento_actual(), _autor(), **campos):
         return jsonify(build_response(False, "Tarea no encontrada o sin cambios.")), 404
 
     # Solo el cambio de estado se avisa: editar un título o una checklist es
@@ -582,10 +607,10 @@ def api_actualizar_task(task_id: int):
 @marketing_api.route("/tasks/<int:task_id>", methods=["DELETE"])
 @requiere_equipo
 def api_eliminar_task(task_id: int):
-    if not eliminar_task(task_id, departamento_actual()):
+    if not eliminar_task(task_id, departamento_actual(), _autor()):
         return jsonify(build_response(False, "Tarea no encontrada.")), 404
     logger.info("marketing elimina task id=%s", task_id)
-    return jsonify(build_response(True, "Tarea eliminada.")), 200
+    return jsonify(build_response(True, "Tarea enviada a la papelera.")), 200
 
 
 # --------------------------------------------------------------------------
@@ -646,115 +671,3 @@ def api_calendario():
     }), 200
 
 
-# --------------------------------------------------------------------------
-# Miembros del departamento
-# --------------------------------------------------------------------------
-
-@marketing_api.route("/miembros", methods=["GET"])
-@requiere_equipo
-def api_miembros():
-    """Directorio del departamento: quién está, qué sabe hacer y cuánto lleva
-    encima. Las etiquetas salen de `equipo_accesos` (perfil de la persona); la
-    carga se calcula sobre las tareas del departamento, no se guarda."""
-    from backend.services.equipo import miembros_activos
-
-    depto = departamento_actual()
-    carga = carga_por_miembro(depto)
-    miembros = [
-        {
-            "email": a["email"],
-            "equipos": _equipos_visibles(a["equipos"]),
-            "activo": a["activo"],
-            "tags": a["tags"],
-            "nombre": a["nombre"],
-            "foto": a["foto"],
-            "abiertas": carga.get(a["email"], 0),
-        }
-        for a in miembros_activos(depto)
-    ]
-    return jsonify({"ok": True, "miembros": miembros}), 200
-
-
-def _es_mi_ficha(email: str) -> bool:
-    """La foto de perfil la cambia cada cual la suya. Admin también, para poder
-    quitar una que no debería estar ahí."""
-    from flask import session
-
-    return is_admin_authenticated() or session.get("equipo_email", "") == email
-
-
-def _miembro_del_departamento(email: str) -> dict | None:
-    """La persona, solo si está en el departamento de la petición: sin esto,
-    la ficha sería una forma de leer las notas de cualquiera del club."""
-    from backend.services.equipo import listar_equipo_accesos
-
-    return next(
-        (
-            a
-            for a in listar_equipo_accesos()
-            if a["email"] == email and departamento_actual() in a["equipos"]
-        ),
-        None,
-    )
-
-
-@marketing_api.route("/miembros/ficha", methods=["GET"])
-@requiere_equipo
-def api_ficha_miembro():
-    """El email va en query y no en la ruta: lleva `@` y puntos, y meterlo en el
-    path obliga a escaparlo en los dos lados para no ganar nada."""
-    email = request.args.get("email", "").strip().lower()
-    acceso = _miembro_del_departamento(email)
-    if acceso is None:
-        return jsonify(build_response(False, "Miembro no encontrado.")), 404
-
-    ficha = ficha_miembro(email, departamento_actual())
-    ficha.update(
-        email=acceso["email"],
-        equipos=_equipos_visibles(acceso["equipos"]),
-        vp_de=acceso["vp_de"],
-        cargo=acceso["cargo"],
-        tags=acceso["tags"],
-        notas=acceso["notas"],
-        nombre=acceso["nombre"],
-        desde=acceso["created_at"],
-        foto=acceso["foto"],
-        # Quién puede cambiar esta foto lo decide el servidor, no el frontend
-        # (que solo lo usa para enseñar u ocultar el botón).
-        es_tu_ficha=_es_mi_ficha(email),
-    )
-    return jsonify({"ok": True, "ficha": ficha}), 200
-
-
-@marketing_api.route("/miembros/ficha", methods=["PUT"])
-@requiere_equipo
-def api_actualizar_ficha_miembro():
-    """Solo etiquetas y nota: los permisos (equipos, vp, cargo) siguen siendo
-    cosa de /admin."""
-    from backend.services.equipo import actualizar_perfil
-
-    datos = _payload()
-    email = _texto(datos, "email", obligatorio=True).lower()
-    anterior = _miembro_del_departamento(email)
-    if anterior is None:
-        return jsonify(build_response(False, "Miembro no encontrado.")), 404
-
-    tags = (
-        _lista_textos(datos, "tags", MAX_RESPONSABLES) if "tags" in datos else None
-    )
-    notas = (
-        _texto(datos, "notas", maximo=MAX_TEXTO_LARGO_LEN, multilinea=True)
-        if "notas" in datos
-        else None
-    )
-    foto = None
-    if "foto" in datos:
-        if not _es_mi_ficha(email):
-            return jsonify(build_response(False, "Solo puedes cambiar tu propia foto.")), 403
-        foto = _foto(datos)
-
-    if tags is None and notas is None and foto is None:
-        raise DatosInvalidos("No hay nada que actualizar.")
-
-    actualizar_perfil(email, tags=tags, notas=notas, foto=foto)
-    return jsonify(build_response(True, "Ficha actualizada.")), 200
