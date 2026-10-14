@@ -175,7 +175,7 @@ def _montar_rutas(
         return jsonify(build_response(True, "Actualizado.")), 200
 
     def eliminar(fila_id: int):
-        if not reg.eliminar(tabla, fila_id, depto_de()):
+        if not reg.eliminar(tabla, fila_id, depto_de(), _autor()):
             return jsonify(build_response(False, "No encontrado.")), 404
         return jsonify(build_response(True, "Eliminado.")), 200
 

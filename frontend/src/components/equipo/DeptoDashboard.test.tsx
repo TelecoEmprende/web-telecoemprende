@@ -23,12 +23,18 @@ const createTaskComment = vi.fn();
 const getCalendarioEquipo = vi.fn();
 const getTask = vi.fn();
 const getPlataforma = vi.fn();
+const deleteTask = vi.fn();
+const restaurar = vi.fn();
 
 // El módulo ya no exporta funciones sueltas sino una factoría por
 // departamento (Marketing y Eventos comparten paneles). `apiDepto` guarda el
 // departamento con el que se le llama, y así el test puede comprobar que cada
 // workspace pide los datos de los suyos y no de los del otro.
 const deptosPedidos: string[] = [];
+
+vi.mock("../../api/club", () => ({
+  restaurar: (...args: unknown[]) => restaurar(...args),
+}));
 
 vi.mock("../../api/notas", () => ({
   listarNotas: () => Promise.resolve({ ok: true, notas: [] }),
@@ -57,7 +63,7 @@ vi.mock("../../api/marketing", () => ({
       deleteCampaign: vi.fn(),
       duplicateCampaign: (...args: unknown[]) => duplicateCampaign(...args),
       deleteContent: vi.fn(),
-      deleteTask: vi.fn(),
+      deleteTask: (...args: unknown[]) => deleteTask(...args),
       updateCampaign: vi.fn(),
       updateContent: vi.fn(),
       getTaskComments: (...args: unknown[]) => getTaskComments(...args),
@@ -177,6 +183,8 @@ describe("/equipo — panel de Marketing", () => {
       .mockResolvedValue({ ok: true, desde: "", hasta: "", items: [] });
     getMiembros.mockReset().mockResolvedValue({ ok: true, miembros: [] });
     getFichaMiembro.mockReset();
+    deleteTask.mockReset().mockResolvedValue({ ok: true });
+    restaurar.mockReset().mockResolvedValue({ ok: true });
     listarRegistros.mockReset().mockImplementation((recurso: string) =>
       Promise.resolve({ ok: true, [recurso]: [] }),
     );
@@ -247,13 +255,24 @@ describe("/equipo — panel de Marketing", () => {
     ).toBeInTheDocument();
   });
 
-  it("un miembro raso (no VP) no ve el botón de crear tarea", async () => {
+  it("un miembro raso (no VP) crea tareas, pero se las queda él o quedan sin dueño", async () => {
     vpDeSesion = [];
+    createTask.mockResolvedValue({ ok: true, task: TAREA });
 
     await renderMarketing();
     await userEvent.click(screen.getByRole("button", { name: "Tareas" }));
+    await userEvent.click(screen.getByRole("button", { name: "+ Nueva tarea" }));
 
-    expect(screen.queryByRole("button", { name: "+ Nueva tarea" })).not.toBeInTheDocument();
+    // No hay selector para repartir a otras personas: solo «Me la quedo yo».
+    expect(screen.queryByRole("button", { name: /Elegir personas/ })).not.toBeInTheDocument();
+    expect(screen.getByLabelText(/Me la quedo yo/)).toBeInTheDocument();
+
+    await userEvent.type(screen.getByLabelText("Título"), "Cartel");
+    await userEvent.type(screen.getByLabelText("Instrucciones"), "Ver notas.");
+    await userEvent.click(screen.getByRole("button", { name: "Crear tarea" }));
+
+    await waitFor(() => expect(createTask).toHaveBeenCalled());
+    expect(createTask.mock.calls[0][0].responsables).toEqual([]);
   });
 
   it("admin asigna en todo el club aunque no sea VP de nada ni tenga cargo", async () => {
@@ -401,7 +420,7 @@ describe("/equipo — panel de Marketing", () => {
     expect(within(dialogo).getByLabelText("Estado")).toHaveValue("pendiente");
   });
 
-  it("borrar una tarea pide confirmación en la página, sin window.confirm", async () => {
+  it("borrar una tarea la manda a la papelera y deja deshacerlo, sin window.confirm", async () => {
     getTasks.mockResolvedValue({ ok: true, tasks: tareas({}), usuario: YO });
     const confirmSpy = vi.spyOn(window, "confirm");
 
@@ -412,9 +431,12 @@ describe("/equipo — panel de Marketing", () => {
     );
 
     const dialogo = await screen.findByRole("dialog");
-    await userEvent.click(within(dialogo).getByRole("button", { name: "Eliminar tarea" }));
+    await userEvent.click(within(dialogo).getByRole("button", { name: "Enviar a la papelera" }));
 
-    expect(within(dialogo).getByRole("button", { name: "Sí" })).toBeInTheDocument();
+    expect(deleteTask).toHaveBeenCalledWith(1);
+    // Aviso con «Deshacer»: restaura de la papelera.
+    await userEvent.click(await screen.findByRole("button", { name: "Deshacer" }));
+    expect(restaurar).toHaveBeenCalledWith("tarea", 1);
     expect(confirmSpy).not.toHaveBeenCalled();
     confirmSpy.mockRestore();
   });
@@ -743,7 +765,10 @@ describe("/equipo — panel de Marketing", () => {
     getCampaigns.mockResolvedValue({
       ok: true,
       campaigns: [
-        { id: 1, nombre: "Vuelta al cole", objetivo: "", total_contents: 2, total_tasks: 3, tareas_acabadas: 1, fecha: null },
+        {
+          id: 1, nombre: "Vuelta al cole", objetivo: "", total_contents: 2, total_tasks: 3, tareas_acabadas: 1,
+          fecha: null, departamento: "marketing", departamentos: ["marketing"], estado: "activo", responsable: "",
+        },
       ],
     });
     duplicateCampaign.mockResolvedValue({
@@ -754,6 +779,7 @@ describe("/equipo — panel de Marketing", () => {
         objetivo: "",
         audiencia: "",
         fecha: null,
+        departamento: "marketing", departamentos: ["marketing"], estado: "idea", responsable: "",
         contents: [],
         tasks_sueltas: [],
       },
@@ -774,6 +800,7 @@ describe("/equipo — panel de Marketing", () => {
       ok: true,
       campaign: {
         id: 1, nombre: "Vuelta al cole", objetivo: "", audiencia: "", fecha: null,
+        departamento: "marketing", departamentos: ["marketing"], estado: "activo", responsable: "",
         contents: [], tasks_sueltas: [],
       },
     });
@@ -898,6 +925,7 @@ describe("/equipo — panel de Marketing", () => {
       ok: true,
       campaign: {
         id: 5, nombre: "Semana de bienvenida", objetivo: "", audiencia: "", fecha: null,
+        departamento: "eventos", departamentos: ["eventos"], estado: "activo", responsable: "",
         contents: [], tasks_sueltas: [],
       },
     });

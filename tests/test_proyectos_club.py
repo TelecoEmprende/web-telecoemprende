@@ -276,6 +276,23 @@ class PapeleraTests(ProyectosClubTestCase):
         self.assertEqual(self.client.post(f"/api/equipo/papelera/nota/{nota['id']}/restaurar").status_code, 404)
         self.assertEqual(self.client.post(f"/api/equipo/papelera/nota/{compartida['id']}/restaurar").status_code, 200)
 
+    def test_una_reunion_con_su_acta_tambien_se_restaura(self):
+        acta = [{"type": "paragraph", "content": [{"type": "text", "text": "Se acordó la feria"}]}]
+        fila = self.client.post(
+            "/api/eventos/reuniones", json={"titulo": "Semanal", "club": True, "contenido": acta}
+        ).get_json()["registro"]
+        self.assertEqual(self.client.delete(f"/api/eventos/reuniones/{fila['id']}").status_code, 200)
+
+        self.assertEqual(self.client.get("/api/eventos/reuniones").get_json()["reuniones"], [])
+        self.assertEqual([(e["entidad"], e["titulo"]) for e in self.papelera()], [("reunion", "Semanal")])
+        self.assertEqual(self.client.post(f"/api/equipo/papelera/reunion/{fila['id']}/restaurar").status_code, 200)
+        vuelta = self.client.get("/api/ingenieria/reuniones").get_json()["reuniones"]
+        self.assertEqual([r["contenido"] for r in vuelta], [acta])
+        self.assertEqual(
+            [e["accion"] for e in self.eventos(entidad="reunion", id=fila["id"])],
+            ["restaurar", "borrar", "crear"],
+        )
+
     def test_requiere_sesion(self):
         self.client.post("/api/equipo/logout")
         for ruta in ("/api/equipo/papelera", "/api/equipo/historial", "/api/equipo/mesa"):

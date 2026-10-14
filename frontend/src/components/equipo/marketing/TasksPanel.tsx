@@ -6,8 +6,9 @@ import { FormEvent, useEffect, useRef, useState, type ReactNode } from "react";
 import { AvataresDeResponsables } from "./Avatares";
 import { SelectorMiembros } from "./SelectorMiembros";
 import { TaskDialog } from "./TaskDialog";
+import { restaurar } from "../../../api/club";
 import { apiDepto } from "../../../api/marketing";
-import { DeptoProvider, useDirectorio } from "../DeptoApi";
+import { DeptoProvider, useDirectorio, useYo } from "../DeptoApi";
 import { AlertBanner } from "../../feedback/AlertBanner";
 import { ContadorCaracteres } from "../../feedback/ContadorCaracteres";
 import { Esqueleto } from "../../feedback/Esqueleto";
@@ -83,6 +84,7 @@ type Props = {
  * mover su propia tarea de estado.
  */
 export function TasksPanel({ deptos, teams, vpDe, puedeAsignarEnTodo }: Props) {
+  const yo = useYo();
   const directorio = useDirectorio();
   const entradaTarjeta = useEntradaDeFila();
 
@@ -110,6 +112,8 @@ export function TasksPanel({ deptos, teams, vpDe, puedeAsignarEnTodo }: Props) {
     actual: TaskEstado;
   } | null>(null);
   const deshacerTimeoutRef = useRef<number | null>(null);
+  // Lo borrado va a la papelera: este aviso trae el «Deshacer».
+  const [borrada, setBorrada] = useState<Task | null>(null);
 
   const [titulo, setTitulo] = useState("");
   const [instrucciones, setInstrucciones] = useState("");
@@ -125,12 +129,13 @@ export function TasksPanel({ deptos, teams, vpDe, puedeAsignarEnTodo }: Props) {
   // si no -- nunca solo `deptos` (el filtro de qué se está VIENDO ahora
   // mismo), igual que ya hace el calendario (`CalendarPanel`).
   const deptosDondePuedeAsignar = (puedeAsignarEnTodo ? TEAMS : teams).filter(puedeAsignarEn);
+  // Crear una tarea puede cualquiera, en cualquiera de los tres departamentos:
+  // sin dueño o para sí. Repartirla a otras personas es de board y VPs.
+  const deptosDondeCrear = TEAMS;
   // Varios a la vez: una misma tarea que toca a dos departamentos se da de
   // alta una vez en cada uno (no hay tarea compartida, cada tablero tiene la
   // suya y la mueve de estado por su cuenta).
-  const [deptosNuevaTarea, setDeptosNuevaTarea] = useState<Team[]>(
-    [deptosDondePuedeAsignar[0] ?? deptos[0]].filter(Boolean),
-  );
+  const [deptosNuevaTarea, setDeptosNuevaTarea] = useState<Team[]>([deptos[0]].filter(Boolean));
 
   useEffect(() => {
     void cargar();
@@ -139,17 +144,6 @@ export function TasksPanel({ deptos, teams, vpDe, puedeAsignarEnTodo }: Props) {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [deptos.join(",")]);
-
-  useEffect(() => {
-    setDeptosNuevaTarea((actuales) => {
-      const validos = actuales.filter((d) => deptosDondePuedeAsignar.includes(d));
-      if (validos.length === actuales.length) return actuales;
-      return validos.length > 0
-        ? validos
-        : [deptosDondePuedeAsignar[0] ?? deptos[0]].filter(Boolean);
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [deptosDondePuedeAsignar.join(",")]);
 
   async function cargar() {
     setIsLoading(true);
@@ -269,6 +263,22 @@ export function TasksPanel({ deptos, teams, vpDe, puedeAsignarEnTodo }: Props) {
   return (
     <section className="mkt-panel-react">
       {error ? <AlertBanner variant="error" message={error} /> : null}
+      {borrada ? (
+        <AlertBanner
+          variant="success"
+          message={`«${borrada.titulo}» está en la papelera (30 días).`}
+          action={{
+            label: "Deshacer",
+            onClick: () => {
+              const id = borrada.id;
+              setBorrada(null);
+              void restaurar("tarea", id)
+                .then(cargar)
+                .catch(() => setError("No se pudo restaurar la tarea."));
+            },
+          }}
+        />
+      ) : null}
       {ultimoMovimiento ? (
         <AlertBanner
           variant="info"
@@ -303,7 +313,7 @@ export function TasksPanel({ deptos, teams, vpDe, puedeAsignarEnTodo }: Props) {
         >
           Completadas
         </button>
-        {deptosDondePuedeAsignar.length > 0 ? (
+        {deptosDondeCrear.length > 0 ? (
           <button
             type="button"
             className="crm-btn"
@@ -314,13 +324,13 @@ export function TasksPanel({ deptos, teams, vpDe, puedeAsignarEnTodo }: Props) {
         ) : null}
       </header>
 
-      {mostrarFormulario && deptosDondePuedeAsignar.length > 0 ? (
+      {mostrarFormulario && deptosDondeCrear.length > 0 ? (
         <form className="mkt-form-react" onSubmit={crear}>
-          {deptosDondePuedeAsignar.length > 1 ? (
+          {deptosDondeCrear.length > 1 ? (
             <div className="mkt-form-deptos-react">
               <span>Departamentos</span>
               <div className="mkt-etiquetas-react">
-                {deptosDondePuedeAsignar.map((d) => {
+                {deptosDondeCrear.map((d) => {
                   const elegido = deptosNuevaTarea.includes(d);
                   return (
                     <label
@@ -413,13 +423,30 @@ export function TasksPanel({ deptos, teams, vpDe, puedeAsignarEnTodo }: Props) {
           </div>
           <div className="field-group-react">
             <label htmlFor="tp-responsables">Responsables</label>
-            <SelectorMiembros
-              id="tp-responsables"
-              seleccionados={responsables}
-              onCambiar={setResponsables}
-              deptos={deptosNuevaTarea}
-              proponer
-            />
+            {deptosNuevaTarea.every(puedeAsignarEn) ? (
+              <SelectorMiembros
+                id="tp-responsables"
+                seleccionados={responsables}
+                onCambiar={setResponsables}
+                deptos={deptosNuevaTarea}
+                proponer
+              />
+            ) : (
+              <label className="mkt-me-la-quedo-react">
+                <input
+                  type="checkbox"
+                  className="crm-check"
+                  checked={(usuario || yo) !== "" && responsables.includes(usuario || yo)}
+                  disabled={(usuario || yo) === ""}
+                  onChange={(event) => setResponsables(event.target.checked ? [usuario || yo] : [])}
+                />
+                Me la quedo yo
+                <span className="mkt-meta-react">
+                  Si no, queda sin dueño: sale en la Mesa del club para que alguien se la quede o
+                  la reparta un VP.
+                </span>
+              </label>
+            )}
           </div>
           <button
             type="submit"
@@ -639,6 +666,7 @@ export function TasksPanel({ deptos, teams, vpDe, puedeAsignarEnTodo }: Props) {
             puedeAsignar={puedeAsignarEn(abierta.departamento as Team)}
             deptosDisponibles={deptosDondePuedeAsignar}
             onCerrar={() => setAbierta(null)}
+            onBorrada={setBorrada}
             onGuardado={() => {
               setAbierta(null);
               void cargar();

@@ -30,15 +30,20 @@ TABLAS = {
     "entregable": "contents",
     "tarea": "tasks",
     "nota": "notas",
+    "reunion": "reuniones",
 }
 _VISTAS = {
     "proyecto": "campaigns_v",
     "entregable": "contents_v",
     "tarea": "tasks_v",
     "nota": "notas_v",
+    "reunion": "reuniones_v",
 }
 # Cómo se llama el título de cada tabla.
-_TITULO = {"campaigns": "nombre", "contents": "titulo", "tasks": "titulo", "notas": "titulo"}
+_TITULO = {
+    "campaigns": "nombre", "contents": "titulo", "tasks": "titulo", "notas": "titulo",
+    "reuniones": "titulo",
+}
 
 _MAX_VALOR = 200
 
@@ -213,6 +218,7 @@ _PROYECTO_DE = {
     "entregable": "campaign_id",
     "tarea": "campaign_id",
     "nota": "proyecto_id",
+    "reunion": "NULL",
 }
 
 
@@ -247,6 +253,9 @@ def listar_papelera(yo: str) -> list[dict]:
                     FROM notas n
                     WHERE n.deleted_at IS NOT NULL
                       AND (NOT n.privada OR n.creado_por_id = (SELECT id FROM equipo_accesos WHERE email = %s))
+                    UNION ALL
+                    SELECT 'reunion', r.id, r.titulo, r.deleted_at, r.deleted_by_id, NULL
+                    FROM reuniones r WHERE r.deleted_at IS NOT NULL
                 ) x
                 WHERE x.deleted_at > NOW() - make_interval(days => {DIAS_EN_PAPELERA})
                 ORDER BY x.deleted_at DESC
@@ -359,7 +368,7 @@ def vaciar_papelera(entidad: str | None = None, entidad_id: int | None = None) -
                 cur.execute(f"DELETE FROM {tabla} WHERE id = %s AND deleted_at IS NOT NULL", (entidad_id,))
                 total = cur.rowcount
             else:
-                for tabla in ("tasks", "contents", "campaigns", "notas"):
+                for tabla in ("tasks", "contents", "campaigns", "notas", "reuniones"):
                     cur.execute(
                         f"DELETE FROM {tabla} WHERE deleted_at IS NOT NULL"
                         f" AND deleted_at < NOW() - make_interval(days => {DIAS_EN_PAPELERA})"

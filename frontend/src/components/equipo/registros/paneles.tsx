@@ -145,69 +145,6 @@ export function PresupuestoPanel() {
 }
 
 // --------------------------------------------------------------------------
-// Reuniones
-// --------------------------------------------------------------------------
-
-const CAMPOS_REUNIONES: readonly CampoSpec[] = [
-  { clave: "titulo", etiqueta: "Título", tipo: "texto", requerido: true },
-  { clave: "fecha", etiqueta: "Fecha", tipo: "fecha" },
-  { clave: "hora", etiqueta: "Hora", tipo: "hora" },
-  {
-    clave: "objetivo",
-    etiqueta: "Objetivo",
-    tipo: "parrafo",
-    ayuda: "Para qué se convoca. Sin esto, la reunión se convierte en una puesta al día.",
-  },
-  {
-    clave: "asistentes",
-    etiqueta: "Asistentes",
-    tipo: "miembros",
-  },
-  { clave: "acta", etiqueta: "Acta y acuerdos", tipo: "parrafo" },
-];
-
-export function ReunionesPanel() {
-  const directorio = useDirectorio();
-  return (
-    <RegistrosPanel
-      recurso="reuniones"
-      descripcion="Convocatorias, objetivo y acta. Lo que se acordó queda escrito donde se puede buscar."
-      vacio="Sin reuniones apuntadas todavía."
-      etiquetaNuevo="Nueva reunión"
-      campos={CAMPOS_REUNIONES}
-      fila={(r) => {
-        const asistentes = listaDe(r, "asistentes");
-        return {
-          titulo: textoDe(r, "titulo"),
-          meta: [
-            textoDe(r, "fecha") ? formatearFecha(textoDe(r, "fecha"), true) : "Sin fecha",
-            textoDe(r, "hora"),
-          ]
-            .filter(Boolean)
-            .join(" · "),
-          derecha:
-            asistentes.length > 0 ? (
-              <AvataresDeResponsables responsables={asistentes} directorio={directorio} />
-            ) : null,
-          cuerpo: (
-            <>
-              {textoDe(r, "objetivo") ? (
-                <p>
-                  <b>Objetivo:</b> {textoDe(r, "objetivo")}
-                </p>
-              ) : null}
-              {textoDe(r, "acta") ? (
-                <p className="reg-cuerpo-largo-react">{textoDe(r, "acta")}</p>
-              ) : null}
-            </>
-          ),
-        };
-      }}
-    />
-  );
-}
-
-// --------------------------------------------------------------------------
 // Servicios e infraestructura (Ingeniería)
 // --------------------------------------------------------------------------
 

@@ -106,6 +106,17 @@ export type Content = {
   tasks: Task[];
 };
 
+export type ProyectoEstado = "idea" | "activo" | "pausado" | "cerrado";
+
+export const PROYECTO_ESTADOS: ProyectoEstado[] = ["idea", "activo", "pausado", "cerrado"];
+
+export const PROYECTO_ESTADO_LABEL: Record<ProyectoEstado, string> = {
+  idea: "Idea",
+  activo: "Activo",
+  pausado: "En pausa",
+  cerrado: "Cerrado",
+};
+
 type Campaign = {
   id: number;
   nombre: string;
@@ -116,7 +127,14 @@ type Campaign = {
   creado_por: string;
   created_at: string;
   updated_at: string;
+  /** Departamento «principal»: el primero del ámbito. Con él se abre el
+   *  proyecto desde su ruta. */
   departamento: Team;
+  /** Ámbito: uno, varios o los tres departamentos (= todo el club). */
+  departamentos: Team[];
+  estado: ProyectoEstado;
+  /** Email de quien lleva el proyecto, o "". */
+  responsable: string;
 };
 
 export type CampaignResumen = Campaign & {

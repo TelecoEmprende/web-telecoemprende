@@ -3320,3 +3320,210 @@ span.cal-capa-react {
   color: var(--color-info-text);
   font-size: 0.9rem;
 }
+
+/* ---------- Mesa del club ---------- */
+
+/* Se mide a sí misma: con la barra lateral abierta hay mucho menos ancho que
+   el de la ventana. */
+.mesa-proyectos-react {
+  container-type: inline-size;
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.mesa-proyecto-react {
+  display: grid;
+  grid-template-columns: minmax(160px, 1.4fr) minmax(140px, 1.2fr) minmax(130px, 1fr) minmax(110px, 0.8fr);
+  gap: 6px 14px;
+  align-items: center;
+  padding: 14px 16px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+}
+
+.mesa-proyecto-react.is-estancado {
+  border-color: var(--color-chispa);
+}
+
+.mesa-proyecto-nombre-react {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-weight: 700;
+  color: var(--color-noche);
+  text-align: left;
+  cursor: pointer;
+}
+
+.mesa-proyecto-nombre-react:hover,
+.mesa-proyecto-nombre-react:focus-visible {
+  color: var(--color-azul);
+  text-decoration: underline;
+}
+
+.mesa-progreso-react {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.mesa-barra-react {
+  flex: 1;
+  height: 8px;
+  border-radius: var(--radius-circle);
+  background: rgba(var(--color-noche-rgb), 0.06);
+  overflow: hidden;
+}
+
+.mesa-barra-react i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--color-azul);
+  transform-origin: left;
+}
+
+.mesa-siguiente-react,
+.mesa-movimiento-react {
+  grid-column: span 2;
+  font-size: 0.84rem;
+  color: var(--color-text-muted);
+}
+
+.mesa-movimiento-react {
+  text-align: right;
+}
+
+.mesa-proyecto-react.is-estancado .mesa-movimiento-react {
+  color: var(--color-info-text);
+  font-weight: 700;
+}
+
+.mesa-columnas-react {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 16px;
+}
+
+.mesa-tareas-react {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.mesa-tareas-react li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--color-divider);
+  font-size: 0.9rem;
+}
+
+.mesa-tareas-react li:last-child {
+  border-bottom: 0;
+}
+
+.mesa-tareas-react li > span:first-child {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.mesa-tareas-react em {
+  font-style: normal;
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+}
+
+@container (max-width: 900px) {
+  .mesa-proyecto-react {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@container (max-width: 560px) {
+  .mesa-proyecto-react {
+    grid-template-columns: 1fr;
+  }
+
+  .mesa-siguiente-react,
+  .mesa-movimiento-react {
+    grid-column: auto;
+    text-align: left;
+  }
+}
+
+/* ---------- Papelera ---------- */
+
+.papelera-lista-react {
+  list-style: none;
+  margin: 0;
+  padding: 4px 18px;
+}
+
+.papelera-lista-react li {
+  display: grid;
+  grid-template-columns: 96px 1fr auto;
+  gap: 14px;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--color-divider);
+}
+
+.papelera-lista-react li:last-child {
+  border-bottom: 0;
+}
+
+.papelera-tipo-react {
+  justify-self: start;
+  padding: 3px 10px;
+  border-radius: var(--radius-circle);
+  background: rgba(var(--color-noche-rgb), 0.06);
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+}
+
+.papelera-textos-react {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.papelera-textos-react em {
+  font-style: normal;
+  font-size: 0.82rem;
+  color: var(--color-text-muted);
+}
+
+.papelera-acciones-react {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+@media (max-width: 640px) {
+  .papelera-lista-react li {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+
+  .papelera-acciones-react {
+    justify-content: flex-start;
+  }
+}

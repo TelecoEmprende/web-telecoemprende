@@ -1,6 +1,7 @@
 import { apiRequest } from "./client";
 import type { ApiResult } from "../types/api";
 import type {
+  ProyectoEstado,
   CalendarioItem,
   FichaMiembro,
   CampaignDetalle,
@@ -74,6 +75,9 @@ export function apiDepto(depto: Team) {
       objetivo?: string;
       audiencia?: string;
       fecha?: string | null;
+      departamentos?: Team[];
+      estado?: ProyectoEstado;
+      responsable?: string;
     }) => post<{ ok: true; campaign: CampaignResumen }>("/campaigns", datos),
 
     updateCampaign: (id: number, datos: Partial<CampaignResumen>) =>

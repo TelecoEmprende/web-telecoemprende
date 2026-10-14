@@ -19,6 +19,7 @@ import psycopg2
 from psycopg2.extras import Json, RealDictCursor
 
 from backend.config import DATABASE_URL
+from backend.services import historial
 from backend.services.db import PERSONAS, fijar_personas, id_de_persona
 
 
@@ -44,6 +45,9 @@ class Tabla:
     # Además de las del departamento, enseña las del club (`departamento = ''`):
     # la reunión semanal de todos no es de ningún departamento.
     incluye_club: bool = False
+    # Borrar manda a la papelera (30 días, ver `services/historial.py`) en vez
+    # de quitar la fila: `entidad` es como se llama allí.
+    papelera: str = ""
 
 
 PRESUPUESTO = Tabla(
@@ -58,6 +62,7 @@ REUNIONES = Tabla(
     orden="fecha DESC, hora DESC, id DESC",
     json=("contenido",),
     incluye_club=True,
+    papelera="reunion",
 )
 
 SERVICIOS = Tabla(
@@ -89,11 +94,14 @@ def _serializar(fila: dict) -> dict:
     return salida
 
 
-def _alcance(tabla: Tabla, departamento: str | None) -> tuple[str, list]:
-    """Cláusula y parámetros que acotan una fila a su departamento."""
+def _alcance(tabla: Tabla, departamento: str | None, sobre_tabla: bool = True) -> tuple[str, list]:
+    """Cláusula y parámetros que acotan una fila a su departamento. Sobre la
+    tabla (escrituras) también deja fuera lo que está en la papelera; la vista
+    `_v` con la que se lee ya lo deja fuera."""
+    sin_borrar = " AND deleted_at IS NULL" if tabla.papelera and sobre_tabla else ""
     if tabla.incluye_club:
-        return " AND departamento IN (%s, '')", [departamento]
-    return " AND departamento = %s", [departamento]
+        return f" AND departamento IN (%s, ''){sin_borrar}", [departamento]
+    return f" AND departamento = %s{sin_borrar}", [departamento]
 
 
 def _adaptar(tabla: Tabla, campos: dict) -> dict:
@@ -101,7 +109,7 @@ def _adaptar(tabla: Tabla, campos: dict) -> dict:
 
 
 def listar(tabla: Tabla, departamento: str | None = None) -> list[dict]:
-    donde, valores = _alcance(tabla, departamento)
+    donde, valores = _alcance(tabla, departamento, sobre_tabla=False)
     with _get_connection() as conn:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute(
@@ -136,6 +144,8 @@ def crear(tabla: Tabla, campos: dict, creado_por: str, departamento: str | None 
                 fijar_personas(cur, tabla.nombre, nueva_id, campos.get(campo_personas, []))
             cur.execute(f"SELECT * FROM {tabla.nombre}_v WHERE id = %s", (nueva_id,))
             fila = cur.fetchone()
+            if tabla.papelera:
+                historial.registrar(cur, tabla.papelera, nueva_id, "crear", fila["titulo"], creado_por)
         conn.commit()
     return _serializar(fila)
 
@@ -177,9 +187,18 @@ def actualizar(
     return actualizado
 
 
-def eliminar(tabla: Tabla, fila_id: int, departamento: str | None = None) -> bool:
+def eliminar(
+    tabla: Tabla, fila_id: int, departamento: str | None = None, autor: str = ""
+) -> bool:
     donde, valores = _alcance(tabla, departamento)
     with _get_connection() as conn:
+        if tabla.papelera:
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                enviado = historial.mandar_a_papelera(
+                    cur, tabla.papelera, fila_id, donde.removeprefix(" AND "), valores, autor
+                )
+            conn.commit()
+            return enviado is not None
         with conn.cursor() as cur:
             cur.execute(
                 f"DELETE FROM {tabla.nombre} WHERE id = %s{donde}",

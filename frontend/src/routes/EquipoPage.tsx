@@ -18,6 +18,8 @@ import {
 } from "../components/equipo/EquipoSidebar";
 import { EquipoLoginForm, type ModoAcceso } from "../components/equipo/EquipoLoginForm";
 import { DeptoDashboard } from "../components/equipo/DeptoDashboard";
+import { MesaPanel } from "../components/equipo/club/MesaPanel";
+import { PapeleraPanel } from "../components/equipo/club/PapeleraPanel";
 import { HerramientasPanel } from "../components/equipo/HerramientasPanel";
 import { MetricasPanel } from "../components/equipo/MetricasPanel";
 import { NotasPanel } from "../components/equipo/notas/NotasPanel";
@@ -346,6 +348,10 @@ export function EquipoPage() {
             {seccion === "club" ? (
               <CalendarioEquipo onIrA={setSeccion} onAbrirNota={abrirNota} />
             ) : null}
+            {seccion === "mesa" ? (
+              <MesaPanel email={perfil.email} nombre={perfil.nombre} onAbrirProyecto={abrirCampaign} />
+            ) : null}
+            {seccion === "papelera" ? <PapeleraPanel esAdmin={esAdmin} /> : null}
             {seccion === "notas" ? (
               <NotasPanel
                 email={perfil.email}
@@ -378,6 +384,7 @@ export function EquipoPage() {
                 vpDe={vpDe}
                 puedeAsignarEnTodo={puedeAsignarEnTodo}
                 onAbrirNota={abrirNota}
+                yo={perfil.email}
               />
             ) : null}
             </PanelAnimado>

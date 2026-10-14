@@ -3,6 +3,7 @@ import { ArrowLeft, Lock, Pin, PinOff, Plus, Search, Trash2 } from "lucide-react
 import { motion } from "motion/react";
 
 import { actualizarNota, crearNota, eliminarNota, listarNotas, obtenerNota } from "../../../api/notas";
+import { restaurar } from "../../../api/club";
 import { AlertBanner } from "../../feedback/AlertBanner";
 import { Esqueleto } from "../../feedback/Esqueleto";
 import { useEntradaDeFila } from "../../movimiento";
@@ -49,7 +50,8 @@ export function NotasPanel({ email, teams, notaInicial, onNotaAbierta }: Props) 
   const [busqueda, setBusqueda] = useState("");
   const [abierta, setAbierta] = useState<Nota | null>(null);
   const [estadoGuardado, setEstadoGuardado] = useState<"guardado" | "guardando" | "pendiente">("guardado");
-  const [porBorrar, setPorBorrar] = useState(false);
+  // Una nota borrada va a la papelera: el aviso trae el «Deshacer».
+  const [borrada, setBorrada] = useState<{ id: number; titulo: string } | null>(null);
 
   const pendiente = useRef<Partial<Nota>>({});
   const temporizador = useRef<number | undefined>(undefined);
@@ -93,7 +95,6 @@ export function NotasPanel({ email, teams, notaInicial, onNotaAbierta }: Props) 
 
   async function abrir(id: number) {
     await guardarYa();
-    setPorBorrar(false);
     try {
       const r = await obtenerNota(id);
       if (r.ok) {
@@ -148,9 +149,10 @@ export function NotasPanel({ email, teams, notaInicial, onNotaAbierta }: Props) 
     window.clearTimeout(temporizador.current);
     pendiente.current = {};
     try {
-      await eliminarNota(abierta.id);
+      const { id, titulo } = abierta;
+      await eliminarNota(id);
       setAbierta(null);
-      setPorBorrar(false);
+      setBorrada({ id, titulo });
       await cargar();
     } catch (err) {
       setError((err as ApiFailure)?.message || "No se pudo borrar la nota.");
@@ -258,6 +260,22 @@ export function NotasPanel({ email, teams, notaInicial, onNotaAbierta }: Props) 
 
       <div className="notas-pagina-react crm-c">
         {error ? <AlertBanner variant="error" message={error} /> : null}
+        {borrada ? (
+          <AlertBanner
+            variant="success"
+            message={`«${borrada.titulo || "Sin título"}» está en la papelera (30 días).`}
+            action={{
+              label: "Deshacer",
+              onClick: () => {
+                const { id } = borrada;
+                setBorrada(null);
+                void restaurar("nota", id)
+                  .then(cargar)
+                  .catch(() => setError("No se pudo restaurar la nota."));
+              },
+            }}
+          />
+        ) : null}
 
         {abierta === null ? (
           <div className="notas-placeholder-react">
@@ -314,25 +332,15 @@ export function NotasPanel({ email, teams, notaInicial, onNotaAbierta }: Props) 
                     ? "Sin guardar"
                     : "Guardado"}
               </span>
-              {porBorrar ? (
-                <span className="crm-tags-react">
-                  <button type="button" className="crm-btn crm-btn-peligro-react" onClick={() => void borrar()}>
-                    Sí, borrar
-                  </button>
-                  <button type="button" className="crm-btn crm-btn-ghost-react" onClick={() => setPorBorrar(false)}>
-                    Cancelar
-                  </button>
-                </span>
-              ) : (
-                <button
-                  type="button"
-                  className="crm-btn crm-btn-ghost-react crm-btn-icono-react"
-                  aria-label="Borrar nota"
-                  onClick={() => setPorBorrar(true)}
-                >
-                  <Trash2 aria-hidden="true" />
-                </button>
-              )}
+              <button
+                type="button"
+                className="crm-btn crm-btn-ghost-react crm-btn-icono-react"
+                aria-label="Borrar nota"
+                title="Va a la papelera 30 días y se puede restaurar"
+                onClick={() => void borrar()}
+              >
+                <Trash2 aria-hidden="true" />
+              </button>
             </div>
 
             <input
