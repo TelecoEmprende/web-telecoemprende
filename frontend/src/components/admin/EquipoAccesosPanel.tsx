@@ -7,6 +7,7 @@ import {
   createEquipoAcceso,
   deleteEquipoAcceso,
   getEquipoAccesos,
+  ponerClaveProvisional,
   updateEquipoAcceso,
 } from "../../api/admin";
 import { AvatarResponsable } from "../equipo/marketing/Avatares";
@@ -51,22 +52,19 @@ const CARGOS: { value: Cargo; label: string }[] = [
   ...(Object.entries(CARGO_LABEL) as [Cargo, string][]).map(([value, label]) => ({ value, label })),
 ];
 
-/** Mismo mínimo que `MIN_EQUIPOS_POR_PERSONA` en `backend/config.py`. */
-const MIN_EQUIPOS = 2;
-
-/** Pone `team` como preferencia número `posicion` (0 = 1ª). Si ya estaba en
- *  otra posición, las dos se intercambian en vez de quedar repetidas. */
+/** Pone `team` como preferencia número `posicion` (0 = 1ª). Como están los
+ *  tres, el que estaba ahí pasa al hueco que deja `team`: se intercambian. */
 function conPreferencia(equipos: Team[], posicion: number, team: Team): Team[] {
   const siguiente = [...equipos];
   const previa = siguiente.indexOf(team);
   if (previa >= 0) siguiente[previa] = siguiente[posicion];
   siguiente[posicion] = team;
-  return siguiente.filter(Boolean);
+  return siguiente;
 }
 
 /**
- * 1ª y 2ª preferencia de departamento, obligatorias, y el que queda como
- * opcional. El orden importa: es el que usa el selector de responsables para
+ * Todos somos de los tres departamentos: lo que se elige es el orden de
+ * preferencia (1ª, 2ª, 3ª). Es el que usa el selector de responsables para
  * proponer a quién asignar una tarea (ver `SelectorMiembros`).
  */
 function Preferencias({
@@ -78,12 +76,9 @@ function Preferencias({
   onChange: (equipos: Team[]) => void;
   idPrefix: string;
 }) {
-  const resto = TEAMS.filter((t) => !equipos.slice(0, MIN_EQUIPOS).includes(t));
-  const tercero = equipos.length >= MIN_EQUIPOS && resto.length === 1 ? resto[0] : null;
-
   return (
     <div className="flex flex-col gap-1.5">
-      {[0, 1].map((posicion) => (
+      {TEAMS.map((_, posicion) => (
         <div key={posicion} className="flex items-center gap-2">
           <span className={`cuentas-ordinal-react${posicion === 0 ? " is-primera" : ""}`}>
             {posicion + 1}ª
@@ -91,7 +86,6 @@ function Preferencias({
           <Select
             value={equipos[posicion] ?? ""}
             onValueChange={(team) => onChange(conPreferencia(equipos, posicion, team as Team))}
-            disabled={posicion === 1 && !equipos[0]}
           >
             <SelectTrigger
               size="sm"
@@ -111,22 +105,6 @@ function Preferencias({
           </Select>
         </div>
       ))}
-      {tercero ? (
-        <div className="flex items-center gap-1.5 pl-8">
-          <Checkbox
-            id={`${idPrefix}-tercero`}
-            checked={equipos.includes(tercero)}
-            onCheckedChange={(marcado) =>
-              onChange(
-                marcado ? [...equipos.slice(0, MIN_EQUIPOS), tercero] : equipos.slice(0, MIN_EQUIPOS),
-              )
-            }
-          />
-          <Label htmlFor={`${idPrefix}-tercero`} className="text-xs font-normal text-muted-foreground">
-            También {DEPTO_LABEL[tercero]}
-          </Label>
-        </div>
-      ) : null}
     </div>
   );
 }
@@ -262,7 +240,6 @@ export function EquipoAccesosPanel() {
   const [messageVariant, setMessageVariant] = useState<"success" | "error">("success");
   // Preferencias a medio elegir (solo la 1ª): el backend exige dos, así que
   // no se guardan hasta que estén las dos.
-  const [borradores, setBorradores] = useState<Record<number, Team[]>>({});
   // Borrar una cuenta no se deshace: se confirma antes.
   const [borrando, setBorrando] = useState<EquipoAcceso | null>(null);
 
@@ -272,7 +249,7 @@ export function EquipoAccesosPanel() {
   const [nuevoNombre, setNuevoNombre] = useState(searchParams.get("nombre") ?? "");
   const [nuevosApellidos, setNuevosApellidos] = useState(searchParams.get("apellidos") ?? "");
   const [nuevaPassword, setNuevaPassword] = useState("");
-  const [nuevosEquipos, setNuevosEquipos] = useState<Team[]>([]);
+  const [nuevosEquipos, setNuevosEquipos] = useState<Team[]>([...TEAMS]);
   const [nuevoVpDe, setNuevoVpDe] = useState<Team[]>([]);
   const [nuevoCargo, setNuevoCargo] = useState<Cargo>("");
   const [nuevoAdmin, setNuevoAdmin] = useState(false);
@@ -333,14 +310,22 @@ export function EquipoAccesosPanel() {
   }
 
   function cambiarPreferencias(acceso: EquipoAcceso, equipos: Team[]) {
-    if (equipos.length < MIN_EQUIPOS) {
-      setBorradores((prev) => ({ ...prev, [acceso.id]: equipos }));
-      return;
+    void guardar(acceso, { equipos });
+  }
+
+  async function darClaveProvisional(acceso: EquipoAcceso) {
+    try {
+      const response = await ponerClaveProvisional(acceso.id);
+      if (response.ok) {
+        setMessageVariant("success");
+        setMessage(
+          `Contraseña provisional de ${acceso.nombre || acceso.email}: ${response.password} — ` +
+            "solo se enseña ahora; tendrá que cambiarla al entrar.",
+        );
+      }
+    } catch (error) {
+      avisarError(error, "No se pudo crear la contraseña provisional.");
     }
-    setBorradores(({ [acceso.id]: _, ...resto }) => resto);
-    // Al quitar un departamento, el backend rechaza un VP que ya no esté en
-    // `equipos`: se recorta aquí también.
-    void guardar(acceso, { equipos, vp_de: acceso.vp_de.filter((v) => equipos.includes(v)) });
   }
 
   async function handleEliminar(acceso: EquipoAcceso) {
@@ -376,7 +361,7 @@ export function EquipoAccesosPanel() {
         setNuevoNombre("");
         setNuevosApellidos("");
         setNuevaPassword("");
-        setNuevosEquipos([]);
+        setNuevosEquipos([...TEAMS]);
         setNuevoVpDe([]);
         setNuevoCargo("");
         setNuevoAdmin(false);
@@ -389,10 +374,7 @@ export function EquipoAccesosPanel() {
     }
   }
 
-  // Igual que el backend: dos departamentos como mínimo, o ninguno con un
-  // cargo (board sin departamento).
-  const nuevoValido =
-    nuevosEquipos.length >= MIN_EQUIPOS || (nuevosEquipos.length === 0 && nuevoCargo !== "");
+  const nuevoValido = nuevosEquipos.length === TEAMS.length;
 
   return (
     <section className="admin-card-react equipo-accesos-panel-react shadcn-scope">
@@ -400,9 +382,10 @@ export function EquipoAccesosPanel() {
         <div>
           {/* El título ya está en la barra superior. */}
           <p className="crm-s max-w-[72ch]">
-            Cada persona va en dos departamentos como mínimo: la <strong>1ª preferencia</strong> es
-            donde se le proponen antes las tareas. El cargo es un título; el acceso al grupo
-            Admin se da aparte, con la casilla <strong>Admin</strong>.
+            Todos somos de los tres departamentos: lo que importa es el orden. La{" "}
+            <strong>1ª preferencia</strong> es donde se le proponen antes las tareas. El cargo
+            es un título; el acceso al grupo Admin se da aparte, con la casilla{" "}
+            <strong>Admin</strong>.
           </p>
         </div>
         <div className="flex gap-2">
@@ -442,19 +425,17 @@ export function EquipoAccesosPanel() {
             <thead>
               <tr className="text-left text-muted-foreground">
                 <th className="cuentas-fija-react px-2 font-medium">Persona</th>
-                <th className="px-2 font-medium">Departamentos</th>
+                <th className="px-2 font-medium">Preferencias</th>
                 <th className="px-2 font-medium">VP de</th>
                 <th className="px-2 font-medium">Cargo</th>
                 <th className="px-2 font-medium">Admin</th>
                 <th className="px-2 font-medium">Web</th>
-                <th className="px-2 font-medium">DNI, LinkedIn y correo</th>
+                <th className="px-2 font-medium">DNI y LinkedIn</th>
                 <th className="px-2 font-medium">Estado</th>
               </tr>
             </thead>
             <tbody>
               {ordenados.map((acceso, indice) => {
-                const equipos = borradores[acceso.id] ?? acceso.equipos;
-                const faltaSegunda = acceso.equipos.length > 0 && acceso.equipos.length < MIN_EQUIPOS;
                 return (
                   <motion.tr
                     key={acceso.id}
@@ -509,15 +490,12 @@ export function EquipoAccesosPanel() {
                         </div>
                       </div>
                     </td>
-                    <td className="p-2" data-label="Departamentos">
+                    <td className="p-2" data-label="Preferencias">
                       <Preferencias
                         idPrefix={`acceso-${acceso.id}`}
-                        equipos={equipos}
+                        equipos={acceso.equipos}
                         onChange={(siguientes) => cambiarPreferencias(acceso, siguientes)}
                       />
-                      {faltaSegunda || (borradores[acceso.id] && equipos.length < MIN_EQUIPOS) ? (
-                        <p className="mt-1 text-xs text-[var(--color-error-text)]">Falta la 2ª preferencia.</p>
-                      ) : null}
                     </td>
                     <td className="p-2" data-label="VP de">
                       <VpDeCheckboxes
@@ -543,7 +521,7 @@ export function EquipoAccesosPanel() {
                     <td className="p-2" data-label="Web">
                       <EnLaWeb acceso={acceso} onGuardar={(cambios) => void guardar(acceso, cambios)} />
                     </td>
-                    <td className="p-2" data-label="DNI, LinkedIn y correo">
+                    <td className="p-2" data-label="DNI y LinkedIn">
                       <div className="flex flex-col gap-1.5">
                         <Input
                           defaultValue={acceso.dni}
@@ -566,18 +544,6 @@ export function EquipoAccesosPanel() {
                             if (linkedin !== acceso.linkedin) void guardar(acceso, { linkedin });
                           }}
                         />
-                        <Input
-                          defaultValue={acceso.correo_personal}
-                          placeholder="Correo personal"
-                          aria-label={`Correo personal de ${acceso.email}`}
-                          className="h-8 w-40"
-                          onBlur={(event) => {
-                            const correo_personal = event.target.value.trim();
-                            if (correo_personal !== acceso.correo_personal) {
-                              void guardar(acceso, { correo_personal });
-                            }
-                          }}
-                        />
                       </div>
                     </td>
                     <td className="p-2" data-label="Estado">
@@ -589,6 +555,15 @@ export function EquipoAccesosPanel() {
                           onClick={() => void guardar(acceso, { activo: !acceso.activo })}
                         >
                           {acceso.activo ? "Desactivar" : "Activar"}
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          title="Para quien no puede recuperarla por correo: tendrá que cambiarla al entrar"
+                          onClick={() => void darClaveProvisional(acceso)}
+                        >
+                          Contraseña provisional
                         </Button>
                         <Button
                           type="button"
@@ -671,7 +646,7 @@ export function EquipoAccesosPanel() {
 
         <div className="grid gap-4 sm:grid-cols-3">
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="nuevo-equipo-pref-0">Departamentos</Label>
+            <Label htmlFor="nuevo-equipo-pref-0">Preferencias</Label>
             <Preferencias
               idPrefix="nuevo-equipo"
               equipos={nuevosEquipos}

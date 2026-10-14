@@ -59,14 +59,20 @@ def _enlaces_seguros(nodo) -> None:
                 _enlaces_seguros(valor)
 
 
-def _contenido(datos: dict) -> list:
-    valor = datos.get("contenido")
+def contenido_valido(valor) -> list:
+    """Documento de BlockNote ya comprobado: lista de bloques, de tamaño
+    razonable y sin enlaces peligrosos. Lo comparten las Notas y las actas de
+    reunión."""
     if not isinstance(valor, list):
         raise DatosInvalidos("'contenido' debe ser una lista de bloques.")
     if srv.tamano_json(valor) > MAX_CONTENIDO_LEN:
         raise DatosInvalidos("La nota es demasiado larga. Pártela en varias.")
     _enlaces_seguros(valor)
     return valor
+
+
+def _contenido(datos: dict) -> list:
+    return contenido_valido(datos.get("contenido"))
 
 
 def _campos_nota(datos: dict, teams: list[str]) -> dict:

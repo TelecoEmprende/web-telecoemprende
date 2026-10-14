@@ -56,13 +56,13 @@ describe("SelectorMiembros", () => {
     expect(await screen.findByText(/Nadie en el equipo/)).toBeInTheDocument();
   });
 
-  it("ordena por preferencia y carga, y propone a quien menos lleva de 1ª", async () => {
+  it("ordena por preferencia y carga, baja a quien va sobrecargado y propone a quien menos lleva de 1ª", async () => {
     getMiembros.mockResolvedValue({
       ok: true,
       miembros: [
-        { email: "segunda@example.com", nombre: "Segunda", equipos: ["eventos", "marketing"], activo: true, tags: [], foto: "", abiertas: 0 },
-        { email: "cargada@example.com", nombre: "Cargada", equipos: ["marketing", "eventos"], activo: true, tags: [], foto: "", abiertas: 5 },
-        { email: "libre@example.com", nombre: "Libre", equipos: ["marketing", "ingenieria"], activo: true, tags: [], foto: "", abiertas: 1 },
+        { email: "segunda@example.com", nombre: "Segunda", equipos: ["eventos", "marketing", "ingenieria"], activo: true, tags: [], foto: "", abiertas: 0 },
+        { email: "cargada@example.com", nombre: "Cargada", equipos: ["marketing", "eventos", "ingenieria"], activo: true, tags: [], foto: "", abiertas: 5 },
+        { email: "libre@example.com", nombre: "Libre", equipos: ["marketing", "ingenieria", "eventos"], activo: true, tags: [], foto: "", abiertas: 1 },
       ],
     });
     const onCambiar = vi.fn();
@@ -71,10 +71,11 @@ describe("SelectorMiembros", () => {
     const propuesta = await screen.findByRole("button", { name: /Propuesta: Libre/ });
     await userEvent.click(screen.getByRole("button", { name: /Elegir personas/ }));
     const filas = (await screen.findAllByRole("listitem")).map((li) => li.textContent);
+    // Cargada es 1ª, pero con 5 abiertas (media del club: 2) baja al final.
     expect(filas).toEqual([
       expect.stringMatching(/Libre1ª1 abierta$/),
-      expect.stringMatching(/Cargada1ª5 abiertas$/),
       expect.stringMatching(/Segunda2ª0 abiertas$/),
+      expect.stringMatching(/Cargada1ªsobrecargado · 5 abiertas$/),
     ]);
 
     await userEvent.click(propuesta);

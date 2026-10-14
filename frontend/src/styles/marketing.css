@@ -300,10 +300,12 @@
   display: flex;
   align-items: center;
   gap: 12px;
+  min-width: 0;
 }
 
 .mkt-campaign-card-react {
   flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -323,10 +325,22 @@
   box-shadow: var(--shadow-soft);
 }
 
+/* El nombre y sus chips (departamento, archivada) van en fila y saltan de
+   línea juntos: sin `flex-wrap`, un nombre largo apretaba el chip encima. */
 .mkt-campaign-nombre-react {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  min-width: 0;
   font-size: 1.05rem;
   font-weight: 700;
   color: var(--color-noche);
+  overflow-wrap: anywhere;
+}
+
+.mkt-campaign-nombre-react [data-slot="badge"] {
+  flex: 0 0 auto;
 }
 
 .mkt-campaign-objetivo-react {
@@ -706,7 +720,7 @@
   min-height: 74px;
   padding: 5px;
   border: 1px dashed rgba(var(--color-noche-rgb), 0.14);
-  border-radius: 6px;
+  border-radius: var(--radius-md);
   background: var(--color-surface);
 }
 
@@ -731,7 +745,7 @@
 .mkt-evento-react {
   display: block;
   padding: 3px 5px;
-  border-radius: 5px;
+  border-radius: var(--radius-circle);
   background: rgba(var(--color-noche-rgb), 0.07);
   color: rgba(var(--color-noche-rgb), 0.78);
   font-size: 0.64rem;
@@ -871,6 +885,13 @@
   flex: 1;
 }
 
+.mkt-miembro-textos-react {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
 .mkt-miembro-nombre-react {
   font-size: 0.98rem;
   font-weight: 700;
@@ -897,7 +918,7 @@
 .mkt-carga-react {
   flex: 0 0 auto;
   padding: 4px 9px;
-  border-radius: 6px;
+  border-radius: var(--radius-circle);
   font-size: 0.68rem;
   font-weight: 600;
   white-space: nowrap;
@@ -1004,7 +1025,7 @@
    en la misma fila sería ruido. */
 .mkt-depto-chip-react {
   padding: 4px 8px;
-  border-radius: 6px;
+  border-radius: var(--radius-circle);
   background: rgba(var(--color-noche-rgb), 0.05);
   color: rgba(var(--color-noche-rgb), 0.78);
   font-size: 0.68rem;
@@ -1023,7 +1044,14 @@
 .mkt-depto-chip-react.mkt-agenda-eventos-react { color: var(--color-depto-eventos); }
 .mkt-depto-chip-react.mkt-agenda-ingenieria-react { color: var(--color-depto-tech); }
 
-@media (max-width: 720px) {
+/* La caja se mide a sí misma, no la ventana: con la barra lateral abierta el
+   directorio tiene mucho menos ancho que el viewport y las cuatro columnas
+   se desbordaban sin llegar a los 720px de la media query. */
+.mkt-directorio-caja-react {
+  container-type: inline-size;
+}
+
+@container (max-width: 760px) {
   .mkt-directorio-cabecera-react {
     display: none;
   }
@@ -1042,6 +1070,51 @@
 .mkt-dialogo-ficha-react {
   padding: 0;
   gap: 0;
+  /* Con la ficha más larga (pendientes, datos propios) tiene que poder
+     desplazarse en pantallas bajas en vez de salirse. */
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
+}
+
+.mkt-ficha-prefs-react {
+  list-style: none;
+  margin: 8px 0 4px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-self: stretch;
+  font-size: 0.86rem;
+  font-weight: 600;
+  text-align: left;
+}
+
+.mkt-ficha-prefs-react li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mkt-ficha-prefs-react .mkt-meta-react {
+  margin-left: auto;
+}
+
+.mkt-ficha-carga-react {
+  margin: -12px 0 0;
+}
+
+.mkt-misdatos-react {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+}
+
+.mkt-misdatos-react > :not(.field-group-react) {
+  grid-column: 1 / -1;
+}
+
+.mkt-misdatos-titulo-react {
+  margin-top: 22px !important;
 }
 
 .mkt-ficha-react {
@@ -1494,7 +1567,7 @@
   margin-bottom: 4px;
   padding: 2px 4px;
   border: none;
-  border-radius: 6px;
+  border-radius: var(--radius-circle);
   background: none;
   color: var(--color-text-muted);
   font-family: inherit;
@@ -1571,7 +1644,7 @@ button.mkt-evento-react:active {
   min-width: 0;
   padding: 6px 8px;
   border: 1px solid var(--color-impulso);
-  border-radius: 6px;
+  border-radius: var(--radius-md);
   background: var(--color-surface);
   color: var(--color-text);
   font-family: inherit;
@@ -1667,7 +1740,7 @@ button.mkt-evento-react:active {
   width: 100%;
   padding: 2px 4px;
   border: none;
-  border-radius: 6px;
+  border-radius: var(--radius-md);
   background: none;
   color: var(--color-text-muted);
   font-family: inherit;
@@ -2073,7 +2146,7 @@ button.mkt-evento-react {
 
 .mkt-comentario-react {
   padding: 8px 10px;
-  border-radius: var(--radius-sm, 6px);
+  border-radius: var(--radius-md);
   background: var(--color-surface);
   border: 1px solid var(--color-border);
 }
@@ -2577,5 +2650,143 @@ button.mkt-evento-react {
   margin: 8px 0 0;
   color: var(--color-error-text);
   font-size: 0.85rem;
+  font-weight: 600;
+}
+
+/* ---------- Proyectos: ámbito, estado y responsable ---------- */
+
+.mkt-ficha-proyecto-react {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+  margin: 2px 0;
+}
+
+.mkt-estado-proyecto-react.is-activo {
+  background: var(--color-success-bg);
+  color: var(--color-success-text);
+}
+
+.mkt-estado-proyecto-react.is-idea,
+.mkt-estado-proyecto-react.is-pausado {
+  background: var(--color-info-bg);
+  color: var(--color-info-text);
+}
+
+.mkt-estado-proyecto-react.is-cerrado {
+  background: rgba(var(--color-noche-rgb), 0.06);
+  color: var(--color-text-muted);
+}
+
+.mkt-responsable-react {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--color-noche);
+}
+
+.mkt-responsable-react [data-slot="avatar"] {
+  width: 22px;
+  height: 22px;
+  font-size: 0.6rem;
+}
+
+.mkt-responsable-react .is-vacio,
+.mkt-responsable-react.is-vacio {
+  font-weight: 500;
+  font-style: italic;
+  color: var(--color-text-muted);
+}
+
+/* Historial plegable de un proyecto. */
+.mkt-historial-react {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  padding: 4px 18px;
+}
+
+.mkt-historial-react summary {
+  cursor: pointer;
+  padding: 12px 0;
+  font-weight: 700;
+  color: var(--color-noche);
+}
+
+.mkt-historial-react[open] summary {
+  border-bottom: 1px solid var(--color-divider);
+  margin-bottom: 8px;
+}
+
+/* ---------- Historial: lista de eventos ---------- */
+
+.hist-lista-react {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.hist-evento-react {
+  display: grid;
+  grid-template-columns: 10px 1fr auto;
+  gap: 12px;
+  align-items: start;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--color-divider);
+  font-size: 0.9rem;
+}
+
+.hist-evento-react:last-child {
+  border-bottom: none;
+}
+
+.hist-evento-react p {
+  margin: 0;
+}
+
+.hist-evento-react time {
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+.hist-punto-react {
+  width: 8px;
+  height: 8px;
+  margin-top: 7px;
+  border-radius: 50%;
+  background: var(--color-azul-claro);
+}
+
+.hist-crear-react .hist-punto-react { background: var(--color-success-text); }
+.hist-borrar-react .hist-punto-react { background: var(--color-error-text); }
+.hist-restaurar-react .hist-punto-react { background: var(--color-chispa); }
+
+.hist-cambios-react {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
+  font-size: 0.84rem;
+  color: var(--color-text-muted);
+}
+
+.hist-cambios-react s {
+  opacity: 0.75;
+}
+
+.hist-cambios-react b {
+  color: var(--color-noche);
+}
+
+.mkt-me-la-quedo-react {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
   font-weight: 600;
 }

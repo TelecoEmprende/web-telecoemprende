@@ -15,6 +15,8 @@ type EquipoLoginFormProps = {
   onSubmit: (email: string, password: string, modo: ModoAcceso) => Promise<void>;
   /** Se llama al cambiar de modo, para que el padre limpie los mensajes. */
   onModeChange: () => void;
+  /** «¿Olvidaste tu contraseña?». */
+  onOlvide: () => void;
 };
 
 const MODOS: { id: ModoAcceso; label: string }[] = [
@@ -38,6 +40,7 @@ export function EquipoLoginForm({
   successMessage,
   onSubmit,
   onModeChange,
+  onOlvide,
 }: EquipoLoginFormProps) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -159,6 +162,11 @@ export function EquipoLoginForm({
               : "Entrar"}
           {isSubmitting ? null : <ArrowRight aria-hidden="true" />}
         </button>
+        {esRegistro ? null : (
+          <button type="button" className="acceso-enlace-react" onClick={onOlvide}>
+            ¿Olvidaste tu contraseña?
+          </button>
+        )}
       </form>
     </section>
   );

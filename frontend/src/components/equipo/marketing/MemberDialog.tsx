@@ -1,10 +1,12 @@
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
-import { Camera, Mail, StickyNote } from "lucide-react";
+import { Camera, StickyNote } from "lucide-react";
 
-import { useApi } from "../DeptoApi";
+import { getCalendarioEquipo } from "../../../api/equipo";
+import { apiDepto, getFichaMiembro, updateFichaMiembro } from "../../../api/marketing";
 import { AlertBanner } from "../../feedback/AlertBanner";
 import { Esqueleto } from "../../feedback/Esqueleto";
-import { AvatarResponsable, etiquetaDe } from "./Avatares";
+import { AvatarResponsable, etiquetaDe, sobrecargado } from "./Avatares";
+import { MisDatos } from "./MisDatos";
 import {
   Dialog,
   DialogContent,
@@ -14,8 +16,9 @@ import {
 } from "@/components/ui/dialog";
 import { aFotoPerfil } from "../../../utils/imagen";
 import type { ApiFailure } from "../../../types/api";
-import { CARGO_LABEL } from "../../../types/equipo";
+import { CARGO_LABEL, DEPTO_LABEL, type Team } from "../../../types/equipo";
 import {
+  diasHasta,
   formatearFecha,
   haceCuanto,
   type CalendarioItem,
@@ -59,8 +62,6 @@ const VERBO_ACTIVIDAD: Record<TaskEstado, string> = {
  * y no del departamento -- así Eventos e Ingeniería ven las mismas.
  */
 export function MemberDialog({ email, habilidadesConocidas, onCerrar, onGuardado }: Props) {
-  const { createTask, getCalendario, getFichaMiembro, updateFichaMiembro } = useApi();
-
   const [ficha, setFicha] = useState<FichaMiembro | null>(null);
   const [tags, setTags] = useState<string[]>([]);
   const [nuevaHabilidad, setNuevaHabilidad] = useState("");
@@ -78,6 +79,9 @@ export function MemberDialog({ email, habilidadesConocidas, onCerrar, onGuardado
 
   const [asignando, setAsignando] = useState(false);
   const [tituloTarea, setTituloTarea] = useState("");
+  // Departamento de la tarea: por defecto el que la persona tiene como 1ª
+  // preferencia, que es donde mejor encaja.
+  const [deptoTarea, setDeptoTarea] = useState<Team>("marketing");
   const [asignandoGuardando, setAsignandoGuardando] = useState(false);
 
   const [proximos, setProximos] = useState<CalendarioItem[]>([]);
@@ -90,6 +94,7 @@ export function MemberDialog({ email, habilidadesConocidas, onCerrar, onGuardado
         const respuesta = await getFichaMiembro(email);
         if (!activo) return;
         setFicha(respuesta.ficha);
+        setDeptoTarea(respuesta.ficha.equipos[0] ?? "marketing");
         setTags(respuesta.ficha.tags);
         setFoto(respuesta.ficha.foto);
         setNotas(respuesta.ficha.notas);
@@ -115,7 +120,7 @@ export function MemberDialog({ email, habilidadesConocidas, onCerrar, onGuardado
       const hoy = new Date();
       const en30dias = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate() + 30);
       try {
-        const respuesta = await getCalendario(iso(hoy), iso(en30dias));
+        const respuesta = await getCalendarioEquipo(iso(hoy), iso(en30dias));
         if (!activo) return;
         setProximos(respuesta.items.filter((i) => i.responsables.includes(email)).slice(0, 3));
       } catch {
@@ -215,7 +220,7 @@ export function MemberDialog({ email, habilidadesConocidas, onCerrar, onGuardado
 
     setAsignandoGuardando(true);
     try {
-      await createTask({ titulo, responsables: [email] });
+      await apiDepto(deptoTarea).createTask({ titulo, responsables: [email] });
       setTituloTarea("");
       setAsignando(false);
       onGuardado();
@@ -226,14 +231,16 @@ export function MemberDialog({ email, habilidadesConocidas, onCerrar, onGuardado
     }
   }
 
-  const nombre = etiquetaDe(email, ficha?.nombre);
+  const nombre = [etiquetaDe(email, ficha?.nombre), ficha?.apellidos.trim().split(/\s+/)[0]]
+    .filter(Boolean)
+    .join(" ");
 
   return (
     <Dialog open onOpenChange={(abierto) => !abierto && onCerrar()}>
       <DialogContent className="mkt-dialogo-react mkt-dialogo-ficha-react">
         <DialogHeader className="sr-only">
           <DialogTitle>{nombre}</DialogTitle>
-          <DialogDescription>{email}</DialogDescription>
+          <DialogDescription>Ficha de {nombre}</DialogDescription>
         </DialogHeader>
 
         {error ? <AlertBanner variant="error" message={error} /> : null}
@@ -286,6 +293,16 @@ export function MemberDialog({ email, habilidadesConocidas, onCerrar, onGuardado
                 {formatearFecha(ficha.desde.slice(0, 10), true)}
               </p>
 
+              <ol className="mkt-ficha-prefs-react" aria-label="Orden de preferencia">
+                {ficha.equipos.map((d, i) => (
+                  <li key={d}>
+                    <span className={`cuentas-ordinal-react${i === 0 ? " is-primera" : ""}`}>{i + 1}ª</span>
+                    {DEPTO_LABEL[d]}
+                    <span className="mkt-meta-react">{ficha.abiertas_por_depto[d] ?? 0}</span>
+                  </li>
+                ))}
+              </ol>
+
               {tags.length > 0 ? (
                 <span className="mkt-tags-react mkt-ficha-skills-react">
                   {tags.map((tag) => (
@@ -297,9 +314,6 @@ export function MemberDialog({ email, habilidadesConocidas, onCerrar, onGuardado
               ) : null}
 
               <div className="mkt-ficha-contacto-react">
-                <a className="mkt-btn-mini-react" href={`mailto:${email}`}>
-                  <Mail size={14} strokeWidth={1.75} aria-hidden="true" /> {email}
-                </a>
                 <button
                   type="button"
                   className="mkt-btn-react"
@@ -311,6 +325,17 @@ export function MemberDialog({ email, habilidadesConocidas, onCerrar, onGuardado
 
               {asignando ? (
                 <form className="mkt-ficha-asignar-react" onSubmit={asignarTarea}>
+                  <select
+                    value={deptoTarea}
+                    aria-label="Departamento de la tarea"
+                    onChange={(e) => setDeptoTarea(e.target.value as Team)}
+                  >
+                    {ficha.equipos.map((d, i) => (
+                      <option key={d} value={d}>
+                        {DEPTO_LABEL[d]} ({i + 1}ª preferencia)
+                      </option>
+                    ))}
+                  </select>
                   <input
                     type="text"
                     autoFocus
@@ -346,12 +371,54 @@ export function MemberDialog({ email, habilidadesConocidas, onCerrar, onGuardado
                 </div>
               </dl>
 
+              <p className="mkt-meta-react mkt-ficha-carga-react">
+                {sobrecargado(ficha.abiertas, ficha.media_club)
+                  ? "Va sobrecargado: "
+                  : ficha.abiertas === 0
+                    ? "Está libre: "
+                    : ""}
+                {ficha.abiertas} {ficha.abiertas === 1 ? "tarea abierta" : "tareas abiertas"} · media
+                del club {String(ficha.media_club).replace(".", ",")}
+              </p>
+
+              <section className="mkt-ficha-bloque-react">
+                <h4>Tareas abiertas</h4>
+                {ficha.pendientes.length === 0 ? (
+                  <p className="mkt-vacio-inline-react">No tiene nada pendiente.</p>
+                ) : (
+                  <ul className="mkt-ficha-actividad-react">
+                    {ficha.pendientes.map((tarea) => {
+                      const dias = diasHasta(tarea.deadline);
+                      return (
+                        <li key={tarea.id}>
+                          <span className={`mkt-punto-react mkt-punto-${tarea.estado}-react`} />
+                          <span className="mkt-ficha-actividad-texto-react">
+                            <b>{tarea.titulo}</b>
+                            <em>
+                              {" · "}
+                              {DEPTO_LABEL[tarea.departamento]}
+                              {tarea.padre ? ` · ${tarea.padre}` : ""}
+                            </em>
+                          </span>
+                          {tarea.deadline ? (
+                            <time
+                              dateTime={tarea.deadline}
+                              className={dias !== null && dias < 0 ? "mkt-vencida-react" : undefined}
+                            >
+                              {formatearFecha(tarea.deadline)}
+                            </time>
+                          ) : null}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+              </section>
+
               <section className="mkt-ficha-bloque-react">
                 <h4>Actividad reciente</h4>
                 {ficha.actividad.length === 0 ? (
-                  <p className="mkt-vacio-inline-react">
-                    Todavía no tiene ninguna tarea en este departamento.
-                  </p>
+                  <p className="mkt-vacio-inline-react">Todavía no ha tocado ninguna tarea.</p>
                 ) : (
                   <ul className="mkt-ficha-actividad-react">
                     {ficha.actividad.map((item) => (
@@ -385,8 +452,18 @@ export function MemberDialog({ email, habilidadesConocidas, onCerrar, onGuardado
                 </section>
               ) : null}
 
+              {ficha.es_yo ? (
+                <MisDatos
+                  onGuardado={() => {
+                    // Recarga la ficha para ver ya el nombre corregido.
+                    void getFichaMiembro(email).then((r) => setFicha(r.ficha));
+                    onGuardado();
+                  }}
+                />
+              ) : null}
+
               <section className="mkt-ficha-bloque-react">
-                <h4>Perfil</h4>
+                <h4>Habilidades y nota</h4>
 
                 {editandoPerfil ? (
                   <>

@@ -10,6 +10,8 @@ import {
   FolderKanban,
   Home,
   KanbanSquare,
+  LayoutDashboard,
+  Trash2,
   LogOut,
   NotebookPen,
   UserCog,
@@ -68,7 +70,7 @@ export type Panel =
   | "reuniones";
 
 export type Seccion =
-  | "club" | "notas" | "herramientas" | "metricas" | "calendario" | Panel
+  | "club" | "mesa" | "notas" | "papelera" | "herramientas" | "metricas" | "calendario" | Panel
   // Lo que antes era /admin: solo con `tieneAccesoAdmin` (Ingeniería y board).
   | "inscripciones" | "cuentas" | "calendario-club" | "auditoria";
 
@@ -78,7 +80,7 @@ export type Seccion =
  *  (`seccionesDe`) y qué departamentos ofrece el filtro dentro de cada uno
  *  (`equiposConPanel`). */
 const PANELES_POR_EQUIPO: Record<Team, Panel[]> = {
-  marketing: ["campanas", "tareas", "miembros"],
+  marketing: ["campanas", "tareas", "reuniones", "miembros"],
   eventos: ["campanas", "tareas", "presupuesto", "reuniones", "miembros"],
   // Proyectos es el mismo para los tres: mismo panel, mismo vocabulario.
   ingenieria: ["campanas", "tareas", "reuniones", "miembros"],
@@ -125,6 +127,7 @@ export function seccionesDe(teams: Team[]): Item[] {
 
   return [
     { id: "club", label: "Inicio", icono: Home, grupo: "Inicio" },
+    { id: "mesa", label: "Mesa del club", icono: LayoutDashboard, grupo: "Inicio" },
     { id: "notas", label: "Notas", icono: NotebookPen, grupo: "Inicio" },
     ...item("tareas", "Trabajo"),
     ...item("campanas", "Trabajo"),
@@ -134,6 +137,7 @@ export function seccionesDe(teams: Team[]): Item[] {
     ...item("miembros", "Club"),
     ...item("reuniones", "Club"),
     { id: "herramientas", label: "Herramientas", icono: Wrench, grupo: "Club" },
+    { id: "papelera", label: "Papelera", icono: Trash2, grupo: "Club" },
   ];
 }
 
@@ -159,7 +163,8 @@ type Props = {
 function papelDe(cargo: Cargo, vpDe: Team[], teams: Team[]) {
   if (vpDe.length > 0) return `VP de ${vpDe.map((t) => DEPTO_LABEL[t]).join(" + ")}`;
   if (cargo) return CARGO_LABEL[cargo];
-  if (teams.length > 0) return teams.map((t) => DEPTO_LABEL[t]).join(" + ");
+  // Todos somos de los tres departamentos: lo que dice quién eres es el orden.
+  if (teams.length > 0) return `1ª ${DEPTO_LABEL[teams[0]]}`;
   return "Equipo";
 }
 

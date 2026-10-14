@@ -106,6 +106,17 @@ export type Content = {
   tasks: Task[];
 };
 
+export type ProyectoEstado = "idea" | "activo" | "pausado" | "cerrado";
+
+export const PROYECTO_ESTADOS: ProyectoEstado[] = ["idea", "activo", "pausado", "cerrado"];
+
+export const PROYECTO_ESTADO_LABEL: Record<ProyectoEstado, string> = {
+  idea: "Idea",
+  activo: "Activo",
+  pausado: "En pausa",
+  cerrado: "Cerrado",
+};
+
 type Campaign = {
   id: number;
   nombre: string;
@@ -116,7 +127,14 @@ type Campaign = {
   creado_por: string;
   created_at: string;
   updated_at: string;
+  /** Departamento «principal»: el primero del ámbito. Con él se abre el
+   *  proyecto desde su ruta. */
   departamento: Team;
+  /** Ámbito: uno, varios o los tres departamentos (= todo el club). */
+  departamentos: Team[];
+  estado: ProyectoEstado;
+  /** Email de quien lleva el proyecto, o "". */
+  responsable: string;
 };
 
 export type CampaignResumen = Campaign & {
@@ -167,17 +185,23 @@ export type CalendarioItem = {
 
 export type Miembro = {
   email: string;
-  equipos: string[];
-  activo: boolean;
+  /** Orden de preferencia de departamentos: 1ª, 2ª, 3ª. Todos somos de los
+   *  tres, lo que cambia de una persona a otra es este orden. */
+  equipos: Team[];
+  cargo: Cargo;
+  vp_de: Team[];
   /** Etiquetas de habilidad, del perfil de la persona. */
   tags: string[];
-  /** Nombre para mostrar. Vacío si todavía no se ha rellenado en /admin. */
+  /** Nombre para mostrar. Vacío si todavía no se ha rellenado en el perfil. */
   nombre: string;
+  apellidos: string;
   /** Foto propia como data URL, o "" si no ha subido ninguna y vale la de
    *  `public/equipo-*.jpg` (ver `Avatares.tsx`). */
   foto: string;
-  /** Tareas sin acabar en ESTE departamento. Se calcula, no se guarda. */
+  /** Tareas sin acabar en todo el club. Se calcula, no se guarda. */
   abiertas: number;
+  /** Las mismas, repartidas por departamento. */
+  abiertas_por_depto: Record<Team, number>;
 };
 
 export type TaskComment = {
@@ -195,26 +219,45 @@ type ActividadMiembro = {
   estado: TaskEstado;
   updated_at: string;
   padre: string | null;
+  departamento: Team;
+};
+
+/** Una tarea abierta de la persona, con su plazo. */
+type PendienteMiembro = {
+  id: number;
+  titulo: string;
+  estado: TaskEstado;
+  deadline: string | null;
+  padre: string | null;
+  departamento: Team;
 };
 
 export type FichaMiembro = {
   email: string;
-  equipos: string[];
-  vp_de: string[];
+  equipos: Team[];
+  vp_de: Team[];
   cargo: Cargo;
   tags: string[];
   notas: string;
   nombre: string;
+  apellidos: string;
   desde: string;
   abiertas: number;
   completadas: number;
   campanas: number;
   actividad: ActividadMiembro[];
+  pendientes: PendienteMiembro[];
+  abiertas_por_depto: Record<Team, number>;
+  /** Tareas abiertas por persona activa, de media: la vara con la que se
+   *  mide si alguien va cargado. */
+  media_club: number;
   /** Foto propia (data URL), o "" si vale la de `public/equipo-*.jpg`. */
   foto: string;
   /** Si quien mira puede cambiar esta foto: su propia ficha, o admin. Lo
    *  decide el servidor; aquí solo sirve para enseñar u ocultar el botón. */
   es_tu_ficha: boolean;
+  /** Es tu cuenta (admin no cuenta): puedes corregir tus datos personales. */
+  es_yo: boolean;
 };
 
 type MiembroSalud = {
@@ -258,8 +301,16 @@ type AlertaDepartamento = {
 };
 
 /** Salud del club entero, solo para board/VP (ver `/api/equipo/metricas`). */
+export type BalanceDepartamento = {
+  /** Personas con este departamento de 1ª, 2ª y 3ª preferencia. */
+  preferencias: [number, number, number];
+  abiertas: number;
+  vencidas: number;
+};
+
 export type MetricasClub = {
   dias_periodo: number;
+  balance_departamentos: Record<Team, BalanceDepartamento>;
   total_activos: number;
   sobrecargados: number;
   inactivos: number;

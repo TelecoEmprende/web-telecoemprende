@@ -87,3 +87,39 @@ def enviar_email_estado(registro: dict, estado: str) -> bool:
             registro["email"], exc, cuerpo, RESEND_API_KEY[:10], len(RESEND_API_KEY),
         )
         return False
+
+
+def enviar_recuperacion_clave(email: str, nombre: str, enlace: str, minutos: int) -> bool:
+    """El enlace para elegir una contraseña nueva. A diferencia de los avisos
+    de estado, aquí quien lo pide se queda sin entrada si falla: devuelve False
+    y quien lo llama lo deja apuntado (ver `api/equipo.py`)."""
+    if not RESEND_API_KEY:
+        logger.error("recuperar contraseña: falta RESEND_API_KEY, no se envía el enlace")
+        return False
+
+    saludo = f"Hola {nombre}," if nombre else "Hola,"
+    payload = {
+        "from": f"{RESEND_FROM_NAME} <{RESEND_FROM_EMAIL}>",
+        "to": [email],
+        "subject": "Elige una contraseña nueva para TelecoEmprende",
+        "html": (
+            f"{saludo}<br><br>"
+            "Has pedido cambiar la contraseña de tu cuenta del equipo. Entra en este enlace "
+            f"para elegir una nueva (vale {minutos} minutos y solo se puede usar una vez):<br><br>"
+            f'<a href="{enlace}">{enlace}</a><br><br>'
+            "Si no lo has pedido tú, ignora este correo: tu contraseña sigue siendo la de "
+            "siempre.<br><br>El equipo de TelecoEmprende"
+        ),
+    }
+    request = urllib.request.Request(
+        RESEND_ENDPOINT,
+        data=json.dumps(payload).encode("utf-8"),
+        headers={"Authorization": f"Bearer {RESEND_API_KEY}", "Content-Type": "application/json"},
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=10):
+            return True
+    except (urllib.error.URLError, urllib.error.HTTPError, OSError) as exc:
+        logger.error("fallo enviando el enlace de recuperación: %s", exc)
+        return False

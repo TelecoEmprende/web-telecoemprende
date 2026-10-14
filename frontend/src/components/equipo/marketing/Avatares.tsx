@@ -56,6 +56,20 @@ export function nivelCarga(abiertas: number): NivelCarga {
   return abiertas >= 4 ? "alta" : "media";
 }
 
+/** Tareas abiertas por persona del club, de media (todos, incluidos los que
+ *  están a cero). */
+export function mediaAbiertas(miembros: { abiertas: number }[]) {
+  return miembros.length ? miembros.reduce((n, m) => n + m.abiertas, 0) / miembros.length : 0;
+}
+
+/** Alguien va sobrecargado si lleva más de una vez y media la media del club.
+ *  El suelo de 3 evita marcar a quien lleva una sola tarea cuando el club
+ *  casi no tiene nada abierto. Es lo que baja a una persona al final de la
+ *  propuesta de asignación. */
+export function sobrecargado(abiertas: number, media: number) {
+  return abiertas >= 3 && abiertas > media * 1.5;
+}
+
 export function fotoDe(email: string) {
   const nombre = nombreAdivinado(email);
   // Same-origin: la CSP del sitio es `img-src 'self' data:`, así que una foto

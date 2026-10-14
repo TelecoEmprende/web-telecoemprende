@@ -1,7 +1,7 @@
 import { FormEvent, useEffect, useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
 
-import { useApi, useDirectorio } from "../DeptoApi";
+import { useApi, useDirectorio, useYo } from "../DeptoApi";
 import { AlertBanner } from "../../feedback/AlertBanner";
 import { ContadorCaracteres } from "../../feedback/ContadorCaracteres";
 import { AdjuntosDeContent } from "./AdjuntosDeContent";
@@ -56,6 +56,9 @@ type Props = {
    *  rellenar es mejor que dejar el clic sin respuesta mientras va la red
    *  (ver `abrir()` en `CalendarPanel`). */
   cargando?: boolean;
+  /** Se llama justo tras mandar la tarea a la papelera, para que quien la abrió
+   *  enseñe el «Deshacer». */
+  onBorrada?: (task: Task) => void;
 };
 
 function comoLineas(valores: string[]) {
@@ -78,8 +81,9 @@ function desdeLineas(texto: string) {
  */
 export function TaskDialog({
   task, onCerrar, onGuardado, etiquetasExistentes = [], puedeAsignar,
-  deptosDisponibles = [], onAbrirCampaign, cargando = false,
+  deptosDisponibles = [], onAbrirCampaign, cargando = false, onBorrada,
 }: Props) {
+  const yo = useYo();
   const { deleteTask, getTaskComments, createTaskComment, updateTask } = useApi();
   const directorio = useDirectorio();
 
@@ -98,7 +102,6 @@ export function TaskDialog({
   const [nuevoItem, setNuevoItem] = useState("");
 
   const [isSaving, setIsSaving] = useState(false);
-  const [confirmando, setConfirmando] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const [comentarios, setComentarios] = useState<TaskComment[]>([]);
@@ -184,6 +187,7 @@ export function TaskDialog({
   async function borrar() {
     try {
       await deleteTask(task.id);
+      onBorrada?.(task);
       onGuardado();
     } catch (err) {
       setError((err as ApiFailure)?.message || "No se pudo eliminar la tarea.");
@@ -408,8 +412,26 @@ export function TaskDialog({
               <p className="mkt-meta-react">
                 {responsables.length > 0
                   ? responsables.map((email) => etiquetaDe(email, directorio[email])).join(", ")
-                  : "Sin asignar"}
-                {" · solo board y VPs reasignan"}
+                  : "Sin dueño"}
+                {" · board y VPs reparten; tú puedes quedarte una sin dueño o soltar la tuya "}
+                {yo && responsables.length === 0 ? (
+                  <button
+                    type="button"
+                    className="mkt-btn-mini-react"
+                    onClick={() => setResponsables([yo])}
+                  >
+                    Me la quedo
+                  </button>
+                ) : null}
+                {yo && responsables.includes(yo) ? (
+                  <button
+                    type="button"
+                    className="mkt-btn-mini-react"
+                    onClick={() => setResponsables(responsables.filter((e) => e !== yo))}
+                  >
+                    Soltarla
+                  </button>
+                ) : null}
               </p>
             )}
           </div>
@@ -498,33 +520,14 @@ export function TaskDialog({
               Cancelar
             </button>
 
-            {confirmando ? (
-              <span className="mkt-confirmar-react">
-                ¿Eliminar la tarea?
-                <button
-                  type="button"
-                  className="mkt-btn-mini-peligro-react"
-                  onClick={() => void borrar()}
-                >
-                  Sí
-                </button>
-                <button
-                  type="button"
-                  className="mkt-btn-mini-react"
-                  onClick={() => setConfirmando(false)}
-                >
-                  No
-                </button>
-              </span>
-            ) : (
-              <button
-                type="button"
-                className="mkt-btn-borrar-react mkt-borrar-derecha-react"
-                onClick={() => setConfirmando(true)}
-              >
-                Eliminar tarea
-              </button>
-            )}
+            <button
+              type="button"
+              className="mkt-btn-borrar-react mkt-borrar-derecha-react"
+              onClick={() => void borrar()}
+              title="Va a la papelera 30 días y se puede restaurar"
+            >
+              Enviar a la papelera
+            </button>
           </div>
         </form>
         )}

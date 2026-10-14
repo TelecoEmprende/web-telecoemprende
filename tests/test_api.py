@@ -343,11 +343,11 @@ class ApiTestCase(unittest.TestCase):
 
         login = self.equipo_login()
         self.assertEqual(login.status_code, 200)
-        self.assertEqual(sorted(login.get_json()["teams"]), ["eventos", "marketing"])
+        self.assertEqual(login.get_json()["teams"], ["marketing", "eventos", "ingenieria"])
 
         session_after = self.client.get("/api/equipo/session")
         self.assertTrue(session_after.get_json()["authenticated"])
-        self.assertEqual(sorted(session_after.get_json()["teams"]), ["eventos", "marketing"])
+        self.assertEqual(session_after.get_json()["teams"], ["marketing", "eventos", "ingenieria"])
 
         logout = self.client.post("/api/equipo/logout")
         self.assertEqual(logout.status_code, 200)
@@ -409,22 +409,24 @@ class ApiTestCase(unittest.TestCase):
         self.assertTrue(self.client.get("/api/admin/session").get_json()["authenticated"])
         self.assertTrue(self.client.get("/api/equipo/session").get_json()["admin"])
 
-    def test_admin_equipo_requires_two_departments_in_preference_order(self):
+    def test_admin_equipo_requires_the_three_departments_in_preference_order(self):
         self.login()
         base = {"password": "contrasena-larga"}
 
-        uno = self.client.post("/api/admin/equipo", json={**base, "email": "a@example.com", "equipos": ["eventos"]})
-        self.assertEqual(uno.status_code, 400)
+        dos = self.client.post("/api/admin/equipo", json={**base, "email": "a@example.com", "equipos": ["eventos", "marketing"]})
+        self.assertEqual(dos.status_code, 400)
         repetido = self.client.post(
-            "/api/admin/equipo", json={**base, "email": "a@example.com", "equipos": ["eventos", "eventos"]}
+            "/api/admin/equipo",
+            json={**base, "email": "a@example.com", "equipos": ["eventos", "eventos", "marketing"]},
         )
         self.assertEqual(repetido.status_code, 400)
 
-        dos = self.client.post(
-            "/api/admin/equipo", json={**base, "email": "a@example.com", "equipos": ["marketing", "eventos"]}
+        tres = self.client.post(
+            "/api/admin/equipo",
+            json={**base, "email": "a@example.com", "equipos": ["marketing", "ingenieria", "eventos"]},
         )
-        self.assertEqual(dos.status_code, 201)
-        self.assertEqual(dos.get_json()["acceso"]["equipos"], ["marketing", "eventos"])
+        self.assertEqual(tres.status_code, 201)
+        self.assertEqual(tres.get_json()["acceso"]["equipos"], ["marketing", "ingenieria", "eventos"])
 
     def test_admin_equipo_sets_photo_and_rejects_non_images(self):
         self.login()
@@ -522,7 +524,7 @@ class ApiTestCase(unittest.TestCase):
             json={
                 "email": "vp2@example.com",
                 "password": "contrasena-larga",
-                "equipos": ["eventos", "marketing"],
+                "equipos": ["eventos", "marketing", "ingenieria"],
                 "vp_de": ["eventos"],
                 "cargo": "boardmember",
             },
@@ -565,7 +567,7 @@ class ApiTestCase(unittest.TestCase):
         conn.close()
         alta = self.client.post("/api/admin/equipo", json={
             "email": "ana@alumnos.upm.es", "password": "contrasena-larga",
-            "equipos": ["marketing", "eventos"], "nombre": "Ana",
+            "equipos": ["marketing", "eventos", "ingenieria"], "nombre": "Ana",
         })
         self.assertEqual(alta.status_code, 201, alta.get_json())
 
@@ -818,6 +820,15 @@ class ApiTestCase(unittest.TestCase):
         self.assertEqual(yo["abiertas"], 1)
         self.assertIn("marketing", metricas["por_departamento"])
 
+        # «De qué pata cojea el club»: quién prefiere cada departamento (1ª, 2ª,
+        # 3ª) frente al trabajo que hay abierto en él.
+        balance = metricas["balance_departamentos"]
+        self.assertEqual(balance["marketing"]["preferencias"], [1, 0, 0])
+        self.assertEqual(balance["eventos"]["preferencias"], [0, 1, 0])
+        self.assertEqual(balance["ingenieria"]["preferencias"], [0, 0, 1])
+        self.assertEqual(balance["marketing"]["abiertas"], 1)
+        self.assertEqual(balance["eventos"]["abiertas"], 0)
+
     def test_directorio_requiere_sesion(self):
         self.assertEqual(self.client.get("/api/equipo/directorio").status_code, 401)
 
@@ -864,7 +875,7 @@ class ApiTestCase(unittest.TestCase):
             "/api/admin/equipo",
             json={
                 "email": "nueva@example.com", "password": "contrasena-larga",
-                "equipos": ["eventos", "ingenieria"],
+                "equipos": ["eventos", "ingenieria", "marketing"],
             },
         )
         self.assertEqual(create.status_code, 201)
@@ -877,10 +888,9 @@ class ApiTestCase(unittest.TestCase):
         update = self.client.put(
             f"/api/admin/equipo/{acceso_id}",
             json={
-                "equipos": ["eventos", "marketing"],
+                "equipos": ["eventos", "marketing", "ingenieria"],
                 "activo": False,
                 "dni": "12345678Z",
-                "correo_personal": "nueva.personal@gmail.com",
                 "apellidos": "García López",
             },
         )
@@ -889,11 +899,11 @@ class ApiTestCase(unittest.TestCase):
         listado_tras_update = self.client.get("/api/admin/equipo").get_json()["accesos"]
         actualizado = next(a for a in listado_tras_update if a["id"] == acceso_id)
         # El orden es la preferencia: se guarda tal cual, sin ordenar.
-        self.assertEqual(actualizado["equipos"], ["eventos", "marketing"])
+        self.assertEqual(actualizado["equipos"], ["eventos", "marketing", "ingenieria"])
         self.assertFalse(actualizado["activo"])
         self.assertEqual(actualizado["dni"], "12345678Z")
         self.assertEqual(actualizado["apellidos"], "García López")
-        self.assertEqual(actualizado["correo_personal"], "nueva.personal@gmail.com")
+        self.assertNotIn("correo_personal", actualizado)
 
         delete = self.client.delete(f"/api/admin/equipo/{acceso_id}")
         self.assertEqual(delete.status_code, 200)
@@ -909,13 +919,13 @@ class ApiTestCase(unittest.TestCase):
             "/api/admin/equipo",
             json={
                 "email": "ya-existe@example.com", "password": "contrasena-larga",
-                "equipos": ["marketing", "eventos"],
+                "equipos": ["marketing", "eventos", "ingenieria"],
             },
         )
         self.assertEqual(response.status_code, 409)
 
-    def test_admin_equipo_create_board_member_without_team(self):
-        """Board sin departamento es válido; el admin va aparte del cargo."""
+    def test_admin_equipo_create_board_member(self):
+        """El cargo es un título; el admin va aparte."""
         self.login()
 
         create = self.client.post(
@@ -923,7 +933,7 @@ class ApiTestCase(unittest.TestCase):
             json={
                 "email": "board@example.com",
                 "password": "contrasena-larga",
-                "equipos": [],
+                "equipos": ["ingenieria", "eventos", "marketing"],
                 "cargo": "boardmember",
                 "es_admin": True,
             },
@@ -936,13 +946,12 @@ class ApiTestCase(unittest.TestCase):
             json={"email": "board@example.com", "password": "contrasena-larga"},
         )
         self.assertEqual(login.status_code, 200)
-        self.assertEqual(login.get_json()["teams"], [])
+        self.assertEqual(login.get_json()["teams"], ["ingenieria", "eventos", "marketing"])
         self.assertEqual(login.get_json()["cargo"], "boardmember")
-        # Sin ningún equipo, el permiso de admin tiene que seguir abriendo Admin.
         self.assertEqual(self.client.get("/api/admin/registrations").status_code, 200)
 
-    def test_admin_equipo_create_rejects_no_team_and_no_cargo(self):
-        """Sin departamento y sin cargo la cuenta no daría acceso a nada."""
+    def test_admin_equipo_create_rejects_no_team(self):
+        """Los tres departamentos van siempre, ordenados."""
         self.login()
 
         response = self.client.post(
@@ -951,23 +960,19 @@ class ApiTestCase(unittest.TestCase):
         )
         self.assertEqual(response.status_code, 400)
 
-    def test_admin_equipo_update_cannot_strip_last_access(self):
-        """Quitarle el cargo a un board sin equipos lo dejaría sin acceso."""
+    def test_admin_equipo_update_never_leaves_fewer_than_three_departments(self):
         self.login()
-
-        create = self.client.post(
-            "/api/admin/equipo",
-            json={
-                "email": "board2@example.com",
-                "password": "contrasena-larga",
-                "equipos": [],
-                "cargo": "boardmember",
-            },
+        self.seed_equipo(email="uno@example.com", equipos=["eventos"])
+        acceso_id = next(
+            a["id"] for a in equipo_service.listar_equipo_accesos() if a["email"] == "uno@example.com"
         )
-        acceso_id = create.get_json()["acceso"]["id"]
 
-        response = self.client.put(f"/api/admin/equipo/{acceso_id}", json={"cargo": ""})
-        self.assertEqual(response.status_code, 404)
+        corto = self.client.put(f"/api/admin/equipo/{acceso_id}", json={"equipos": ["marketing"]})
+        self.assertEqual(corto.status_code, 400)
+
+        # Una cuenta antigua guardada con uno solo ya se ve con los tres.
+        antigua = next(a for a in equipo_service.listar_equipo_accesos() if a["id"] == acceso_id)
+        self.assertEqual(antigua["equipos"], ["eventos", "marketing", "ingenieria"])
 
     def test_admin_equipo_create_rejects_invalid_team(self):
         self.login()

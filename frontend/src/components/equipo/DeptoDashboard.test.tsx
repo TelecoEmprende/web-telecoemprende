@@ -23,6 +23,8 @@ const createTaskComment = vi.fn();
 const getCalendarioEquipo = vi.fn();
 const getTask = vi.fn();
 const getPlataforma = vi.fn();
+const deleteTask = vi.fn();
+const restaurar = vi.fn();
 
 // El módulo ya no exporta funciones sueltas sino una factoría por
 // departamento (Marketing y Eventos comparten paneles). `apiDepto` guarda el
@@ -30,11 +32,20 @@ const getPlataforma = vi.fn();
 // workspace pide los datos de los suyos y no de los del otro.
 const deptosPedidos: string[] = [];
 
+vi.mock("../../api/club", () => ({
+  restaurar: (...args: unknown[]) => restaurar(...args),
+}));
+
 vi.mock("../../api/notas", () => ({
   listarNotas: () => Promise.resolve({ ok: true, notas: [] }),
 }));
 
 vi.mock("../../api/marketing", () => ({
+  // Todos somos de los tres departamentos: el directorio y la ficha son del
+  // club y se piden fuera de `apiDepto`.
+  getMiembrosClub: (...args: unknown[]) => getMiembros(...args),
+  getFichaMiembro: (...args: unknown[]) => getFichaMiembro(...args),
+  updateFichaMiembro: (...args: unknown[]) => updateFichaMiembro(...args),
   apiDepto: (depto: string) => {
     deptosPedidos.push(depto);
     return {
@@ -52,7 +63,7 @@ vi.mock("../../api/marketing", () => ({
       deleteCampaign: vi.fn(),
       duplicateCampaign: (...args: unknown[]) => duplicateCampaign(...args),
       deleteContent: vi.fn(),
-      deleteTask: vi.fn(),
+      deleteTask: (...args: unknown[]) => deleteTask(...args),
       updateCampaign: vi.fn(),
       updateContent: vi.fn(),
       getTaskComments: (...args: unknown[]) => getTaskComments(...args),
@@ -172,6 +183,8 @@ describe("/equipo — panel de Marketing", () => {
       .mockResolvedValue({ ok: true, desde: "", hasta: "", items: [] });
     getMiembros.mockReset().mockResolvedValue({ ok: true, miembros: [] });
     getFichaMiembro.mockReset();
+    deleteTask.mockReset().mockResolvedValue({ ok: true });
+    restaurar.mockReset().mockResolvedValue({ ok: true });
     listarRegistros.mockReset().mockImplementation((recurso: string) =>
       Promise.resolve({ ok: true, [recurso]: [] }),
     );
@@ -242,13 +255,24 @@ describe("/equipo — panel de Marketing", () => {
     ).toBeInTheDocument();
   });
 
-  it("un miembro raso (no VP) no ve el botón de crear tarea", async () => {
+  it("un miembro raso (no VP) crea tareas, pero se las queda él o quedan sin dueño", async () => {
     vpDeSesion = [];
+    createTask.mockResolvedValue({ ok: true, task: TAREA });
 
     await renderMarketing();
     await userEvent.click(screen.getByRole("button", { name: "Tareas" }));
+    await userEvent.click(screen.getByRole("button", { name: "+ Nueva tarea" }));
 
-    expect(screen.queryByRole("button", { name: "+ Nueva tarea" })).not.toBeInTheDocument();
+    // No hay selector para repartir a otras personas: solo «Me la quedo yo».
+    expect(screen.queryByRole("button", { name: /Elegir personas/ })).not.toBeInTheDocument();
+    expect(screen.getByLabelText(/Me la quedo yo/)).toBeInTheDocument();
+
+    await userEvent.type(screen.getByLabelText("Título"), "Cartel");
+    await userEvent.type(screen.getByLabelText("Instrucciones"), "Ver notas.");
+    await userEvent.click(screen.getByRole("button", { name: "Crear tarea" }));
+
+    await waitFor(() => expect(createTask).toHaveBeenCalled());
+    expect(createTask.mock.calls[0][0].responsables).toEqual([]);
   });
 
   it("admin asigna en todo el club aunque no sea VP de nada ni tenga cargo", async () => {
@@ -396,7 +420,7 @@ describe("/equipo — panel de Marketing", () => {
     expect(within(dialogo).getByLabelText("Estado")).toHaveValue("pendiente");
   });
 
-  it("borrar una tarea pide confirmación en la página, sin window.confirm", async () => {
+  it("borrar una tarea la manda a la papelera y deja deshacerlo, sin window.confirm", async () => {
     getTasks.mockResolvedValue({ ok: true, tasks: tareas({}), usuario: YO });
     const confirmSpy = vi.spyOn(window, "confirm");
 
@@ -407,9 +431,12 @@ describe("/equipo — panel de Marketing", () => {
     );
 
     const dialogo = await screen.findByRole("dialog");
-    await userEvent.click(within(dialogo).getByRole("button", { name: "Eliminar tarea" }));
+    await userEvent.click(within(dialogo).getByRole("button", { name: "Enviar a la papelera" }));
 
-    expect(within(dialogo).getByRole("button", { name: "Sí" })).toBeInTheDocument();
+    expect(deleteTask).toHaveBeenCalledWith(1);
+    // Aviso con «Deshacer»: restaura de la papelera.
+    await userEvent.click(await screen.findByRole("button", { name: "Deshacer" }));
+    expect(restaurar).toHaveBeenCalledWith("tarea", 1);
     expect(confirmSpy).not.toHaveBeenCalled();
     confirmSpy.mockRestore();
   });
@@ -574,15 +601,15 @@ describe("/equipo — panel de Marketing", () => {
     expect(document.querySelectorAll(".mkt-semana-columna-react").length).toBe(7);
   });
 
-  it("lista los miembros del departamento con su carga", async () => {
+  it("lista los miembros del club con su orden de preferencia y su carga", async () => {
     getMiembros.mockResolvedValue({
       ok: true,
       miembros: [
-        { email: YO, equipos: ["marketing"], activo: true, tags: ["Copy"], abiertas: 0 },
+        { email: YO, equipos: ["marketing", "eventos", "ingenieria"], cargo: "", vp_de: [], nombre: "", apellidos: "", foto: "", abiertas_por_depto: { marketing: 0, eventos: 0, ingenieria: 0 }, tags: ["Copy"], abiertas: 0 },
         {
           email: "hugo@telecoemprende.es",
-          equipos: ["marketing"],
-          activo: true,
+          equipos: ["marketing", "eventos", "ingenieria"],
+          cargo: "", vp_de: [], nombre: "", apellidos: "", foto: "", abiertas_por_depto: { marketing: 0, eventos: 0, ingenieria: 0 },
           tags: ["Reels"],
           abiertas: 5,
         },
@@ -595,7 +622,13 @@ describe("/equipo — panel de Marketing", () => {
     // El directorio enseña el nombre, no el email en crudo.
     expect(await screen.findByText("Abril")).toBeInTheDocument();
     expect(screen.getByText("Libre")).toBeInTheDocument();
-    expect(screen.getByText("5 tareas abiertas")).toBeInTheDocument();
+    expect(screen.getByText(/5 tareas abiertas/)).toBeInTheDocument();
+    // Con una media de 2,5 por persona, 5 es sobrecarga.
+    expect(screen.getByText(/sobrecargado/)).toBeInTheDocument();
+    // Todos somos de los tres departamentos: se ve el orden, no «solo Marketing».
+    const lista = within(document.querySelector(".mkt-directorio-react") as HTMLElement);
+    expect(lista.getAllByText("1ª Marketing").length).toBe(2);
+    expect(lista.getAllByText("3ª Ingeniería").length).toBe(2);
   });
 
   it("los más libres salen primero, para saber a quién asignar", async () => {
@@ -604,12 +637,12 @@ describe("/equipo — panel de Marketing", () => {
       miembros: [
         {
           email: "hugo@telecoemprende.es",
-          equipos: ["marketing"],
-          activo: true,
+          equipos: ["marketing", "eventos", "ingenieria"],
+          cargo: "", vp_de: [], nombre: "", apellidos: "", foto: "", abiertas_por_depto: { marketing: 0, eventos: 0, ingenieria: 0 },
           tags: [],
           abiertas: 5,
         },
-        { email: YO, equipos: ["marketing"], activo: true, tags: [], abiertas: 0 },
+        { email: YO, equipos: ["marketing", "eventos", "ingenieria"], cargo: "", vp_de: [], nombre: "", apellidos: "", foto: "", abiertas_por_depto: { marketing: 0, eventos: 0, ingenieria: 0 }, tags: [], abiertas: 0 },
       ],
     });
 
@@ -627,11 +660,11 @@ describe("/equipo — panel de Marketing", () => {
     getMiembros.mockResolvedValue({
       ok: true,
       miembros: [
-        { email: YO, equipos: ["marketing"], activo: true, tags: ["Copy"], abiertas: 0 },
+        { email: YO, equipos: ["marketing", "eventos", "ingenieria"], cargo: "", vp_de: [], nombre: "", apellidos: "", foto: "", abiertas_por_depto: { marketing: 0, eventos: 0, ingenieria: 0 }, tags: ["Copy"], abiertas: 0 },
         {
           email: "hugo@telecoemprende.es",
-          equipos: ["marketing"],
-          activo: true,
+          equipos: ["marketing", "eventos", "ingenieria"],
+          cargo: "", vp_de: [], nombre: "", apellidos: "", foto: "", abiertas_por_depto: { marketing: 0, eventos: 0, ingenieria: 0 },
           tags: ["Reels"],
           abiertas: 1,
         },
@@ -652,23 +685,39 @@ describe("/equipo — panel de Marketing", () => {
     getMiembros.mockResolvedValue({
       ok: true,
       miembros: [
-        { email: YO, equipos: ["marketing"], activo: true, tags: ["Copy"], abiertas: 2 },
+        { email: YO, equipos: ["marketing", "eventos", "ingenieria"], cargo: "", vp_de: [], nombre: "", apellidos: "", foto: "", abiertas_por_depto: { marketing: 0, eventos: 0, ingenieria: 0 }, tags: ["Copy"], abiertas: 2 },
       ],
     });
     getFichaMiembro.mockResolvedValue({
       ok: true,
       ficha: {
         email: YO,
-        equipos: ["marketing"],
+        equipos: ["marketing", "eventos", "ingenieria"],
         vp_de: [],
         cargo: "",
         tags: ["Copy"],
         notas: "Mejor una cosa a la vez.",
+        nombre: "",
+        apellidos: "",
         desde: "2026-01-15T10:00:00",
         abiertas: 2,
         completadas: 12,
         campanas: 3,
-       
+        media_club: 1.5,
+        abiertas_por_depto: { marketing: 2, eventos: 0, ingenieria: 0 },
+        foto: "",
+        es_tu_ficha: false,
+        es_yo: false,
+        pendientes: [
+          {
+            id: 7,
+            titulo: "Maquetar el cartel",
+            estado: "pendiente" as TaskEstado,
+            deadline: "2026-12-01",
+            padre: null,
+            departamento: "eventos",
+          },
+        ],
         actividad: [
           {
             id: 1,
@@ -676,6 +725,7 @@ describe("/equipo — panel de Marketing", () => {
             estado: "acabado" as TaskEstado,
             updated_at: new Date().toISOString(),
             padre: "Vuelta al cole",
+            departamento: "marketing",
           },
         ],
       },
@@ -687,6 +737,11 @@ describe("/equipo — panel de Marketing", () => {
 
     const dialogo = await screen.findByRole("dialog");
     expect(within(dialogo).getByText("12")).toBeInTheDocument();
+    // Lo pendiente, con su departamento, y el orden de preferencia: no hay
+    // correo ni botón de escribirle.
+    expect(within(dialogo).getByText("Maquetar el cartel")).toBeInTheDocument();
+    expect(within(dialogo).getByLabelText("Orden de preferencia")).toBeInTheDocument();
+    expect(within(dialogo).queryByText(YO)).not.toBeInTheDocument();
     expect(within(dialogo).getByText("Grabar reel de apertura", { exact: false }))
       .toBeInTheDocument();
     // La nota sale de solo lectura por defecto; el textarea para editarla
@@ -710,7 +765,10 @@ describe("/equipo — panel de Marketing", () => {
     getCampaigns.mockResolvedValue({
       ok: true,
       campaigns: [
-        { id: 1, nombre: "Vuelta al cole", objetivo: "", total_contents: 2, total_tasks: 3, tareas_acabadas: 1, fecha: null },
+        {
+          id: 1, nombre: "Vuelta al cole", objetivo: "", total_contents: 2, total_tasks: 3, tareas_acabadas: 1,
+          fecha: null, departamento: "marketing", departamentos: ["marketing"], estado: "activo", responsable: "",
+        },
       ],
     });
     duplicateCampaign.mockResolvedValue({
@@ -721,6 +779,7 @@ describe("/equipo — panel de Marketing", () => {
         objetivo: "",
         audiencia: "",
         fecha: null,
+        departamento: "marketing", departamentos: ["marketing"], estado: "idea", responsable: "",
         contents: [],
         tasks_sueltas: [],
       },
@@ -741,6 +800,7 @@ describe("/equipo — panel de Marketing", () => {
       ok: true,
       campaign: {
         id: 1, nombre: "Vuelta al cole", objetivo: "", audiencia: "", fecha: null,
+        departamento: "marketing", departamentos: ["marketing"], estado: "activo", responsable: "",
         contents: [], tasks_sueltas: [],
       },
     });
@@ -865,6 +925,7 @@ describe("/equipo — panel de Marketing", () => {
       ok: true,
       campaign: {
         id: 5, nombre: "Semana de bienvenida", objetivo: "", audiencia: "", fecha: null,
+        departamento: "eventos", departamentos: ["eventos"], estado: "activo", responsable: "",
         contents: [], tasks_sueltas: [],
       },
     });

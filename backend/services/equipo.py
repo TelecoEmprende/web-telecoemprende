@@ -1,4 +1,6 @@
 import base64
+import hashlib
+import secrets
 from io import BytesIO
 
 import psycopg2
@@ -12,6 +14,8 @@ from backend.services.db import ids_de_personas
 from backend.config import (
     CARGOS_VALIDOS,
     DATABASE_URL,
+    EQUIPOS_ORDEN_POR_DEFECTO,
+    MINUTOS_ENLACE_CLAVE,
     EQUIPOS_VALIDOS,
 )
 from backend.services.registrations import _celda_segura
@@ -51,7 +55,7 @@ def listar_directorio_club() -> list[dict]:
 
     return [
         {
-            "email": f[0], "equipos": f[1], "vp_de": f[2], "cargo": f[3],
+            "email": f[0], "equipos": completar_equipos(f[1]), "vp_de": f[2], "cargo": f[3],
             "nombre": f[4],
         }
         for f in filas
@@ -60,9 +64,16 @@ def listar_directorio_club() -> list[dict]:
 
 def ordenar_equipos(equipos: list[str]) -> list[str]:
     """Sin duplicados y en el orden en que llegan: el primero es la 1ª
-    preferencia de la persona y el segundo la 2ª (no se ordena alfabéticamente,
-    que perdería esa información)."""
+    preferencia de la persona, el segundo la 2ª y el tercero la 3ª (no se
+    ordena alfabéticamente, que perdería esa información)."""
     return list(dict.fromkeys(equipos))
+
+
+def completar_equipos(equipos: list[str]) -> list[str]:
+    """Todos somos de los tres departamentos: respeta el orden de preferencia
+    que hay y añade al final los que falten, en el orden por defecto."""
+    ordenados = [e for e in ordenar_equipos(equipos) if e in EQUIPOS_VALIDOS]
+    return ordenados + [e for e in EQUIPOS_ORDEN_POR_DEFECTO if e not in ordenados]
 
 
 def login_equipo(email: str, password: str) -> dict | None:
@@ -72,7 +83,7 @@ def login_equipo(email: str, password: str) -> dict | None:
             cur.execute(
                 """
                 SELECT password_hash, equipos, vp_de, cargo, nombre,
-                       COALESCE(es_admin, FALSE)
+                       COALESCE(es_admin, FALSE), debe_cambiar_clave
                 FROM equipo_accesos WHERE email = %s AND activo = TRUE
                 """,
                 (email,),
@@ -85,11 +96,12 @@ def login_equipo(email: str, password: str) -> dict | None:
     if row is None or not password_ok:
         return None
 
-    equipos = [e for e in row[1] if e in EQUIPOS_VALIDOS]
+    equipos = completar_equipos(row[1])
     vp_de = [e for e in row[2] if e in equipos]
     cargo = row[3] if row[3] in CARGOS_VALIDOS else ""
     nombre = row[4]
     es_admin = bool(row[5])
+    cambiar_clave = bool(row[6])
 
     # session.clear() por higiene ante fijación de sesión.
     session.clear()
@@ -100,13 +112,14 @@ def login_equipo(email: str, password: str) -> dict | None:
     session["equipo_cargo"] = cargo
     session["equipo_nombre"] = nombre
     session["equipo_admin"] = es_admin
+    session["equipo_cambiar_clave"] = cambiar_clave
     # Solo quien tiene el permiso de admin marcado (no el departamento ni el
     # cargo) recibe la sesión de admin: grupo Admin y rutas /api/admin/*.
     if es_admin:
         session["admin_auth"] = True
     return {
         "teams": equipos, "vp_de": vp_de, "cargo": cargo, "nombre": nombre,
-        "admin": es_admin,
+        "admin": es_admin, "cambiar_clave": cambiar_clave,
     }
 
 
@@ -116,12 +129,15 @@ def is_equipo_authenticated() -> bool:
 
 def equipo_session_info() -> dict:
     return {
-        "teams": session.get("equipo_teams", []),
+        # Sesiones abiertas antes de que todos fuéramos de los tres
+        # departamentos traen la lista vieja: se completa al leerla.
+        "teams": completar_equipos(session.get("equipo_teams", [])),
         "vp_de": session.get("equipo_vp_de", []),
         "cargo": session.get("equipo_cargo", ""),
         "email": session.get("equipo_email", ""),
         "nombre": session.get("equipo_nombre", ""),
         "admin": session.get("equipo_admin", False),
+        "cambiar_clave": session.get("equipo_cambiar_clave", False),
     }
 
 
@@ -136,7 +152,7 @@ def listar_equipo_accesos() -> list[dict]:
             cur.execute(
                 """
                 SELECT id, email, equipos, vp_de, cargo, activo, created_at,
-                       tags, notas, nombre, dni, correo_personal,
+                       tags, notas, nombre, dni,
                        foto, apellidos, COALESCE(es_admin, FALSE),
                        COALESCE(en_web, FALSE), registro_id, linkedin
                 FROM equipo_accesos ORDER BY email
@@ -148,7 +164,7 @@ def listar_equipo_accesos() -> list[dict]:
         {
             "id": f[0],
             "email": f[1],
-            "equipos": f[2],
+            "equipos": completar_equipos(f[2]),
             "vp_de": f[3],
             "cargo": f[4],
             "activo": f[5],
@@ -157,13 +173,12 @@ def listar_equipo_accesos() -> list[dict]:
             "notas": f[8],
             "nombre": f[9],
             "dni": f[10],
-            "correo_personal": f[11],
-            "foto": f[12],
-            "apellidos": f[13],
-            "es_admin": f[14],
-            "en_web": f[15],
-            "registro_id": f[16],
-            "linkedin": f[17],
+            "foto": f[11],
+            "apellidos": f[12],
+            "es_admin": f[13],
+            "en_web": f[14],
+            "registro_id": f[15],
+            "linkedin": f[16],
         }
         for f in filas
     ]
@@ -239,8 +254,8 @@ def generar_pdf_equipo_en_memoria() -> BytesIO:
     pdf.cell(0, 10, "TelecoEmprende -- Miembros del equipo", new_x="LMARGIN", new_y="NEXT")
 
     columnas = [
-        ("Nombre", 40), ("Email", 55), ("DNI", 25), ("Correo personal", 55),
-        ("Equipos", 45), ("Cargo", 25), ("Activo", 15),
+        ("Nombre", 45), ("Email", 65), ("DNI", 30),
+        ("Preferencias", 65), ("Cargo", 30), ("Activo", 20),
     ]
     pdf.set_font("Helvetica", "B", 9)
     for titulo, ancho in columnas:
@@ -253,7 +268,6 @@ def generar_pdf_equipo_en_memoria() -> BytesIO:
             acceso["nombre"] or "-",
             acceso["email"],
             acceso["dni"] or "-",
-            acceso["correo_personal"] or "-",
             ", ".join(acceso["equipos"]) or "-",
             acceso["cargo"] or "-",
             "Sí" if acceso["activo"] else "No",
@@ -267,8 +281,8 @@ def generar_pdf_equipo_en_memoria() -> BytesIO:
 
 
 def generar_excel_equipo_en_memoria() -> BytesIO:
-    """Datos personales de todo el equipo (lo que cada cual rellena en
-    `/equipo/datosformulario`) con sus departamentos y cargo, y la foto
+    """Datos personales de todo el equipo (lo que cada cual rellena en su
+    perfil) con sus preferencias de departamento y cargo, y la foto
     incrustada en la última columna -- ver `api/admin.py`."""
     accesos = listar_equipo_accesos()
 
@@ -276,10 +290,10 @@ def generar_excel_equipo_en_memoria() -> BytesIO:
     ws = wb.active
     ws.title = "Equipo"
     ws.append([
-        "Nombre", "Apellidos", "DNI/NIE/Pasaporte", "Correo de contacto",
-        "Email de acceso", "Departamentos", "VP de", "Cargo", "Activo", "Foto",
+        "Nombre", "Apellidos", "DNI/NIE/Pasaporte",
+        "Email de acceso", "Preferencias", "VP de", "Cargo", "Activo", "Foto",
     ])
-    for col, ancho in zip("ABCDEFGHIJ", (20, 25, 18, 32, 32, 30, 20, 14, 8, 12)):
+    for col, ancho in zip("ABCDEFGHI", (20, 25, 18, 32, 30, 20, 14, 8, 12)):
         ws.column_dimensions[col].width = ancho
 
     for fila, a in enumerate(accesos, start=2):
@@ -287,7 +301,6 @@ def generar_excel_equipo_en_memoria() -> BytesIO:
             _celda_segura(a["nombre"]),
             _celda_segura(a["apellidos"]),
             _celda_segura(a["dni"]),
-            _celda_segura(a["correo_personal"]),
             _celda_segura(a["email"]),
             ", ".join(a["equipos"]),
             ", ".join(a["vp_de"]),
@@ -299,7 +312,7 @@ def generar_excel_equipo_en_memoria() -> BytesIO:
             # aquí basta con decodificarla.
             imagen = XLImage(BytesIO(base64.b64decode(a["foto"].split(",", 1)[1])))
             imagen.width = imagen.height = 64
-            ws.add_image(imagen, f"J{fila}")
+            ws.add_image(imagen, f"I{fila}")
             ws.row_dimensions[fila].height = 50
 
     output = BytesIO()
@@ -308,12 +321,111 @@ def generar_excel_equipo_en_memoria() -> BytesIO:
     return output
 
 
+def cambiar_password(email: str, actual: str, nueva: str) -> bool:
+    """False si la contraseña actual no coincide."""
+    email = email.strip().lower()
+    with _get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT password_hash FROM equipo_accesos WHERE email = %s AND activo = TRUE",
+                (email,),
+            )
+            fila = cur.fetchone()
+            if fila is None or not check_password_hash(fila[0], actual):
+                return False
+            cur.execute(
+                "UPDATE equipo_accesos SET password_hash = %s, debe_cambiar_clave = FALSE"
+                " WHERE email = %s",
+                (generate_password_hash(nueva), email),
+            )
+        conn.commit()
+    return True
+
+
+def _hash_token(token: str) -> str:
+    return hashlib.sha256(token.encode("utf-8")).hexdigest()
+
+
+def crear_token_recuperacion(email: str) -> tuple[str, str] | None:
+    """Un enlace de un solo uso para elegir contraseña nueva: devuelve
+    `(token, nombre)`, o None si no hay cuenta activa con ese correo o ya se
+    pidió hace nada (dos minutos: así nadie llena un buzón ajeno a base de
+    peticiones). Pedir uno nuevo anula los anteriores."""
+    email = email.strip().lower()
+    with _get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT id, nombre FROM equipo_accesos WHERE email = %s AND activo = TRUE", (email,)
+            )
+            fila = cur.fetchone()
+            if fila is None:
+                return None
+            persona_id, nombre = fila
+            cur.execute(
+                "SELECT 1 FROM recuperacion_clave WHERE persona_id = %s"
+                " AND creado_en > NOW() - interval '2 minutes'",
+                (persona_id,),
+            )
+            if cur.fetchone() is not None:
+                return None
+            token = secrets.token_urlsafe(32)
+            cur.execute("DELETE FROM recuperacion_clave WHERE persona_id = %s", (persona_id,))
+            cur.execute(
+                "INSERT INTO recuperacion_clave (token_hash, persona_id, expira)"
+                " VALUES (%s, %s, NOW() + make_interval(mins => %s))",
+                (_hash_token(token), persona_id, MINUTOS_ENLACE_CLAVE),
+            )
+        conn.commit()
+    return token, nombre
+
+
+def canjear_token_recuperacion(token: str, nueva: str) -> bool:
+    """Pone la contraseña nueva si el enlace es de verdad, no ha caducado y no
+    se ha usado. Se gasta al usarlo."""
+    with _get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "DELETE FROM recuperacion_clave WHERE token_hash = %s AND expira > NOW()"
+                " RETURNING persona_id",
+                (_hash_token(token),),
+            )
+            fila = cur.fetchone()
+            if fila is None:
+                return False
+            cur.execute(
+                "UPDATE equipo_accesos SET password_hash = %s, debe_cambiar_clave = FALSE"
+                " WHERE id = %s AND activo = TRUE",
+                (generate_password_hash(nueva), fila[0]),
+            )
+            # Cualquier otro enlace pendiente de esa cuenta también se gasta.
+            cur.execute("DELETE FROM recuperacion_clave WHERE persona_id = %s", (fila[0],))
+        conn.commit()
+    return True
+
+
+def poner_clave_provisional(acceso_id: int) -> str | None:
+    """Para quien no puede usar el enlace por correo: un admin le pone una
+    contraseña provisional y la persona tiene que cambiarla al entrar. Se
+    devuelve una sola vez; en la base solo queda su hash."""
+    provisional = secrets.token_urlsafe(9)
+    with _get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "UPDATE equipo_accesos SET password_hash = %s, debe_cambiar_clave = TRUE WHERE id = %s",
+                (generate_password_hash(provisional), acceso_id),
+            )
+            hecho = cur.rowcount > 0
+        conn.commit()
+    return provisional if hecho else None
+
+
 def datos_formulario(email: str) -> dict | None:
+    """El perfil de la propia persona: lo que ella misma puede corregir."""
     with _get_connection() as conn:
         with conn.cursor() as cur:
             cur.execute(
                 """
-                SELECT nombre, apellidos, dni, correo_personal, foto
+                SELECT nombre, apellidos, dni, linkedin, foto
                 FROM equipo_accesos WHERE email = %s
                 """,
                 (email.strip().lower(),),
@@ -321,16 +433,16 @@ def datos_formulario(email: str) -> dict | None:
             f = cur.fetchone()
     if f is None:
         return None
-    return {"nombre": f[0], "apellidos": f[1], "dni": f[2], "correo": f[3], "foto": f[4]}
+    return {"nombre": f[0], "apellidos": f[1], "dni": f[2], "linkedin": f[3], "foto": f[4]}
 
 
 def guardar_datos_formulario(
-    email: str, nombre: str, apellidos: str, dni: str, correo: str, foto: str | None
+    email: str, nombre: str, apellidos: str, dni: str, linkedin: str, foto: str | None
 ) -> bool:
-    """Ficha que rellena la propia persona. `foto=None` deja la que ya tenía
+    """Perfil que corrige la propia persona. `foto=None` deja la que ya tenía
     (no hace falta volver a subirla para corregir un apellido)."""
-    campos = ["nombre = %s", "apellidos = %s", "dni = %s", "correo_personal = %s"]
-    valores: list = [nombre, apellidos, dni, correo]
+    campos = ["nombre = %s", "apellidos = %s", "dni = %s", "linkedin = %s"]
+    valores: list = [nombre, apellidos, dni, linkedin]
     if foto is not None:
         campos.append("foto = %s")
         valores.append(foto)
@@ -347,27 +459,20 @@ def guardar_datos_formulario(
 
 
 def miembros_activos(equipo: str) -> list[dict]:
-    """Los accesos activos de un departamento -- filtro que reutilizan el
+    """Los accesos activos de un departamento (hoy todos: ver `completar_equipos`) -- filtro que reutilizan el
     directorio de marketing (`api_miembros`) y `salud_equipo`, para no tener
     la misma condición escrita dos veces."""
     return [a for a in listar_equipo_accesos() if equipo in a["equipos"] and a["activo"]]
 
 
 def _acceso_valido(equipos: list[str], vp_de: list[str], cargo: str) -> bool:
-    """Un acceso necesita al menos un departamento O un cargo de dirección.
-
-    El cargo a solas (board member sin departamento) es válido a propósito:
-    el Inicio, las Notas y el club se ven igual. Sin ninguno de los dos, en
-    cambio, la cuenta no daría acceso a nada. El mínimo de dos departamentos
-    se exige en la API al cambiarlos, no aquí: así una fila antigua con uno
-    solo se puede seguir editando (cargo, VP...) sin tener que arreglarla
-    primero.
+    """Departamentos y cargo válidos, y los VP solo de departamentos de la
+    persona. Que `equipos` lleve los tres se exige en la API al cambiarlos,
+    no aquí: una fila antigua se puede seguir editando sin arreglarla antes.
     """
     if cargo and cargo not in CARGOS_VALIDOS:
         return False
     if any(e not in EQUIPOS_VALIDOS for e in equipos):
-        return False
-    if not equipos and not cargo:
         return False
     return all(v in equipos for v in vp_de)
 
@@ -384,7 +489,7 @@ def crear_equipo_acceso(
 ) -> dict | None:
     """Devuelve None si el email ya existe o si equipos/vp_de/cargo no son válidos."""
     email = email.strip().lower()
-    equipos = ordenar_equipos(equipos)
+    equipos = completar_equipos(equipos)
     vp_de = sorted(set(vp_de or []))
     cargo = cargo or ""
     nombre = (nombre or "").strip()
@@ -402,8 +507,8 @@ def crear_equipo_acceso(
                 f"""
                 INSERT INTO equipo_accesos
                     (email, password_hash, equipos, vp_de, cargo, nombre, es_admin, apellidos,
-                     registro_id)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, {_INSCRIPCION})
+                     debe_cambiar_clave, registro_id)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, TRUE, {_INSCRIPCION})
                 RETURNING id, email, equipos, vp_de, cargo, activo, created_at, nombre,
                           es_admin, apellidos
                 """,
@@ -471,7 +576,6 @@ def actualizar_equipo_acceso(
     nombre: str | None = None,
     apellidos: str | None = None,
     dni: str | None = None,
-    correo_personal: str | None = None,
     email: str | None = None,
     registro_id: int | None = None,
     es_admin: bool | None = None,
@@ -486,7 +590,7 @@ def actualizar_equipo_acceso(
     llamada, se valida contra el `equipos` ya guardado en la fila.
     """
     if equipos is not None:
-        equipos = ordenar_equipos(equipos)
+        equipos = completar_equipos(equipos)
     if vp_de is not None:
         vp_de = sorted(set(vp_de))
     campos = []
@@ -527,8 +631,10 @@ def actualizar_equipo_acceso(
         campos.append("activo = %s")
         valores.append(activo)
     if password:
+        # La que pone un admin la conoce un admin: se cambia al entrar.
         campos.append("password_hash = %s")
         valores.append(generate_password_hash(password))
+        campos.append("debe_cambiar_clave = TRUE")
     if nombre is not None:
         campos.append("nombre = %s")
         valores.append(nombre.strip())
@@ -538,9 +644,6 @@ def actualizar_equipo_acceso(
     if dni is not None:
         campos.append("dni = %s")
         valores.append(dni.strip())
-    if correo_personal is not None:
-        campos.append("correo_personal = %s")
-        valores.append(correo_personal.strip().lower())
     if email is not None:
         # El email es el login: único (la API traduce el choque a un 400).
         campos.append("email = %s")
