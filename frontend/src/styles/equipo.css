@@ -1819,7 +1819,7 @@ kbd {
 
 .inicio-kpis-react {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 16px;
 }
 
@@ -1891,6 +1891,7 @@ kbd {
   align-items: stretch;
 }
 
+.inicio-span-12-react { grid-column: span 12; }
 .inicio-span-7-react { grid-column: span 7; }
 .inicio-span-5-react { grid-column: span 5; }
 .inicio-span-4-react { grid-column: span 4; }
@@ -2016,6 +2017,7 @@ kbd {
 }
 
 @container (max-width: 980px) {
+  .inicio-span-12-react,
   .inicio-span-7-react,
   .inicio-span-5-react {
     grid-column: span 12;
