@@ -165,14 +165,14 @@ def crear_campaign(
             cur.execute(
                 """
                 INSERT INTO campaigns
-                    (nombre, objetivo, audiencia, fecha, creado_por_id, departamento,
+                    (nombre, objetivo, audiencia, fecha, creado_por_id,
                      departamentos, estado, responsable_id)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
                 RETURNING id
                 """,
                 (
                     nombre, objetivo, audiencia, fecha, id_de_persona(cur, creado_por),
-                    ambito[0], ambito, estado, _responsable_id(cur, responsable),
+                    ambito, estado, _responsable_id(cur, responsable),
                 ),
             )
             nueva_id = cur.fetchone()["id"]

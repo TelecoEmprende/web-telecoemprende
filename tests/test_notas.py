@@ -116,7 +116,7 @@ class NotasTestCase(unittest.TestCase):
         conn = notas_service._get_connection()
         with conn.cursor() as cur:
             cur.execute(
-                "INSERT INTO campaigns (nombre, departamento) VALUES ('Charla YC', 'marketing') RETURNING id"
+                "INSERT INTO campaigns (nombre, departamentos) VALUES ('Charla YC', ARRAY['marketing']) RETURNING id"
             )
             proyecto = cur.fetchone()[0]
         conn.commit()

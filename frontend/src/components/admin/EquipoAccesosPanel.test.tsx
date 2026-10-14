@@ -7,7 +7,7 @@ import { EquipoAccesosPanel } from "./EquipoAccesosPanel";
 
 const cuenta = (id: number, nombre: string, apellidos: string, email: string) => ({
   id, email, nombre, apellidos, equipos: ["marketing", "eventos"], vp_de: [], cargo: "",
-  activo: true, created_at: "2026-10-01T10:00:00", dni: "", correo_personal: "",
+  activo: true, created_at: "2026-10-01T10:00:00", dni: "",
   foto: "", es_admin: false,
 });
 
