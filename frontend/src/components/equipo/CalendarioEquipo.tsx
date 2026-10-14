@@ -295,15 +295,6 @@ export function CalendarioEquipo({ onIrA, onAbrirNota }: Props) {
     }
   }
 
-  const porDia = useMemo(
-    () =>
-      eventos.reduce<Record<string, EventoCalendario[]>>((acc, evento) => {
-        (acc[evento.fecha] ??= []).push(evento);
-        return acc;
-      }, {}),
-    [eventos],
-  );
-
   /** Vencimientos de tareas por día, para la rejilla de "esta semana". */
   const tareasPorDia = useMemo(() => {
     const mapa: Record<string, Task[]> = {};
@@ -319,19 +310,15 @@ export function CalendarioEquipo({ onIrA, onAbrirNota }: Props) {
   /** Los eventos del club (los que se apuntan desde /admin) y los de Luma,
    *  en una sola lista. Los de Luma traen su página, que es donde la gente se
    *  apunta: ya no hay "Confirmar" dentro del panel. */
-  const proximos = useMemo(() => {
-    const hoy = new Date();
-    hoy.setHours(0, 0, 0, 0);
-    const delClub = eventos
-      .filter((evento) => parsearFechaLocal(evento.fecha) >= hoy)
-      .map((e) => ({
-        clave: `club-${e.id}`,
-        titulo: e.titulo,
-        fecha: e.fecha,
-        hora: e.hora,
-        detalle: e.descripcion,
-        url: "",
-      }));
+  const todosLosEventos = useMemo(() => {
+    const delClub = eventos.map((e) => ({
+      clave: `club-${e.id}`,
+      titulo: e.titulo,
+      fecha: e.fecha,
+      hora: e.hora,
+      detalle: e.descripcion,
+      url: "",
+    }));
     const deLuma = luma.eventos.map((e) => {
       const inicio = new Date(e.inicio);
       return {
@@ -346,7 +333,25 @@ export function CalendarioEquipo({ onIrA, onAbrirNota }: Props) {
     return [...delClub, ...deLuma].sort((a, b) => (a.fecha + a.hora).localeCompare(b.fecha + b.hora));
   }, [eventos, luma]);
 
+  /** Desde hoy: lo que sale en «Próximos eventos». */
+  const proximos = useMemo(() => {
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
+    return todosLosEventos.filter((e) => parsearFechaLocal(e.fecha) >= hoy);
+  }, [todosLosEventos]);
+
   const hoy = iso(new Date());
+
+  /** Lo de cada día de la semana: eventos del club y de Luma juntos (con la
+   *  fecha local, no UTC), incluidos los de hoy que ya empezaron. */
+  const porDia = useMemo(
+    () =>
+      todosLosEventos.reduce<Record<string, typeof todosLosEventos>>((acc, e) => {
+        (acc[e.fecha] ??= []).push(e);
+        return acc;
+      }, {}),
+    [todosLosEventos],
+  );
 
   // Cuántas tareas vencen dentro de la semana en curso (lunes a domingo): es
   // lo que dice la cabecera del boceto, no "todo lo pendiente alguna vez".
@@ -360,10 +365,6 @@ export function CalendarioEquipo({ onIrA, onAbrirNota }: Props) {
     }).length;
   }, [tareas, semana]);
 
-  // Lo pendiente del club sale de las notas: cada casilla sin marcar es una
-  // cosa por hacer, con la nota de la que viene al lado.
-  const notasConPendientes = notas.filter((n) => n.checks_pendientes > 0);
-  const totalPendientes = notasConPendientes.reduce((suma, n) => suma + n.checks_pendientes, 0);
   const tareasAbiertas = tareas.filter((t) => t.estado !== "acabado");
   const proximoEvento = proximos[0];
   const diasProximo = proximoEvento ? diasHasta(proximoEvento.fecha) : null;
@@ -381,9 +382,6 @@ export function CalendarioEquipo({ onIrA, onAbrirNota }: Props) {
             {tareasQueVencenEstaSemana === 0
               ? "ninguna tarea vence esta semana"
               : `${tareasQueVencenEstaSemana} ${tareasQueVencenEstaSemana === 1 ? "tarea vence" : "tareas vencen"} esta semana`}
-            {totalPendientes > 0
-              ? ` · ${totalPendientes} ${totalPendientes === 1 ? "pendiente" : "pendientes"} en las notas`
-              : ""}
           </p>
         </div>
         <div className="inicio-hero-acciones-react">
@@ -412,13 +410,6 @@ export function CalendarioEquipo({ onIrA, onAbrirNota }: Props) {
             valor={tareasQueVencenEstaSemana}
           />
           <span className="crm-s">de lunes a domingo</span>
-        </button>
-        <button type="button" className="inicio-kpi-react" onClick={() => onIrA("notas")}>
-          <span className="crm-k">Pendiente en notas</span>
-          <Contador className="inicio-kpi-num-react" valor={totalPendientes} />
-          <span className="crm-s">
-            en {notasConPendientes.length} {notasConPendientes.length === 1 ? "nota" : "notas"}
-          </span>
         </button>
         <button type="button" className="inicio-kpi-react" onClick={() => onIrA("calendario")}>
           <span className="crm-k">Próximo evento</span>
@@ -517,89 +508,6 @@ export function CalendarioEquipo({ onIrA, onAbrirNota }: Props) {
                 })}
               </div>
             )}
-          </section>
-
-          <section className="crm-c inicio-span-5-react">
-            <div className="crm-cabecera-react">
-              <p className="crm-k">Pendiente en notas</p>
-              <button type="button" className="crm-enlace-react" onClick={() => onIrA("notas")}>
-                Ver notas
-              </button>
-            </div>
-            {notasConPendientes.length === 0 ? (
-              <p className="crm-s">
-                Nada pendiente. Las casillas que dejes sin marcar en una nota aparecen aquí.
-              </p>
-            ) : (
-              <div className="inicio-scroll-react">
-                {notasConPendientes.slice(0, 4).map((n, indice) => (
-                  <motion.div key={n.id} className="inicio-pendientes-react" {...entradaFila(indice)}>
-                    <button
-                      type="button"
-                      className="inicio-pendientes-nota-react"
-                      onClick={() => (onAbrirNota ? onAbrirNota(n.id) : onIrA("notas"))}
-                    >
-                      {n.titulo || "Sin título"}
-                      <span>{n.checks_pendientes}</span>
-                    </button>
-                    <ul>
-                      {n.pendientes.slice(0, 3).map((texto, i) => (
-                        <li key={i}>{texto}</li>
-                      ))}
-                      {n.checks_pendientes > 3 ? (
-                        <li className="crm-s">y {n.checks_pendientes - 3} más</li>
-                      ) : null}
-                    </ul>
-                  </motion.div>
-                ))}
-              </div>
-            )}
-          </section>
-
-          <section className="crm-c inicio-span-7-react">
-            <div className="crm-cabecera-react">
-              <p className="crm-k">Esta semana</p>
-              <button type="button" className="crm-enlace-react" onClick={() => onIrA("calendario")}>
-                Ver el mes
-              </button>
-            </div>
-
-            <div className="crm-semana-react">
-              {semana.map((dia, indice) => {
-                const clave = iso(dia);
-                return (
-                  <div
-                    key={clave}
-                    className={`crm-semana-dia-react${clave === hoy ? " crm-semana-hoy-react" : ""}`}
-                  >
-                    <div className="crm-s inicio-dia-react">
-                      <span>{DIAS_LETRA[indice]}</span> <b>{dia.getDate()}</b>
-                    </div>
-                    {(porDia[clave] ?? []).map((evento) => (
-                      <span
-                        key={`ev-${evento.id}`}
-                        className="crm-tag crm-tag-bloque-react crm-tag-azul-react"
-                      >
-                        {evento.titulo}
-                        {evento.hora ? ` ${evento.hora}` : ""}
-                      </span>
-                    ))}
-                    {(tareasPorDia[clave] ?? []).map((tarea) => (
-                      <span
-                        key={`t-${tarea.id}`}
-                        className="crm-tag crm-tag-bloque-react crm-tag-ambar-react"
-                      >
-                        Vence: {tarea.titulo}
-                      </span>
-                    ))}
-                  </div>
-                );
-              })}
-            </div>
-
-            <div className="crm-s">
-              Eventos del club, reuniones de departamento y vencimientos de tus tareas en la misma rejilla.
-            </div>
           </section>
 
           <section className="crm-c inicio-span-5-react">
@@ -708,6 +616,67 @@ export function CalendarioEquipo({ onIrA, onAbrirNota }: Props) {
                 })}
               </div>
             )}
+          </section>
+
+          <section className="crm-c inicio-span-12-react">
+            <div className="crm-cabecera-react">
+              <p className="crm-k">Esta semana</p>
+              <button type="button" className="crm-enlace-react" onClick={() => onIrA("calendario")}>
+                Ver el mes
+              </button>
+            </div>
+
+            <div className="crm-semana-react">
+              {semana.map((dia, indice) => {
+                const clave = iso(dia);
+                return (
+                  <div
+                    key={clave}
+                    className={`crm-semana-dia-react${clave === hoy ? " crm-semana-hoy-react" : ""}`}
+                  >
+                    <div className="crm-s inicio-dia-react">
+                      <span>{DIAS_LETRA[indice]}</span> <b>{dia.getDate()}</b>
+                    </div>
+                    {(porDia[clave] ?? []).map((evento) =>
+                      evento.url ? (
+                        // Los de Luma llevan a su página, donde la gente se apunta.
+                        <a
+                          key={evento.clave}
+                          className="crm-tag crm-tag-bloque-react crm-tag-azul-react"
+                          href={evento.url}
+                          target="_blank"
+                          rel="noreferrer noopener"
+                        >
+                          {evento.titulo}
+                          {evento.hora ? ` ${evento.hora}` : ""}
+                          <span className="sr-only"> en Luma (se abre en otra pestaña)</span>
+                        </a>
+                      ) : (
+                        <span
+                          key={evento.clave}
+                          className="crm-tag crm-tag-bloque-react crm-tag-azul-react"
+                        >
+                          {evento.titulo}
+                          {evento.hora ? ` ${evento.hora}` : ""}
+                        </span>
+                      ),
+                    )}
+                    {(tareasPorDia[clave] ?? []).map((tarea) => (
+                      <span
+                        key={`t-${tarea.id}`}
+                        className="crm-tag crm-tag-bloque-react crm-tag-ambar-react"
+                      >
+                        Vence: {tarea.titulo}
+                      </span>
+                    ))}
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="crm-s">
+              Eventos del club, reuniones de departamento y vencimientos de tus tareas en la misma rejilla.
+            </div>
           </section>
 
           <section className="crm-c inicio-span-4-react">

@@ -95,6 +95,14 @@ class NotasTestCase(unittest.TestCase):
         nota = ana.get(f"/api/equipo/notas/{nota_id}").get_json()["nota"]
         self.assertEqual((nota["titulo"], nota["editado_por"], nota["privada"]), ("Editada", "bea@example.com", False))
 
+    def test_otra_persona_cambia_el_ambito_sin_tocar_la_privacidad(self):
+        ana, bea = self.como("ana@example.com"), self.como("bea@example.com")
+        nota_id = ana.post("/api/equipo/notas", json={"titulo": "Redes", "contenido": []}).get_json()["nota"]["id"]
+        # El selector de ámbito manda `privada` junto al departamento, aunque no cambie.
+        r = bea.put(f"/api/equipo/notas/{nota_id}", json={"privada": False, "departamento": "marketing"})
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(ana.get(f"/api/equipo/notas/{nota_id}").get_json()["nota"]["departamento"], "marketing")
+
     def test_enlaces_peligrosos_rechazados(self):
         ana = self.como("ana@example.com")
         malo = [{"type": "paragraph", "content": [

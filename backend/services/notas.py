@@ -159,17 +159,20 @@ def actualizar_nota(nota_id: int, campos: dict, yo: str, teams: list[str]) -> bo
     asignaciones += [f"editado_por_id = {_YO}", "updated_at = NOW()"]
     valores.append(yo)
     donde, valores_visible = _visible(yo, teams)
-    if "privada" in campos:
-        # Solo quien la escribió decide si es privada: si no, cualquiera
-        # podría esconderle al resto una nota compartida.
-        donde += f" AND creado_por_id = {_YO}"
-        valores_visible.append(yo)
     with _get_connection() as conn:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute(f"SELECT * FROM notas_v WHERE id = %s{donde}", [nota_id, *valores_visible])
             antes = cur.fetchone()
             if antes is None:
                 return False
+            # Solo quien la escribió decide si es privada: si no, cualquiera
+            # podría esconderle al resto una nota compartida. Cambiar solo el
+            # ámbito (el selector reenvía `privada` tal cual) sí vale para todos.
+            if "privada" in campos and bool(campos["privada"]) != antes["privada"]:
+                cur.execute("SELECT id FROM equipo_accesos WHERE email = %s", (yo,))
+                yo_id = cur.fetchone()
+                if yo_id is None or yo_id["id"] != antes["creado_por_id"]:
+                    return False
             cur.execute(
                 f"UPDATE notas SET {', '.join(asignaciones)} WHERE id = %s{donde}",
                 [*valores, nota_id, *valores_visible],

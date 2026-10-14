@@ -8,6 +8,7 @@ const getEquipoSession = vi.fn();
 const getMisTareas = vi.fn();
 const getMisProyectos = vi.fn();
 const getDirectorioClub = vi.fn();
+const getEventosLuma = vi.fn();
 
 vi.mock("../../api/notas", () => ({
   listarNotas: () => Promise.resolve({ ok: true, notas: [] }),
@@ -19,7 +20,7 @@ vi.mock("../../api/equipo", () => ({
   getMisTareas: () => getMisTareas(),
   getMisProyectos: () => getMisProyectos(),
   getDirectorioClub: () => getDirectorioClub(),
-  getEventosLuma: () => Promise.resolve({ ok: true, calendario: "", eventos: [] }),
+  getEventosLuma: () => getEventosLuma(),
 }));
 
 // Sin mock, `apiDepto` haría peticiones de verdad contra jsdom.
@@ -34,6 +35,27 @@ describe("CalendarioEquipo — tu agenda", () => {
     getMisTareas.mockReset().mockResolvedValue({ ok: true, tareas: [] });
     getMisProyectos.mockReset().mockResolvedValue({ ok: true, proyectos: [] });
     getDirectorioClub.mockReset().mockResolvedValue({ ok: true, miembros: [] });
+    getEventosLuma.mockReset().mockResolvedValue({ ok: true, calendario: "", eventos: [] });
+  });
+
+  it("los eventos de Luma salen en «Esta semana», con su enlace, y no hay tarjeta de pendientes", async () => {
+    getEquipoSession.mockResolvedValue({
+      ok: true, authenticated: true, teams: ["marketing"], vp_de: [], cargo: "",
+      email: "abril@example.com", nombre: "Abril",
+    });
+    const hoy = new Date();
+    hoy.setHours(18, 30, 0, 0);
+    getEventosLuma.mockResolvedValue({
+      ok: true,
+      calendario: "https://luma.com/alumni.etsit.upm",
+      eventos: [{ id: "e1", titulo: "Conversaciones alumni", inicio: hoy.toISOString(), lugar: "ETSIT", url: "https://luma.com/e1" }],
+    });
+
+    render(<CalendarioEquipo onIrA={() => {}} />);
+
+    const enSemana = (await screen.findAllByRole("link", { name: /Conversaciones alumni 18:30/ }))[0];
+    expect(enSemana).toHaveAttribute("href", "https://luma.com/e1");
+    expect(screen.queryByText("Pendiente en notas")).not.toBeInTheDocument();
   });
 
   it("saluda y pide la agenda también con un solo departamento", async () => {
