@@ -133,6 +133,16 @@ class DatosFormularioTestCase(unittest.TestCase):
         )
         self.assertEqual(nueva.status_code, 200)
 
+    def test_sin_sesion_de_admin_fetch_recibe_json_y_el_navegador_una_pagina(self):
+        # `fetch` manda Accept: */* y `apiRequest` solo entiende JSON.
+        fetch = self.client.get("/api/admin/equipo", headers={"Accept": "*/*"})
+        self.assertEqual((fetch.status_code, fetch.get_json()["ok"]), (401, False))
+        navegador = self.client.get(
+            "/api/admin/equipo/excel", headers={"Accept": "text/html,application/xhtml+xml,*/*;q=0.8"}
+        )
+        self.assertEqual(navegador.status_code, 401)
+        self.assertIn("text/html", navegador.content_type)
+
     def test_excel_solo_para_admin_con_roles_y_foto(self):
         self.assertEqual(self.client.get("/api/admin/equipo/excel").status_code, 401)
 

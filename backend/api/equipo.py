@@ -246,7 +246,9 @@ def api_equipo_miembros_web():
     foto cambiada en Cuentas cambia también aquí."""
     respuesta = jsonify({"ok": True, "miembros": listar_miembros_web()})
     # La lee cada visita a la home: cinco minutos de caché le sobran.
-    respuesta.headers["Cache-Control"] = "public, max-age=300"
+    respuesta.headers["Cache-Control"] = (
+        "private, max-age=300" if request.cookies else "public, max-age=300"
+    )
     return respuesta, 200
 
 
@@ -261,10 +263,14 @@ def api_equipo_foto(acceso_id: int):
     cabecera, _, datos = fila[0].partition(",")
     respuesta = make_response(base64.b64decode(datos))
     respuesta.mimetype = cabecera.removeprefix("data:").split(";")[0] or "image/jpeg"
-    # La URL lleva la versión (`?v=`): se puede guardar para siempre.
-    respuesta.headers["Cache-Control"] = (
-        f"{'public' if fila[1] else 'private'}, max-age=31536000, immutable"
-    )
+    # La URL lleva la versión (`?v=`), así que no hace falta revalidarla.
+    # Pública solo si sale en la web y no hay cookie (la respuesta de alguien
+    # con sesión lleva Set-Cookie y no puede acabar en una caché compartida),
+    # y un día como mucho: quitar «Sale en la web» no cambia la versión.
+    if fila[1] and not request.cookies:
+        respuesta.headers["Cache-Control"] = "public, max-age=86400, immutable"
+    else:
+        respuesta.headers["Cache-Control"] = "private, max-age=31536000, immutable"
     return respuesta
 
 
@@ -292,6 +298,7 @@ def api_equipo_accesos():
 
 
 @equipo_api.route("/calendario", methods=["POST"])
+@requiere_sesion
 def api_equipo_crear_calendario():
     """VPs pueden añadir eventos al calendario del club sin pasar por /admin
     -- editar y borrar siguen siendo cosa de /admin (ver CalendarioPanel)."""

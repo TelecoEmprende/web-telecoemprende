@@ -36,13 +36,10 @@ def requiere_admin(func):
 
 
 # Las descargas (Excel, PDF) se abren con un <a href>: si la sesión caducó,
-# el navegador recibe una página y no un JSON suelto.
+# el navegador recibe una página y no un JSON suelto. Solo si pide text/html
+# con todas las letras: `fetch` manda `*/*` y espera JSON.
 def prefers_html_response() -> bool:
-    best = request.accept_mimetypes.best_match(["text/html", "application/json"])
-    return best == "text/html" and (
-        request.accept_mimetypes["text/html"]
-        >= request.accept_mimetypes["application/json"]
-    )
+    return any(tipo == "text/html" for tipo, _ in request.accept_mimetypes)
 
 
 def access_denied_response(message: str, status_code: int = 401):
