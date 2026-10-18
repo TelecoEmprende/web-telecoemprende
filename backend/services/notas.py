@@ -31,20 +31,20 @@ def _get_connection():
 _YO = "(SELECT id FROM members WHERE email = %s)"
 
 
-def _visible(yo: str, teams: list[str]) -> tuple[str, list]:
+def _visible(yo: str, teams: list[str], sobre_tabla: bool = True) -> tuple[str, list]:
     """Lo privado, solo para su autor; lo demás, si es del club o de uno de
-    tus departamentos. Sobre la tabla `notes`; para leer de la vista, ver
-    `_visible_en_vista`."""
+    tus departamentos. Sobre la tabla `notes` (escrituras) o, con
+    `sobre_tabla=False`, sobre la vista `notes_v`, que llama a sus columnas
+    como la API (igual que `_alcance` en `services/registros.py`)."""
+    privada, autor, depto = (
+        ("is_private", "created_by_id", "department") if sobre_tabla
+        else ("privada", "creado_por_id", "departamento")
+    )
     return (
-        f" AND ((is_private AND created_by_id = {_YO})"
-        " OR (NOT is_private AND (department = '' OR department = ANY(%s))))",
+        f" AND (({privada} AND {autor} = {_YO})"
+        f" OR (NOT {privada} AND ({depto} = '' OR {depto} = ANY(%s))))",
         [yo, list(teams)],
     )
-
-
-def _visible_en_vista(yo: str, teams: list[str]) -> tuple[str, list]:
-    donde, valores = _visible(yo, teams)
-    return f" AND id IN (SELECT id FROM notes WHERE TRUE{donde})", valores
 
 
 def _serializar(fila: dict) -> dict:
@@ -110,7 +110,7 @@ def _con_resumen(fila: dict) -> dict:
 # --------------------------------------------------------------------------
 
 def listar_notas(yo: str, teams: list[str]) -> list[dict]:
-    donde, valores = _visible_en_vista(yo, teams)
+    donde, valores = _visible(yo, teams, sobre_tabla=False)
     with _get_connection() as conn:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute(
@@ -122,7 +122,7 @@ def listar_notas(yo: str, teams: list[str]) -> list[dict]:
 
 
 def obtener_nota(nota_id: int, yo: str, teams: list[str]) -> dict | None:
-    donde, valores = _visible_en_vista(yo, teams)
+    donde, valores = _visible(yo, teams, sobre_tabla=False)
     with _get_connection() as conn:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute(f"SELECT * FROM notes_v WHERE id = %s{donde}", [nota_id, *valores])
@@ -172,7 +172,7 @@ def actualizar_nota(nota_id: int, campos: dict, yo: str, teams: list[str]) -> bo
     donde, valores_visible = _visible(yo, teams)
     with _get_connection() as conn:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            en_vista, _ = _visible_en_vista(yo, teams)
+            en_vista, _ = _visible(yo, teams, sobre_tabla=False)
             cur.execute(f"SELECT * FROM notes_v WHERE id = %s{en_vista}", [nota_id, *valores_visible])
             antes = cur.fetchone()
             if antes is None:

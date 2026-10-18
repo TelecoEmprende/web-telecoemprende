@@ -121,14 +121,19 @@ def logout_equipo() -> None:
 
 
 
+# Versión de la foto para su enlace (`url_foto`), calculada en la base de
+# datos: así los listados no se traen cada foto entera solo para hashearla.
+_FOTO_V = "CASE WHEN photo <> '' THEN left(md5(photo), 10) ELSE '' END"
+
+
 def listar_equipo_accesos() -> list[dict]:
     with _get_connection() as conn:
         with conn.cursor() as cur:
             cur.execute(
-                """
+                f"""
                 SELECT id, email, preferred_departments, vp_of, role, active, created_at,
                        tags, notes, first_name, id_document,
-                       photo, last_name, COALESCE(is_admin, FALSE),
+                       {_FOTO_V}, last_name, COALESCE(is_admin, FALSE),
                        COALESCE(on_website, FALSE), registration_id, linkedin
                 FROM members ORDER BY email
                 """
@@ -148,7 +153,7 @@ def listar_equipo_accesos() -> list[dict]:
             "notas": f[8],
             "nombre": f[9],
             "dni": f[10],
-            "foto": f[11],
+            "foto": url_foto(f[0], f[11]),
             "apellidos": f[12],
             "es_admin": f[13],
             "en_web": f[14],
@@ -187,14 +192,13 @@ def puesto_web(cargo: str, vp_de: list[str]) -> dict | None:
     return None
 
 
-def url_foto(acceso_id: int, foto: str) -> str:
+def url_foto(acceso_id: int, version: str) -> str:
     """Las fotos se guardan enteras en `members.photo` (data URL), pero a la
     API salen como enlace a `/api/equipo/foto/<id>`: así no viajan todas
-    dentro de cada JSON y el navegador las guarda en caché. `v` cambia con
-    la foto, así que una foto nueva nunca sale de una caché vieja."""
-    if not foto:
-        return ""
-    return f"/api/equipo/foto/{acceso_id}?v={hashlib.sha1(foto.encode()).hexdigest()[:10]}"
+    dentro de cada JSON y el navegador las guarda en caché. `version` es
+    `_FOTO_V` y cambia con la foto, así que una foto nueva nunca sale de una
+    caché vieja; vacía, no hay foto."""
+    return f"/api/equipo/foto/{acceso_id}?v={version}" if version else ""
 
 
 def foto_de(acceso_id: int) -> tuple[str, bool] | None:
@@ -215,8 +219,8 @@ def listar_miembros_web() -> list[dict]:
     with _get_connection() as conn:
         with conn.cursor() as cur:
             cur.execute(
-                """
-                SELECT first_name, last_name, photo, role, vp_of, linkedin, id
+                f"""
+                SELECT first_name, last_name, {_FOTO_V}, role, vp_of, linkedin, id
                 FROM members
                 WHERE on_website AND first_name <> '' AND photo <> ''
                 """
@@ -279,6 +283,10 @@ def generar_excel_equipo_en_memoria() -> BytesIO:
     perfil) con sus preferencias de departamento y cargo, y la foto
     incrustada en la última columna -- ver `api/admin.py`."""
     accesos = listar_equipo_accesos()
+    with _get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT id, photo FROM members WHERE photo <> ''")
+            fotos = dict(cur.fetchall())
 
     wb = Workbook()
     ws = wb.active
@@ -301,10 +309,10 @@ def generar_excel_equipo_en_memoria() -> BytesIO:
             a["cargo"],
             "Sí" if a["activo"] else "No",
         ])
-        if a["foto"]:
+        if a["id"] in fotos:
             # La foto ya pasó `_foto` al guardarse (data URL validado), así que
             # aquí basta con decodificarla.
-            imagen = XLImage(BytesIO(base64.b64decode(a["foto"].split(",", 1)[1])))
+            imagen = XLImage(BytesIO(base64.b64decode(fotos[a["id"]].split(",", 1)[1])))
             imagen.width = imagen.height = 64
             ws.add_image(imagen, f"I{fila}")
             ws.row_dimensions[fila].height = 50
@@ -418,8 +426,8 @@ def datos_formulario(email: str) -> dict | None:
     with _get_connection() as conn:
         with conn.cursor() as cur:
             cur.execute(
-                """
-                SELECT first_name, last_name, id_document, linkedin, photo, id
+                f"""
+                SELECT first_name, last_name, id_document, linkedin, {_FOTO_V}, id
                 FROM members WHERE email = %s
                 """,
                 (email.strip().lower(),),

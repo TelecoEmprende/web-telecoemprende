@@ -47,7 +47,6 @@ from backend.services.equipo import (
     listar_eventos_calendario,
     listar_miembros_web,
     foto_de,
-    url_foto,
     login_equipo,
     logout_equipo,
     registrar_equipo_acceso,
@@ -495,7 +494,7 @@ def api_equipo_miembros():
             "email": a["email"],
             "nombre": a["nombre"],
             "apellidos": a["apellidos"],
-            "foto": url_foto(a["id"], a["foto"]),
+            "foto": a["foto"],
             "equipos": a["equipos"],
             "cargo": a["cargo"],
             "vp_de": a["vp_de"],
@@ -532,7 +531,7 @@ def api_equipo_ficha_miembro():
         nombre=acceso["nombre"],
         apellidos=acceso["apellidos"],
         desde=acceso["created_at"],
-        foto=url_foto(acceso["id"], acceso["foto"]),
+        foto=acceso["foto"],
         # Quién puede editar esta ficha lo decide el servidor, no el frontend
         # (que solo lo usa para enseñar u ocultar el botón).
         es_tu_ficha=_es_mi_ficha(email),

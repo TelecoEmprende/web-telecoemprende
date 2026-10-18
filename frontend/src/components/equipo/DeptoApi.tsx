@@ -41,7 +41,7 @@ export function useDirectorio(): Record<string, string> {
   return useContext(DirectorioContext);
 }
 
-/** email → foto propia (data URL) de quien haya subido una. Va aparte del
+/** email → enlace a la foto propia de quien haya subido una. Va aparte del
  *  directorio de nombres para no cambiarle la forma a `directorio[email]`,
  *  que se usa como string en media docena de paneles. Lo llena la misma
  *  llamada, así que no cuesta una petición más. */

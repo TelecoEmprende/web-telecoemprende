@@ -5,6 +5,7 @@ marcadas `en_web` que tienen foto, con nombre y primer apellido.
 """
 
 import base64
+import hashlib
 import os
 import unittest
 
@@ -52,7 +53,7 @@ class MiembrosWebTestCase(unittest.TestCase):
         self.assertEqual(
             self.miembros(),
             [{
-                "nombre": "Ana", "apellido": "García", "foto": equipo_service.url_foto(ana["id"], FOTO),
+                "nombre": "Ana", "apellido": "García", "foto": equipo_service.url_foto(ana["id"], hashlib.md5(FOTO.encode()).hexdigest()[:10]),
                 "puesto": None, "linkedin": "",
             }],
         )
@@ -89,7 +90,7 @@ class MiembrosWebTestCase(unittest.TestCase):
 
     def test_la_foto_de_quien_no_sale_en_la_web_pide_sesion(self):
         acceso = self.alta("ana@example.com", "Ana", ["marketing", "eventos"], en_web=False, foto=FOTO)
-        url = equipo_service.url_foto(acceso["id"], FOTO)
+        url = equipo_service.url_foto(acceso["id"], hashlib.md5(FOTO.encode()).hexdigest()[:10])
         self.assertEqual(self.client.get(url).status_code, 404)
         with self.client.session_transaction() as sesion:
             sesion["equipo_email"] = "ana@example.com"

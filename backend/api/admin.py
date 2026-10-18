@@ -32,7 +32,6 @@ from backend.services.equipo import (
     listar_equipo_accesos,
     listar_eventos_calendario,
     poner_clave_provisional,
-    url_foto,
 )
 from backend.services.registrations import (
     actualizar_estado,
@@ -222,8 +221,7 @@ def api_admin_delete_registration(reg_id: int):
 @admin_api.route("/equipo", methods=["GET"])
 @requiere_admin
 def api_admin_listar_equipo():
-    accesos = [{**a, "foto": url_foto(a["id"], a["foto"])} for a in listar_equipo_accesos()]
-    return jsonify({"ok": True, "accesos": accesos}), 200
+    return jsonify({"ok": True, "accesos": listar_equipo_accesos()}), 200
 
 
 def _error_equipos(equipos: list) -> str | None:
