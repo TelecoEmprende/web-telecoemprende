@@ -11,7 +11,7 @@ import { useFotos } from "../DeptoApi";
 /**
  * Caras de los responsables.
  *
- * `equipo_accesos.nombre` (perfil real, ver `/admin` → Accesos de equipo) es
+ * `members.first_name` (perfil real, ver `/admin` → Accesos de equipo) es
  * la fuente cuando está rellena -- se pasa como segundo argumento/prop desde
  * quien ya tiene el directorio a mano (`useDirectorio()`, ver `DeptoApi.tsx`,
  * o un `Miembro`/`FichaMiembro` ya cargado). Si está vacía (perfil sin

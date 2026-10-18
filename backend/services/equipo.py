@@ -57,9 +57,9 @@ def login_equipo(email: str, password: str) -> dict | None:
         with conn.cursor() as cur:
             cur.execute(
                 """
-                SELECT password_hash, equipos, vp_de, cargo, nombre,
-                       COALESCE(es_admin, FALSE), debe_cambiar_clave
-                FROM equipo_accesos WHERE email = %s AND activo = TRUE
+                SELECT password_hash, preferred_departments, vp_of, role, first_name,
+                       COALESCE(is_admin, FALSE), must_change_password
+                FROM members WHERE email = %s AND active = TRUE
                 """,
                 (email,),
             )
@@ -126,11 +126,11 @@ def listar_equipo_accesos() -> list[dict]:
         with conn.cursor() as cur:
             cur.execute(
                 """
-                SELECT id, email, equipos, vp_de, cargo, activo, created_at,
-                       tags, notas, nombre, dni,
-                       foto, apellidos, COALESCE(es_admin, FALSE),
-                       COALESCE(en_web, FALSE), registro_id, linkedin
-                FROM equipo_accesos ORDER BY email
+                SELECT id, email, preferred_departments, vp_of, role, active, created_at,
+                       tags, notes, first_name, id_document,
+                       photo, last_name, COALESCE(is_admin, FALSE),
+                       COALESCE(on_website, FALSE), registration_id, linkedin
+                FROM members ORDER BY email
                 """
             )
             filas = cur.fetchall()
@@ -187,6 +187,25 @@ def puesto_web(cargo: str, vp_de: list[str]) -> dict | None:
     return None
 
 
+def url_foto(acceso_id: int, foto: str) -> str:
+    """Las fotos se guardan enteras en `members.photo` (data URL), pero a la
+    API salen como enlace a `/api/equipo/foto/<id>`: así no viajan todas
+    dentro de cada JSON y el navegador las guarda en caché. `v` cambia con
+    la foto, así que una foto nueva nunca sale de una caché vieja."""
+    if not foto:
+        return ""
+    return f"/api/equipo/foto/{acceso_id}?v={hashlib.sha1(foto.encode()).hexdigest()[:10]}"
+
+
+def foto_de(acceso_id: int) -> tuple[str, bool] | None:
+    """`(data URL, sale en la web)` de una cuenta, o None si no existe."""
+    with _get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT photo, on_website FROM members WHERE id = %s", (acceso_id,))
+            fila = cur.fetchone()
+    return (fila[0], bool(fila[1])) if fila else None
+
+
 def listar_miembros_web() -> list[dict]:
     """Quién sale en la sección «Equipo» de la web pública: cuentas marcadas
     `en_web` y con foto subida. Ruta pública, así que solo viaja nombre,
@@ -197,9 +216,9 @@ def listar_miembros_web() -> list[dict]:
         with conn.cursor() as cur:
             cur.execute(
                 """
-                SELECT nombre, apellidos, foto, cargo, vp_de, linkedin
-                FROM equipo_accesos
-                WHERE en_web AND nombre <> '' AND foto <> ''
+                SELECT first_name, last_name, photo, role, vp_of, linkedin, id
+                FROM members
+                WHERE on_website AND first_name <> '' AND photo <> ''
                 """
             )
             filas = cur.fetchall()
@@ -209,7 +228,7 @@ def listar_miembros_web() -> list[dict]:
         {
             "nombre": f[0],
             "apellido": (f[1].split() or [""])[0],
-            "foto": f[2],
+            "foto": url_foto(f[6], f[2]),
             "puesto": puesto_web(f[3], f[4]),
             "linkedin": f[5],
         }
@@ -302,14 +321,14 @@ def cambiar_password(email: str, actual: str, nueva: str) -> bool:
     with _get_connection() as conn:
         with conn.cursor() as cur:
             cur.execute(
-                "SELECT password_hash FROM equipo_accesos WHERE email = %s AND activo = TRUE",
+                "SELECT password_hash FROM members WHERE email = %s AND active = TRUE",
                 (email,),
             )
             fila = cur.fetchone()
             if fila is None or not check_password_hash(fila[0], actual):
                 return False
             cur.execute(
-                "UPDATE equipo_accesos SET password_hash = %s, debe_cambiar_clave = FALSE"
+                "UPDATE members SET password_hash = %s, must_change_password = FALSE"
                 " WHERE email = %s",
                 (generate_password_hash(nueva), email),
             )
@@ -330,23 +349,23 @@ def crear_token_recuperacion(email: str) -> tuple[str, str] | None:
     with _get_connection() as conn:
         with conn.cursor() as cur:
             cur.execute(
-                "SELECT id, nombre FROM equipo_accesos WHERE email = %s AND activo = TRUE", (email,)
+                "SELECT id, first_name FROM members WHERE email = %s AND active = TRUE", (email,)
             )
             fila = cur.fetchone()
             if fila is None:
                 return None
             persona_id, nombre = fila
             cur.execute(
-                "SELECT 1 FROM recuperacion_clave WHERE persona_id = %s"
-                " AND creado_en > NOW() - interval '2 minutes'",
+                "SELECT 1 FROM password_resets WHERE member_id = %s"
+                " AND created_at > NOW() - interval '2 minutes'",
                 (persona_id,),
             )
             if cur.fetchone() is not None:
                 return None
             token = secrets.token_urlsafe(32)
-            cur.execute("DELETE FROM recuperacion_clave WHERE persona_id = %s", (persona_id,))
+            cur.execute("DELETE FROM password_resets WHERE member_id = %s", (persona_id,))
             cur.execute(
-                "INSERT INTO recuperacion_clave (token_hash, persona_id, expira)"
+                "INSERT INTO password_resets (token_hash, member_id, expires_at)"
                 " VALUES (%s, %s, NOW() + make_interval(mins => %s))",
                 (_hash_token(token), persona_id, MINUTOS_ENLACE_CLAVE),
             )
@@ -360,20 +379,20 @@ def canjear_token_recuperacion(token: str, nueva: str) -> bool:
     with _get_connection() as conn:
         with conn.cursor() as cur:
             cur.execute(
-                "DELETE FROM recuperacion_clave WHERE token_hash = %s AND expira > NOW()"
-                " RETURNING persona_id",
+                "DELETE FROM password_resets WHERE token_hash = %s AND expires_at > NOW()"
+                " RETURNING member_id",
                 (_hash_token(token),),
             )
             fila = cur.fetchone()
             if fila is None:
                 return False
             cur.execute(
-                "UPDATE equipo_accesos SET password_hash = %s, debe_cambiar_clave = FALSE"
-                " WHERE id = %s AND activo = TRUE",
+                "UPDATE members SET password_hash = %s, must_change_password = FALSE"
+                " WHERE id = %s AND active = TRUE",
                 (generate_password_hash(nueva), fila[0]),
             )
             # Cualquier otro enlace pendiente de esa cuenta también se gasta.
-            cur.execute("DELETE FROM recuperacion_clave WHERE persona_id = %s", (fila[0],))
+            cur.execute("DELETE FROM password_resets WHERE member_id = %s", (fila[0],))
         conn.commit()
     return True
 
@@ -386,7 +405,7 @@ def poner_clave_provisional(acceso_id: int) -> str | None:
     with _get_connection() as conn:
         with conn.cursor() as cur:
             cur.execute(
-                "UPDATE equipo_accesos SET password_hash = %s, debe_cambiar_clave = TRUE WHERE id = %s",
+                "UPDATE members SET password_hash = %s, must_change_password = TRUE WHERE id = %s",
                 (generate_password_hash(provisional), acceso_id),
             )
             hecho = cur.rowcount > 0
@@ -400,15 +419,18 @@ def datos_formulario(email: str) -> dict | None:
         with conn.cursor() as cur:
             cur.execute(
                 """
-                SELECT nombre, apellidos, dni, linkedin, foto
-                FROM equipo_accesos WHERE email = %s
+                SELECT first_name, last_name, id_document, linkedin, photo, id
+                FROM members WHERE email = %s
                 """,
                 (email.strip().lower(),),
             )
             f = cur.fetchone()
     if f is None:
         return None
-    return {"nombre": f[0], "apellidos": f[1], "dni": f[2], "linkedin": f[3], "foto": f[4]}
+    return {
+        "nombre": f[0], "apellidos": f[1], "dni": f[2], "linkedin": f[3],
+        "foto": url_foto(f[5], f[4]),
+    }
 
 
 def guardar_datos_formulario(
@@ -416,16 +438,16 @@ def guardar_datos_formulario(
 ) -> bool:
     """Perfil que corrige la propia persona. `foto=None` deja la que ya tenía
     (no hace falta volver a subirla para corregir un apellido)."""
-    campos = ["nombre = %s", "apellidos = %s", "dni = %s", "linkedin = %s"]
+    campos = ["first_name = %s", "last_name = %s", "id_document = %s", "linkedin = %s"]
     valores: list = [nombre, apellidos, dni, linkedin]
     if foto is not None:
-        campos.append("foto = %s")
+        campos.append("photo = %s")
         valores.append(foto)
     valores.append(email.strip().lower())
     with _get_connection() as conn:
         with conn.cursor() as cur:
             cur.execute(
-                f"UPDATE equipo_accesos SET {', '.join(campos)} WHERE email = %s",
+                f"UPDATE members SET {', '.join(campos)} WHERE email = %s",
                 valores,
             )
             actualizado = cur.rowcount > 0
@@ -474,18 +496,18 @@ def crear_equipo_acceso(
 
     with _get_connection() as conn:
         with conn.cursor() as cur:
-            cur.execute("SELECT 1 FROM equipo_accesos WHERE email = %s", (email,))
+            cur.execute("SELECT 1 FROM members WHERE email = %s", (email,))
             if cur.fetchone() is not None:
                 return None
 
             cur.execute(
                 f"""
-                INSERT INTO equipo_accesos
-                    (email, password_hash, equipos, vp_de, cargo, nombre, es_admin, apellidos,
-                     debe_cambiar_clave, registro_id)
+                INSERT INTO members
+                    (email, password_hash, preferred_departments, vp_of, role, first_name,
+                     is_admin, last_name, must_change_password, registration_id)
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, TRUE, {_INSCRIPCION})
-                RETURNING id, email, equipos, vp_de, cargo, activo, created_at, nombre,
-                          es_admin, apellidos
+                RETURNING id, email, preferred_departments, vp_of, role, active, created_at,
+                          first_name, is_admin, last_name
                 """,
                 (
                     email, generate_password_hash(password), equipos, vp_de, cargo, nombre,
@@ -529,7 +551,7 @@ def registrar_equipo_acceso(email: str, password: str) -> bool:
         with conn.cursor() as cur:
             cur.execute(
                 f"""
-                INSERT INTO equipo_accesos (email, password_hash, activo, registro_id)
+                INSERT INTO members (email, password_hash, active, registration_id)
                 VALUES (%s, %s, FALSE, {_INSCRIPCION})
                 ON CONFLICT (email) DO NOTHING
                 """,
@@ -579,7 +601,7 @@ def actualizar_equipo_acceso(
         with _get_connection() as conn:
             with conn.cursor() as cur:
                 cur.execute(
-                    "SELECT equipos, vp_de, cargo FROM equipo_accesos WHERE id = %s",
+                    "SELECT preferred_departments, vp_of, role FROM members WHERE id = %s",
                     (acceso_id,),
                 )
                 fila = cur.fetchone()
@@ -594,30 +616,30 @@ def actualizar_equipo_acceso(
             return False
 
         if equipos is not None:
-            campos.append("equipos = %s")
+            campos.append("preferred_departments = %s")
             valores.append(equipos)
         if vp_de is not None:
-            campos.append("vp_de = %s")
+            campos.append("vp_of = %s")
             valores.append(vp_de)
         if cargo is not None:
-            campos.append("cargo = %s")
+            campos.append("role = %s")
             valores.append(cargo)
     if activo is not None:
-        campos.append("activo = %s")
+        campos.append("active = %s")
         valores.append(activo)
     if password:
         # La que pone un admin la conoce un admin: se cambia al entrar.
         campos.append("password_hash = %s")
         valores.append(generate_password_hash(password))
-        campos.append("debe_cambiar_clave = TRUE")
+        campos.append("must_change_password = TRUE")
     if nombre is not None:
-        campos.append("nombre = %s")
+        campos.append("first_name = %s")
         valores.append(nombre.strip())
     if apellidos is not None:
-        campos.append("apellidos = %s")
+        campos.append("last_name = %s")
         valores.append(apellidos.strip())
     if dni is not None:
-        campos.append("dni = %s")
+        campos.append("id_document = %s")
         valores.append(dni.strip())
     if email is not None:
         # El email es el login: único (la API traduce el choque a un 400).
@@ -625,17 +647,17 @@ def actualizar_equipo_acceso(
         valores.append(email.strip().lower())
     if registro_id is not None:
         # 0 desvincula la cuenta de su inscripción.
-        campos.append("registro_id = %s")
+        campos.append("registration_id = %s")
         valores.append(registro_id or None)
     if es_admin is not None:
-        campos.append("es_admin = %s")
+        campos.append("is_admin = %s")
         valores.append(es_admin)
     if foto is not None:
         # Ya validada con `_foto` en la API; "" vuelve a la de `public/`.
-        campos.append("foto = %s")
+        campos.append("photo = %s")
         valores.append(foto)
     if en_web is not None:
-        campos.append("en_web = %s")
+        campos.append("on_website = %s")
         valores.append(en_web)
     if linkedin is not None:
         # Ya validado en la API: http(s) o "".
@@ -649,7 +671,7 @@ def actualizar_equipo_acceso(
     with _get_connection() as conn:
         with conn.cursor() as cur:
             cur.execute(
-                f"UPDATE equipo_accesos SET {', '.join(campos)} WHERE id = %s",
+                f"UPDATE members SET {', '.join(campos)} WHERE id = %s",
                 valores,
             )
             actualizado = cur.rowcount > 0
@@ -661,7 +683,7 @@ def actualizar_equipo_acceso(
 def eliminar_equipo_acceso(acceso_id: int) -> bool:
     with _get_connection() as conn:
         with conn.cursor() as cur:
-            cur.execute("DELETE FROM equipo_accesos WHERE id = %s", (acceso_id,))
+            cur.execute("DELETE FROM members WHERE id = %s", (acceso_id,))
             eliminado = cur.rowcount > 0
         conn.commit()
 
@@ -678,8 +700,8 @@ def listar_eventos_calendario() -> list[dict]:
         with conn.cursor() as cur:
             cur.execute(
                 """
-                SELECT id, titulo, descripcion, fecha, hora
-                FROM calendario_eventos ORDER BY fecha, hora
+                SELECT id, title, description, date, start_time
+                FROM club_events ORDER BY date, start_time
                 """
             )
             filas = cur.fetchall()
@@ -701,9 +723,9 @@ def crear_evento_calendario(titulo: str, descripcion: str, fecha: str, hora: str
         with conn.cursor() as cur:
             cur.execute(
                 """
-                INSERT INTO calendario_eventos (titulo, descripcion, fecha, hora)
+                INSERT INTO club_events (title, description, date, start_time)
                 VALUES (%s, %s, %s, %s)
-                RETURNING id, titulo, descripcion, fecha, hora
+                RETURNING id, title, description, date, start_time
                 """,
                 (titulo.strip(), descripcion.strip(), fecha, hora.strip()),
             )
@@ -726,8 +748,8 @@ def actualizar_evento_calendario(
         with conn.cursor() as cur:
             cur.execute(
                 """
-                UPDATE calendario_eventos
-                SET titulo = %s, descripcion = %s, fecha = %s, hora = %s
+                UPDATE club_events
+                SET title = %s, description = %s, date = %s, start_time = %s
                 WHERE id = %s
                 """,
                 (titulo.strip(), descripcion.strip(), fecha, hora.strip(), evento_id),
@@ -741,7 +763,7 @@ def actualizar_evento_calendario(
 def eliminar_evento_calendario(evento_id: int) -> bool:
     with _get_connection() as conn:
         with conn.cursor() as cur:
-            cur.execute("DELETE FROM calendario_eventos WHERE id = %s", (evento_id,))
+            cur.execute("DELETE FROM club_events WHERE id = %s", (evento_id,))
             eliminado = cur.rowcount > 0
         conn.commit()
 
@@ -767,12 +789,12 @@ def actualizar_perfil(
         campos.append("tags = %s")
         valores.append(sorted({t.strip() for t in tags if t.strip()}))
     if notas is not None:
-        campos.append("notas = %s")
+        campos.append("notes = %s")
         valores.append(notas.strip())
     if foto is not None:
         # "" borra la foto propia y devuelve a la de `public/`, que es la
         # única forma de deshacer una subida.
-        campos.append("foto = %s")
+        campos.append("photo = %s")
         valores.append(foto)
 
     if not campos:
@@ -782,7 +804,7 @@ def actualizar_perfil(
     with _get_connection() as conn:
         with conn.cursor() as cur:
             cur.execute(
-                f"UPDATE equipo_accesos SET {', '.join(campos)} WHERE email = %s",
+                f"UPDATE members SET {', '.join(campos)} WHERE email = %s",
                 valores,
             )
             actualizado = cur.rowcount > 0

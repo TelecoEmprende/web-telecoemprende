@@ -1,5 +1,6 @@
 """Perfil propio (/api/equipo/perfil), cambio de contraseña y el Excel de /admin."""
 
+import base64
 import os
 import unittest
 from io import BytesIO
@@ -30,7 +31,7 @@ class DatosFormularioTestCase(unittest.TestCase):
 
         conn = equipo_service._get_connection()
         with conn.cursor() as cur:
-            cur.execute("DELETE FROM equipo_accesos")
+            cur.execute("DELETE FROM members")
         conn.commit()
         conn.close()
 
@@ -69,13 +70,13 @@ class DatosFormularioTestCase(unittest.TestCase):
         self.assertEqual(datos["apellidos"], "García López")
         self.assertEqual(datos["dni"], "12345678Z")
         self.assertEqual(datos["linkedin"], "https://www.linkedin.com/in/ana")
-        self.assertEqual(datos["foto"], FOTO)
+        self.assertEqual(self.client.get(datos["foto"]).data, base64.b64decode(FOTO.split(",")[1]))
 
         # Sin `foto` se conserva la guardada.
         self.client.put("/api/equipo/perfil", json={
             "nombre": "Ana", "apellidos": "García", "dni": "X1234567L",
         })
-        self.assertEqual(self.client.get("/api/equipo/perfil").get_json()["foto"], FOTO)
+        self.assertEqual(self.client.get("/api/equipo/perfil").get_json()["foto"], datos["foto"])
         # El nombre nuevo se ve ya en la sesión, sin volver a entrar.
         self.assertEqual(self.client.get("/api/equipo/session").get_json()["nombre"], "Ana")
 

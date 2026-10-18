@@ -118,7 +118,10 @@ def aplicar_headers_seguridad(response):
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
     response.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()"
-    response.headers["Cache-Control"] = "no-store"
+    # Nada se guarda en caché salvo lo que la propia ruta pida con max-age
+    # (fotos, la lista pública del equipo); los datos personales, nunca.
+    if "max-age" not in response.headers.get("Cache-Control", ""):
+        response.headers["Cache-Control"] = "no-store"
     response.headers["Strict-Transport-Security"] = "max-age=63072000; includeSubDomains"
     # CSP sencilla. Si luego añades scripts inline o más servicios externos, habrá que ajustarla.
     response.headers["Content-Security-Policy"] = (

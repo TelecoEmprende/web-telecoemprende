@@ -30,9 +30,9 @@ class CronTests(unittest.TestCase):
         conn = marketing_service._get_connection()
         with conn.cursor() as cur:
             cur.execute("DELETE FROM tasks")
-            cur.execute("DELETE FROM contents")
-            cur.execute("DELETE FROM campaigns")
-            cur.execute("DELETE FROM equipo_accesos")
+            cur.execute("DELETE FROM deliverables")
+            cur.execute("DELETE FROM projects")
+            cur.execute("DELETE FROM members")
         conn.commit()
         conn.close()
 
@@ -45,7 +45,7 @@ class CronTests(unittest.TestCase):
             # `_puede_asignar_tareas`), y este test ejercita la creación en
             # sí, no ese límite de permisos.
             cur.execute(
-                "INSERT INTO equipo_accesos (email, password_hash, equipos, vp_de)"
+                "INSERT INTO members (email, password_hash, preferred_departments, vp_of)"
                 " VALUES (%s, %s, %s, %s)",
                 ("marketing@example.com", generate_password_hash("x"), ["marketing"], ["marketing"]),
             )
@@ -99,26 +99,26 @@ class CronTests(unittest.TestCase):
     def test_purga_auditoria_e_inscripciones_de_hace_mas_de_un_año(self):
         conn = equipo_service._get_connection()
         with conn.cursor() as cur:
-            cur.execute("DELETE FROM auditoria")
-            cur.execute("UPDATE equipo_accesos SET registro_id = NULL")
+            cur.execute("DELETE FROM audit_log")
+            cur.execute("UPDATE members SET registration_id = NULL")
             cur.execute("DELETE FROM registrations")
             cur.execute(
-                "INSERT INTO auditoria (momento, metodo, ruta, estado)"
+                "INSERT INTO audit_log (occurred_at, method, path, status)"
                 " VALUES (NOW() - INTERVAL '400 days', 'POST', '/api/vieja', 200),"
                 "        (NOW() - INTERVAL '10 days', 'POST', '/api/reciente', 200)"
             )
             ids = {}
             for email, dias in (("vieja@upm.es", 400), ("enlazada@upm.es", 400), ("nueva@upm.es", 10)):
                 cur.execute(
-                    "INSERT INTO registrations (nombre, apellidos, estudios, email,"
-                    " privacidad_aceptada, ip_registro, evento, created_at)"
+                    "INSERT INTO registrations (first_name, last_name, studies, email,"
+                    " privacy_accepted, ip_address, event, created_at)"
                     " VALUES ('A', 'B', 'C', %s, 'si', '1.1.1.1', 'x', NOW() - make_interval(days => %s))"
                     " RETURNING id",
                     (email, dias),
                 )
                 ids[email] = cur.fetchone()[0]
             cur.execute(
-                "UPDATE equipo_accesos SET registro_id = %s WHERE email = 'marketing@example.com'",
+                "UPDATE members SET registration_id = %s WHERE email = 'marketing@example.com'",
                 (ids["enlazada@upm.es"],),
             )
         conn.commit()
@@ -131,7 +131,7 @@ class CronTests(unittest.TestCase):
 
         self.assertEqual(respuesta.get_json()["inscripciones"], 1)
         with conn.cursor() as cur:
-            cur.execute("SELECT ruta FROM auditoria WHERE ruta IN ('/api/vieja', '/api/reciente')")
+            cur.execute("SELECT path FROM audit_log WHERE path IN ('/api/vieja', '/api/reciente')")
             self.assertEqual([f[0] for f in cur.fetchall()], ["/api/reciente"])
             cur.execute("SELECT email FROM registrations ORDER BY email")
             self.assertEqual([f[0] for f in cur.fetchall()], ["enlazada@upm.es", "nueva@upm.es"])
@@ -156,7 +156,7 @@ class CronTests(unittest.TestCase):
         conn = equipo_service._get_connection()
         with conn.cursor() as cur:
             cur.execute(
-                "INSERT INTO equipo_accesos (email, password_hash, equipos)"
+                "INSERT INTO members (email, password_hash, preferred_departments)"
                 " VALUES (%s, %s, %s)",
                 ("eventos@example.com", generate_password_hash("x"), ["eventos"]),
             )

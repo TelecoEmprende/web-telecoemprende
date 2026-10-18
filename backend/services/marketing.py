@@ -4,10 +4,12 @@ Modelo: Campaign -> Content -> Task. Un Content es una pieza de comunicación
 (un reel, un post); una Task es trabajo que hay que hacer. Son cosas distintas
 con ciclos de vida distintos, por eso no comparten tabla ni estados.
 
-Los responsables y autores son cuentas (`equipo_accesos.id`, con clave
-foránea): se escriben en `tarea_responsables`/`entregable_responsables` y en
-`creado_por_id`/`autor_id`, y se leen de las vistas `tasks_v`, `contents_v`...,
-que los devuelven como emails, que es lo que habla la API (ver services/db.py).
+Tablas: `projects` (proyectos), `deliverables` (entregables) y `tasks`. Los
+responsables y autores son cuentas (`members.id`, con clave foránea): se
+escriben en `task_assignees`/`deliverable_assignees` y en
+`created_by_id`/`author_id`, y se leen de las vistas `tasks_v`,
+`deliverables_v`..., que los devuelven como emails y con los nombres de campo
+de la API (ver services/db.py).
 """
 
 import json
@@ -45,14 +47,14 @@ def listar_campaigns(departamento: str) -> list[dict]:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute("""
                 SELECT c.*,
-                       (SELECT COUNT(*) FROM contents_v co WHERE co.campaign_id = c.id)
+                       (SELECT COUNT(*) FROM deliverables_v co WHERE co.campaign_id = c.id)
                            AS total_contents,
                        (SELECT COUNT(*) FROM tasks_v t WHERE t.campaign_id = c.id)
                            AS total_tasks,
                        (SELECT COUNT(*) FROM tasks_v t
                             WHERE t.campaign_id = c.id AND t.estado = 'acabado')
                            AS tareas_acabadas
-                FROM campaigns_v c
+                FROM projects_v c
                 WHERE %s = ANY(c.departamentos)
                 ORDER BY COALESCE(c.fecha, c.created_at::date) DESC, c.id DESC
             """, (departamento,))
@@ -73,7 +75,7 @@ def mis_campanas(email: str) -> list[dict]:
                 SELECT c.id, c.nombre, c.departamentos[1] AS departamento,
                        COUNT(t.id) AS total_tasks,
                        COUNT(t.id) FILTER (WHERE t.estado = 'acabado') AS tareas_acabadas
-                FROM campaigns_v c
+                FROM projects_v c
                 JOIN tasks_v t ON t.campaign_id = c.id
                 WHERE c.archivado = FALSE
                   -- El progreso es del proyecto entero, no solo de "mis"
@@ -97,7 +99,7 @@ def obtener_campaign(campaign_id: int, departamento: str) -> dict | None:
     with _get_connection() as conn:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute(
-                "SELECT * FROM campaigns_v WHERE id = %s AND %s = ANY(departamentos)",
+                "SELECT * FROM projects_v WHERE id = %s AND %s = ANY(departamentos)",
                 (campaign_id, departamento),
             )
             campaign = cur.fetchone()
@@ -105,7 +107,7 @@ def obtener_campaign(campaign_id: int, departamento: str) -> dict | None:
                 return None
 
             cur.execute(
-                "SELECT * FROM contents_v WHERE campaign_id = %s"
+                "SELECT * FROM deliverables_v WHERE campaign_id = %s"
                 " ORDER BY COALESCE(fecha_publicacion, '9999-12-31'::date), id",
                 (campaign_id,),
             )
@@ -164,9 +166,9 @@ def crear_campaign(
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute(
                 """
-                INSERT INTO campaigns
-                    (nombre, objetivo, audiencia, fecha, creado_por_id,
-                     departamentos, estado, responsable_id)
+                INSERT INTO projects
+                    (name, goal, audience, date, created_by_id,
+                     departments, status, owner_id)
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
                 RETURNING id
                 """,
@@ -176,7 +178,7 @@ def crear_campaign(
                 ),
             )
             nueva_id = cur.fetchone()["id"]
-            cur.execute("SELECT * FROM campaigns_v WHERE id = %s", (nueva_id,))
+            cur.execute("SELECT * FROM projects_v WHERE id = %s", (nueva_id,))
             fila = cur.fetchone()
             historial.registrar(cur, "proyecto", nueva_id, "crear", nombre, creado_por, nueva_id)
         conn.commit()
@@ -188,12 +190,12 @@ def actualizar_campaign(campaign_id: int, departamento: str, autor: str = "", **
         "nombre", "objetivo", "audiencia", "fecha", "archivado", "estado",
         "departamentos", "responsable",
     )
-    return _actualizar("campaigns", campaign_id, permitidos, campos, departamento, autor)
+    return _actualizar("projects", campaign_id, permitidos, campos, departamento, autor)
 
 
 def eliminar_campaign(campaign_id: int, departamento: str, autor: str = "") -> bool:
     """A la papelera, con sus entregables y tareas: se restaura de una vez."""
-    return _eliminar("campaigns", campaign_id, departamento, autor)
+    return _eliminar("projects", campaign_id, departamento, autor)
 
 
 def duplicar_campaign(campaign_id: int, departamento: str, creado_por: str) -> dict | None:
@@ -279,7 +281,7 @@ def crear_content(campaign_id: int, departamento: str, autor: str = "", **campos
     with _get_connection() as conn:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute(
-                "SELECT 1 FROM campaigns WHERE id = %s AND %s = ANY(departamentos)"
+                "SELECT 1 FROM projects WHERE id = %s AND %s = ANY(departments)"
                 " AND deleted_at IS NULL",
                 (campaign_id, departamento),
             )
@@ -288,9 +290,9 @@ def crear_content(campaign_id: int, departamento: str, autor: str = "", **campos
 
             cur.execute(
                 """
-                INSERT INTO contents (
-                    campaign_id, titulo, tipo, plataforma, fecha_publicacion,
-                    estado, script, copy_texto, cta, hashtags, idea_visual, enlaces
+                INSERT INTO deliverables (
+                    project_id, title, kind, platform, publish_date,
+                    status, script, copy_text, cta, hashtags, visual_idea, links
                 )
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 RETURNING id
@@ -311,8 +313,8 @@ def crear_content(campaign_id: int, departamento: str, autor: str = "", **campos
                 ),
             )
             nuevo_id = cur.fetchone()["id"]
-            fijar_personas(cur, "contents", nuevo_id, campos.get("responsables", []))
-            cur.execute("SELECT * FROM contents_v WHERE id = %s", (nuevo_id,))
+            fijar_personas(cur, "deliverables", nuevo_id, campos.get("responsables", []))
+            cur.execute("SELECT * FROM deliverables_v WHERE id = %s", (nuevo_id,))
             fila = cur.fetchone()
             historial.registrar(
                 cur, "entregable", nuevo_id, "crear", fila["titulo"], autor, campaign_id
@@ -328,9 +330,9 @@ def obtener_content(content_id: int, departamento: str) -> dict | None:
     with _get_connection() as conn:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute(
-                "SELECT co.* FROM contents_v co"
-                " JOIN campaigns c ON c.id = co.campaign_id"
-                " WHERE co.id = %s AND %s = ANY(c.departamentos)",
+                "SELECT co.* FROM deliverables_v co"
+                " JOIN projects c ON c.id = co.campaign_id"
+                " WHERE co.id = %s AND %s = ANY(c.departments)",
                 (content_id, departamento),
             )
             fila = cur.fetchone()
@@ -352,7 +354,7 @@ def actualizar_content(content_id: int, departamento: str, autor: str = "", **ca
         "titulo", "tipo", "plataforma", "fecha_publicacion", "estado", "script",
         "copy_texto", "cta", "hashtags", "idea_visual", "responsables", "enlaces",
     )
-    actualizado = _actualizar("contents", content_id, permitidos, campos, departamento, autor)
+    actualizado = _actualizar("deliverables", content_id, permitidos, campos, departamento, autor)
 
     # Publicar un contenido cierra solo sus tareas todavía abiertas: antes
     # "publicado" y "tareas acabadas" eran dos cosas que había que marcar por
@@ -362,8 +364,8 @@ def actualizar_content(content_id: int, departamento: str, autor: str = "", **ca
             with conn.cursor() as cur:
                 cur.execute(
                     """
-                    UPDATE tasks SET estado = 'acabado', updated_at = NOW()
-                    WHERE content_id = %s AND departamento = %s AND estado != 'acabado'
+                    UPDATE tasks SET status = 'acabado', updated_at = NOW()
+                    WHERE deliverable_id = %s AND department = %s AND status != 'acabado'
                       AND deleted_at IS NULL
                     """,
                     (content_id, departamento),
@@ -374,7 +376,7 @@ def actualizar_content(content_id: int, departamento: str, autor: str = "", **ca
 
 
 def eliminar_content(content_id: int, departamento: str, autor: str = "") -> bool:
-    return _eliminar("contents", content_id, departamento, autor)
+    return _eliminar("deliverables", content_id, departamento, autor)
 
 
 # --------------------------------------------------------------------------
@@ -398,11 +400,11 @@ def listar_tasks(departamento: str) -> list[dict]:
             cur.execute(
                 """
                 SELECT t.*,
-                       co.titulo AS content_titulo,
-                       c.nombre AS campaign_nombre
+                       co.title AS content_titulo,
+                       c.name AS campaign_nombre
                 FROM tasks_v t
-                LEFT JOIN contents co ON co.id = t.content_id
-                LEFT JOIN campaigns c ON c.id = t.campaign_id
+                LEFT JOIN deliverables co ON co.id = t.content_id
+                LEFT JOIN projects c ON c.id = t.campaign_id
                 WHERE t.departamento = %s
                   AND NOT (t.estado = 'acabado' AND COALESCE(t.completado_en, t.updated_at) < now() - interval '1 day')
                 ORDER BY COALESCE(t.deadline, '9999-12-31'::date), t.id
@@ -423,11 +425,11 @@ def listar_tasks_archivadas(departamento: str) -> list[dict]:
             cur.execute(
                 """
                 SELECT t.*,
-                       co.titulo AS content_titulo,
-                       c.nombre AS campaign_nombre
+                       co.title AS content_titulo,
+                       c.name AS campaign_nombre
                 FROM tasks_v t
-                LEFT JOIN contents co ON co.id = t.content_id
-                LEFT JOIN campaigns c ON c.id = t.campaign_id
+                LEFT JOIN deliverables co ON co.id = t.content_id
+                LEFT JOIN projects c ON c.id = t.campaign_id
                 WHERE t.departamento = %s
                   AND t.estado = 'acabado' AND COALESCE(t.completado_en, t.updated_at) < now() - interval '1 day'
                 ORDER BY COALESCE(t.completado_en, t.updated_at) DESC
@@ -468,11 +470,11 @@ def mis_tareas(email: str) -> list[dict]:
             cur.execute(
                 """
                 SELECT t.*,
-                       co.titulo AS content_titulo,
-                       c.nombre AS campaign_nombre
+                       co.title AS content_titulo,
+                       c.name AS campaign_nombre
                 FROM tasks_v t
-                LEFT JOIN contents co ON co.id = t.content_id
-                LEFT JOIN campaigns c ON c.id = t.campaign_id
+                LEFT JOIN deliverables co ON co.id = t.content_id
+                LEFT JOIN projects c ON c.id = t.campaign_id
                 WHERE %s = ANY(t.responsables) AND t.estado != 'acabado'
                 ORDER BY COALESCE(t.deadline, '9999-12-31'::date), t.id
                 """,
@@ -506,9 +508,9 @@ def crear_task(**campos) -> dict | None:
             # Marketing pasando su id.
             if content_id is not None:
                 cur.execute(
-                    "SELECT co.campaign_id FROM contents co"
-                    " JOIN campaigns c ON c.id = co.campaign_id"
-                    " WHERE co.id = %s AND %s = ANY(c.departamentos)"
+                    "SELECT co.project_id AS campaign_id FROM deliverables co"
+                    " JOIN projects c ON c.id = co.project_id"
+                    " WHERE co.id = %s AND %s = ANY(c.departments)"
                     " AND co.deleted_at IS NULL AND c.deleted_at IS NULL",
                     (content_id, departamento),
                 )
@@ -518,7 +520,7 @@ def crear_task(**campos) -> dict | None:
                 campaign_id = fila["campaign_id"]
             elif campaign_id is not None:
                 cur.execute(
-                    "SELECT 1 FROM campaigns WHERE id = %s AND %s = ANY(departamentos)"
+                    "SELECT 1 FROM projects WHERE id = %s AND %s = ANY(departments)"
                     " AND deleted_at IS NULL",
                     (campaign_id, departamento),
                 )
@@ -528,9 +530,9 @@ def crear_task(**campos) -> dict | None:
             cur.execute(
                 """
                 INSERT INTO tasks (
-                    departamento, campaign_id, content_id, titulo, descripcion,
-                    instrucciones, estado, prioridad, deadline, hora,
-                    tags, checklist, enlaces, creado_por_id
+                    department, project_id, deliverable_id, title, description,
+                    instructions, status, priority, deadline, due_time,
+                    tags, checklist, links, created_by_id
                 )
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 RETURNING id
@@ -619,7 +621,7 @@ def crear_task_comment(task_id: int, autor: str, texto: str) -> dict:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute(
                 """
-                INSERT INTO task_comments (task_id, autor_id, texto)
+                INSERT INTO task_comments (task_id, author_id, body)
                 VALUES (%s, %s, %s)
                 RETURNING id
                 """,
@@ -658,19 +660,19 @@ def calendario(desde: date, hasta: date, departamento: str) -> list[dict]:
                            co.campaign_id, co.plataforma AS detalle,
                            NULL AS prioridad, c.nombre AS padre,
                            co.responsables, NULL::varchar AS hora
-                    FROM contents_v co
-                    JOIN campaigns_v c ON c.id = co.campaign_id
+                    FROM deliverables_v co
+                    JOIN projects_v c ON c.id = co.campaign_id
                     WHERE co.fecha_publicacion BETWEEN %(desde)s AND %(hasta)s
                       AND %(departamento)s = ANY(c.departamentos)
                     UNION ALL
                     SELECT 'task' AS origen, t.id, t.titulo,
                            t.deadline AS fecha, t.estado,
                            t.campaign_id, t.prioridad AS detalle,
-                           t.prioridad, COALESCE(co.titulo, c.nombre) AS padre,
+                           t.prioridad, COALESCE(co.title, c.name) AS padre,
                            t.responsables, NULLIF(t.hora, '') AS hora
                     FROM tasks_v t
-                    LEFT JOIN contents co ON co.id = t.content_id
-                    LEFT JOIN campaigns c ON c.id = t.campaign_id
+                    LEFT JOIN deliverables co ON co.id = t.content_id
+                    LEFT JOIN projects c ON c.id = t.campaign_id
                     WHERE t.deadline BETWEEN %(desde)s AND %(hasta)s
                       AND t.departamento = %(departamento)s
                     UNION ALL
@@ -679,7 +681,7 @@ def calendario(desde: date, hasta: date, departamento: str) -> list[dict]:
                            NULL::integer AS campaign_id, r.objetivo AS detalle,
                            NULL AS prioridad, NULL AS padre,
                            r.asistentes AS responsables, NULLIF(r.hora, '') AS hora
-                    FROM reuniones_v r
+                    FROM meetings_v r
                     WHERE r.fecha BETWEEN %(desde)s AND %(hasta)s
                       AND r.departamento IN (%(departamento)s, '')
                 ) x
@@ -718,20 +720,20 @@ def calendario_equipo(desde: date, hasta: date, departamentos: list[str]) -> lis
                            NULL AS prioridad, c.nombre AS padre,
                            co.responsables, NULL::varchar AS hora,
                            c.departamento
-                    FROM contents_v co
-                    JOIN campaigns_v c ON c.id = co.campaign_id
+                    FROM deliverables_v co
+                    JOIN projects_v c ON c.id = co.campaign_id
                     WHERE co.fecha_publicacion BETWEEN %(desde)s AND %(hasta)s
                       AND c.departamentos && %(departamentos)s
                     UNION ALL
                     SELECT 'task' AS origen, t.id, t.titulo,
                            t.deadline AS fecha, t.estado,
                            t.campaign_id, t.prioridad AS detalle,
-                           t.prioridad, COALESCE(co.titulo, c.nombre) AS padre,
+                           t.prioridad, COALESCE(co.title, c.name) AS padre,
                            t.responsables, NULLIF(t.hora, '') AS hora,
                            t.departamento
                     FROM tasks_v t
-                    LEFT JOIN contents co ON co.id = t.content_id
-                    LEFT JOIN campaigns c ON c.id = t.campaign_id
+                    LEFT JOIN deliverables co ON co.id = t.content_id
+                    LEFT JOIN projects c ON c.id = t.campaign_id
                     WHERE t.deadline BETWEEN %(desde)s AND %(hasta)s
                       AND t.departamento = ANY(%(departamentos)s)
                     UNION ALL
@@ -741,7 +743,7 @@ def calendario_equipo(desde: date, hasta: date, departamentos: list[str]) -> lis
                            NULL AS prioridad, NULL AS padre,
                            r.asistentes AS responsables, NULLIF(r.hora, '') AS hora,
                            r.departamento
-                    FROM reuniones_v r
+                    FROM meetings_v r
                     WHERE r.fecha BETWEEN %(desde)s AND %(hasta)s
                       AND (r.departamento = ANY(%(departamentos)s) OR r.departamento = '')
                     UNION ALL
@@ -751,14 +753,14 @@ def calendario_equipo(desde: date, hasta: date, departamentos: list[str]) -> lis
                     -- salen aunque la vista esté filtrada a uno solo -- por
                     -- eso `departamento` viaja NULL y no se les pinta color
                     -- de departamento (ver `botonEvento` en CalendarPanel).
-                    SELECT 'club' AS origen, e.id, e.titulo,
-                           e.fecha AS fecha, '' AS estado,
-                           NULL::integer AS campaign_id, e.descripcion AS detalle,
+                    SELECT 'club' AS origen, e.id, e.title,
+                           e.date AS fecha, '' AS estado,
+                           NULL::integer AS campaign_id, e.description AS detalle,
                            NULL AS prioridad, NULL AS padre,
-                           ARRAY[]::text[] AS responsables, NULLIF(e.hora, '') AS hora,
+                           ARRAY[]::text[] AS responsables, NULLIF(e.start_time, '') AS hora,
                            NULL::varchar AS departamento
-                    FROM calendario_eventos e
-                    WHERE e.fecha BETWEEN %(desde)s AND %(hasta)s
+                    FROM club_events e
+                    WHERE e.date BETWEEN %(desde)s AND %(hasta)s
                 ) x
                 ORDER BY fecha,
                          CASE prioridad
@@ -778,25 +780,45 @@ def calendario_equipo(desde: date, hasta: date, departamentos: list[str]) -> lis
 # --------------------------------------------------------------------------
 
 # De qué departamento es una fila, por tabla. Un proyecto es de todos los
-# departamentos de su ámbito; `contents` no tiene columna propia y hereda la de
-# su proyecto. Va en el WHERE del propio UPDATE/DELETE en vez de en un SELECT
-# previo, así no hay hueco entre comprobar y escribir. Lo que está en la
+# departamentos de su ámbito; `deliverables` no tiene columna propia y hereda
+# la de su proyecto. Va en el WHERE del propio UPDATE/DELETE en vez de en un
+# SELECT previo, así no hay hueco entre comprobar y escribir. Lo que está en la
 # papelera no se toca: se restaura primero.
 _ALCANCE_DEPTO = {
-    "campaigns": "%s = ANY(departamentos) AND deleted_at IS NULL",
-    "tasks": "departamento = %s AND deleted_at IS NULL",
-    "contents": (
-        "campaign_id IN (SELECT id FROM campaigns WHERE %s = ANY(departamentos))"
+    "projects": "%s = ANY(departments) AND deleted_at IS NULL",
+    "tasks": "department = %s AND deleted_at IS NULL",
+    "deliverables": (
+        "project_id IN (SELECT id FROM projects WHERE %s = ANY(departments))"
         " AND deleted_at IS NULL"
     ),
 }
 
-_ENTIDAD = {"campaigns": "proyecto", "contents": "entregable", "tasks": "tarea"}
-_TITULO = {"campaigns": "nombre", "contents": "titulo", "tasks": "titulo"}
+# Campo de la API -> columna de la tabla, donde no se llaman igual. La API
+# habla como las vistas `_v`; la tabla, en inglés.
+_COLUMNA = {
+    "projects": {
+        "nombre": "name", "objetivo": "goal", "audiencia": "audience", "fecha": "date",
+        "archivado": "archived", "estado": "status", "departamentos": "departments",
+    },
+    "deliverables": {
+        "campaign_id": "project_id", "titulo": "title", "tipo": "kind", "plataforma": "platform",
+        "fecha_publicacion": "publish_date", "estado": "status", "copy_texto": "copy_text",
+        "idea_visual": "visual_idea", "enlaces": "links",
+    },
+    "tasks": {
+        "departamento": "department", "campaign_id": "project_id", "content_id": "deliverable_id",
+        "titulo": "title", "descripcion": "description", "instrucciones": "instructions",
+        "estado": "status", "prioridad": "priority", "hora": "due_time", "enlaces": "links",
+        "completado_en": "completed_at",
+    },
+}
+
+_ENTIDAD = {"projects": "proyecto", "deliverables": "entregable", "tasks": "tarea"}
+_TITULO = {"projects": "nombre", "deliverables": "titulo", "tasks": "titulo"}
 
 
 def _proyecto_de(fila: dict, tabla: str) -> int | None:
-    return fila["id"] if tabla == "campaigns" else fila.get("campaign_id")
+    return fila["id"] if tabla == "projects" else fila.get("campaign_id")
 
 
 def _actualizar(
@@ -821,14 +843,14 @@ def _actualizar(
     valores: list = []
     for clave in permitidos:
         if clave in campos and clave not in (campo_personas, "responsable"):
-            asignaciones.append(f"{clave} = %s")
+            asignaciones.append(f"{_COLUMNA[tabla].get(clave, clave)} = %s")
             valores.append(campos[clave])
 
     with _get_connection() as conn:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            if "responsable" in campos and tabla == "campaigns":
+            if "responsable" in campos and tabla == "projects":
                 # Una sola persona, que va como id: se traduce aquí.
-                asignaciones.append("responsable_id = %s")
+                asignaciones.append("owner_id = %s")
                 valores.append(_responsable_id(cur, campos["responsable"]))
 
             if not asignaciones and personas is None:
@@ -836,8 +858,10 @@ def _actualizar(
 
             # Lo que había, para el historial: de la vista, que ya trae las
             # personas como emails.
+            alcance = _ALCANCE_DEPTO[tabla].replace(" AND deleted_at IS NULL", "")
             cur.execute(
-                f"SELECT * FROM {tabla}_v WHERE id = %s AND {_ALCANCE_DEPTO[tabla].replace(' AND deleted_at IS NULL', '')}",
+                f"SELECT * FROM {tabla}_v WHERE id = %s"
+                f" AND id IN (SELECT id FROM {tabla} WHERE {alcance})",
                 (fila_id, departamento),
             )
             antes = cur.fetchone()
@@ -902,7 +926,7 @@ def mesa_del_club() -> dict:
                        GREATEST(c.updated_at, a.ultima) AS ultima_actividad,
                        n.titulo AS siguiente_titulo, n.deadline AS siguiente_deadline,
                        n.responsables AS siguiente_responsables
-                FROM campaigns_v c
+                FROM projects_v c
                 LEFT JOIN LATERAL (
                     SELECT COUNT(*) AS total,
                            COUNT(*) FILTER (WHERE estado = 'acabado') AS acabadas,
@@ -935,10 +959,10 @@ def mesa_del_club() -> dict:
             cur.execute(
                 """
                 SELECT t.id, t.titulo, t.departamento, t.deadline, t.prioridad,
-                       COALESCE(co.titulo, c.nombre) AS padre
+                       COALESCE(co.title, c.name) AS padre
                 FROM tasks_v t
-                LEFT JOIN contents co ON co.id = t.content_id
-                LEFT JOIN campaigns c ON c.id = t.campaign_id
+                LEFT JOIN deliverables co ON co.id = t.content_id
+                LEFT JOIN projects c ON c.id = t.campaign_id
                 WHERE t.estado <> 'acabado' AND cardinality(t.responsables) = 0
                 ORDER BY COALESCE(t.deadline, '9999-12-31'::date), t.id
                 LIMIT 40
@@ -949,10 +973,10 @@ def mesa_del_club() -> dict:
             cur.execute(
                 """
                 SELECT t.id, t.titulo, t.departamento, t.deadline, t.responsables,
-                       COALESCE(co.titulo, c.nombre) AS padre
+                       COALESCE(co.title, c.name) AS padre
                 FROM tasks_v t
-                LEFT JOIN contents co ON co.id = t.content_id
-                LEFT JOIN campaigns c ON c.id = t.campaign_id
+                LEFT JOIN deliverables co ON co.id = t.content_id
+                LEFT JOIN projects c ON c.id = t.campaign_id
                 WHERE t.estado <> 'acabado' AND t.deadline < %s
                 ORDER BY t.deadline, t.id
                 LIMIT 40
@@ -1039,10 +1063,10 @@ def ficha_miembro(email: str) -> dict:
             cur.execute(
                 """
                 SELECT t.id, t.titulo, t.estado, t.updated_at, t.deadline, t.departamento,
-                       COALESCE(co.titulo, c.nombre) AS padre
+                       COALESCE(co.title, c.name) AS padre
                 FROM tasks_v t
-                LEFT JOIN contents co ON co.id = t.content_id
-                LEFT JOIN campaigns c ON c.id = t.campaign_id
+                LEFT JOIN deliverables co ON co.id = t.content_id
+                LEFT JOIN projects c ON c.id = t.campaign_id
                 WHERE %s = ANY(t.responsables)
                 ORDER BY t.updated_at DESC
                 LIMIT 8
@@ -1054,10 +1078,10 @@ def ficha_miembro(email: str) -> dict:
             cur.execute(
                 """
                 SELECT t.id, t.titulo, t.estado, t.deadline, t.departamento,
-                       COALESCE(co.titulo, c.nombre) AS padre
+                       COALESCE(co.title, c.name) AS padre
                 FROM tasks_v t
-                LEFT JOIN contents co ON co.id = t.content_id
-                LEFT JOIN campaigns c ON c.id = t.campaign_id
+                LEFT JOIN deliverables co ON co.id = t.content_id
+                LEFT JOIN projects c ON c.id = t.campaign_id
                 WHERE %s = ANY(t.responsables) AND t.estado <> 'acabado'
                 ORDER BY COALESCE(t.deadline, '9999-12-31'::date), t.id
                 LIMIT 10
@@ -1066,7 +1090,7 @@ def ficha_miembro(email: str) -> dict:
             )
             pendientes = [_serializar(f) for f in cur.fetchall()]
 
-            cur.execute("SELECT COUNT(*) FROM equipo_accesos WHERE activo")
+            cur.execute("SELECT COUNT(*) FROM members WHERE active")
             activos = cur.fetchone()["count"]
 
     carga = carga_club()

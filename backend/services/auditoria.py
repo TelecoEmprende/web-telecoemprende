@@ -45,7 +45,7 @@ def registrar(email: str, metodo: str, ruta: str, estado: int, ip: str) -> None:
         with _get_connection() as conn:
             with conn.cursor() as cur:
                 cur.execute(
-                    "INSERT INTO auditoria (email, metodo, ruta, estado, ip) VALUES (%s, %s, %s, %s, %s)",
+                    "INSERT INTO audit_log (email, method, path, status, ip) VALUES (%s, %s, %s, %s, %s)",
                     (email[:120], metodo[:8], ruta[:MAX_RUTA_LEN], estado, ip[:64]),
                 )
             conn.commit()
@@ -60,10 +60,11 @@ def listar(q: str = "", limite: int = 200) -> list[dict]:
             donde, valores = "", []
             if q.strip():
                 patron = f"%{q.strip().lower()}%"
-                donde, valores = "WHERE lower(email) LIKE %s OR lower(ruta) LIKE %s", [patron, patron]
+                donde, valores = "WHERE lower(email) LIKE %s OR lower(path) LIKE %s", [patron, patron]
             cur.execute(
-                "SELECT id, momento, email, metodo, ruta, estado, ip FROM auditoria"
-                f" {donde} ORDER BY momento DESC, id DESC LIMIT %s",
+                "SELECT id, occurred_at AS momento, email, method AS metodo, path AS ruta,"
+                " status AS estado, ip FROM audit_log"
+                f" {donde} ORDER BY occurred_at DESC, id DESC LIMIT %s",
                 [*valores, limite],
             )
             filas = cur.fetchall()
@@ -76,7 +77,7 @@ def purgar_antigua() -> int:
     with _get_connection() as conn:
         with conn.cursor() as cur:
             cur.execute(
-                "DELETE FROM auditoria WHERE momento < NOW() - make_interval(days => %s)",
+                "DELETE FROM audit_log WHERE occurred_at < NOW() - make_interval(days => %s)",
                 (DIAS_DE_AUDITORIA,),
             )
             borradas = cur.rowcount

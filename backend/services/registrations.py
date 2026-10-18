@@ -8,7 +8,7 @@ from backend.config import DATABASE_URL
 
 # Las inscripciones están cerradas: pasado un año, los datos de quien se apuntó
 # (email, teléfono, IP) ya no sirven para nada. Se quedan las que acabaron en
-# una cuenta del equipo (`equipo_accesos.registro_id`).
+# una cuenta del equipo (`members.registration_id`).
 DIAS_DE_INSCRIPCION = 365
 
 
@@ -25,7 +25,7 @@ def purgar_inscripciones_antiguas() -> int:
                 """
                 DELETE FROM registrations r
                 WHERE r.created_at < NOW() - make_interval(days => %s)
-                  AND NOT EXISTS (SELECT 1 FROM equipo_accesos a WHERE a.registro_id = r.id)
+                  AND NOT EXISTS (SELECT 1 FROM members a WHERE a.registration_id = r.id)
                 """,
                 (DIAS_DE_INSCRIPCION,),
             )
@@ -37,7 +37,7 @@ def purgar_inscripciones_antiguas() -> int:
 def obtener_eventos() -> list[str]:
     with _get_connection() as conn:
         with conn.cursor() as cur:
-            cur.execute("SELECT DISTINCT evento FROM registrations ORDER BY evento")
+            cur.execute("SELECT DISTINCT event FROM registrations ORDER BY event")
             rows = cur.fetchall()
     return [r[0] for r in rows]
 
@@ -48,11 +48,11 @@ def obtener_registros(evento: str | None = None):
             if evento:
                 cur.execute(
                     """
-                    SELECT id, nombre, apellidos, estudios, email, departamento, drive_link,
-                           privacidad_aceptada, ip_registro, created_at, evento, escuela, nivel, telefono,
-                           estado, notificado
+                    SELECT id, first_name, last_name, studies, email, department, drive_link,
+                           privacy_accepted, ip_address, created_at, event, school, level, phone,
+                           status, notified
                     FROM registrations
-                    WHERE evento = %s
+                    WHERE event = %s
                     ORDER BY id
                     """,
                     (evento,),
@@ -60,9 +60,9 @@ def obtener_registros(evento: str | None = None):
             else:
                 cur.execute(
                     """
-                    SELECT id, nombre, apellidos, estudios, email, departamento, drive_link,
-                           privacidad_aceptada, ip_registro, created_at, evento, escuela, nivel, telefono,
-                           estado, notificado
+                    SELECT id, first_name, last_name, studies, email, department, drive_link,
+                           privacy_accepted, ip_address, created_at, event, school, level, phone,
+                           status, notified
                     FROM registrations
                     ORDER BY id
                     """
@@ -116,8 +116,8 @@ def actualizar_registro(
             cur.execute(
                 """
                 UPDATE registrations
-                SET nombre = %s, apellidos = %s, estudios = %s, email = %s, departamento = %s, drive_link = %s,
-                    escuela = %s, nivel = %s, telefono = %s
+                SET first_name = %s, last_name = %s, studies = %s, email = %s, department = %s,
+                    drive_link = %s, school = %s, level = %s, phone = %s
                 WHERE id = %s
                 """,
                 (
@@ -143,8 +143,8 @@ def actualizar_estado(reg_id: int, estado: str) -> dict | None:
     with _get_connection() as conn:
         with conn.cursor() as cur:
             cur.execute(
-                "UPDATE registrations SET estado = %s, notificado = FALSE WHERE id = %s "
-                "RETURNING id, nombre, apellidos, email, evento",
+                "UPDATE registrations SET status = %s, notified = FALSE WHERE id = %s "
+                "RETURNING id, first_name, last_name, email, event",
                 (estado, reg_id),
             )
             row = cur.fetchone()
@@ -159,8 +159,8 @@ def obtener_pendientes_notificacion(estado: str) -> list[dict]:
     with _get_connection() as conn:
         with conn.cursor() as cur:
             cur.execute(
-                "SELECT id, nombre, apellidos, email FROM registrations "
-                "WHERE estado = %s AND notificado = FALSE",
+                "SELECT id, first_name, last_name, email FROM registrations "
+                "WHERE status = %s AND notified = FALSE",
                 (estado,),
             )
             rows = cur.fetchall()
@@ -170,7 +170,7 @@ def obtener_pendientes_notificacion(estado: str) -> list[dict]:
 def marcar_notificado(reg_id: int) -> None:
     with _get_connection() as conn:
         with conn.cursor() as cur:
-            cur.execute("UPDATE registrations SET notificado = TRUE WHERE id = %s", (reg_id,))
+            cur.execute("UPDATE registrations SET notified = TRUE WHERE id = %s", (reg_id,))
         conn.commit()
 
 

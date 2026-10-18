@@ -34,9 +34,9 @@ class RegistrosTestCase(unittest.TestCase):
 
         conn = registros_service._get_connection()
         with conn.cursor() as cur:
-            for tabla in ("presupuesto_lineas", "reuniones", "servicios"):
+            for tabla in ("budget_lines", "meetings", "services"):
                 cur.execute(f"DELETE FROM {tabla}")
-            cur.execute("DELETE FROM equipo_accesos")
+            cur.execute("DELETE FROM members")
         conn.commit()
         conn.close()
 
@@ -47,7 +47,7 @@ class RegistrosTestCase(unittest.TestCase):
         conn = equipo_service._get_connection()
         with conn.cursor() as cur:
             cur.execute(
-                "INSERT INTO equipo_accesos (email, password_hash, equipos, cargo)"
+                "INSERT INTO members (email, password_hash, preferred_departments, role)"
                 " VALUES (%s, %s, %s, %s)",
                 (
                     "iker@example.com",
@@ -312,7 +312,7 @@ class RegistrosTestCase(unittest.TestCase):
         conn = equipo_service._get_connection()
         with conn.cursor() as cur:
             cur.execute(
-                "INSERT INTO equipo_accesos (email, password_hash, equipos) VALUES (%s, %s, %s)",
+                "INSERT INTO members (email, password_hash, preferred_departments) VALUES (%s, %s, %s)",
                 ("mkt@example.com", generate_password_hash("pw"), ["marketing"]),
             )
         conn.commit()

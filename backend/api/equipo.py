@@ -1,8 +1,9 @@
+import base64
 import logging
 import re
 from datetime import date, timedelta
 
-from flask import Blueprint, jsonify, request, session
+from flask import Blueprint, jsonify, make_response, request, session
 
 from backend.api.admin import _validar_evento_calendario
 from backend.api.marketing import (
@@ -45,6 +46,8 @@ from backend.services.equipo import (
     listar_equipo_accesos,
     listar_eventos_calendario,
     listar_miembros_web,
+    foto_de,
+    url_foto,
     login_equipo,
     logout_equipo,
     registrar_equipo_acceso,
@@ -241,7 +244,28 @@ def api_equipo_miembros_web():
     """Sección «Equipo» de la web pública: sin sesión, solo lo que ya se ve en
     la web (ver `listar_miembros_web`). La misma fila que /equipo, así que una
     foto cambiada en Cuentas cambia también aquí."""
-    return jsonify({"ok": True, "miembros": listar_miembros_web()}), 200
+    respuesta = jsonify({"ok": True, "miembros": listar_miembros_web()})
+    # La lee cada visita a la home: cinco minutos de caché le sobran.
+    respuesta.headers["Cache-Control"] = "public, max-age=300"
+    return respuesta, 200
+
+
+@equipo_api.route("/foto/<int:acceso_id>", methods=["GET"])
+def api_equipo_foto(acceso_id: int):
+    """La foto de una cuenta (ver `url_foto`). Sin sesión, solo las de quien
+    sale en la web, que ya son públicas; las demás, 404 como si no existieran."""
+    fila = foto_de(acceso_id)
+    hay_sesion = is_equipo_authenticated() or is_admin_authenticated()
+    if fila is None or not fila[0] or not (fila[1] or hay_sesion):
+        return jsonify(build_response(False, "Foto no encontrada.")), 404
+    cabecera, _, datos = fila[0].partition(",")
+    respuesta = make_response(base64.b64decode(datos))
+    respuesta.mimetype = cabecera.removeprefix("data:").split(";")[0] or "image/jpeg"
+    # La URL lleva la versión (`?v=`): se puede guardar para siempre.
+    respuesta.headers["Cache-Control"] = (
+        f"{'public' if fila[1] else 'private'}, max-age=31536000, immutable"
+    )
+    return respuesta
 
 
 @equipo_api.route("/calendario", methods=["GET"])
@@ -298,9 +322,6 @@ def api_equipo_calendario_cruzado():
     `CalendarPanel.tsx`). Cualquier sesión de /equipo puede leerlo -- no hace
     falta pertenecer al departamento cuyos datos se están mirando, es lectura,
     no edición."""
-    # `calendario_equipo()` también hace JOIN contra `reuniones` (ver el mismo
-    # comentario en `requiere_equipo`, backend/api/marketing.py).
-
     args = request.args.to_dict()
     hoy = date.today()
 
@@ -467,7 +488,7 @@ def api_equipo_miembros():
             "email": a["email"],
             "nombre": a["nombre"],
             "apellidos": a["apellidos"],
-            "foto": a["foto"],
+            "foto": url_foto(a["id"], a["foto"]),
             "equipos": a["equipos"],
             "cargo": a["cargo"],
             "vp_de": a["vp_de"],
@@ -504,7 +525,7 @@ def api_equipo_ficha_miembro():
         nombre=acceso["nombre"],
         apellidos=acceso["apellidos"],
         desde=acceso["created_at"],
-        foto=acceso["foto"],
+        foto=url_foto(acceso["id"], acceso["foto"]),
         # Quién puede editar esta ficha lo decide el servidor, no el frontend
         # (que solo lo usa para enseñar u ocultar el botón).
         es_tu_ficha=_es_mi_ficha(email),

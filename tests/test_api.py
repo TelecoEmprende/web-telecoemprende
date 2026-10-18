@@ -1,3 +1,4 @@
+import base64
 import os
 import unittest
 
@@ -31,15 +32,15 @@ class ApiTestCase(unittest.TestCase):
         conn = registration_service._get_connection()
         with conn.cursor() as cur:
             cur.execute("DELETE FROM registrations")
-            cur.execute("DELETE FROM equipo_accesos")
-            cur.execute("DELETE FROM calendario_eventos")
+            cur.execute("DELETE FROM members")
+            cur.execute("DELETE FROM club_events")
             # `tasks` arrastra `contents`/`campaigns` por cascada: sin esto,
             # una tarea creada por un test de /api/marketing/tasks o
             # /api/equipo/mis-tareas (metricas, mis-tareas...) sobrevive al
             # siguiente test de esta clase -- no hay transacción por test.
             cur.execute("DELETE FROM tasks")
-            cur.execute("DELETE FROM contents")
-            cur.execute("DELETE FROM campaigns")
+            cur.execute("DELETE FROM deliverables")
+            cur.execute("DELETE FROM projects")
         conn.commit()
         conn.close()
 
@@ -64,7 +65,7 @@ class ApiTestCase(unittest.TestCase):
         with conn.cursor() as cur:
             cur.execute(
                 """
-                INSERT INTO equipo_accesos (email, password_hash, equipos, activo, vp_de, cargo)
+                INSERT INTO members (email, password_hash, preferred_departments, active, vp_of, role)
                 VALUES (%s, %s, %s, %s, %s, %s)
                 """,
                 (
@@ -90,8 +91,8 @@ class ApiTestCase(unittest.TestCase):
             cur.execute(
                 """
                 INSERT INTO registrations
-                    (nombre, apellidos, escuela, nivel, estudios, email, telefono,
-                     departamento, drive_link, privacidad_aceptada, ip_registro, evento)
+                    (first_name, last_name, school, level, studies, email, phone,
+                     department, drive_link, privacy_accepted, ip_address, event)
                 VALUES (%s, 'Perez', 'ETSIT', 'Grado', 'Grado - Test', %s, '600123456',
                         'Tech/Ingeniería', 'https://drive.google.com/file/d/test', 'Sí',
                         '127.0.0.1', 'telecoemprende-2026-27')
@@ -400,7 +401,7 @@ class ApiTestCase(unittest.TestCase):
         self.seed_equipo(email="admin@example.com", equipos=["marketing", "eventos"])
         conn = registration_service._get_connection()
         with conn.cursor() as cur:
-            cur.execute("UPDATE equipo_accesos SET es_admin = TRUE WHERE email = 'admin@example.com'")
+            cur.execute("UPDATE members SET is_admin = TRUE WHERE email = 'admin@example.com'")
         conn.commit()
         conn.close()
 
@@ -447,13 +448,15 @@ class ApiTestCase(unittest.TestCase):
         guardado = next(
             a for a in self.client.get("/api/admin/equipo").get_json()["accesos"] if a["id"] == acceso_id
         )
-        self.assertEqual(guardado["foto"], png)
+        self.assertEqual(
+            self.client.get(guardado["foto"]).data, base64.b64decode(png.split(",")[1])
+        )
 
     def test_admin_cannot_remove_own_admin(self):
         self.seed_equipo(email="yo@example.com", equipos=["marketing", "eventos"])
         conn = registration_service._get_connection()
         with conn.cursor() as cur:
-            cur.execute("UPDATE equipo_accesos SET es_admin = TRUE WHERE email = 'yo@example.com' RETURNING id")
+            cur.execute("UPDATE members SET is_admin = TRUE WHERE email = 'yo@example.com' RETURNING id")
             acceso_id = cur.fetchone()[0]
         conn.commit()
         conn.close()
@@ -557,8 +560,8 @@ class ApiTestCase(unittest.TestCase):
         conn = equipo_service._get_connection()
         with conn.cursor() as cur:
             cur.execute(
-                "INSERT INTO registrations (nombre, apellidos, estudios, email, drive_link,"
-                " privacidad_aceptada, ip_registro, evento, departamento)"
+                "INSERT INTO registrations (first_name, last_name, studies, email, drive_link,"
+                " privacy_accepted, ip_address, event, department)"
                 " VALUES ('Ana', 'García', 'GISD', 'ana@alumnos.upm.es', 'https://drive.google.com/x',"
                 " TRUE, '127.0.0.1', 'telecoemprende-2026-27', 'Marketing') RETURNING id"
             )

@@ -179,18 +179,74 @@ class MigracionPersonasTestCase(unittest.TestCase):
                 self.assertEqual(cur.fetchall(), [])
 
 
+    def test_la_0010_solo_renombra_y_la_api_lee_lo_mismo(self):
+        """Tablas y columnas en inglés: los datos siguen ahí, las vistas `_v`
+        mantienen los nombres de la API y las personas siguen enlazadas."""
+        with psycopg2.connect(self.url) as conn:
+            with conn.cursor() as cur:
+                for archivo in sorted(MIGRACIONES.glob("*.sql")):
+                    if archivo.stem >= "0010":
+                        break
+                    self.aplicar(cur, archivo.stem)
+                cur.execute(
+                    "INSERT INTO equipo_accesos (email, password_hash, equipos, nombre)"
+                    " VALUES ('ana@x.es', 'h', '{eventos,marketing,ingenieria}', 'Ana') RETURNING id"
+                )
+                ana = cur.fetchone()[0]
+                cur.execute(
+                    "INSERT INTO campaigns (nombre, departamentos, responsable_id)"
+                    " VALUES ('Feria', '{eventos}', %s) RETURNING id",
+                    (ana,),
+                )
+                proyecto = cur.fetchone()[0]
+                cur.execute(
+                    "INSERT INTO tasks (titulo, departamento, campaign_id, estado, hora)"
+                    " VALUES ('Cartel', 'eventos', %s, 'en_progreso', '10:00') RETURNING id",
+                    (proyecto,),
+                )
+                tarea = cur.fetchone()[0]
+                cur.execute(
+                    "INSERT INTO tarea_responsables (tarea_id, persona_id, orden) VALUES (%s, %s, 1)",
+                    (tarea, ana),
+                )
+                cur.execute(
+                    "INSERT INTO historial (entidad, entidad_id, accion, titulo, persona_id)"
+                    " VALUES ('tarea', %s, 'crear', 'Cartel', %s)",
+                    (tarea, ana),
+                )
+
+                self.aplicar(cur, "0010_tablas_y_columnas_en_ingles")
+
+                cur.execute(
+                    "SELECT titulo, estado, hora, departamento, campaign_id, responsables"
+                    " FROM tasks_v WHERE id = %s",
+                    (tarea,),
+                )
+                self.assertEqual(
+                    cur.fetchone(), ("Cartel", "en_progreso", "10:00", "eventos", proyecto, ["ana@x.es"])
+                )
+                cur.execute("SELECT nombre, departamentos, responsable FROM projects_v")
+                self.assertEqual(cur.fetchall(), [("Feria", ["eventos"], "ana@x.es")])
+                cur.execute("SELECT title, status, due_time, project_id FROM tasks")
+                self.assertEqual(cur.fetchall(), [("Cartel", "en_progreso", "10:00", proyecto)])
+                cur.execute("SELECT first_name, preferred_departments FROM members")
+                self.assertEqual(cur.fetchall(), [("Ana", ["eventos", "marketing", "ingenieria"])])
+                cur.execute("SELECT entity_type, entity_id, member_id FROM history")
+                self.assertEqual(cur.fetchall(), [("tarea", tarea, ana)])
+
+
 class RelacionesPorIdTestCase(unittest.TestCase):
     def setUp(self):
         db.migrar()
         conn = equipo_service._get_connection()
         with conn.cursor() as cur:
             cur.execute("DELETE FROM tasks")
-            cur.execute("DELETE FROM campaigns")
-            cur.execute("DELETE FROM notas")
-            cur.execute("DELETE FROM equipo_accesos")
+            cur.execute("DELETE FROM projects")
+            cur.execute("DELETE FROM notes")
+            cur.execute("DELETE FROM members")
             for email in ("vp@example.com", "ana@example.com"):
                 cur.execute(
-                    "INSERT INTO equipo_accesos (email, password_hash, equipos, vp_de, es_admin)"
+                    "INSERT INTO members (email, password_hash, preferred_departments, vp_of, is_admin)"
                     " VALUES (%s, %s, '{marketing,eventos}', '{marketing}', %s)",
                     (email, generate_password_hash("test-equipo"), email == "vp@example.com"),
                 )

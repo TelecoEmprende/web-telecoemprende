@@ -26,7 +26,7 @@ class EquipoRegistroTestCase(unittest.TestCase):
 
         conn = equipo_service._get_connection()
         with conn.cursor() as cur:
-            cur.execute("DELETE FROM equipo_accesos")
+            cur.execute("DELETE FROM members")
         conn.commit()
         conn.close()
 

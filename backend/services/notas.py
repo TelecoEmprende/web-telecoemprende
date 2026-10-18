@@ -15,26 +15,36 @@ from psycopg2.extras import Json, RealDictCursor
 from backend.config import DATABASE_URL
 from backend.services import historial
 
-NOTA_COLUMNAS = ("titulo", "contenido", "departamento", "privada", "fijada", "proyecto_id")
+# Campo de la API (y de la vista `notes_v`) -> columna de la tabla `notes`.
+NOTA_COLUMNAS = {
+    "titulo": "title", "contenido": "content", "departamento": "department",
+    "privada": "is_private", "fijada": "pinned", "proyecto_id": "project_id",
+}
 
 
 def _get_connection():
     return psycopg2.connect(DATABASE_URL)
 
 
-# La autoría es la cuenta (`creado_por_id`, `editado_por_id`); las consultas
+# La autoría es la cuenta (`created_by_id`, `edited_by_id`); las consultas
 # reciben el email de la sesión y lo traducen aquí mismo.
-_YO = "(SELECT id FROM equipo_accesos WHERE email = %s)"
+_YO = "(SELECT id FROM members WHERE email = %s)"
 
 
 def _visible(yo: str, teams: list[str]) -> tuple[str, list]:
     """Lo privado, solo para su autor; lo demás, si es del club o de uno de
-    tus departamentos."""
+    tus departamentos. Sobre la tabla `notes`; para leer de la vista, ver
+    `_visible_en_vista`."""
     return (
-        f" AND ((privada AND creado_por_id = {_YO})"
-        " OR (NOT privada AND (departamento = '' OR departamento = ANY(%s))))",
+        f" AND ((is_private AND created_by_id = {_YO})"
+        " OR (NOT is_private AND (department = '' OR department = ANY(%s))))",
         [yo, list(teams)],
     )
+
+
+def _visible_en_vista(yo: str, teams: list[str]) -> tuple[str, list]:
+    donde, valores = _visible(yo, teams)
+    return f" AND id IN (SELECT id FROM notes WHERE TRUE{donde})", valores
 
 
 def _serializar(fila: dict) -> dict:
@@ -100,11 +110,11 @@ def _con_resumen(fila: dict) -> dict:
 # --------------------------------------------------------------------------
 
 def listar_notas(yo: str, teams: list[str]) -> list[dict]:
-    donde, valores = _visible(yo, teams)
+    donde, valores = _visible_en_vista(yo, teams)
     with _get_connection() as conn:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute(
-                f"SELECT * FROM notas_v WHERE TRUE{donde}"
+                f"SELECT * FROM notes_v WHERE TRUE{donde}"
                 " ORDER BY fijada DESC, updated_at DESC, id DESC",
                 valores,
             )
@@ -112,10 +122,10 @@ def listar_notas(yo: str, teams: list[str]) -> list[dict]:
 
 
 def obtener_nota(nota_id: int, yo: str, teams: list[str]) -> dict | None:
-    donde, valores = _visible(yo, teams)
+    donde, valores = _visible_en_vista(yo, teams)
     with _get_connection() as conn:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute(f"SELECT * FROM notas_v WHERE id = %s{donde}", [nota_id, *valores])
+            cur.execute(f"SELECT * FROM notes_v WHERE id = %s{donde}", [nota_id, *valores])
             fila = cur.fetchone()
     return _serializar(fila) if fila else None
 
@@ -129,14 +139,15 @@ def crear_nota(campos: dict, yo: str) -> dict:
     columnas = [c for c in NOTA_COLUMNAS if c in campos]
     valores = [campos[c] for c in columnas] + [yo, yo]
     marcadores = ["%s"] * len(columnas) + [_YO, _YO]
+    columnas = [NOTA_COLUMNAS[c] for c in columnas]
     with _get_connection() as conn:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute(
-                f"INSERT INTO notas ({', '.join(columnas + ['creado_por_id', 'editado_por_id'])})"
+                f"INSERT INTO notes ({', '.join(columnas + ['created_by_id', 'edited_by_id'])})"
                 f" VALUES ({', '.join(marcadores)}) RETURNING id",
                 valores,
             )
-            cur.execute("SELECT * FROM notas_v WHERE id = %s", (cur.fetchone()["id"],))
+            cur.execute("SELECT * FROM notes_v WHERE id = %s", (cur.fetchone()["id"],))
             fila = cur.fetchone()
             historial.registrar(
                 cur, "nota", fila["id"], "crear", fila["titulo"], yo, fila["proyecto_id"]
@@ -152,16 +163,17 @@ def _plano_contenido(contenido) -> str:
 def actualizar_nota(nota_id: int, campos: dict, yo: str, teams: list[str]) -> bool:
     nuevo = dict(campos)
     campos = _adaptar(campos)
-    asignaciones = [f"{c} = %s" for c in NOTA_COLUMNAS if c in campos]
+    asignaciones = [f"{columna} = %s" for c, columna in NOTA_COLUMNAS.items() if c in campos]
     valores = [campos[c] for c in NOTA_COLUMNAS if c in campos]
     if not asignaciones:
         return False
-    asignaciones += [f"editado_por_id = {_YO}", "updated_at = NOW()"]
+    asignaciones += [f"edited_by_id = {_YO}", "updated_at = NOW()"]
     valores.append(yo)
     donde, valores_visible = _visible(yo, teams)
     with _get_connection() as conn:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute(f"SELECT * FROM notas_v WHERE id = %s{donde}", [nota_id, *valores_visible])
+            en_vista, _ = _visible_en_vista(yo, teams)
+            cur.execute(f"SELECT * FROM notes_v WHERE id = %s{en_vista}", [nota_id, *valores_visible])
             antes = cur.fetchone()
             if antes is None:
                 return False
@@ -169,12 +181,12 @@ def actualizar_nota(nota_id: int, campos: dict, yo: str, teams: list[str]) -> bo
             # podría esconderle al resto una nota compartida. Cambiar solo el
             # ámbito (el selector reenvía `privada` tal cual) sí vale para todos.
             if "privada" in campos and bool(campos["privada"]) != antes["privada"]:
-                cur.execute("SELECT id FROM equipo_accesos WHERE email = %s", (yo,))
+                cur.execute("SELECT id FROM members WHERE email = %s", (yo,))
                 yo_id = cur.fetchone()
                 if yo_id is None or yo_id["id"] != antes["creado_por_id"]:
                     return False
             cur.execute(
-                f"UPDATE notas SET {', '.join(asignaciones)} WHERE id = %s{donde}",
+                f"UPDATE notes SET {', '.join(asignaciones)} WHERE id = %s{donde}",
                 [*valores, nota_id, *valores_visible],
             )
             actualizado = cur.rowcount > 0
@@ -213,7 +225,7 @@ def proyecto_existe(proyecto_id: int) -> bool:
     with _get_connection() as conn:
         with conn.cursor() as cur:
             cur.execute(
-                "SELECT 1 FROM campaigns WHERE id = %s AND deleted_at IS NULL", (proyecto_id,)
+                "SELECT 1 FROM projects WHERE id = %s AND deleted_at IS NULL", (proyecto_id,)
             )
             return cur.fetchone() is not None
 
