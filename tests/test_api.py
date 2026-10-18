@@ -649,67 +649,6 @@ class ApiTestCase(unittest.TestCase):
         titulos = [e["titulo"] for e in response.get_json()["eventos"]]
         self.assertIn("Charla", titulos)
 
-    def test_confirmar_evento_se_apunta_y_se_puede_quitar(self):
-        self.login()
-        evento_id = self.client.post(
-            "/api/admin/calendario",
-            json={"titulo": "Demo Day", "descripcion": "", "fecha": "2026-10-24", "hora": "17:00"},
-        ).get_json()["evento"]["id"]
-        self.client.post("/api/admin/logout")
-
-        self.seed_equipo(email="voy@example.com")
-        self.equipo_login(email="voy@example.com")
-
-        confirmar = self.client.post(f"/api/equipo/calendario/{evento_id}/confirmar", json={})
-        self.assertEqual(confirmar.status_code, 200)
-        eventos = self.client.get("/api/equipo/calendario").get_json()["eventos"]
-        evento = next(e for e in eventos if e["id"] == evento_id)
-        self.assertEqual(evento["confirmados"], ["voy@example.com"])
-
-        quitar = self.client.post(
-            f"/api/equipo/calendario/{evento_id}/confirmar", json={"confirmar": False}
-        )
-        self.assertEqual(quitar.status_code, 200)
-        eventos = self.client.get("/api/equipo/calendario").get_json()["eventos"]
-        evento = next(e for e in eventos if e["id"] == evento_id)
-        self.assertEqual(evento["confirmados"], [])
-
-    def test_checkin_requiere_ser_vp_o_admin(self):
-        self.login()
-        evento_id = self.client.post(
-            "/api/admin/calendario",
-            json={"titulo": "Demo Day", "descripcion": "", "fecha": "2026-10-24", "hora": "17:00"},
-        ).get_json()["evento"]["id"]
-        self.client.post("/api/admin/logout")
-
-        self.seed_equipo(email="raso@example.com", vp_de=[])
-        self.equipo_login(email="raso@example.com")
-
-        respuesta = self.client.post(
-            f"/api/equipo/calendario/{evento_id}/checkin", json={"email": "raso@example.com"}
-        )
-        self.assertEqual(respuesta.status_code, 401)
-
-    def test_vp_hace_checkin_y_alimenta_asistencia(self):
-        self.login()
-        evento_id = self.client.post(
-            "/api/admin/calendario",
-            json={"titulo": "Demo Day", "descripcion": "", "fecha": "2026-10-24", "hora": "17:00"},
-        ).get_json()["evento"]["id"]
-        self.client.post("/api/admin/logout")
-
-        self.seed_equipo(email="vp@example.com", vp_de=["marketing"])
-        self.seed_equipo(email="asistio@example.com")
-        self.equipo_login(email="vp@example.com")
-
-        checkin = self.client.post(
-            f"/api/equipo/calendario/{evento_id}/checkin", json={"email": "asistio@example.com"}
-        )
-        self.assertEqual(checkin.status_code, 200)
-        eventos = self.client.get("/api/equipo/calendario").get_json()["eventos"]
-        evento = next(e for e in eventos if e["id"] == evento_id)
-        self.assertEqual(evento["asistio"], ["asistio@example.com"])
-
     def test_mis_proyectos_requiere_sesion(self):
         self.assertEqual(self.client.get("/api/equipo/mis-proyectos").status_code, 401)
 

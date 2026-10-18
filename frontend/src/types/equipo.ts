@@ -115,11 +115,6 @@ export type EventoCalendario = {
   descripcion: string;
   fecha: string; // YYYY-MM-DD
   hora: string; // HH:MM o ""
-  /** Emails que dijeron "voy". */
-  confirmados: string[];
-  /** Emails con check-in real el día del evento -- alimenta la métrica de
-   *  asistencia, a diferencia de `confirmados` (solo intención previa). */
-  asistio: string[];
 };
 
 /** Un evento del calendario público de Luma (ver `services/luma.py`). */

@@ -755,9 +755,9 @@ def calendario_equipo(desde: date, hasta: date, departamentos: list[str]) -> lis
                            e.fecha AS fecha, '' AS estado,
                            NULL::integer AS campaign_id, e.descripcion AS detalle,
                            NULL AS prioridad, NULL AS padre,
-                           e.confirmados AS responsables, NULLIF(e.hora, '') AS hora,
+                           ARRAY[]::text[] AS responsables, NULLIF(e.hora, '') AS hora,
                            NULL::varchar AS departamento
-                    FROM calendario_eventos_v e
+                    FROM calendario_eventos e
                     WHERE e.fecha BETWEEN %(desde)s AND %(hasta)s
                 ) x
                 ORDER BY fecha,
@@ -1187,22 +1187,6 @@ def metricas_club(dias_periodo: int = 30) -> dict:
     hoy = date.today()
     desde_periodo = hoy - timedelta(days=dias_periodo)
 
-    # Asistencia media de los eventos del club ya celebrados en el periodo --
-    # sale del check-in real (`evento_asistentes`), no de quién dijo que iba
-    # a venir.
-    with _get_connection() as conn:
-        with conn.cursor() as cur:
-            cur.execute(
-                """
-                SELECT AVG(COALESCE(array_length(asistio, 1), 0))
-                FROM calendario_eventos_v
-                WHERE fecha BETWEEN %s AND %s
-                """,
-                (desde_periodo, hoy),
-            )
-            promedio = cur.fetchone()[0]
-    asistencia_media = round(float(promedio)) if promedio is not None else None
-
     with _get_connection() as conn:
         with conn.cursor() as cur:
             # Última actividad por persona, en cualquier departamento (no
@@ -1387,7 +1371,6 @@ def metricas_club(dias_periodo: int = 30) -> dict:
         "pct_a_tiempo_club": (
             round(100 * a_tiempo_club / con_deadline_club) if con_deadline_club else None
         ),
-        "asistencia_media": asistencia_media,
         "participacion_semanal": participacion_semanal,
         "por_departamento": por_departamento,
         "miembros": miembros,

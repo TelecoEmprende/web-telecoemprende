@@ -703,8 +703,8 @@ def listar_eventos_calendario() -> list[dict]:
         with conn.cursor() as cur:
             cur.execute(
                 """
-                SELECT id, titulo, descripcion, fecha, hora, confirmados, asistio
-                FROM calendario_eventos_v ORDER BY fecha, hora
+                SELECT id, titulo, descripcion, fecha, hora
+                FROM calendario_eventos ORDER BY fecha, hora
                 """
             )
             filas = cur.fetchall()
@@ -716,48 +716,9 @@ def listar_eventos_calendario() -> list[dict]:
             "descripcion": f[2],
             "fecha": f[3].isoformat(),
             "hora": f[4],
-            "confirmados": f[5],
-            "asistio": f[6],
         }
         for f in filas
     ]
-
-
-def confirmar_evento_calendario(evento_id: int, email: str, confirmar: bool) -> bool:
-    """"Voy" / "no voy" de la propia persona a un evento del club."""
-    return _marcar_en_evento("evento_confirmados", evento_id, email, confirmar)
-
-
-def marcar_asistio_evento(evento_id: int, email: str, asistio: bool) -> bool:
-    """Check-in real el día del evento -- lo marca quien gestiona la puerta
-    (VP/admin, ver `_puede_editar_calendario_club`), no la propia persona.
-    Alimenta `metricas_club` ("asistencia media"), a diferencia de
-    `evento_confirmados`, que es solo la intención previa."""
-    return _marcar_en_evento("evento_asistentes", evento_id, email, asistio)
-
-
-def _marcar_en_evento(tabla: str, evento_id: int, email: str, poner: bool) -> bool:
-    """Pone o quita a una persona de una lista de un evento. False si el
-    evento no existe."""
-    with _get_connection() as conn:
-        with conn.cursor() as cur:
-            cur.execute("SELECT 1 FROM calendario_eventos WHERE id = %s", (evento_id,))
-            if cur.fetchone() is None:
-                return False
-            (persona_id,) = ids_de_personas(cur, [email])
-            if poner:
-                cur.execute(
-                    f"INSERT INTO {tabla} (evento_id, persona_id) VALUES (%s, %s)"
-                    " ON CONFLICT DO NOTHING",
-                    (evento_id, persona_id),
-                )
-            else:
-                cur.execute(
-                    f"DELETE FROM {tabla} WHERE evento_id = %s AND persona_id = %s",
-                    (evento_id, persona_id),
-                )
-        conn.commit()
-    return True
 
 
 def crear_evento_calendario(titulo: str, descripcion: str, fecha: str, hora: str) -> dict:

@@ -35,7 +35,6 @@ from backend.services.equipo import (
     cambiar_password,
     canjear_token_recuperacion,
     crear_token_recuperacion,
-    confirmar_evento_calendario,
     crear_evento_calendario,
     datos_formulario,
     equipo_session_info,
@@ -48,7 +47,6 @@ from backend.services.equipo import (
     listar_miembros_web,
     login_equipo,
     logout_equipo,
-    marcar_asistio_evento,
     registrar_equipo_acceso,
 )
 from backend.services.marketing import (
@@ -303,42 +301,6 @@ def api_equipo_crear_calendario():
     )
     logger.info("equipo crea evento calendario id=%s", evento["id"])
     return jsonify(build_response(True, "Evento creado.", evento=evento)), 201
-
-
-@equipo_api.route("/calendario/<int:evento_id>/confirmar", methods=["POST"])
-def api_equipo_confirmar_evento(evento_id: int):
-    """"Voy" / "no voy" de la propia persona -- cualquiera con sesión de
-    equipo, sobre sí mismo (no hay `email` en el payload a propósito)."""
-    if not is_equipo_authenticated():
-        return jsonify(build_response(False, "No autorizado.")), 401
-
-    payload = request.get_json(silent=True) or {}
-    confirmar = bool(payload.get("confirmar", True))
-    email = session.get("equipo_email", "")
-
-    if not confirmar_evento_calendario(evento_id, email, confirmar):
-        return jsonify(build_response(False, "Evento no encontrado.")), 404
-    return jsonify(build_response(True, "Confirmación actualizada.")), 200
-
-
-@equipo_api.route("/calendario/<int:evento_id>/checkin", methods=["POST"])
-def api_equipo_checkin_evento(evento_id: int):
-    """Check-in el día del evento: lo marca quien gestiona la puerta (VP de
-    cualquier departamento, o admin), no la propia persona -- mismo criterio
-    que añadir un evento (`_puede_editar_calendario_club`)."""
-    if not _puede_editar_calendario_club():
-        return jsonify(build_response(False, "No autorizado.")), 401
-
-    payload = request.get_json(silent=True) or {}
-    email = limpiar_texto(str(payload.get("email", ""))).lower()
-    asistio = bool(payload.get("asistio", True))
-
-    if not email or "@" not in email:
-        return jsonify(build_response(False, "Introduce un email válido.")), 400
-
-    if not marcar_asistio_evento(evento_id, email, asistio):
-        return jsonify(build_response(False, "Evento no encontrado.")), 404
-    return jsonify(build_response(True, "Asistencia actualizada.")), 200
 
 
 @equipo_api.route("/calendario-equipo", methods=["GET"])

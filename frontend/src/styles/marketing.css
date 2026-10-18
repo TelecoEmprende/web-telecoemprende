@@ -602,142 +602,9 @@
 
 /* ---------- Calendario ---------- */
 
-/* "Capas": el filtro de departamento vive en una columna vertical junto a la
-   rejilla, no en chips horizontales encima -- así el filtro se lee como
-   parte fija del calendario en vez de una barra que aparece y desaparece. */
-.mkt-calendario-layout-react {
-  display: flex;
-  align-items: flex-start;
-  gap: 16px;
-  margin-top: 16px;
-}
-
-.mkt-capas-react {
-  flex: 0 0 156px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  padding: 14px;
-  border: 1px dashed var(--color-border);
-  border-radius: var(--radius-lg);
-  background: var(--color-surface);
-}
-
-/* Las capas se apilan pero no se estiran: son cajitas, no bandas de color
-   de lado a lado -- tres losas saturadas pesaban más que la propia rejilla. */
-.mkt-capas-lista-react {
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 5px;
-}
-
 .mkt-calendario-principal-react {
   flex: 1;
   min-width: 0;
-}
-
-.mkt-calendario-fila-inferior-react {
-  display: flex;
-  align-items: stretch;
-  gap: 16px;
-  margin-top: 16px;
-}
-
-/* La ficha de evento ya se abre en un modal, así que esta caja suele quedarse
-   sola en la fila: sin esto se quedaba encogida a 240px con el resto vacío. */
-.mkt-calendario-fila-inferior-react .mkt-sincronizacion-react:only-child {
-  flex: 1;
-}
-
-.mkt-sincronizacion-react {
-  flex: 0 0 240px;
-  padding: 16px;
-  border: 1px dashed var(--color-border);
-  border-radius: var(--radius-lg);
-  background: var(--color-surface);
-}
-
-.mkt-sincronizacion-lista-react {
-  margin: 10px 0 0;
-  padding: 0;
-  list-style: none;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  font-size: 0.82rem;
-  color: var(--color-text-muted);
-}
-
-@media (max-width: 720px) {
-  .mkt-calendario-layout-react,
-  .mkt-calendario-fila-inferior-react {
-    flex-direction: column;
-  }
-
-  .mkt-capas-react {
-    flex: 0 0 auto;
-    width: 100%;
-  }
-
-  .mkt-capas-lista-react {
-    flex-direction: row;
-    flex-wrap: wrap;
-  }
-
-  .mkt-capas-lista-react .mkt-btn-mini-react {
-    width: auto;
-  }
-
-  .mkt-sincronizacion-react {
-    flex: 0 0 auto;
-    width: 100%;
-  }
-}
-
-.mkt-calendario-react {
-  display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
-  gap: 6px;
-  margin-top: 12px;
-}
-
-.mkt-calendario-cabecera-react {
-  padding: 4px 2px;
-  text-align: left;
-  font-size: 0.62rem;
-  font-weight: 700;
-  letter-spacing: var(--tracking-label);
-  text-transform: uppercase;
-  color: rgba(var(--color-noche-rgb), 0.62);
-}
-
-/* Celda del boceto: trazo discontinuo fino, nada de relleno ni sombra --
-   la celda es una guía, lo que se lee son las cajitas de dentro. */
-.mkt-dia-react {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  min-height: 74px;
-  padding: 5px;
-  border: 1px dashed rgba(var(--color-noche-rgb), 0.14);
-  border-radius: var(--radius-md);
-  background: var(--color-surface);
-}
-
-.mkt-dia-vacio-react {
-  min-height: 74px;
-}
-
-.mkt-dia-hoy-react {
-  border-style: solid;
-  border-color: var(--color-impulso);
-}
-
-.mkt-dia-numero-react {
-  display: block;
-  font-size: 0.66rem;
-  font-weight: 700;
-  color: rgba(var(--color-noche-rgb), 0.62);
 }
 
 /* Los eventos de la rejilla son las mismas cajitas que el resto del
@@ -849,34 +716,6 @@
   min-width: 0;
 }
 
-.mkt-miembro-acciones-react {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  flex: 0 0 auto;
-}
-
-.mkt-icon-btn-react {
-  display: grid;
-  place-items: center;
-  width: 34px;
-  height: 34px;
-  flex-shrink: 0;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  background: var(--color-surface);
-  color: var(--color-slate);
-  text-decoration: none;
-  cursor: pointer;
-  transition: border-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
-}
-
-.mkt-icon-btn-react:hover,
-.mkt-icon-btn-react:focus-visible {
-  border-color: var(--color-impulso);
-  color: var(--color-impulso);
-}
-
 .mkt-miembro-datos-react {
   display: flex;
   flex-direction: column;
@@ -939,18 +778,6 @@
 .mkt-carga-alta-react {
   background: var(--color-error-bg);
   color: var(--color-error-text);
-}
-
-.mkt-filtros-react {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.mkt-filtros-react [aria-pressed="true"]:not(.crm-tag) {
-  background: var(--color-impulso);
-  border-color: var(--color-impulso);
-  color: #fff;
 }
 
 /* Los chips de departamento activos deben pintarse de SU color, no del
@@ -1428,12 +1255,6 @@
     scroll-snap-align: start;
   }
 
-  /* El calendario mensual no cabe en 7 columnas en un móvil: se deja
-     desplazable en horizontal en vez de aplastarlo hasta hacerlo ilegible. */
-  .mkt-calendario-react {
-    min-width: 560px;
-  }
-
   /* El scroll va en la columna que contiene la rejilla, no en el panel: al
      partir el calendario en "Capas" + contenido, el `:has()` del panel dejó
      de ser el ancestro que recorta y la rejilla empujaba el layout entero. */
@@ -1558,39 +1379,11 @@
    Calendario accionable
    ========================================================================== */
 
-/* El número del día es el sitio donde se pulsa para añadir algo. */
-.mkt-dia-numero-react {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-  margin-bottom: 4px;
-  padding: 2px 4px;
-  border: none;
-  border-radius: var(--radius-circle);
-  background: none;
-  color: var(--color-text-muted);
-  font-family: inherit;
-  font-size: 0.76rem;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.mkt-dia-numero-react:hover {
-  background: var(--color-background);
-  color: var(--color-noche);
-}
-
 .mkt-dia-mas-react {
   opacity: 0;
   font-size: 1rem;
   line-height: 1;
   color: var(--color-impulso);
-}
-
-.mkt-dia-react:hover .mkt-dia-mas-react,
-.mkt-dia-numero-react:focus-visible .mkt-dia-mas-react {
-  opacity: 1;
 }
 
 /* Los eventos son botones: llevan a su campaña. */
@@ -1622,14 +1415,6 @@ button.mkt-evento-react:active {
 .mkt-evento-alta-react {
   background: var(--color-error-bg);
   color: var(--color-error-text);
-}
-
-.mkt-dia-mas-eventos-react {
-  display: block;
-  padding: 2px 6px;
-  color: var(--color-text-muted);
-  font-size: 0.7rem;
-  font-weight: 700;
 }
 
 .mkt-dia-form-react {
@@ -1672,13 +1457,6 @@ button.mkt-evento-react:active {
     padding: 10px 14px;
     font-size: 0.82rem;
   }
-}
-
-/* Las celdas crecían con su contenido y rompían el ritmo de la fila. */
-.mkt-dia-react {
-  display: flex;
-  flex-direction: column;
-  min-height: 108px;
 }
 
 /* ---------- Vista semana: rejilla de horas ---------- */
@@ -2383,23 +2161,6 @@ button.mkt-evento-react {
 .reg-estado-caducado-react {
   background: var(--color-error-bg);
   color: var(--color-error-text);
-}
-
-.reg-fijado-react {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 0.72rem;
-  font-weight: 700;
-  padding: 2px 9px;
-  border-radius: 999px;
-  background: var(--color-impulso);
-  color: #fff;
-}
-
-.reg-fijado-react svg {
-  width: 12px;
-  height: 12px;
 }
 
 /* ---------- Presupuesto ---------- */
