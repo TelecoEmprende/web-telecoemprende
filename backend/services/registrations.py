@@ -6,8 +6,32 @@ from openpyxl import Workbook
 from backend.config import DATABASE_URL
 
 
+# Las inscripciones están cerradas: pasado un año, los datos de quien se apuntó
+# (email, teléfono, IP) ya no sirven para nada. Se quedan las que acabaron en
+# una cuenta del equipo (`equipo_accesos.registro_id`).
+DIAS_DE_INSCRIPCION = 365
+
+
 def _get_connection():
     return psycopg2.connect(DATABASE_URL)
+
+
+def purgar_inscripciones_antiguas() -> int:
+    """Borra las inscripciones de hace más de `DIAS_DE_INSCRIPCION` que no
+    están enlazadas a ninguna cuenta (cron diario). Devuelve cuántas."""
+    with _get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                DELETE FROM registrations r
+                WHERE r.created_at < NOW() - make_interval(days => %s)
+                  AND NOT EXISTS (SELECT 1 FROM equipo_accesos a WHERE a.registro_id = r.id)
+                """,
+                (DIAS_DE_INSCRIPCION,),
+            )
+            borradas = cur.rowcount
+        conn.commit()
+    return borradas
 
 
 def obtener_eventos() -> list[str]:

@@ -26,6 +26,9 @@ DESCARGAS = ("/api/admin/equipo/excel", "/api/admin/equipo/pdf", "/api/admin/dow
 EXCLUIDAS = ("/api/cron/", "/api/slack/")
 
 MAX_RUTA_LEN = 255
+# Un año de registro basta para reconstruir quién hizo qué; más es guardar IPs
+# y correos de gente que quizá ya ni está en el club.
+DIAS_DE_AUDITORIA = 365
 
 def _get_connection():
     return psycopg2.connect(DATABASE_URL)
@@ -65,3 +68,17 @@ def listar(q: str = "", limite: int = 200) -> list[dict]:
             )
             filas = cur.fetchall()
     return [{**f, "momento": f["momento"].isoformat()} for f in filas]
+
+
+def purgar_antigua() -> int:
+    """Borra lo que lleva más de `DIAS_DE_AUDITORIA` (cron diario). Devuelve
+    cuántas líneas se han ido."""
+    with _get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "DELETE FROM auditoria WHERE momento < NOW() - make_interval(days => %s)",
+                (DIAS_DE_AUDITORIA,),
+            )
+            borradas = cur.rowcount
+        conn.commit()
+    return borradas
