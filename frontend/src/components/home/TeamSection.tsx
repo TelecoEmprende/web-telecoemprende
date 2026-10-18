@@ -1,4 +1,5 @@
 import type { MiembroWeb } from "../../types/equipo";
+import { LogoLinkedin } from "../equipo/LogosMarca";
 import { useTranslation } from "../../i18n/translations";
 import { Aparece, TitularAnimado } from "./aparece";
 import { useMiembrosWeb } from "./useMiembrosWeb";
@@ -17,8 +18,9 @@ export function TeamSection() {
     return (
       <Aparece como="li" className="in-persona" key={`${nombre}-${i}`} retraso={(i % 4) * 0.07}>
         {miembro.linkedin ? (
-          <a href={miembro.linkedin} target="_blank" rel="noopener noreferrer" aria-label={`${t.team.linkedin} ${nombre}`}>
+          <a href={miembro.linkedin} target="_blank" rel="noopener noreferrer" aria-label={`${t.team.linkedin} ${nombre}`} className="in-persona-foto">
             <img src={miembro.foto} alt={`${t.team.photoAlt} ${nombre}`} loading="lazy" />
+            <LogoLinkedin className="in-persona-linkedin" />
           </a>
         ) : (
           <img src={miembro.foto} alt={`${t.team.photoAlt} ${nombre}`} loading="lazy" />
