@@ -7,36 +7,23 @@ y cualquiera puede restaurar lo que se borró. Vaciar la papelera a mano es
 solo de admin; a los 30 días se vacía sola (ver `api/cron.py`).
 """
 
-from functools import wraps
-
 from flask import Blueprint, jsonify, request
 
 from backend.api.marketing import DatosInvalidos
+from backend.api.sesion import requiere_sesion
 from backend.schemas import build_response
 from backend.services import historial
 from backend.services.admin import is_admin_authenticated
-from backend.services.equipo import equipo_session_info, is_equipo_authenticated
+from backend.services.equipo import equipo_session_info
 from backend.services.marketing import mesa_del_club
 
 club_api = Blueprint("club_api", __name__, url_prefix="/api/equipo")
 
 
-def requiere_sesion(func):
-    @wraps(func)
-    def envoltorio(*args, **kwargs):
-        if not is_equipo_authenticated():
-            return jsonify(build_response(False, "No autorizado.")), 401
-        try:
-            return func(equipo_session_info()["email"], *args, **kwargs)
-        except DatosInvalidos as error:
-            return jsonify(build_response(False, str(error))), 400
-
-    return envoltorio
-
-
 @club_api.route("/mesa", methods=["GET"])
 @requiere_sesion
-def api_mesa(yo):
+def api_mesa():
+    yo = equipo_session_info()["email"]
     return jsonify({
         "ok": True,
         "mesa": mesa_del_club(),
@@ -55,9 +42,10 @@ def _entero(valor: str | None) -> int | None:
 
 @club_api.route("/historial", methods=["GET"])
 @requiere_sesion
-def api_historial(yo):
+def api_historial():
     """`?entidad=tarea&id=7` (lo de una cosa), `?proyecto_id=3` (lo de un
     proyecto y todo lo que cuelga de él) o sin filtro (lo último del club)."""
+    yo = equipo_session_info()["email"]
     entidad = request.args.get("entidad")
     if entidad is not None and entidad not in historial.TABLAS:
         raise DatosInvalidos("Tipo no válido.")
@@ -73,7 +61,8 @@ def api_historial(yo):
 
 @club_api.route("/papelera", methods=["GET"])
 @requiere_sesion
-def api_papelera(yo):
+def api_papelera():
+    yo = equipo_session_info()["email"]
     return jsonify({
         "ok": True,
         "dias": historial.DIAS_EN_PAPELERA,
@@ -83,7 +72,8 @@ def api_papelera(yo):
 
 @club_api.route("/papelera/<entidad>/<int:fila_id>/restaurar", methods=["POST"])
 @requiere_sesion
-def api_restaurar(yo, entidad: str, fila_id: int):
+def api_restaurar(entidad: str, fila_id: int):
+    yo = equipo_session_info()["email"]
     if entidad not in historial.TABLAS:
         raise DatosInvalidos("Tipo no válido.")
     if not historial.restaurar(entidad, fila_id, yo):
@@ -93,7 +83,7 @@ def api_restaurar(yo, entidad: str, fila_id: int):
 
 @club_api.route("/papelera/<entidad>/<int:fila_id>", methods=["DELETE"])
 @requiere_sesion
-def api_vaciar(yo, entidad: str, fila_id: int):
+def api_vaciar(entidad: str, fila_id: int):
     """Borrado definitivo de una cosa: solo admin."""
     if not is_admin_authenticated():
         return jsonify(build_response(False, "Solo un admin puede borrar definitivamente.")), 403

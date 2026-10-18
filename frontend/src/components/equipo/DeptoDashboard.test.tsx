@@ -109,7 +109,6 @@ vi.mock("../../api/equipo", () => ({
   createEquipoCalendarioEvento: vi.fn(),
   getMisTareas: () => Promise.resolve({ ok: true, tareas: [] }),
   getMisProyectos: () => Promise.resolve({ ok: true, proyectos: [] }),
-  getDirectorioClub: () => Promise.resolve({ ok: true, miembros: [] }),
   getEventosLuma: () => Promise.resolve({ ok: true, calendario: "", eventos: [] }),
   getAccesos: () => Promise.resolve({ ok: true, luma: "", accesos: [] }),
   logoutEquipo: () => Promise.resolve({ ok: true }),

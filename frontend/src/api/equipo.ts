@@ -6,7 +6,6 @@ import type {
   EquipoSessionResponse,
   EventoCalendario,
   EventoLuma,
-  MiembroDirectorio,
   MiembroWeb,
   Team,
 } from "../types/equipo";
@@ -42,10 +41,6 @@ export function getEquipoSession() {
 /** Sección «Equipo» de la web pública; no necesita sesión. */
 export function getMiembrosWeb() {
   return apiRequest<{ ok: true; miembros: MiembroWeb[] }>("/api/equipo/miembros-web");
-}
-
-export function getDirectorioClub() {
-  return apiRequest<ApiResult & { miembros: MiembroDirectorio[] }>("/api/equipo/directorio");
 }
 
 export function getEquipoCalendario() {

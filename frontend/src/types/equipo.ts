@@ -64,14 +64,6 @@ export type EquipoSessionResponse = {
 /** Fila del directorio del club entero ("Quién es quién") -- solo lo básico,
  *  visible a cualquier miembro. Nada de notas ni datos personales (ver
  *  `EquipoAcceso`, la versión completa que solo ve admin). */
-export type MiembroDirectorio = {
-  email: string;
-  equipos: Team[];
-  vp_de: Team[];
-  cargo: Cargo;
-  nombre: string;
-};
-
 export type EquipoAcceso = {
   id: number;
   email: string;

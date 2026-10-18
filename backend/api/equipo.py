@@ -26,6 +26,7 @@ from backend.config import (
     MAX_RESPONSABLES,
     MAX_TEXTO_LARGO_LEN,
 )
+from backend.api.sesion import requiere_sesion
 from backend.schemas import build_response
 from backend.services.admin import is_admin_authenticated
 from backend.services import auditoria
@@ -41,7 +42,6 @@ from backend.services.equipo import (
     guardar_datos_formulario,
     actualizar_perfil,
     is_equipo_authenticated,
-    listar_directorio_club,
     listar_equipo_accesos,
     listar_eventos_calendario,
     listar_miembros_web,
@@ -236,16 +236,6 @@ def api_equipo_session():
     return jsonify({"ok": True, "authenticated": authenticated, **info}), 200
 
 
-@equipo_api.route("/directorio", methods=["GET"])
-def api_equipo_directorio():
-    """Quién es quién del club entero -- para el widget de "Mi semana".
-    Cualquiera con sesión de equipo, no solo board/VP: es un directorio, no
-    datos de rendimiento (eso es `/metricas`)."""
-    if not is_equipo_authenticated() and not is_admin_authenticated():
-        return jsonify(build_response(False, "No autorizado.")), 401
-    return jsonify({"ok": True, "miembros": listar_directorio_club()}), 200
-
-
 @equipo_api.route("/miembros-web", methods=["GET"])
 def api_equipo_miembros_web():
     """Sección «Equipo» de la web pública: sin sesión, solo lo que ya se ve en
@@ -255,27 +245,23 @@ def api_equipo_miembros_web():
 
 
 @equipo_api.route("/calendario", methods=["GET"])
+@requiere_sesion
 def api_equipo_calendario():
-    if not is_equipo_authenticated():
-        return jsonify(build_response(False, "No autorizado.")), 401
-
     return jsonify({"ok": True, "eventos": listar_eventos_calendario()}), 200
 
 
 @equipo_api.route("/luma", methods=["GET"])
+@requiere_sesion
 def api_equipo_luma():
     """Próximos eventos del calendario de Luma del club (ver services/luma.py)."""
-    if not is_equipo_authenticated():
-        return jsonify(build_response(False, "No autorizado.")), 401
     return jsonify({"ok": True, "calendario": LUMA_CALENDAR_URL, "eventos": eventos_luma()}), 200
 
 
 @equipo_api.route("/accesos", methods=["GET"])
+@requiere_sesion
 def api_equipo_accesos():
     """Enlaces del club para Herramientas: los servicios marcados como acceso
     para todo el club (ver `accesos_club`). Cualquiera con sesión de equipo."""
-    if not is_equipo_authenticated():
-        return jsonify(build_response(False, "No autorizado.")), 401
     from backend.services.registros import accesos_club
 
     return jsonify({"ok": True, "luma": LUMA_CALENDAR_URL, "accesos": accesos_club()}), 200
@@ -304,6 +290,7 @@ def api_equipo_crear_calendario():
 
 
 @equipo_api.route("/calendario-equipo", methods=["GET"])
+@requiere_sesion
 def api_equipo_calendario_cruzado():
     """Lectura cruzada: deadlines/publicaciones/reuniones de los
     departamentos pedidos (todos por defecto), para el calendario de
@@ -311,9 +298,6 @@ def api_equipo_calendario_cruzado():
     `CalendarPanel.tsx`). Cualquier sesión de /equipo puede leerlo -- no hace
     falta pertenecer al departamento cuyos datos se están mirando, es lectura,
     no edición."""
-    if not is_equipo_authenticated() and not is_admin_authenticated():
-        return jsonify(build_response(False, "No autorizado.")), 401
-
     # `calendario_equipo()` también hace JOIN contra `reuniones` (ver el mismo
     # comentario en `requiere_equipo`, backend/api/marketing.py).
 
@@ -345,35 +329,30 @@ def api_equipo_calendario_cruzado():
 
 
 @equipo_api.route("/mis-tareas", methods=["GET"])
+@requiere_sesion
 def api_equipo_mis_tareas():
     """Tareas abiertas de la persona logueada, de cualquier departamento --
     para el resumen personal de "Inicio". Vive aquí y no en marketing.py
     porque no está atada a un solo departamento (ver `mis_tareas`)."""
-    if not is_equipo_authenticated():
-        return jsonify(build_response(False, "No autorizado.")), 401
-
     email = session.get("equipo_email", "")
     return jsonify({"ok": True, "tareas": mis_tareas(email)}), 200
 
 
 @equipo_api.route("/mis-proyectos", methods=["GET"])
+@requiere_sesion
 def api_equipo_mis_proyectos():
     """Campañas (proyectos) de cualquier departamento donde la persona tiene
     una tarea, con su progreso -- mismo criterio cruzado que `/mis-tareas`."""
-    if not is_equipo_authenticated():
-        return jsonify(build_response(False, "No autorizado.")), 401
-
     email = session.get("equipo_email", "")
     return jsonify({"ok": True, "proyectos": mis_campanas(email)}), 200
 
 
 @equipo_api.route("/metricas", methods=["GET"])
+@requiere_sesion
 def api_equipo_metricas():
     """Salud del club entero para el board: mismo semáforo que la de cada
     departamento, cruzando los tres, más productividad por persona. Ver
     `metricas_club` -- gated a cargo/VP/admin."""
-    if not is_equipo_authenticated() and not is_admin_authenticated():
-        return jsonify(build_response(False, "No autorizado.")), 401
     if not es_cargo_vp_o_admin():
         return jsonify(build_response(False, "No autorizado.")), 403
 
@@ -393,12 +372,10 @@ _DOCUMENTO_RE = re.compile(rf"^[A-Z0-9]{{5,{MAX_DNI_LEN}}}$")
 
 
 @equipo_api.route("/perfil", methods=["GET"])
+@requiere_sesion
 def api_equipo_perfil():
     """El perfil de la propia persona. Solo el suyo: el email sale de la
     sesión, nunca del payload. El DNI no sale de aquí hacia nadie más."""
-    if not is_equipo_authenticated():
-        return jsonify(build_response(False, "No autorizado.")), 401
-
     email = session.get("equipo_email", "")
     datos = datos_formulario(email)
     if datos is None:
@@ -407,12 +384,10 @@ def api_equipo_perfil():
 
 
 @equipo_api.route("/perfil", methods=["PUT"])
+@requiere_sesion
 def api_equipo_guardar_perfil():
     """Cada cual corrige lo suyo: nombre, apellidos, documento, LinkedIn y
     foto. Cargo, departamentos, permisos y «Sale en la web» son de admin."""
-    if not is_equipo_authenticated():
-        return jsonify(build_response(False, "No autorizado.")), 401
-
     payload = request.get_json(silent=True) or {}
     nombre = limpiar_texto(str(payload.get("nombre", "")))
     apellidos = limpiar_texto(str(payload.get("apellidos", "")))
@@ -430,11 +405,8 @@ def api_equipo_guardar_perfil():
     if len(linkedin) > 600 or (linkedin and not linkedin.lower().startswith("https://")):
         return jsonify(build_response(False, "El LinkedIn tiene que ser un enlace https://.")), 400
 
-    try:
-        # Sin `foto` en el payload se conserva la que ya había.
-        foto = _foto(payload) if "foto" in payload else None
-    except DatosInvalidos as error:
-        return jsonify(build_response(False, str(error))), 400
+    # Sin `foto` en el payload se conserva la que ya había.
+    foto = _foto(payload) if "foto" in payload else None
 
     email = session.get("equipo_email", "")
     if not guardar_datos_formulario(email, nombre, apellidos, dni, linkedin, foto):
@@ -446,12 +418,10 @@ def api_equipo_guardar_perfil():
 
 
 @equipo_api.route("/password", methods=["PUT"])
+@requiere_sesion
 def api_equipo_cambiar_password():
     """Cambio de contraseña de la propia persona: pide la actual, así una
     sesión olvidada abierta no basta para quedarse con la cuenta."""
-    if not is_equipo_authenticated():
-        return jsonify(build_response(False, "No autorizado.")), 401
-
     payload = request.get_json(silent=True) or {}
     actual = str(payload.get("actual", ""))
     nueva = str(payload.get("nueva", ""))
@@ -473,10 +443,6 @@ def api_equipo_cambiar_password():
 # orden de preferencia (`equipos`) y su carga.
 
 
-def _hay_sesion() -> bool:
-    return is_equipo_authenticated() or is_admin_authenticated()
-
-
 def _acceso_activo(email: str) -> dict | None:
     return next(
         (a for a in listar_equipo_accesos() if a["email"] == email and a["activo"]), None
@@ -490,13 +456,11 @@ def _es_mi_ficha(email: str) -> bool:
 
 
 @equipo_api.route("/miembros", methods=["GET"])
+@requiere_sesion
 def api_equipo_miembros():
     """Directorio del club: quién está, en qué orden prefiere cada
     departamento, qué sabe hacer y cuánto lleva encima (en total y por
     departamento). Sin DNI ni nada personal: solo lo de trabajo."""
-    if not _hay_sesion():
-        return jsonify(build_response(False, "No autorizado.")), 401
-
     carga = carga_club()
     miembros = [
         {
@@ -520,12 +484,10 @@ def api_equipo_miembros():
 
 
 @equipo_api.route("/miembros/ficha", methods=["GET"])
+@requiere_sesion
 def api_equipo_ficha_miembro():
     """El email va en query y no en la ruta: lleva `@` y puntos, y meterlo en el
     path obliga a escaparlo en los dos lados para no ganar nada."""
-    if not _hay_sesion():
-        return jsonify(build_response(False, "No autorizado.")), 401
-
     email = request.args.get("email", "").strip().lower()
     acceso = _acceso_activo(email)
     if acceso is None:
@@ -554,35 +516,30 @@ def api_equipo_ficha_miembro():
 
 
 @equipo_api.route("/miembros/ficha", methods=["PUT"])
+@requiere_sesion
 def api_equipo_actualizar_ficha_miembro():
     """Habilidades y nota de equipo (las edita cualquiera, para repartir mejor)
     y la foto (solo la tuya). Departamentos, cargo y permisos siguen siendo
     cosa de Cuentas."""
-    if not _hay_sesion():
-        return jsonify(build_response(False, "No autorizado.")), 401
+    datos = _payload()
+    email = _texto(datos, "email", obligatorio=True).lower()
+    if _acceso_activo(email) is None:
+        return jsonify(build_response(False, "Miembro no encontrado.")), 404
 
-    try:
-        datos = _payload()
-        email = _texto(datos, "email", obligatorio=True).lower()
-        if _acceso_activo(email) is None:
-            return jsonify(build_response(False, "Miembro no encontrado.")), 404
+    tags = _lista_textos(datos, "tags", MAX_RESPONSABLES) if "tags" in datos else None
+    notas = (
+        _texto(datos, "notas", maximo=MAX_TEXTO_LARGO_LEN, multilinea=True)
+        if "notas" in datos
+        else None
+    )
+    foto = None
+    if "foto" in datos:
+        if not _es_mi_ficha(email):
+            return jsonify(build_response(False, "Solo puedes cambiar tu propia foto.")), 403
+        foto = _foto(datos)
 
-        tags = _lista_textos(datos, "tags", MAX_RESPONSABLES) if "tags" in datos else None
-        notas = (
-            _texto(datos, "notas", maximo=MAX_TEXTO_LARGO_LEN, multilinea=True)
-            if "notas" in datos
-            else None
-        )
-        foto = None
-        if "foto" in datos:
-            if not _es_mi_ficha(email):
-                return jsonify(build_response(False, "Solo puedes cambiar tu propia foto.")), 403
-            foto = _foto(datos)
-
-        if tags is None and notas is None and foto is None:
-            raise DatosInvalidos("No hay nada que actualizar.")
-    except DatosInvalidos as error:
-        return jsonify(build_response(False, str(error))), 400
+    if tags is None and notas is None and foto is None:
+        raise DatosInvalidos("No hay nada que actualizar.")
 
     actualizar_perfil(email, tags=tags, notas=notas, foto=foto)
     return jsonify(build_response(True, "Ficha actualizada.")), 200

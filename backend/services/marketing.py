@@ -18,7 +18,7 @@ from psycopg2.extras import RealDictCursor
 
 from backend.config import DATABASE_URL
 from backend.services import historial
-from backend.services.db import DatosInvalidos, PERSONAS, fijar_personas, id_de_persona, ids_de_personas
+from backend.services.db import PERSONAS, fijar_personas, id_de_persona, ids_de_personas
 
 
 def _get_connection():

@@ -10,7 +10,6 @@ from openpyxl import Workbook
 from openpyxl.drawing.image import Image as XLImage
 from werkzeug.security import check_password_hash, generate_password_hash
 
-from backend.services.db import ids_de_personas
 from backend.config import (
     CARGOS_VALIDOS,
     DATABASE_URL,
@@ -36,30 +35,6 @@ def _get_connection():
 _INSCRIPCION = (
     "(SELECT id FROM registrations WHERE lower(email) = %s ORDER BY created_at DESC LIMIT 1)"
 )
-
-
-def listar_directorio_club() -> list[dict]:
-    """Quién es quién del club entero, para el widget de "Mi semana" -- solo
-    lo básico (nombre, equipos, cargo). Nada de notas ni datos personales
-    (ver `listar_equipo_accesos`, la versión completa de admin).
-    """
-    with _get_connection() as conn:
-        with conn.cursor() as cur:
-            cur.execute(
-                """
-                SELECT email, equipos, vp_de, cargo, nombre
-                FROM equipo_accesos WHERE activo = TRUE ORDER BY nombre, email
-                """
-            )
-            filas = cur.fetchall()
-
-    return [
-        {
-            "email": f[0], "equipos": completar_equipos(f[1]), "vp_de": f[2], "cargo": f[3],
-            "nombre": f[4],
-        }
-        for f in filas
-    ]
 
 
 def ordenar_equipos(equipos: list[str]) -> list[str]:
