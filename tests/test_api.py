@@ -1,3 +1,4 @@
+import base64
 import os
 import unittest
 
@@ -31,15 +32,15 @@ class ApiTestCase(unittest.TestCase):
         conn = registration_service._get_connection()
         with conn.cursor() as cur:
             cur.execute("DELETE FROM registrations")
-            cur.execute("DELETE FROM equipo_accesos")
-            cur.execute("DELETE FROM calendario_eventos")
+            cur.execute("DELETE FROM members")
+            cur.execute("DELETE FROM club_events")
             # `tasks` arrastra `contents`/`campaigns` por cascada: sin esto,
             # una tarea creada por un test de /api/marketing/tasks o
             # /api/equipo/mis-tareas (metricas, mis-tareas...) sobrevive al
             # siguiente test de esta clase -- no hay transacción por test.
             cur.execute("DELETE FROM tasks")
-            cur.execute("DELETE FROM contents")
-            cur.execute("DELETE FROM campaigns")
+            cur.execute("DELETE FROM deliverables")
+            cur.execute("DELETE FROM projects")
         conn.commit()
         conn.close()
 
@@ -64,7 +65,7 @@ class ApiTestCase(unittest.TestCase):
         with conn.cursor() as cur:
             cur.execute(
                 """
-                INSERT INTO equipo_accesos (email, password_hash, equipos, activo, vp_de, cargo)
+                INSERT INTO members (email, password_hash, preferred_departments, active, vp_of, role)
                 VALUES (%s, %s, %s, %s, %s, %s)
                 """,
                 (
@@ -90,8 +91,8 @@ class ApiTestCase(unittest.TestCase):
             cur.execute(
                 """
                 INSERT INTO registrations
-                    (nombre, apellidos, escuela, nivel, estudios, email, telefono,
-                     departamento, drive_link, privacidad_aceptada, ip_registro, evento)
+                    (first_name, last_name, school, level, studies, email, phone,
+                     department, drive_link, privacy_accepted, ip_address, event)
                 VALUES (%s, 'Perez', 'ETSIT', 'Grado', 'Grado - Test', %s, '600123456',
                         'Tech/Ingeniería', 'https://drive.google.com/file/d/test', 'Sí',
                         '127.0.0.1', 'telecoemprende-2026-27')
@@ -400,7 +401,7 @@ class ApiTestCase(unittest.TestCase):
         self.seed_equipo(email="admin@example.com", equipos=["marketing", "eventos"])
         conn = registration_service._get_connection()
         with conn.cursor() as cur:
-            cur.execute("UPDATE equipo_accesos SET es_admin = TRUE WHERE email = 'admin@example.com'")
+            cur.execute("UPDATE members SET is_admin = TRUE WHERE email = 'admin@example.com'")
         conn.commit()
         conn.close()
 
@@ -447,13 +448,15 @@ class ApiTestCase(unittest.TestCase):
         guardado = next(
             a for a in self.client.get("/api/admin/equipo").get_json()["accesos"] if a["id"] == acceso_id
         )
-        self.assertEqual(guardado["foto"], png)
+        self.assertEqual(
+            self.client.get(guardado["foto"]).data, base64.b64decode(png.split(",")[1])
+        )
 
     def test_admin_cannot_remove_own_admin(self):
         self.seed_equipo(email="yo@example.com", equipos=["marketing", "eventos"])
         conn = registration_service._get_connection()
         with conn.cursor() as cur:
-            cur.execute("UPDATE equipo_accesos SET es_admin = TRUE WHERE email = 'yo@example.com' RETURNING id")
+            cur.execute("UPDATE members SET is_admin = TRUE WHERE email = 'yo@example.com' RETURNING id")
             acceso_id = cur.fetchone()[0]
         conn.commit()
         conn.close()
@@ -557,8 +560,8 @@ class ApiTestCase(unittest.TestCase):
         conn = equipo_service._get_connection()
         with conn.cursor() as cur:
             cur.execute(
-                "INSERT INTO registrations (nombre, apellidos, estudios, email, drive_link,"
-                " privacidad_aceptada, ip_registro, evento, departamento)"
+                "INSERT INTO registrations (first_name, last_name, studies, email, drive_link,"
+                " privacy_accepted, ip_address, event, department)"
                 " VALUES ('Ana', 'García', 'GISD', 'ana@alumnos.upm.es', 'https://drive.google.com/x',"
                 " TRUE, '127.0.0.1', 'telecoemprende-2026-27', 'Marketing') RETURNING id"
             )
@@ -648,67 +651,6 @@ class ApiTestCase(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         titulos = [e["titulo"] for e in response.get_json()["eventos"]]
         self.assertIn("Charla", titulos)
-
-    def test_confirmar_evento_se_apunta_y_se_puede_quitar(self):
-        self.login()
-        evento_id = self.client.post(
-            "/api/admin/calendario",
-            json={"titulo": "Demo Day", "descripcion": "", "fecha": "2026-10-24", "hora": "17:00"},
-        ).get_json()["evento"]["id"]
-        self.client.post("/api/admin/logout")
-
-        self.seed_equipo(email="voy@example.com")
-        self.equipo_login(email="voy@example.com")
-
-        confirmar = self.client.post(f"/api/equipo/calendario/{evento_id}/confirmar", json={})
-        self.assertEqual(confirmar.status_code, 200)
-        eventos = self.client.get("/api/equipo/calendario").get_json()["eventos"]
-        evento = next(e for e in eventos if e["id"] == evento_id)
-        self.assertEqual(evento["confirmados"], ["voy@example.com"])
-
-        quitar = self.client.post(
-            f"/api/equipo/calendario/{evento_id}/confirmar", json={"confirmar": False}
-        )
-        self.assertEqual(quitar.status_code, 200)
-        eventos = self.client.get("/api/equipo/calendario").get_json()["eventos"]
-        evento = next(e for e in eventos if e["id"] == evento_id)
-        self.assertEqual(evento["confirmados"], [])
-
-    def test_checkin_requiere_ser_vp_o_admin(self):
-        self.login()
-        evento_id = self.client.post(
-            "/api/admin/calendario",
-            json={"titulo": "Demo Day", "descripcion": "", "fecha": "2026-10-24", "hora": "17:00"},
-        ).get_json()["evento"]["id"]
-        self.client.post("/api/admin/logout")
-
-        self.seed_equipo(email="raso@example.com", vp_de=[])
-        self.equipo_login(email="raso@example.com")
-
-        respuesta = self.client.post(
-            f"/api/equipo/calendario/{evento_id}/checkin", json={"email": "raso@example.com"}
-        )
-        self.assertEqual(respuesta.status_code, 401)
-
-    def test_vp_hace_checkin_y_alimenta_asistencia(self):
-        self.login()
-        evento_id = self.client.post(
-            "/api/admin/calendario",
-            json={"titulo": "Demo Day", "descripcion": "", "fecha": "2026-10-24", "hora": "17:00"},
-        ).get_json()["evento"]["id"]
-        self.client.post("/api/admin/logout")
-
-        self.seed_equipo(email="vp@example.com", vp_de=["marketing"])
-        self.seed_equipo(email="asistio@example.com")
-        self.equipo_login(email="vp@example.com")
-
-        checkin = self.client.post(
-            f"/api/equipo/calendario/{evento_id}/checkin", json={"email": "asistio@example.com"}
-        )
-        self.assertEqual(checkin.status_code, 200)
-        eventos = self.client.get("/api/equipo/calendario").get_json()["eventos"]
-        evento = next(e for e in eventos if e["id"] == evento_id)
-        self.assertEqual(evento["asistio"], ["asistio@example.com"])
 
     def test_mis_proyectos_requiere_sesion(self):
         self.assertEqual(self.client.get("/api/equipo/mis-proyectos").status_code, 401)
@@ -828,22 +770,6 @@ class ApiTestCase(unittest.TestCase):
         self.assertEqual(balance["ingenieria"]["preferencias"], [0, 0, 1])
         self.assertEqual(balance["marketing"]["abiertas"], 1)
         self.assertEqual(balance["eventos"]["abiertas"], 0)
-
-    def test_directorio_requiere_sesion(self):
-        self.assertEqual(self.client.get("/api/equipo/directorio").status_code, 401)
-
-    def test_directorio_lo_ve_cualquier_miembro_y_omite_privados(self):
-        """"Quién es quién" no es board/VP-only como /metricas: cualquiera con
-        sesión de equipo lo ve, y solo trae lo básico (nada de notas)."""
-        self.seed_equipo()
-        self.seed_equipo(email="otra@example.com", equipos=["eventos"], cargo="boardmember")
-        self.equipo_login()
-
-        respuesta = self.client.get("/api/equipo/directorio")
-        self.assertEqual(respuesta.status_code, 200)
-        miembros = respuesta.get_json()["miembros"]
-        self.assertEqual({m["email"] for m in miembros}, {"marketing@example.com", "otra@example.com"})
-        self.assertNotIn("notas", miembros[0])
 
     def test_admin_equipo_endpoints_require_auth(self):
         self.assertEqual(self.client.get("/api/admin/equipo").status_code, 401)

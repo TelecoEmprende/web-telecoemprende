@@ -1,19 +1,18 @@
 import logging
 import re
 
-from flask import Blueprint, jsonify, make_response, render_template_string, request, send_file, session
+from flask import Blueprint, jsonify, request, send_file, session
 
-from backend.api.marketing import DatosInvalidos, _foto
+from backend.api.marketing import _foto
+from backend.api.sesion import requiere_admin
 
 from backend.config import (
     CARGOS_VALIDOS,
     DEPARTAMENTOS_VALIDOS,
     ESTADOS_VALIDOS,
     EQUIPOS_VALIDOS,
-    LOGIN_BLOCK_WINDOW_SECONDS,
     MAX_DNI_LEN,
     MAX_EMAIL_LEN,
-    MAX_LOGIN_ATTEMPTS_PER_WINDOW,
     MAX_NOMBRE_EQUIPO_LEN,
     MIN_EQUIPOS_POR_PERSONA,
 )
@@ -45,12 +44,10 @@ from backend.services.registrations import (
     obtener_registros,
 )
 from backend.services.security import (
-    demasiadas_peticiones,
     drive_link_valido,
     email_upm_valido,
     limpiar_texto,
     longitud_valida,
-    obtener_ip_real,
     telefono_valido,
 )
 
@@ -58,166 +55,6 @@ logger = logging.getLogger("telecoemprende.admin")
 
 
 admin_api = Blueprint("admin_api", __name__, url_prefix="/api/admin")
-
-
-def prefers_html_response() -> bool:
-    best = request.accept_mimetypes.best_match(["text/html", "application/json"])
-    return best == "text/html" and (
-        request.accept_mimetypes["text/html"]
-        >= request.accept_mimetypes["application/json"]
-    )
-
-
-def access_denied_response(message: str, status_code: int = 401):
-    if not prefers_html_response():
-        return jsonify(build_response(False, message)), status_code
-
-    html = render_template_string(
-        """
-        <!doctype html>
-        <html lang="es">
-          <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Acceso denegado | TelecoEmprende</title>
-            <style>
-              :root {
-                --primary: #0f5cc0;
-                --danger: #b42318;
-                --danger-soft: #fde8ea;
-                --text: #0f172a;
-                --muted: #5f6c80;
-                --border: #dce3ee;
-                --surface: rgba(255, 255, 255, 0.88);
-              }
-
-              * { box-sizing: border-box; }
-
-              body {
-                margin: 0;
-                min-height: 100vh;
-                display: grid;
-                place-items: center;
-                padding: 24px;
-                font-family: Inter, sans-serif;
-                color: var(--text);
-                background:
-                  radial-gradient(circle at top left, rgba(15, 92, 192, 0.08), transparent 28%),
-                  radial-gradient(circle at top right, rgba(243, 198, 165, 0.12), transparent 24%),
-                  linear-gradient(180deg, #f7f9fc 0%, #eef3f9 100%);
-              }
-
-              .card {
-                width: min(100%, 760px);
-                background: var(--surface);
-                border: 1px solid var(--border);
-                border-radius: 32px;
-                padding: 36px 32px;
-                box-shadow: 0 20px 50px rgba(15, 23, 42, 0.08);
-                backdrop-filter: blur(8px);
-              }
-
-              .badge {
-                display: inline-flex;
-                align-items: center;
-                gap: 8px;
-                padding: 10px 14px;
-                border-radius: 999px;
-                background: var(--danger-soft);
-                color: var(--danger);
-                font-size: 0.82rem;
-                font-weight: 800;
-                letter-spacing: 0.06em;
-                text-transform: uppercase;
-              }
-
-              h1 {
-                margin: 18px 0 12px;
-                font-size: clamp(2rem, 4vw, 3.2rem);
-                line-height: 0.98;
-                letter-spacing: -0.05em;
-              }
-
-              p {
-                margin: 0 0 14px;
-                color: var(--muted);
-                line-height: 1.7;
-                max-width: 58ch;
-              }
-
-              .message {
-                margin-top: 22px;
-                padding: 16px 18px;
-                border-radius: 18px;
-                background: #fff;
-                border: 1px solid #f0d5d8;
-                color: var(--text);
-                font-weight: 700;
-              }
-
-              .actions {
-                display: flex;
-                flex-wrap: wrap;
-                gap: 14px;
-                margin-top: 26px;
-              }
-
-              .primary,
-              .secondary {
-                display: inline-flex;
-                align-items: center;
-                justify-content: center;
-                min-height: 52px;
-                padding: 0 18px;
-                border-radius: 16px;
-                text-decoration: none;
-                font-weight: 800;
-              }
-
-              .primary {
-                background: linear-gradient(135deg, var(--primary), #0b67d4);
-                color: #fff;
-                box-shadow: 0 20px 50px rgba(15, 92, 192, 0.12);
-              }
-
-              .secondary {
-                background: #fff;
-                color: var(--text);
-                border: 1px solid var(--border);
-              }
-
-              .eyebrow {
-                margin-top: 24px;
-                color: var(--muted);
-                font-size: 0.95rem;
-              }
-            </style>
-          </head>
-          <body>
-            <main class="card">
-              <div class="badge">Acceso denegado</div>
-              <h1>Esta ruta de administración no está disponible ahora mismo.</h1>
-              <p>
-                Has abierto un endpoint protegido de la API directamente en el navegador.
-                Esa URL solo responde si existe una sesión de administrador activa.
-              </p>
-              <div class="message">{{ message }}</div>
-              <div class="actions">
-                <a class="primary" href="/admin">Ir al panel admin</a>
-                <a class="secondary" href="/">Volver al inicio</a>
-              </div>
-              <p class="eyebrow">
-                Si acabas de cerrar sesión, vuelve a autenticarte desde el panel antes de consultar registros.
-              </p>
-            </main>
-          </body>
-        </html>
-        """,
-        message=message,
-    )
-    response = make_response(html, status_code)
-    response.headers["Content-Type"] = "text/html; charset=utf-8"
-    return response
 
 
 @admin_api.route("/logout", methods=["POST"])
@@ -235,10 +72,8 @@ def api_admin_session():
 
 
 @admin_api.route("/registrations", methods=["GET"])
+@requiere_admin
 def api_admin_registrations():
-    if not is_admin_authenticated():
-        return access_denied_response("No autorizado.", 401)
-
     evento = request.args.get("evento") or None
     registros = obtener_registros(evento)
     eventos = obtener_eventos()
@@ -251,10 +86,8 @@ def api_admin_registrations():
 
 
 @admin_api.route("/download", methods=["GET"])
+@requiere_admin
 def api_admin_download():
-    if not is_admin_authenticated():
-        return access_denied_response("No autorizado.", 401)
-
     evento = request.args.get("evento") or None
     filename = f"registros_{evento}.xlsx" if evento else "registros_todos.xlsx"
     return send_file(
@@ -266,10 +99,8 @@ def api_admin_download():
 
 
 @admin_api.route("/registrations/<int:reg_id>", methods=["PUT"])
+@requiere_admin
 def api_admin_update_registration(reg_id: int):
-    if not is_admin_authenticated():
-        return jsonify(build_response(False, "No autorizado.")), 401
-
     payload = request.get_json(silent=True) or {}
     nombre = limpiar_texto(str(payload.get("nombre", "")))
     apellidos = limpiar_texto(str(payload.get("apellidos", "")))
@@ -333,10 +164,8 @@ def api_admin_update_registration(reg_id: int):
 
 
 @admin_api.route("/registrations/<int:reg_id>/estado", methods=["PATCH"])
+@requiere_admin
 def api_admin_update_estado(reg_id: int):
-    if not is_admin_authenticated():
-        return jsonify(build_response(False, "No autorizado.")), 401
-
     payload = request.get_json(silent=True) or {}
     estado = str(payload.get("estado", ""))
 
@@ -352,13 +181,11 @@ def api_admin_update_estado(reg_id: int):
 
 
 @admin_api.route("/registrations/notificar", methods=["POST"])
+@requiere_admin
 def api_admin_notificar():
     """Envía (ahora, no antes) el email de estado a todos los registros del estado
     dado que aún no han sido notificados. Clasificar (PATCH .../estado) nunca envía
     solo por sí mismo: hace falta pulsar "Enviar notificaciones" en el panel."""
-    if not is_admin_authenticated():
-        return jsonify(build_response(False, "No autorizado.")), 401
-
     payload = request.get_json(silent=True) or {}
     estado = str(payload.get("estado", ""))
 
@@ -382,10 +209,8 @@ def api_admin_notificar():
 
 
 @admin_api.route("/registrations/<int:reg_id>", methods=["DELETE"])
+@requiere_admin
 def api_admin_delete_registration(reg_id: int):
-    if not is_admin_authenticated():
-        return jsonify(build_response(False, "No autorizado.")), 401
-
     if eliminar_registro(reg_id):
         logger.info("admin delete registration id=%s", reg_id)
         return jsonify(build_response(True, "Registro eliminado.")), 200
@@ -394,10 +219,8 @@ def api_admin_delete_registration(reg_id: int):
 
 
 @admin_api.route("/equipo", methods=["GET"])
+@requiere_admin
 def api_admin_listar_equipo():
-    if not is_admin_authenticated():
-        return jsonify(build_response(False, "No autorizado.")), 401
-
     return jsonify({"ok": True, "accesos": listar_equipo_accesos()}), 200
 
 
@@ -412,10 +235,8 @@ def _error_equipos(equipos: list) -> str | None:
 
 
 @admin_api.route("/equipo", methods=["POST"])
+@requiere_admin
 def api_admin_crear_equipo():
-    if not is_admin_authenticated():
-        return jsonify(build_response(False, "No autorizado.")), 401
-
     payload = request.get_json(silent=True) or {}
     email = limpiar_texto(str(payload.get("email", ""))).lower()
     password = str(payload.get("password", ""))
@@ -468,12 +289,10 @@ def api_admin_crear_equipo():
 
 
 @admin_api.route("/equipo/<int:acceso_id>/clave-provisional", methods=["POST"])
+@requiere_admin
 def api_admin_clave_provisional(acceso_id: int):
     """Para quien no puede recuperar la contraseña por correo: una provisional
     que se enseña una sola vez y que la persona cambia al entrar."""
-    if not is_admin_authenticated():
-        return jsonify(build_response(False, "No autorizado.")), 401
-
     provisional = poner_clave_provisional(acceso_id)
     if provisional is None:
         return jsonify(build_response(False, "Acceso no encontrado.")), 404
@@ -482,10 +301,8 @@ def api_admin_clave_provisional(acceso_id: int):
 
 
 @admin_api.route("/equipo/<int:acceso_id>", methods=["PUT"])
+@requiere_admin
 def api_admin_actualizar_equipo(acceso_id: int):
-    if not is_admin_authenticated():
-        return jsonify(build_response(False, "No autorizado.")), 401
-
     payload = request.get_json(silent=True) or {}
     equipos = payload.get("equipos")
     vp_de = payload.get("vp_de")
@@ -508,10 +325,7 @@ def api_admin_actualizar_equipo(acceso_id: int):
         linkedin = str(linkedin).strip()
         if len(linkedin) > 600 or (linkedin and not linkedin.lower().startswith("https://")):
             return jsonify(build_response(False, "El LinkedIn tiene que ser un enlace https://.")), 400
-    try:
-        foto = _foto(payload) if "foto" in payload else None
-    except DatosInvalidos as error:
-        return jsonify(build_response(False, str(error))), 400
+    foto = _foto(payload) if "foto" in payload else None
 
     # La combinación equipos/vp_de/cargo la valida el servicio contra la fila ya
     # guardada (aquí solo se ven los campos que llegan en la petición).
@@ -604,10 +418,8 @@ def api_admin_actualizar_equipo(acceso_id: int):
 
 
 @admin_api.route("/equipo/pdf", methods=["GET"])
+@requiere_admin
 def api_admin_equipo_pdf():
-    if not is_admin_authenticated():
-        return access_denied_response("No autorizado.", 401)
-
     return send_file(
         generar_pdf_equipo_en_memoria(),
         as_attachment=True,
@@ -617,10 +429,8 @@ def api_admin_equipo_pdf():
 
 
 @admin_api.route("/equipo/excel", methods=["GET"])
+@requiere_admin
 def api_admin_equipo_excel():
-    if not is_admin_authenticated():
-        return access_denied_response("No autorizado.", 401)
-
     return send_file(
         generar_excel_equipo_en_memoria(),
         as_attachment=True,
@@ -630,10 +440,8 @@ def api_admin_equipo_excel():
 
 
 @admin_api.route("/equipo/<int:acceso_id>", methods=["DELETE"])
+@requiere_admin
 def api_admin_eliminar_equipo(acceso_id: int):
-    if not is_admin_authenticated():
-        return jsonify(build_response(False, "No autorizado.")), 401
-
     if eliminar_equipo_acceso(acceso_id):
         logger.info("admin elimina acceso equipo id=%s", acceso_id)
         return jsonify(build_response(True, "Acceso eliminado.")), 200
@@ -642,11 +450,9 @@ def api_admin_eliminar_equipo(acceso_id: int):
 
 
 @admin_api.route("/auditoria", methods=["GET"])
+@requiere_admin
 def api_admin_auditoria():
     """Registro de auditoría (ver `services/auditoria.py`), lo último primero."""
-    if not is_admin_authenticated():
-        return jsonify(build_response(False, "No autorizado.")), 401
-
     q = limpiar_texto(str(request.args.get("q", "")))[:120]
     limite = min(max(request.args.get("limite", 200, type=int), 1), 1000)
     return jsonify({"ok": True, "registros": auditoria.listar(q, limite)}), 200
@@ -675,18 +481,14 @@ def _validar_evento_calendario(payload: dict) -> str | None:
 
 
 @admin_api.route("/calendario", methods=["GET"])
+@requiere_admin
 def api_admin_listar_calendario():
-    if not is_admin_authenticated():
-        return jsonify(build_response(False, "No autorizado.")), 401
-
     return jsonify({"ok": True, "eventos": listar_eventos_calendario()}), 200
 
 
 @admin_api.route("/calendario", methods=["POST"])
+@requiere_admin
 def api_admin_crear_calendario():
-    if not is_admin_authenticated():
-        return jsonify(build_response(False, "No autorizado.")), 401
-
     payload = request.get_json(silent=True) or {}
     error = _validar_evento_calendario(payload)
     if error:
@@ -703,10 +505,8 @@ def api_admin_crear_calendario():
 
 
 @admin_api.route("/calendario/<int:evento_id>", methods=["PUT"])
+@requiere_admin
 def api_admin_actualizar_calendario(evento_id: int):
-    if not is_admin_authenticated():
-        return jsonify(build_response(False, "No autorizado.")), 401
-
     payload = request.get_json(silent=True) or {}
     error = _validar_evento_calendario(payload)
     if error:
@@ -726,10 +526,8 @@ def api_admin_actualizar_calendario(evento_id: int):
 
 
 @admin_api.route("/calendario/<int:evento_id>", methods=["DELETE"])
+@requiere_admin
 def api_admin_eliminar_calendario(evento_id: int):
-    if not is_admin_authenticated():
-        return jsonify(build_response(False, "No autorizado.")), 401
-
     if eliminar_evento_calendario(evento_id):
         logger.info("admin elimina evento calendario id=%s", evento_id)
         return jsonify(build_response(True, "Evento eliminado.")), 200

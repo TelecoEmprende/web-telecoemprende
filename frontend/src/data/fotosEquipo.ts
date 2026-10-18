@@ -1,5 +1,5 @@
 /** Nombres con foto en `frontend/public/equipo-*.jpg`: la foto de quien aún
- *  no tiene una subida en su cuenta (`equipo_accesos.foto`). La lee el CRM
+ *  no tiene una subida en su cuenta (`members.photo`). La lee el CRM
  *  (`Avatares.tsx`, por email).
  *
  *  Cuando dos personas comparten nombre de pila la clave es `nombre-apellido`

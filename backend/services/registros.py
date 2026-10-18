@@ -31,18 +31,19 @@ def _get_connection():
 class Tabla:
     """Una entidad del workspace.
 
-    `columnas` son las que se pueden escribir desde la API: nunca se
-    interpolan valores de usuario en el SQL, solo estos nombres, que son
-    literales del código.
+    `columnas` son las que se pueden escribir desde la API, como campo de la
+    API -> columna de la tabla: nunca se interpolan valores de usuario en el
+    SQL, solo estos nombres, que son literales del código. Se lee de la vista
+    `<nombre>_v`, que habla como la API (por eso `orden` usa sus nombres).
     """
 
     nombre: str
-    columnas: tuple[str, ...]
+    columnas: dict[str, str]
     orden: str
     # Columnas JSONB: un `list` de Python se adaptaría a ARRAY, así que van
     # envueltas en `Json` al escribir.
     json: tuple[str, ...] = ()
-    # Además de las del departamento, enseña las del club (`departamento = ''`):
+    # Además de las del departamento, enseña las del club (`department = ''`):
     # la reunión semanal de todos no es de ningún departamento.
     incluye_club: bool = False
     # Borrar manda a la papelera (30 días, ver `services/historial.py`) en vez
@@ -51,14 +52,20 @@ class Tabla:
 
 
 PRESUPUESTO = Tabla(
-    nombre="presupuesto_lineas",
-    columnas=("concepto", "tipo", "importe", "estado", "fecha", "notas"),
+    nombre="budget_lines",
+    columnas={
+        "concepto": "item", "tipo": "kind", "importe": "amount", "estado": "status",
+        "fecha": "date", "notas": "notes",
+    },
     orden="COALESCE(fecha, created_at::date) DESC, id DESC",
 )
 
 REUNIONES = Tabla(
-    nombre="reuniones",
-    columnas=("titulo", "fecha", "hora", "objetivo", "asistentes", "contenido"),
+    nombre="meetings",
+    columnas={
+        "titulo": "title", "fecha": "date", "hora": "start_time", "objetivo": "goal",
+        "asistentes": "asistentes", "contenido": "content",
+    },
     orden="fecha DESC, hora DESC, id DESC",
     json=("contenido",),
     incluye_club=True,
@@ -66,11 +73,12 @@ REUNIONES = Tabla(
 )
 
 SERVICIOS = Tabla(
-    nombre="servicios",
-    columnas=(
-        "nombre", "tipo", "url", "responsables", "renovacion", "estado", "notas",
-        "visible_club",
-    ),
+    nombre="services",
+    columnas={
+        "nombre": "name", "tipo": "kind", "url": "url", "responsables": "responsables",
+        "renovacion": "renewal_date", "estado": "status", "notas": "notes",
+        "visible_club": "visible_to_club",
+    },
     orden="nombre",
 )
 
@@ -97,11 +105,13 @@ def _serializar(fila: dict) -> dict:
 def _alcance(tabla: Tabla, departamento: str | None, sobre_tabla: bool = True) -> tuple[str, list]:
     """Cláusula y parámetros que acotan una fila a su departamento. Sobre la
     tabla (escrituras) también deja fuera lo que está en la papelera; la vista
-    `_v` con la que se lee ya lo deja fuera."""
+    `_v` con la que se lee ya lo deja fuera, y su columna se llama como en la
+    API."""
     sin_borrar = " AND deleted_at IS NULL" if tabla.papelera and sobre_tabla else ""
+    columna = "department" if sobre_tabla else "departamento"
     if tabla.incluye_club:
-        return f" AND departamento IN (%s, ''){sin_borrar}", [departamento]
-    return f" AND departamento = %s{sin_borrar}", [departamento]
+        return f" AND {columna} IN (%s, ''){sin_borrar}", [departamento]
+    return f" AND {columna} = %s{sin_borrar}", [departamento]
 
 
 def _adaptar(tabla: Tabla, campos: dict) -> dict:
@@ -123,16 +133,17 @@ def listar(tabla: Tabla, departamento: str | None = None) -> list[dict]:
 def crear(tabla: Tabla, campos: dict, creado_por: str, departamento: str | None = None) -> dict:
     campo_personas = _campo_personas(tabla)
     campos = _adaptar(tabla, campos)
-    columnas = [c for c in tabla.columnas if c in campos and c != campo_personas]
-    valores = [campos[c] for c in columnas]
+    claves = [c for c in tabla.columnas if c in campos and c != campo_personas]
+    valores = [campos[c] for c in claves]
+    columnas = [tabla.columnas[c] for c in claves]
 
-    columnas.append("departamento")
+    columnas.append("department")
     valores.append(departamento)
 
     marcadores = ", ".join(["%s"] * len(columnas))
     with _get_connection() as conn:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            columnas.append("creado_por_id")
+            columnas.append("created_by_id")
             valores.append(id_de_persona(cur, creado_por))
             cur.execute(
                 f"INSERT INTO {tabla.nombre} ({', '.join(columnas)})"
@@ -164,9 +175,9 @@ def actualizar(
     campo_personas = _campo_personas(tabla)
     personas = campos.get(campo_personas) if campo_personas else None
     campos = _adaptar(tabla, campos)
-    columnas = [c for c in tabla.columnas if c in campos and c != campo_personas]
-    asignaciones = [f"{c} = %s" for c in columnas]
-    valores = [campos[c] for c in columnas]
+    claves = [c for c in tabla.columnas if c in campos and c != campo_personas]
+    asignaciones = [f"{tabla.columnas[c]} = %s" for c in claves]
+    valores = [campos[c] for c in claves]
     if not asignaciones and personas is None:
         return False
 
@@ -215,9 +226,9 @@ def accesos_club() -> list[dict]:
     with _get_connection() as conn:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute(
-                "SELECT id, nombre, tipo, url, notas FROM servicios"
-                " WHERE visible_club AND url <> '' AND estado <> 'baja'"
-                " ORDER BY nombre"
+                "SELECT id, name AS nombre, kind AS tipo, url, notes AS notas FROM services"
+                " WHERE visible_to_club AND url <> '' AND status <> 'baja'"
+                " ORDER BY name"
             )
             return [dict(f) for f in cur.fetchall()]
 
@@ -233,13 +244,13 @@ def resumen_presupuesto(departamento: str) -> dict:
             cur.execute(
                 """
                 SELECT
-                    COALESCE(SUM(importe) FILTER (WHERE tipo = 'gasto'), 0),
-                    COALESCE(SUM(importe) FILTER (WHERE tipo = 'ingreso'), 0),
-                    COALESCE(SUM(importe) FILTER (
-                        WHERE tipo = 'gasto' AND estado = 'pagado'
+                    COALESCE(SUM(amount) FILTER (WHERE kind = 'gasto'), 0),
+                    COALESCE(SUM(amount) FILTER (WHERE kind = 'ingreso'), 0),
+                    COALESCE(SUM(amount) FILTER (
+                        WHERE kind = 'gasto' AND status = 'pagado'
                     ), 0)
-                FROM presupuesto_lineas
-                WHERE departamento = %s AND estado <> 'cancelado'
+                FROM budget_lines
+                WHERE department = %s AND status <> 'cancelado'
                 """,
                 (departamento,),
             )

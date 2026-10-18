@@ -7,7 +7,7 @@ const getEquipoCalendario = vi.fn();
 const getEquipoSession = vi.fn();
 const getMisTareas = vi.fn();
 const getMisProyectos = vi.fn();
-const getDirectorioClub = vi.fn();
+const getMiembrosClub = vi.fn();
 const getEventosLuma = vi.fn();
 
 vi.mock("../../api/notas", () => ({
@@ -19,12 +19,12 @@ vi.mock("../../api/equipo", () => ({
   getEquipoSession: () => getEquipoSession(),
   getMisTareas: () => getMisTareas(),
   getMisProyectos: () => getMisProyectos(),
-  getDirectorioClub: () => getDirectorioClub(),
   getEventosLuma: () => getEventosLuma(),
 }));
 
 // Sin mock, `apiDepto` haría peticiones de verdad contra jsdom.
 vi.mock("../../api/marketing", () => ({
+  getMiembrosClub: () => getMiembrosClub(),
   apiDepto: () => ({
   }),
 }));
@@ -34,7 +34,7 @@ describe("CalendarioEquipo — tu agenda", () => {
     getEquipoCalendario.mockReset().mockResolvedValue({ ok: true, eventos: [] });
     getMisTareas.mockReset().mockResolvedValue({ ok: true, tareas: [] });
     getMisProyectos.mockReset().mockResolvedValue({ ok: true, proyectos: [] });
-    getDirectorioClub.mockReset().mockResolvedValue({ ok: true, miembros: [] });
+    getMiembrosClub.mockReset().mockResolvedValue({ ok: true, miembros: [] });
     getEventosLuma.mockReset().mockResolvedValue({ ok: true, calendario: "", eventos: [] });
   });
 

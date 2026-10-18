@@ -30,9 +30,9 @@ class CronTests(unittest.TestCase):
         conn = marketing_service._get_connection()
         with conn.cursor() as cur:
             cur.execute("DELETE FROM tasks")
-            cur.execute("DELETE FROM contents")
-            cur.execute("DELETE FROM campaigns")
-            cur.execute("DELETE FROM equipo_accesos")
+            cur.execute("DELETE FROM deliverables")
+            cur.execute("DELETE FROM projects")
+            cur.execute("DELETE FROM members")
         conn.commit()
         conn.close()
 
@@ -45,7 +45,7 @@ class CronTests(unittest.TestCase):
             # `_puede_asignar_tareas`), y este test ejercita la creación en
             # sí, no ese límite de permisos.
             cur.execute(
-                "INSERT INTO equipo_accesos (email, password_hash, equipos, vp_de)"
+                "INSERT INTO members (email, password_hash, preferred_departments, vp_of)"
                 " VALUES (%s, %s, %s, %s)",
                 ("marketing@example.com", generate_password_hash("x"), ["marketing"], ["marketing"]),
             )
@@ -96,6 +96,47 @@ class CronTests(unittest.TestCase):
         tareas_avisadas = aviso.call_args[0][0]
         self.assertEqual([t["titulo"] for t in tareas_avisadas], ["Diseñar cartel"])
 
+    def test_purga_auditoria_e_inscripciones_de_hace_mas_de_un_año(self):
+        conn = equipo_service._get_connection()
+        with conn.cursor() as cur:
+            cur.execute("DELETE FROM audit_log")
+            cur.execute("UPDATE members SET registration_id = NULL")
+            cur.execute("DELETE FROM registrations")
+            cur.execute(
+                "INSERT INTO audit_log (occurred_at, method, path, status)"
+                " VALUES (NOW() - INTERVAL '400 days', 'POST', '/api/vieja', 200),"
+                "        (NOW() - INTERVAL '10 days', 'POST', '/api/reciente', 200)"
+            )
+            ids = {}
+            for email, dias in (("vieja@upm.es", 400), ("enlazada@upm.es", 400), ("nueva@upm.es", 10)):
+                cur.execute(
+                    "INSERT INTO registrations (first_name, last_name, studies, email,"
+                    " privacy_accepted, ip_address, event, created_at)"
+                    " VALUES ('A', 'B', 'C', %s, 'si', '1.1.1.1', 'x', NOW() - make_interval(days => %s))"
+                    " RETURNING id",
+                    (email, dias),
+                )
+                ids[email] = cur.fetchone()[0]
+            cur.execute(
+                "UPDATE members SET registration_id = %s WHERE email = 'marketing@example.com'",
+                (ids["enlazada@upm.es"],),
+            )
+        conn.commit()
+
+        with patch("backend.api.cron.aviso_deadlines_manana", return_value=True):
+            respuesta = self.client.post(
+                "/api/cron/avisar-deadlines",
+                headers={"Authorization": "Bearer test-cron-secret"},
+            )
+
+        self.assertEqual(respuesta.get_json()["inscripciones"], 1)
+        with conn.cursor() as cur:
+            cur.execute("SELECT path FROM audit_log WHERE path IN ('/api/vieja', '/api/reciente')")
+            self.assertEqual([f[0] for f in cur.fetchall()], ["/api/reciente"])
+            cur.execute("SELECT email FROM registrations ORDER BY email")
+            self.assertEqual([f[0] for f in cur.fetchall()], ["enlazada@upm.es", "nueva@upm.es"])
+        conn.close()
+
     def test_sin_tareas_no_llama_a_slack_con_lista_vacia(self):
         with patch("backend.api.cron.aviso_deadlines_manana") as aviso:
             aviso.return_value = False
@@ -115,7 +156,7 @@ class CronTests(unittest.TestCase):
         conn = equipo_service._get_connection()
         with conn.cursor() as cur:
             cur.execute(
-                "INSERT INTO equipo_accesos (email, password_hash, equipos)"
+                "INSERT INTO members (email, password_hash, preferred_departments)"
                 " VALUES (%s, %s, %s)",
                 ("eventos@example.com", generate_password_hash("x"), ["eventos"]),
             )

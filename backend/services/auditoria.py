@@ -26,6 +26,9 @@ DESCARGAS = ("/api/admin/equipo/excel", "/api/admin/equipo/pdf", "/api/admin/dow
 EXCLUIDAS = ("/api/cron/", "/api/slack/")
 
 MAX_RUTA_LEN = 255
+# Un año de registro basta para reconstruir quién hizo qué; más es guardar IPs
+# y correos de gente que quizá ya ni está en el club.
+DIAS_DE_AUDITORIA = 365
 
 def _get_connection():
     return psycopg2.connect(DATABASE_URL)
@@ -42,7 +45,7 @@ def registrar(email: str, metodo: str, ruta: str, estado: int, ip: str) -> None:
         with _get_connection() as conn:
             with conn.cursor() as cur:
                 cur.execute(
-                    "INSERT INTO auditoria (email, metodo, ruta, estado, ip) VALUES (%s, %s, %s, %s, %s)",
+                    "INSERT INTO audit_log (email, method, path, status, ip) VALUES (%s, %s, %s, %s, %s)",
                     (email[:120], metodo[:8], ruta[:MAX_RUTA_LEN], estado, ip[:64]),
                 )
             conn.commit()
@@ -57,11 +60,26 @@ def listar(q: str = "", limite: int = 200) -> list[dict]:
             donde, valores = "", []
             if q.strip():
                 patron = f"%{q.strip().lower()}%"
-                donde, valores = "WHERE lower(email) LIKE %s OR lower(ruta) LIKE %s", [patron, patron]
+                donde, valores = "WHERE lower(email) LIKE %s OR lower(path) LIKE %s", [patron, patron]
             cur.execute(
-                "SELECT id, momento, email, metodo, ruta, estado, ip FROM auditoria"
-                f" {donde} ORDER BY momento DESC, id DESC LIMIT %s",
+                "SELECT id, occurred_at AS momento, email, method AS metodo, path AS ruta,"
+                " status AS estado, ip FROM audit_log"
+                f" {donde} ORDER BY occurred_at DESC, id DESC LIMIT %s",
                 [*valores, limite],
             )
             filas = cur.fetchall()
     return [{**f, "momento": f["momento"].isoformat()} for f in filas]
+
+
+def purgar_antigua() -> int:
+    """Borra lo que lleva más de `DIAS_DE_AUDITORIA` (cron diario). Devuelve
+    cuántas líneas se han ido."""
+    with _get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "DELETE FROM audit_log WHERE occurred_at < NOW() - make_interval(days => %s)",
+                (DIAS_DE_AUDITORIA,),
+            )
+            borradas = cur.rowcount
+        conn.commit()
+    return borradas

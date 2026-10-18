@@ -5,15 +5,14 @@ departamento (ver `services/notas.py`), así que no pueden colgar de
 `marketing_api`, y `equipo.py` ya es bastante largo.
 """
 
-from functools import wraps
-
 from flask import Blueprint, jsonify
 
 from backend.api.marketing import DatosInvalidos, _payload, _texto
 from backend.config import MAX_TITULO_LEN
+from backend.api.sesion import requiere_sesion
 from backend.schemas import build_response
 from backend.services import notas as srv
-from backend.services.equipo import equipo_session_info, is_equipo_authenticated
+from backend.services.equipo import equipo_session_info
 
 notas_api = Blueprint("notas_api", __name__, url_prefix="/api/equipo")
 
@@ -21,20 +20,6 @@ notas_api = Blueprint("notas_api", __name__, url_prefix="/api/equipo")
 # sitio para notas largas sin convertir la tabla en un almacén de ficheros.
 MAX_CONTENIDO_LEN = 400_000
 _ESQUEMAS_SEGUROS = ("http://", "https://", "mailto:")
-
-
-def requiere_sesion(func):
-    @wraps(func)
-    def envoltorio(*args, **kwargs):
-        if not is_equipo_authenticated():
-            return jsonify(build_response(False, "No autorizado.")), 401
-        sesion = equipo_session_info()
-        try:
-            return func(sesion["email"], sesion["teams"], *args, **kwargs)
-        except DatosInvalidos as error:
-            return jsonify(build_response(False, str(error))), 400
-
-    return envoltorio
 
 
 def _departamento(datos: dict, teams: list[str]) -> str:
@@ -108,13 +93,17 @@ def _proyecto(valor) -> int | None:
 
 @notas_api.route("/notas", methods=["GET"])
 @requiere_sesion
-def api_listar_notas(yo, teams):
+def api_listar_notas():
+    sesion = equipo_session_info()
+    yo, teams = sesion["email"], sesion["teams"]
     return jsonify({"ok": True, "notas": srv.listar_notas(yo, teams)}), 200
 
 
 @notas_api.route("/notas", methods=["POST"])
 @requiere_sesion
-def api_crear_nota(yo, teams):
+def api_crear_nota():
+    sesion = equipo_session_info()
+    yo, teams = sesion["email"], sesion["teams"]
     campos = _campos_nota(_payload(), teams)
     nota = srv.crear_nota(campos, yo)
     return jsonify(build_response(True, "Nota creada.", nota=nota)), 201
@@ -122,7 +111,9 @@ def api_crear_nota(yo, teams):
 
 @notas_api.route("/notas/<int:nota_id>", methods=["GET"])
 @requiere_sesion
-def api_obtener_nota(yo, teams, nota_id: int):
+def api_obtener_nota(nota_id: int):
+    sesion = equipo_session_info()
+    yo, teams = sesion["email"], sesion["teams"]
     nota = srv.obtener_nota(nota_id, yo, teams)
     if nota is None:
         return jsonify(build_response(False, "No encontrada.")), 404
@@ -131,7 +122,9 @@ def api_obtener_nota(yo, teams, nota_id: int):
 
 @notas_api.route("/notas/<int:nota_id>", methods=["PUT"])
 @requiere_sesion
-def api_actualizar_nota(yo, teams, nota_id: int):
+def api_actualizar_nota(nota_id: int):
+    sesion = equipo_session_info()
+    yo, teams = sesion["email"], sesion["teams"]
     campos = _campos_nota(_payload(), teams)
     if not campos:
         raise DatosInvalidos("No hay nada que actualizar.")
@@ -142,7 +135,9 @@ def api_actualizar_nota(yo, teams, nota_id: int):
 
 @notas_api.route("/notas/<int:nota_id>", methods=["DELETE"])
 @requiere_sesion
-def api_eliminar_nota(yo, teams, nota_id: int):
+def api_eliminar_nota(nota_id: int):
+    sesion = equipo_session_info()
+    yo, teams = sesion["email"], sesion["teams"]
     if not srv.eliminar_nota(nota_id, yo, teams):
         return jsonify(build_response(False, "No encontrada.")), 404
     return jsonify(build_response(True, "Eliminada.")), 200

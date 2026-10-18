@@ -3,24 +3,24 @@ import { FormEvent, useMemo, useState, useEffect } from "react";
 
 import {
   createEquipoCalendarioEvento,
-  getDirectorioClub,
   getEquipoCalendario,
   getEquipoSession,
   getEventosLuma,
   getMisProyectos,
   getMisTareas,
 } from "../../api/equipo";
-import { apiDepto } from "../../api/marketing";
+import { apiDepto, getMiembrosClub } from "../../api/marketing";
 import type { Seccion } from "./EquipoSidebar";
 import { DeptoProvider } from "./DeptoApi";
 import { AvatarResponsable, etiquetaDe } from "./marketing/Avatares";
 import { TaskDialog } from "./marketing/TaskDialog";
 import { Contador, useEntradaDeFila } from "../movimiento";
 import { listarNotas } from "../../api/notas";
+import type { Miembro } from "../../types/marketing";
 import type { NotaResumen } from "../../types/notas";
 import { DURATION, EASE_OUT } from "@/components/smoothui/lib/animation";
 import type { ApiFailure } from "../../types/api";
-import { DEPTO_LABEL, SLACK_CLUB, type EventoCalendario, type EventoLuma, type MiembroDirectorio, type Team } from "../../types/equipo";
+import { DEPTO_LABEL, SLACK_CLUB, type EventoCalendario, type EventoLuma, type Team } from "../../types/equipo";
 import {
   diasHasta,
   formatearFecha as formatearFechaCorta,
@@ -40,7 +40,7 @@ const DEPTO_TAG: Record<string, string> = {
 /** Por qué le escribes a esta persona: primero su VP-azgo en TUS
  *  departamentos, que es lo que la hace tu referente; la presidencia, si no
  *  es VP de ninguno tuyo. */
-function papelDe(persona: MiembroDirectorio, teams: Team[]) {
+function papelDe(persona: Miembro, teams: Team[]) {
   const mios = persona.vp_de.filter((t) => teams.includes(t));
   if (mios.length > 0) return `VP de ${mios.map((t) => DEPTO_LABEL[t] ?? t).join(" + ")}`;
   if (persona.cargo === "presidente") return "Presidencia del club";
@@ -158,7 +158,7 @@ export function CalendarioEquipo({ onIrA, onAbrirNota }: Props) {
   // "Asignadas a mí" filtra por responsable; "Mis departamentos" (por
   // defecto) es lo de siempre: todo lo abierto de los departamentos propios.
   const [filtroTareas, setFiltroTareas] = useState<"mias" | "departamentos">("departamentos");
-  const [directorio, setDirectorio] = useState<MiembroDirectorio[]>([]);
+  const [directorio, setDirectorio] = useState<Miembro[]>([]);
   const [marcandoHecha, setMarcandoHecha] = useState<number | null>(null);
   const [notas, setNotas] = useState<NotaResumen[]>([]);
   const [luma, setLuma] = useState<{ calendario: string; eventos: EventoLuma[] }>({
@@ -226,7 +226,7 @@ export function CalendarioEquipo({ onIrA, onAbrirNota }: Props) {
         // Sin sesión legible no hay nombre que saludar ni agenda que pedir.
       });
 
-    getDirectorioClub()
+    getMiembrosClub()
       .then((respuesta) => {
         if (active) setDirectorio(respuesta.miembros);
       })

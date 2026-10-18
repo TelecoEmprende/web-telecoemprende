@@ -17,7 +17,7 @@ type Props = {
 };
 
 /**
- * Las notas enlazadas a un proyecto (`notas.proyecto_id`): el resumen, los
+ * Las notas enlazadas a un proyecto (`notes.project_id`): el resumen, los
  * contactos, lo que se ha decidido... Se escriben en Notas, con su editor; el
  * proyecto solo las lista, deja enlazar una que ya exista o crear una nueva
  * ya enlazada. Solo salen las que la persona puede ver (privadas propias,

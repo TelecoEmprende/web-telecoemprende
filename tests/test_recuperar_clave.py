@@ -23,8 +23,8 @@ class RecuperarClaveTestCase(unittest.TestCase):
         migrar()
         conn = equipo_service._get_connection()
         with conn.cursor() as cur:
-            cur.execute("DELETE FROM recuperacion_clave")
-            cur.execute("DELETE FROM equipo_accesos")
+            cur.execute("DELETE FROM password_resets")
+            cur.execute("DELETE FROM members")
         conn.commit()
         conn.close()
         equipo_service.crear_equipo_acceso("ana@alumnos.upm.es", "clave-de-ana-1", ["marketing"], nombre="Ana")
@@ -88,7 +88,7 @@ class RecuperarClaveTestCase(unittest.TestCase):
         primero = self.token_enviado()
         conn = equipo_service._get_connection()
         with conn.cursor() as cur:
-            cur.execute("UPDATE recuperacion_clave SET creado_en = NOW() - interval '5 minutes'")
+            cur.execute("UPDATE password_resets SET created_at = NOW() - interval '5 minutes'")
         conn.commit()
         conn.close()
         self.pedir()
@@ -105,7 +105,7 @@ class RecuperarClaveTestCase(unittest.TestCase):
         token = self.token_enviado()
         conn = equipo_service._get_connection()
         with conn.cursor() as cur:
-            cur.execute("UPDATE recuperacion_clave SET expira = NOW() - interval '1 minute'")
+            cur.execute("UPDATE password_resets SET expires_at = NOW() - interval '1 minute'")
         conn.commit()
         conn.close()
         respuesta = self.client.post("/api/equipo/restablecer-clave", json={"token": token, "nueva": "clave-nueva-2"})
@@ -116,7 +116,7 @@ class RecuperarClaveTestCase(unittest.TestCase):
         token = self.token_enviado()
         conn = equipo_service._get_connection()
         with conn.cursor() as cur:
-            cur.execute("SELECT token_hash FROM recuperacion_clave")
+            cur.execute("SELECT token_hash FROM password_resets")
             (guardado,) = cur.fetchone()
         conn.close()
         self.assertNotEqual(guardado, token)
@@ -131,7 +131,7 @@ class RecuperarClaveTestCase(unittest.TestCase):
         self.assertEqual(respuesta.status_code, 200)
         conn = equipo_service._get_connection()
         with conn.cursor() as cur:
-            cur.execute("SELECT email, metodo, ruta FROM auditoria WHERE metodo = 'EMAIL'")
+            cur.execute("SELECT email, method, path FROM audit_log WHERE method = 'EMAIL'")
             filas = cur.fetchall()
         conn.close()
         self.assertEqual([f[0] for f in filas], ["ana@alumnos.upm.es"])
@@ -156,7 +156,7 @@ class ClaveProvisionalTestCase(unittest.TestCase):
         migrar()
         conn = equipo_service._get_connection()
         with conn.cursor() as cur:
-            cur.execute("DELETE FROM equipo_accesos")
+            cur.execute("DELETE FROM members")
         conn.commit()
         conn.close()
         equipo_service.crear_equipo_acceso("ana@alumnos.upm.es", "clave-de-ana-1", ["marketing"])
