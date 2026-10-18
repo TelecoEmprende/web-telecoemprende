@@ -19,7 +19,7 @@ export type NotaResumen = {
   pendientes: string[];
   checks_pendientes: number;
   checks_hechos: number;
-  /** Proyecto (`campaigns.id`) al que está enlazada, o null. */
+  /** Proyecto (`projects.id`) al que está enlazada, o null. */
   proyecto_id: number | null;
 };
 

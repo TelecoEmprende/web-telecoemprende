@@ -13,6 +13,7 @@ from functools import wraps
 
 from flask import jsonify
 
+from backend.api.sesion import requiere_sesion
 from backend.api.marketing import (
     DatosInvalidos,
     _autor,
@@ -24,7 +25,6 @@ from backend.api.marketing import (
     departamento_actual,
     es_cargo_vp_o_admin,
     marketing_api,
-    requiere_equipo,
 )
 from backend.api.notas import contenido_valido
 from backend.config import (
@@ -191,7 +191,7 @@ def _montar_rutas(
         url = f"/{ruta}/<int:fila_id>" if con_id else f"/{ruta}"
         if solo_cargo:
             func = _solo_cargo_o_admin(func)
-        marketing_api.route(url, methods=[metodo])(requiere_equipo(func))
+        marketing_api.route(url, methods=[metodo])(requiere_sesion(func))
 
 
 _montar_rutas("presupuesto", reg.PRESUPUESTO, _campos_presupuesto, "concepto", solo_cargo=True)
@@ -200,14 +200,14 @@ _montar_rutas("servicios", reg.SERVICIOS, _campos_servicio, "nombre")
 
 
 @marketing_api.route("/presupuesto/resumen", methods=["GET"])
-@requiere_equipo
+@requiere_sesion
 @_solo_cargo_o_admin
 def api_presupuesto_resumen():
     return jsonify({"ok": True, "resumen": reg.resumen_presupuesto(departamento_actual())}), 200
 
 
 @marketing_api.route("/plataforma", methods=["GET"])
-@requiere_equipo
+@requiere_sesion
 def api_plataforma():
     """Estado del despliegue y de las integraciones. Solo Ingeniería: las
     rutas cuelgan del blueprint de los tres departamentos, y esto no es cosa

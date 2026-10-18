@@ -38,7 +38,7 @@ EQUIPOS_ORDEN_POR_DEFECTO = ("marketing", "eventos", "ingenieria")
 MIN_EQUIPOS_POR_PERSONA = len(EQUIPOS_ORDEN_POR_DEFECTO)
 
 # Cargos de dirección: un título, independiente del departamento y del permiso
-# de admin (`equipo_accesos.es_admin`). Siguen dando permisos de gestión de
+# de admin (`members.is_admin`). Siguen dando permisos de gestión de
 # departamento (asignar tareas en cualquiera, calendario del club).
 CARGOS_VALIDOS = {"presidente", "vicepresidente", "boardmember"}
 

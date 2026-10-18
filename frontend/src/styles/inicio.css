@@ -704,6 +704,24 @@
   filter: none;
 }
 
+/* Quien tiene LinkedIn: la foto enlaza a su perfil y lo avisa con el logo. */
+.in-persona-foto {
+  position: relative;
+  display: block;
+}
+
+.in-persona-linkedin {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  width: 22px;
+  height: 22px;
+  padding: 4px;
+  border-radius: var(--radius-circle);
+  background: var(--color-azul);
+  color: var(--color-text-on-dark);
+}
+
 .in-persona h3 {
   margin: 12px 0 0;
   font-size: 1rem;

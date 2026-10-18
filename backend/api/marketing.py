@@ -6,7 +6,7 @@ el de la petición. Todas las consultas van acotadas por él, así que pasar el 
 de una tarea de otro departamento no encuentra nada.
 
 Autorización: reutiliza la sesión que ya monta `login_equipo` (no hay un
-sistema de auth paralelo). Cada ruta pasa por `@requiere_equipo`, que exige
+sistema de auth paralelo). Cada ruta pasa por `@requiere_sesion`, que exige
 pertenecer al departamento de la ruta -- comprobado en servidor, nunca
 confiando en que el frontend haya escondido el botón.
 """
@@ -16,7 +16,6 @@ import binascii
 import logging
 import re
 from datetime import date, datetime, timedelta
-from functools import wraps
 
 from flask import Blueprint, jsonify, request
 
@@ -32,9 +31,10 @@ from backend.config import (
     TASK_PRIORIDADES,
 )
 from backend.schemas import build_response
+from backend.api.sesion import requiere_sesion
 from backend.services.admin import is_admin_authenticated
 from backend.services.db import DatosInvalidos
-from backend.services.equipo import equipo_session_info, is_equipo_authenticated
+from backend.services.equipo import equipo_session_info
 from backend.services.slack import (
     tarea_cambia_estado,
     tarea_comentada,
@@ -110,28 +110,6 @@ marketing_api = Blueprint("marketing_api", __name__, url_prefix="/api/marketing"
 
 def departamento_actual() -> str:
     return _DEPARTAMENTO_POR_BLUEPRINT[request.blueprint]
-
-
-def requiere_equipo(func):
-    """Exige pertenecer al departamento de la ruta. El admin pasa siempre: el
-    equipo de ingeniería recibe `admin_auth` al entrar en /equipo y hace de
-    superusuario."""
-
-    @wraps(func)
-    def envoltorio(*args, **kwargs):
-        autorizado = is_admin_authenticated() or (
-            is_equipo_authenticated()
-            and departamento_actual() in equipo_session_info()["teams"]
-        )
-        if not autorizado:
-            return jsonify(build_response(False, "No autorizado.")), 401
-
-        try:
-            return func(*args, **kwargs)
-        except DatosInvalidos as error:
-            return jsonify(build_response(False, str(error))), 400
-
-    return envoltorio
 
 
 # --------------------------------------------------------------------------
@@ -296,13 +274,13 @@ def _puede_repartir(anteriores: list[str], nuevos: list[str]) -> bool:
 # --------------------------------------------------------------------------
 
 @marketing_api.route("/campaigns", methods=["GET"])
-@requiere_equipo
+@requiere_sesion
 def api_listar_campaigns():
     return jsonify({"ok": True, "campaigns": listar_campaigns(departamento_actual())}), 200
 
 
 @marketing_api.route("/campaigns", methods=["POST"])
-@requiere_equipo
+@requiere_sesion
 def api_crear_campaign():
     datos = _payload()
     campaign = crear_campaign(
@@ -321,7 +299,7 @@ def api_crear_campaign():
 
 
 @marketing_api.route("/campaigns/<int:campaign_id>", methods=["GET"])
-@requiere_equipo
+@requiere_sesion
 def api_obtener_campaign(campaign_id: int):
     campaign = obtener_campaign(campaign_id, departamento_actual())
     if campaign is None:
@@ -330,7 +308,7 @@ def api_obtener_campaign(campaign_id: int):
 
 
 @marketing_api.route("/campaigns/<int:campaign_id>", methods=["PUT"])
-@requiere_equipo
+@requiere_sesion
 def api_actualizar_campaign(campaign_id: int):
     datos = _payload()
     campos = {}
@@ -357,7 +335,7 @@ def api_actualizar_campaign(campaign_id: int):
 
 
 @marketing_api.route("/campaigns/<int:campaign_id>", methods=["DELETE"])
-@requiere_equipo
+@requiere_sesion
 def api_eliminar_campaign(campaign_id: int):
     if not eliminar_campaign(campaign_id, departamento_actual(), _autor()):
         return jsonify(build_response(False, "Campaña no encontrada.")), 404
@@ -368,7 +346,7 @@ def api_eliminar_campaign(campaign_id: int):
 
 
 @marketing_api.route("/campaigns/<int:campaign_id>/duplicar", methods=["POST"])
-@requiere_equipo
+@requiere_sesion
 def api_duplicar_campaign(campaign_id: int):
     campaign = duplicar_campaign(campaign_id, departamento_actual(), _autor())
     if campaign is None:
@@ -414,7 +392,7 @@ def _campos_content(datos: dict, *, parcial: bool) -> dict:
 
 
 @marketing_api.route("/campaigns/<int:campaign_id>/contents", methods=["POST"])
-@requiere_equipo
+@requiere_sesion
 def api_crear_content(campaign_id: int):
     datos = _payload()
     content = crear_content(
@@ -427,7 +405,7 @@ def api_crear_content(campaign_id: int):
 
 
 @marketing_api.route("/contents/<int:content_id>", methods=["GET"])
-@requiere_equipo
+@requiere_sesion
 def api_obtener_content(content_id: int):
     content = obtener_content(content_id, departamento_actual())
     if content is None:
@@ -436,7 +414,7 @@ def api_obtener_content(content_id: int):
 
 
 @marketing_api.route("/contents/<int:content_id>", methods=["PUT"])
-@requiere_equipo
+@requiere_sesion
 def api_actualizar_content(content_id: int):
     campos = _campos_content(_payload(), parcial=True)
     if not actualizar_content(content_id, departamento_actual(), _autor(), **campos):
@@ -445,7 +423,7 @@ def api_actualizar_content(content_id: int):
 
 
 @marketing_api.route("/contents/<int:content_id>", methods=["DELETE"])
-@requiere_equipo
+@requiere_sesion
 def api_eliminar_content(content_id: int):
     if not eliminar_content(content_id, departamento_actual(), _autor()):
         return jsonify(build_response(False, "Contenido no encontrado.")), 404
@@ -458,7 +436,7 @@ def api_eliminar_content(content_id: int):
 # --------------------------------------------------------------------------
 
 @marketing_api.route("/tasks", methods=["GET"])
-@requiere_equipo
+@requiere_sesion
 def api_listar_tasks():
     # `usuario` viaja aquí para que el panel pueda filtrar "solo lo mío" sin
     # tocar /api/equipo/session, que es de otro miembro del equipo.
@@ -470,7 +448,7 @@ def api_listar_tasks():
 
 
 @marketing_api.route("/tasks/archivadas", methods=["GET"])
-@requiere_equipo
+@requiere_sesion
 def api_listar_tasks_archivadas():
     return jsonify({
         "ok": True,
@@ -479,7 +457,7 @@ def api_listar_tasks_archivadas():
 
 
 @marketing_api.route("/tasks", methods=["POST"])
-@requiere_equipo
+@requiere_sesion
 def api_crear_task():
     datos = _payload()
     # Cualquiera crea una tarea (y la deja sin dueño, o se la queda). Asignarla
@@ -527,7 +505,7 @@ def api_crear_task():
 
 
 @marketing_api.route("/tasks/<int:task_id>", methods=["GET"])
-@requiere_equipo
+@requiere_sesion
 def api_obtener_task(task_id: int):
     task = obtener_task(task_id, departamento_actual())
     if task is None:
@@ -536,7 +514,7 @@ def api_obtener_task(task_id: int):
 
 
 @marketing_api.route("/tasks/<int:task_id>", methods=["PUT"])
-@requiere_equipo
+@requiere_sesion
 def api_actualizar_task(task_id: int):
     datos = _payload()
     campos = {}
@@ -605,7 +583,7 @@ def api_actualizar_task(task_id: int):
 
 
 @marketing_api.route("/tasks/<int:task_id>", methods=["DELETE"])
-@requiere_equipo
+@requiere_sesion
 def api_eliminar_task(task_id: int):
     if not eliminar_task(task_id, departamento_actual(), _autor()):
         return jsonify(build_response(False, "Tarea no encontrada.")), 404
@@ -618,7 +596,7 @@ def api_eliminar_task(task_id: int):
 # --------------------------------------------------------------------------
 
 @marketing_api.route("/tasks/<int:task_id>/comments", methods=["GET"])
-@requiere_equipo
+@requiere_sesion
 def api_listar_task_comments(task_id: int):
     if obtener_task(task_id, departamento_actual()) is None:
         return jsonify(build_response(False, "Tarea no encontrada.")), 404
@@ -626,7 +604,7 @@ def api_listar_task_comments(task_id: int):
 
 
 @marketing_api.route("/tasks/<int:task_id>/comments", methods=["POST"])
-@requiere_equipo
+@requiere_sesion
 def api_crear_task_comment(task_id: int):
     tarea = obtener_task(task_id, departamento_actual())
     if tarea is None:
@@ -647,7 +625,7 @@ def api_crear_task_comment(task_id: int):
 # --------------------------------------------------------------------------
 
 @marketing_api.route("/calendario", methods=["GET"])
-@requiere_equipo
+@requiere_sesion
 def api_calendario():
     """`?desde=AAAA-MM-DD&hasta=AAAA-MM-DD`. Sin parámetros, el mes en curso."""
     args = request.args.to_dict()

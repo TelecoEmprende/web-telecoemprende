@@ -64,14 +64,6 @@ export type EquipoSessionResponse = {
 /** Fila del directorio del club entero ("Quién es quién") -- solo lo básico,
  *  visible a cualquier miembro. Nada de notas ni datos personales (ver
  *  `EquipoAcceso`, la versión completa que solo ve admin). */
-export type MiembroDirectorio = {
-  email: string;
-  equipos: Team[];
-  vp_de: Team[];
-  cargo: Cargo;
-  nombre: string;
-};
-
 export type EquipoAcceso = {
   id: number;
   email: string;
@@ -115,11 +107,6 @@ export type EventoCalendario = {
   descripcion: string;
   fecha: string; // YYYY-MM-DD
   hora: string; // HH:MM o ""
-  /** Emails que dijeron "voy". */
-  confirmados: string[];
-  /** Emails con check-in real el día del evento -- alimenta la métrica de
-   *  asistencia, a diferencia de `confirmados` (solo intención previa). */
-  asistio: string[];
 };
 
 /** Un evento del calendario público de Luma (ver `services/luma.py`). */

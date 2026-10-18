@@ -3,7 +3,7 @@
    vía tokens.css. Prefijo nw-. */
 
 .nw {
-  --nw-nav-h: 73px; /* alto de .lp-nav: el filtro de temas se pega justo debajo */
+  --nw-nav-h: 72px; /* alto de .lp-nav (min-height de .lp-nav-inner): el filtro de temas se pega justo debajo */
   background: var(--color-papel);
   color: var(--color-text);
 }
@@ -546,7 +546,7 @@ html:has(.nw) {
 
 @media (max-width: 720px) {
   .nw {
-    --nw-nav-h: 65px;
+    --nw-nav-h: 64px;
   }
 
   html:has(.nw) {

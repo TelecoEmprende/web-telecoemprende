@@ -32,15 +32,15 @@ class NotasTestCase(unittest.TestCase):
         migrar()
         conn = notas_service._get_connection()
         with conn.cursor() as cur:
-            cur.execute("DELETE FROM notas")
-            cur.execute("DELETE FROM equipo_accesos")
+            cur.execute("DELETE FROM notes")
+            cur.execute("DELETE FROM members")
             for email, equipos in (
                 ("ana@example.com", ["marketing"]),
                 ("bea@example.com", ["marketing"]),
                 ("carlos@example.com", ["eventos"]),
             ):
                 cur.execute(
-                    "INSERT INTO equipo_accesos (email, password_hash, equipos) VALUES (%s, %s, %s)",
+                    "INSERT INTO members (email, password_hash, preferred_departments) VALUES (%s, %s, %s)",
                     (email, generate_password_hash("pw"), equipos),
                 )
         conn.commit()
@@ -124,7 +124,7 @@ class NotasTestCase(unittest.TestCase):
         conn = notas_service._get_connection()
         with conn.cursor() as cur:
             cur.execute(
-                "INSERT INTO campaigns (nombre, departamentos) VALUES ('Charla YC', ARRAY['marketing']) RETURNING id"
+                "INSERT INTO projects (name, departments) VALUES ('Charla YC', ARRAY['marketing']) RETURNING id"
             )
             proyecto = cur.fetchone()[0]
         conn.commit()

@@ -49,7 +49,7 @@ def _fecha(valor: str) -> datetime | None:
 
 
 def _texto(valor: str) -> str:
-    return valor.replace("\\n", " ").replace("\\,", ",").replace("\;", ";").replace("\\\\", "\\")
+    return valor.replace("\\n", " ").replace("\\,", ",").replace("\\;", ";").replace("\\\\", "\\")
 
 
 def parsear_ics(texto: str) -> list[dict]:

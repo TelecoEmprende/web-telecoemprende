@@ -23,10 +23,10 @@ class AuditoriaTestCase(unittest.TestCase):
         auditoria.listar()  # crea la tabla
         conn = equipo_service._get_connection()
         with conn.cursor() as cur:
-            cur.execute("DELETE FROM auditoria")
-            cur.execute("DELETE FROM equipo_accesos")
+            cur.execute("DELETE FROM audit_log")
+            cur.execute("DELETE FROM members")
             cur.execute(
-                "INSERT INTO equipo_accesos (email, password_hash, equipos, es_admin) VALUES (%s, %s, %s, %s)",
+                "INSERT INTO members (email, password_hash, preferred_departments, is_admin) VALUES (%s, %s, %s, %s)",
                 ("ana@example.com", generate_password_hash("pw"), ["marketing", "eventos"], True),
             )
         conn.commit()

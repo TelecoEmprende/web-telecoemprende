@@ -11,8 +11,8 @@ cambiar el esquema se añade un archivo nuevo, nunca se edita uno aplicado.
 Personas
 --------
 Una persona se referencia siempre por el id de su cuenta
-(`equipo_accesos.id`), con clave foránea: en `creado_por_id`/`autor_id` y en
-las tablas de "quién está en qué" (`tarea_responsables`...). La API sigue
+(`members.id`), con clave foránea: en `created_by_id`/`author_id` y en
+las tablas de "quién está en qué" (`task_assignees`...). La API sigue
 hablando en emails, así que aquí se traducen: al escribir, email -> id (un
 email sin cuenta es un error de datos, no algo que guardar suelto); al leer,
 las vistas `<tabla>_v` devuelven las personas ya como emails.
@@ -47,7 +47,7 @@ def migrar() -> None:
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS schema_migrations (
                     version VARCHAR(120) PRIMARY KEY,
-                    aplicada_en TIMESTAMPTZ NOT NULL DEFAULT NOW()
+                    applied_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
                 )
             """)
             cur.execute("SELECT version FROM schema_migrations")
@@ -88,10 +88,10 @@ def _cerrar_api_publica(cur) -> None:
 # Qué tabla guarda las personas de cada entidad, con qué columna apunta a la
 # fila y cómo se llama el campo en la API.
 PERSONAS = {
-    "tasks": ("tarea_responsables", "tarea_id", "responsables"),
-    "contents": ("entregable_responsables", "entregable_id", "responsables"),
-    "reuniones": ("reunion_asistentes", "reunion_id", "asistentes"),
-    "servicios": ("servicio_responsables", "servicio_id", "responsables"),
+    "tasks": ("task_assignees", "task_id", "responsables"),
+    "deliverables": ("deliverable_assignees", "deliverable_id", "responsables"),
+    "meetings": ("meeting_attendees", "meeting_id", "asistentes"),
+    "services": ("service_owners", "service_id", "responsables"),
 }
 
 
@@ -99,7 +99,7 @@ def id_de_persona(cur, email: str) -> int | None:
     """Id de la cuenta con ese email, o None (p. ej. una sesión de admin sin
     cuenta de equipo)."""
     cur.execute(
-        "SELECT id FROM equipo_accesos WHERE email = %s", ((email or "").strip().lower(),)
+        "SELECT id FROM members WHERE email = %s", ((email or "").strip().lower(),)
     )
     fila = cur.fetchone()
     return _primera(fila)
@@ -112,7 +112,7 @@ def ids_de_personas(cur, emails: list[str]) -> list[int]:
     limpios = list(dict.fromkeys(e.strip().lower() for e in emails if e and e.strip()))
     if not limpios:
         return []
-    cur.execute("SELECT email AS email, id AS id FROM equipo_accesos WHERE email = ANY(%s)", (limpios,))
+    cur.execute("SELECT email AS email, id AS id FROM members WHERE email = ANY(%s)", (limpios,))
     # El cursor puede ser de tuplas o de diccionarios según quién llame.
     por_email = {
         (f["email"] if isinstance(f, dict) else f[0]): (f["id"] if isinstance(f, dict) else f[1])
@@ -131,7 +131,7 @@ def fijar_personas(cur, tabla: str, fila_id: int, emails: list[str]) -> None:
     cur.execute(f"DELETE FROM {tabla_personas} WHERE {columna} = %s", (fila_id,))
     for orden, persona_id in enumerate(ids, start=1):
         cur.execute(
-            f"INSERT INTO {tabla_personas} ({columna}, persona_id, orden) VALUES (%s, %s, %s)",
+            f"INSERT INTO {tabla_personas} ({columna}, member_id, position) VALUES (%s, %s, %s)",
             (fila_id, persona_id, orden),
         )
 

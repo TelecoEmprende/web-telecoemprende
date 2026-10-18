@@ -31,13 +31,13 @@ class MarketingTestCase(unittest.TestCase):
             # Las tres en una sentencia: campaigns arrastra el resto por cascada,
             # pero ser explícito deja el estado claro si alguien mira la tabla.
             cur.execute("DELETE FROM tasks")
-            cur.execute("DELETE FROM contents")
-            cur.execute("DELETE FROM campaigns")
-            cur.execute("DELETE FROM equipo_accesos")
+            cur.execute("DELETE FROM deliverables")
+            cur.execute("DELETE FROM projects")
+            cur.execute("DELETE FROM members")
             # El calendario ahora también lee reuniones (services/registros.py);
             # sin limpiarlas aquí, una reunión creada en un test se cuela en el
             # rango de fechas amplio que usan otros.
-            cur.execute("DELETE FROM reuniones")
+            cur.execute("DELETE FROM meetings")
         conn.commit()
         conn.close()
 
@@ -56,7 +56,7 @@ class MarketingTestCase(unittest.TestCase):
         conn = equipo_service._get_connection()
         with conn.cursor() as cur:
             cur.execute(
-                "INSERT INTO equipo_accesos (email, password_hash, equipos, vp_de, cargo)"
+                "INSERT INTO members (email, password_hash, preferred_departments, vp_of, role)"
                 " VALUES (%s, %s, %s, %s, %s)",
                 (
                     email,
@@ -150,7 +150,7 @@ class AutorizacionTests(MarketingTestCase):
         self.login(email="dev@example.com", equipos=["ingenieria"])
         conn = marketing_service._get_connection()
         with conn.cursor() as cur:
-            cur.execute("UPDATE equipo_accesos SET es_admin = TRUE WHERE email = 'dev@example.com'")
+            cur.execute("UPDATE members SET is_admin = TRUE WHERE email = 'dev@example.com'")
         conn.commit()
         conn.close()
         self.client.post("/api/equipo/login", json={"email": "dev@example.com", "password": "test-equipo"})
@@ -587,7 +587,7 @@ class TaskTests(MarketingTestCase):
         conn = marketing_service._get_connection()
         with conn.cursor() as cur:
             cur.execute(
-                "UPDATE tasks SET completado_en = NOW() - %s::interval WHERE id = %s",
+                "UPDATE tasks SET completed_at = NOW() - %s::interval WHERE id = %s",
                 (f"{dias} days", task_id),
             )
             conn.commit()
@@ -763,9 +763,9 @@ class CalendarioCruzadoTestCase(MarketingTestCase):
         self.login(email="marketing@example.com")
         conn = equipo_service._get_connection()
         with conn.cursor() as cur:
-            cur.execute("DELETE FROM calendario_eventos")
+            cur.execute("DELETE FROM club_events")
             cur.execute(
-                "INSERT INTO calendario_eventos (titulo, descripcion, fecha, hora)"
+                "INSERT INTO club_events (title, description, date, start_time)"
                 " VALUES (%s, %s, %s, %s)",
                 ("Conversaciones alumni", "Charla con antiguos del club", date.today(), "18:30"),
             )
@@ -833,7 +833,9 @@ class FotoPerfilTestCase(MarketingTestCase):
         self.assertEqual(respuesta.status_code, 200, respuesta.get_json())
 
         miembros = self.client.get("/api/equipo/miembros").get_json()["miembros"]
-        self.assertEqual(miembros[0]["foto"], self.JPEG)
+        self.assertEqual(
+            self.client.get(miembros[0]["foto"]).data, b"no-es-un-jpeg-real"
+        )
 
     def test_vaciarla_devuelve_a_la_foto_por_defecto(self):
         self._put("marketing@example.com", self.JPEG)
@@ -907,7 +909,7 @@ class CalendarioTests(MarketingTestCase):
         conn = registros_service._get_connection()
         with conn.cursor() as cur:
             cur.execute(
-                "INSERT INTO reuniones (departamento, titulo, fecha, hora)"
+                "INSERT INTO meetings (department, title, date, start_time)"
                 " VALUES ('marketing', 'Semanal', '2026-10-12', '18:00')"
             )
         conn.commit()
@@ -1253,7 +1255,7 @@ class FichaMiembroTestCase(MarketingTestCase):
         self.seed_acceso("baja@example.com", "x", ["eventos"])
         conn = marketing_service._get_connection()
         with conn.cursor() as cur:
-            cur.execute("UPDATE equipo_accesos SET activo = FALSE WHERE email = 'baja@example.com'")
+            cur.execute("UPDATE members SET active = FALSE WHERE email = 'baja@example.com'")
         conn.commit()
         conn.close()
 
@@ -1294,7 +1296,7 @@ class SaludEquipoTestCase(MarketingTestCase):
         conn = marketing_service._get_connection()
         with conn.cursor() as cur:
             cur.execute(
-                "UPDATE tasks SET updated_at = NOW() - %s::interval WHERE titulo = %s",
+                "UPDATE tasks SET updated_at = NOW() - %s::interval WHERE title = %s",
                 (f"{hace_dias} days", titulo),
             )
         conn.commit()

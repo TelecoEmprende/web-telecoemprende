@@ -13,7 +13,8 @@ from flask import Blueprint, jsonify, request
 
 from backend.config import CRON_SECRET, EQUIPOS_VALIDOS
 from backend.schemas import build_response
-from backend.services import historial
+from backend.services import auditoria, historial
+from backend.services.registrations import purgar_inscripciones_antiguas
 from backend.services.marketing import mesa_del_club, salud_equipo, tareas_que_vencen
 from backend.services.slack import aviso_deadlines_manana, resumen_mesa, resumen_salud_equipo
 
@@ -40,14 +41,22 @@ def api_avisar_deadlines():
     enviado = aviso_deadlines_manana(tareas)
     logger.info("cron avisar-deadlines: %s tarea(s), enviado=%s", len(tareas), enviado)
 
-    # De paso, una vez al día: lo que lleva más de 30 días en la papelera se
-    # borra de verdad. Un fallo aquí no tapa el aviso, que ya está enviado.
-    vaciadas = 0
-    try:
-        vaciadas = historial.vaciar_papelera()
-    except Exception:
-        logger.exception("cron avisar-deadlines: fallo vaciando la papelera")
-    return jsonify({"ok": True, "tareas": len(tareas), "enviado": enviado, "vaciadas": vaciadas}), 200
+    # De paso, una vez al día, la limpieza: la papelera de más de 30 días y
+    # los datos personales que ya han cumplido su plazo (auditoría e
+    # inscripciones de hace más de un año). Un fallo en una no tapa el aviso,
+    # que ya está enviado, ni las demás.
+    borradas = {}
+    for nombre, limpiar in (
+        ("vaciadas", historial.vaciar_papelera),
+        ("auditoria", auditoria.purgar_antigua),
+        ("inscripciones", purgar_inscripciones_antiguas),
+    ):
+        try:
+            borradas[nombre] = limpiar()
+        except Exception:
+            logger.exception("cron avisar-deadlines: fallo limpiando %s", nombre)
+            borradas[nombre] = 0
+    return jsonify({"ok": True, "tareas": len(tareas), "enviado": enviado, **borradas}), 200
 
 
 @cron_api.route("/resumen-equipo", methods=["POST"])

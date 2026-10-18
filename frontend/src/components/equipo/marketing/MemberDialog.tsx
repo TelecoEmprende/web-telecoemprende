@@ -58,7 +58,7 @@ const VERBO_ACTIVIDAD: Record<TaskEstado, string> = {
  *
  * Los tres números y el historial no se guardan en ningún sitio: salen de sus
  * tareas en el momento de abrir la ficha. Lo único que se escribe son las
- * etiquetas y la nota, que viven en `equipo_accesos` porque son de la persona
+ * etiquetas y la nota, que viven en `members` porque son de la persona
  * y no del departamento -- así Eventos e Ingeniería ven las mismas.
  */
 export function MemberDialog({ email, habilidadesConocidas, onCerrar, onGuardado }: Props) {

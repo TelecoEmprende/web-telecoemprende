@@ -3,7 +3,7 @@
 Todos pueden crear, editar y borrar en el club; a cambio, todo queda
 apuntado (quién, qué y cuándo) y nada se borra de golpe:
 
-- **Historial** (`historial`): una fila por crear, editar, borrar o restaurar,
+- **Historial** (tabla `history`): una fila por crear, editar, borrar o restaurar,
   con el campo, el valor anterior y el nuevo. Es lo que se enseña en la
   pestaña «Historial» de un proyecto y en la actividad de la Mesa del club.
   Nunca guarda contenidos enteros (un guion, una nota): solo que cambiaron.
@@ -26,24 +26,21 @@ DIAS_EN_PAPELERA = 30
 
 # Entidad de la API -> tabla. `deleted_at` y las vistas `<tabla>_v` hacen el resto.
 TABLAS = {
-    "proyecto": "campaigns",
-    "entregable": "contents",
+    "proyecto": "projects",
+    "entregable": "deliverables",
     "tarea": "tasks",
-    "nota": "notas",
-    "reunion": "reuniones",
+    "nota": "notes",
+    "reunion": "meetings",
 }
 _VISTAS = {
-    "proyecto": "campaigns_v",
-    "entregable": "contents_v",
+    "proyecto": "projects_v",
+    "entregable": "deliverables_v",
     "tarea": "tasks_v",
-    "nota": "notas_v",
-    "reunion": "reuniones_v",
+    "nota": "notes_v",
+    "reunion": "meetings_v",
 }
 # Cómo se llama el título de cada tabla.
-_TITULO = {
-    "campaigns": "nombre", "contents": "titulo", "tasks": "titulo", "notas": "titulo",
-    "reuniones": "titulo",
-}
+_TITULO = {"projects": "name", "deliverables": "title", "tasks": "title", "notes": "title", "meetings": "title"}
 
 _MAX_VALOR = 200
 
@@ -103,15 +100,15 @@ def registrar(
     persona_id = id_de_persona(cur, autor)
     if agrupar_minutos and accion == "editar":
         cur.execute(
-            "SELECT 1 FROM historial WHERE entidad = %s AND entidad_id = %s AND accion = 'editar'"
-            " AND persona_id IS NOT DISTINCT FROM %s"
-            " AND creado_en > NOW() - make_interval(mins => %s)",
+            "SELECT 1 FROM history WHERE entity_type = %s AND entity_id = %s AND action = 'editar'"
+            " AND member_id IS NOT DISTINCT FROM %s"
+            " AND created_at > NOW() - make_interval(mins => %s)",
             (entidad, entidad_id, persona_id, agrupar_minutos),
         )
         if cur.fetchone() is not None:
             return
     cur.execute(
-        "INSERT INTO historial (entidad, entidad_id, proyecto_id, accion, titulo, cambios, persona_id)"
+        "INSERT INTO history (entity_type, entity_id, project_id, action, title, changes, member_id)"
         " VALUES (%s, %s, %s, %s, %s, %s, %s)",
         (entidad, entidad_id, proyecto_id, accion, (titulo or "")[:200], Json(cambios or []), persona_id),
     )
@@ -125,9 +122,9 @@ def registrar(
 # feeds compartidos (proyecto, club). El resto de entidades son del club.
 def _filtro_notas(alias: str = "h") -> str:
     return (
-        f"({alias}.entidad <> 'nota' OR EXISTS ("
-        f"  SELECT 1 FROM notas n WHERE n.id = {alias}.entidad_id"
-        "   AND (NOT n.privada OR n.creado_por_id = (SELECT id FROM equipo_accesos WHERE email = %s))))"
+        f"({alias}.entity_type <> 'nota' OR EXISTS ("
+        f"  SELECT 1 FROM notes n WHERE n.id = {alias}.entity_id"
+        "   AND (NOT n.is_private OR n.created_by_id = (SELECT id FROM members WHERE email = %s))))"
     )
 
 
@@ -140,26 +137,27 @@ def listar(
 ) -> list[dict]:
     donde, valores = ["TRUE"], []
     if entidad is not None:
-        donde.append("h.entidad = %s")
+        donde.append("h.entity_type = %s")
         valores.append(entidad)
     if entidad_id is not None:
-        donde.append("h.entidad_id = %s")
+        donde.append("h.entity_id = %s")
         valores.append(entidad_id)
     if proyecto_id is not None:
         # Lo del proyecto y lo suyo (sus entregables y tareas llevan su id).
-        donde.append("(h.proyecto_id = %s OR (h.entidad = 'proyecto' AND h.entidad_id = %s))")
+        donde.append("(h.project_id = %s OR (h.entity_type = 'proyecto' AND h.entity_id = %s))")
         valores += [proyecto_id, proyecto_id]
     donde.append(_filtro_notas())
     valores.append(yo)
     with _get_connection() as conn:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute(
-                "SELECT h.id, h.entidad, h.entidad_id, h.proyecto_id, h.accion, h.titulo,"
-                " h.cambios, h.creado_en,"
-                " COALESCE(p.email, '') AS persona, COALESCE(p.nombre, '') AS persona_nombre"
-                " FROM historial h LEFT JOIN equipo_accesos p ON p.id = h.persona_id"
+                "SELECT h.id, h.entity_type AS entidad, h.entity_id AS entidad_id,"
+                " h.project_id AS proyecto_id, h.action AS accion, h.title AS titulo,"
+                " h.changes AS cambios, h.created_at AS creado_en,"
+                " COALESCE(p.email, '') AS persona, COALESCE(p.first_name, '') AS persona_nombre"
+                " FROM history h LEFT JOIN members p ON p.id = h.member_id"
                 f" WHERE {' AND '.join(donde)}"
-                " ORDER BY h.creado_en DESC, h.id DESC LIMIT %s",
+                " ORDER BY h.created_at DESC, h.id DESC LIMIT %s",
                 [*valores, max(1, min(limite, 200))],
             )
             filas = cur.fetchall()
@@ -196,16 +194,16 @@ def mandar_a_papelera(cur, entidad: str, entidad_id: int, alcance: str, valores_
     )
     # Lo que cuelga, con la misma hora: así restaurar el padre lo devuelve.
     if entidad == "proyecto":
-        for hija in ("contents", "tasks"):
+        for hija in ("deliverables", "tasks"):
             cur.execute(
                 f"UPDATE {hija} SET deleted_at = %s, deleted_by_id = %s"
-                " WHERE campaign_id = %s AND deleted_at IS NULL",
+                " WHERE project_id = %s AND deleted_at IS NULL",
                 (ahora, persona, entidad_id),
             )
     elif entidad == "entregable":
         cur.execute(
             "UPDATE tasks SET deleted_at = %s, deleted_by_id = %s"
-            " WHERE content_id = %s AND deleted_at IS NULL",
+            " WHERE deliverable_id = %s AND deleted_at IS NULL",
             (ahora, persona, entidad_id),
         )
     registrar(cur, entidad, entidad_id, "borrar", titulo, autor, proyecto_id)
@@ -215,9 +213,9 @@ def mandar_a_papelera(cur, entidad: str, entidad_id: int, alcance: str, valores_
 # De qué proyecto cuelga cada cosa (para el historial del proyecto).
 _PROYECTO_DE = {
     "proyecto": "id",
-    "entregable": "campaign_id",
-    "tarea": "campaign_id",
-    "nota": "proyecto_id",
+    "entregable": "project_id",
+    "tarea": "project_id",
+    "nota": "project_id",
     "reunion": "NULL",
 }
 
@@ -231,31 +229,31 @@ def listar_papelera(yo: str) -> list[dict]:
             cur.execute(
                 f"""
                 SELECT * FROM (
-                    SELECT 'proyecto' AS entidad, c.id, c.nombre AS titulo, c.deleted_at,
+                    SELECT 'proyecto' AS entidad, c.id, c.name AS titulo, c.deleted_at,
                            c.deleted_by_id, NULL::text AS padre
-                    FROM campaigns c WHERE c.deleted_at IS NOT NULL
+                    FROM projects c WHERE c.deleted_at IS NOT NULL
                     UNION ALL
-                    SELECT 'entregable', co.id, co.titulo, co.deleted_at, co.deleted_by_id, p.nombre
-                    FROM contents co JOIN campaigns p ON p.id = co.campaign_id
+                    SELECT 'entregable', co.id, co.title, co.deleted_at, co.deleted_by_id, p.name
+                    FROM deliverables co JOIN projects p ON p.id = co.project_id
                     WHERE co.deleted_at IS NOT NULL
                       AND (p.deleted_at IS NULL OR p.deleted_at <> co.deleted_at)
                     UNION ALL
-                    SELECT 'tarea', t.id, t.titulo, t.deleted_at, t.deleted_by_id,
-                           COALESCE(co.titulo, p.nombre)
+                    SELECT 'tarea', t.id, t.title, t.deleted_at, t.deleted_by_id,
+                           COALESCE(co.title, p.name)
                     FROM tasks t
-                    LEFT JOIN contents co ON co.id = t.content_id
-                    LEFT JOIN campaigns p ON p.id = t.campaign_id
+                    LEFT JOIN deliverables co ON co.id = t.deliverable_id
+                    LEFT JOIN projects p ON p.id = t.project_id
                     WHERE t.deleted_at IS NOT NULL
                       AND (co.id IS NULL OR co.deleted_at IS NULL OR co.deleted_at <> t.deleted_at)
                       AND (p.id IS NULL OR p.deleted_at IS NULL OR p.deleted_at <> t.deleted_at)
                     UNION ALL
-                    SELECT 'nota', n.id, n.titulo, n.deleted_at, n.deleted_by_id, NULL
-                    FROM notas n
+                    SELECT 'nota', n.id, n.title, n.deleted_at, n.deleted_by_id, NULL
+                    FROM notes n
                     WHERE n.deleted_at IS NOT NULL
-                      AND (NOT n.privada OR n.creado_por_id = (SELECT id FROM equipo_accesos WHERE email = %s))
+                      AND (NOT n.is_private OR n.created_by_id = (SELECT id FROM members WHERE email = %s))
                     UNION ALL
-                    SELECT 'reunion', r.id, r.titulo, r.deleted_at, r.deleted_by_id, NULL
-                    FROM reuniones r WHERE r.deleted_at IS NOT NULL
+                    SELECT 'reunion', r.id, r.title, r.deleted_at, r.deleted_by_id, NULL
+                    FROM meetings r WHERE r.deleted_at IS NOT NULL
                 ) x
                 WHERE x.deleted_at > NOW() - make_interval(days => {DIAS_EN_PAPELERA})
                 ORDER BY x.deleted_at DESC
@@ -267,7 +265,7 @@ def listar_papelera(yo: str) -> list[dict]:
             nombres = {}
             if ids:
                 cur.execute(
-                    "SELECT id, email, nombre FROM equipo_accesos WHERE id = ANY(%s)", (list(ids),)
+                    "SELECT id, email, first_name AS nombre FROM members WHERE id = ANY(%s)", (list(ids),)
                 )
                 nombres = {p["id"]: p for p in cur.fetchall()}
     salida = []
@@ -298,7 +296,7 @@ def restaurar(entidad: str, entidad_id: int, autor: str) -> bool:
                 f"SELECT {_TITULO[tabla]} AS titulo, {_PROYECTO_DE[entidad]} AS proyecto_id,"
                 f" deleted_at FROM {tabla} WHERE id = %s AND deleted_at IS NOT NULL"
                 + (
-                    " AND (NOT privada OR creado_por_id = (SELECT id FROM equipo_accesos WHERE email = %s))"
+                    " AND (NOT is_private OR created_by_id = (SELECT id FROM members WHERE email = %s))"
                     if entidad == "nota"
                     else ""
                 ),
@@ -312,16 +310,16 @@ def restaurar(entidad: str, entidad_id: int, autor: str) -> bool:
                 _comprobar_padres(cur, entidad, entidad_id, marca)
             cur.execute(f"UPDATE {tabla} SET deleted_at = NULL, deleted_by_id = NULL WHERE id = %s", (entidad_id,))
             if entidad == "proyecto":
-                for hija in ("contents", "tasks"):
+                for hija in ("deliverables", "tasks"):
                     cur.execute(
                         f"UPDATE {hija} SET deleted_at = NULL, deleted_by_id = NULL"
-                        " WHERE campaign_id = %s AND deleted_at = %s",
+                        " WHERE project_id = %s AND deleted_at = %s",
                         (entidad_id, marca),
                     )
             elif entidad == "entregable":
                 cur.execute(
                     "UPDATE tasks SET deleted_at = NULL, deleted_by_id = NULL"
-                    " WHERE content_id = %s AND deleted_at = %s",
+                    " WHERE deliverable_id = %s AND deleted_at = %s",
                     (entidad_id, marca),
                 )
             registrar(cur, entidad, entidad_id, "restaurar", fila["titulo"], autor, fila["proyecto_id"])
@@ -334,7 +332,7 @@ def _comprobar_padres(cur, entidad: str, entidad_id: int, marca) -> None:
     dejaría invisible: se pide restaurar antes al padre."""
     if entidad == "entregable":
         cur.execute(
-            "SELECT p.nombre FROM contents co JOIN campaigns p ON p.id = co.campaign_id"
+            "SELECT p.name AS nombre FROM deliverables co JOIN projects p ON p.id = co.project_id"
             " WHERE co.id = %s AND p.deleted_at IS NOT NULL",
             (entidad_id,),
         )
@@ -343,9 +341,9 @@ def _comprobar_padres(cur, entidad: str, entidad_id: int, marca) -> None:
             raise DatosInvalidos(f"Restaura antes el proyecto «{padre['nombre']}».")
     else:
         cur.execute(
-            "SELECT p.nombre AS proyecto, co.titulo AS entregable FROM tasks t"
-            " LEFT JOIN campaigns p ON p.id = t.campaign_id AND p.deleted_at IS NOT NULL"
-            " LEFT JOIN contents co ON co.id = t.content_id AND co.deleted_at IS NOT NULL"
+            "SELECT p.name AS proyecto, co.title AS entregable FROM tasks t"
+            " LEFT JOIN projects p ON p.id = t.project_id AND p.deleted_at IS NOT NULL"
+            " LEFT JOIN deliverables co ON co.id = t.deliverable_id AND co.deleted_at IS NOT NULL"
             " WHERE t.id = %s",
             (entidad_id,),
         )
@@ -368,7 +366,7 @@ def vaciar_papelera(entidad: str | None = None, entidad_id: int | None = None) -
                 cur.execute(f"DELETE FROM {tabla} WHERE id = %s AND deleted_at IS NOT NULL", (entidad_id,))
                 total = cur.rowcount
             else:
-                for tabla in ("tasks", "contents", "campaigns", "notas", "reuniones"):
+                for tabla in ("tasks", "deliverables", "projects", "notes", "meetings"):
                     cur.execute(
                         f"DELETE FROM {tabla} WHERE deleted_at IS NOT NULL"
                         f" AND deleted_at < NOW() - make_interval(days => {DIAS_EN_PAPELERA})"

@@ -6,7 +6,6 @@ import type {
   EquipoSessionResponse,
   EventoCalendario,
   EventoLuma,
-  MiembroDirectorio,
   MiembroWeb,
   Team,
 } from "../types/equipo";
@@ -42,10 +41,6 @@ export function getEquipoSession() {
 /** Sección «Equipo» de la web pública; no necesita sesión. */
 export function getMiembrosWeb() {
   return apiRequest<{ ok: true; miembros: MiembroWeb[] }>("/api/equipo/miembros-web");
-}
-
-export function getDirectorioClub() {
-  return apiRequest<ApiResult & { miembros: MiembroDirectorio[] }>("/api/equipo/directorio");
 }
 
 export function getEquipoCalendario() {
@@ -93,23 +88,6 @@ export function getMisTareas() {
  *  tarea, con su progreso -- para "Mis proyectos" en Mi semana. */
 export function getMisProyectos() {
   return apiRequest<ApiResult & { proyectos: ProyectoResumen[] }>("/api/equipo/mis-proyectos");
-}
-
-/** "Voy" / "no voy" de la propia persona a un evento del club. */
-export function confirmarEventoCalendario(eventoId: number, confirmar = true) {
-  return apiRequest<ApiResult>(`/api/equipo/calendario/${eventoId}/confirmar`, {
-    method: "POST",
-    body: JSON.stringify({ confirmar }),
-  });
-}
-
-/** Check-in el día del evento -- solo VP de cualquier departamento o admin
- *  (ver `_puede_editar_calendario_club` en el backend). */
-export function checkinEventoCalendario(eventoId: number, email: string, asistio = true) {
-  return apiRequest<ApiResult>(`/api/equipo/calendario/${eventoId}/checkin`, {
-    method: "POST",
-    body: JSON.stringify({ email, asistio }),
-  });
 }
 
 /** Solo cargo, VP o admin (ver `es_cargo_vp_o_admin` en el backend) -- 403 para cualquier

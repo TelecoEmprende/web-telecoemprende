@@ -21,8 +21,8 @@ class ProyectosClubTestCase(base.MarketingTestCase):
         super().setUp()
         conn = base.marketing_service._get_connection()
         with conn.cursor() as cur:
-            cur.execute("DELETE FROM historial")
-            cur.execute("DELETE FROM notas")
+            cur.execute("DELETE FROM history")
+            cur.execute("DELETE FROM notes")
         conn.commit()
         conn.close()
         # VP de todo: estas pruebas no ejercitan el límite de repartir tareas.
@@ -336,7 +336,7 @@ class MesaTests(ProyectosClubTestCase):
         pausado = self.crear_campaign(nombre="En pausa", estado="pausado")
         conn = base.marketing_service._get_connection()
         with conn.cursor() as cur:
-            cur.execute("UPDATE campaigns SET updated_at = NOW() - interval '20 days'")
+            cur.execute("UPDATE projects SET updated_at = NOW() - interval '20 days'")
         conn.commit()
         conn.close()
 
