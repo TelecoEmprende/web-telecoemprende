@@ -2420,8 +2420,8 @@ button.mkt-evento-react {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 6px 8px;
-  margin: 2px 0;
+  gap: 8px;
+  margin: 10px 0 4px;
 }
 
 .mkt-estado-proyecto-react.is-activo {
