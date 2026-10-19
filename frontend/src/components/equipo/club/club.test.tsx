@@ -156,12 +156,24 @@ describe("MesaPanel", () => {
             responsable: "", fecha: null, total_tasks: 4, tareas_acabadas: 1,
             ultima_actividad: null, dias_sin_movimiento: 20, estancado: true,
             siguiente_titulo: "Imprimir carteles", siguiente_deadline: null, siguiente_responsables: [],
+            entregables: [
+              { id: 3, titulo: "Carteles", fecha: null, total: 2, acabadas: 1 },
+              { id: 4, titulo: "Stand", fecha: "2020-01-10", total: 1, acabadas: 0 },
+            ],
           },
         ],
         sin_dueno: [
           { id: 9, titulo: "Reservar sala", departamento: "eventos", deadline: null, padre: null },
         ],
         atrasadas: [],
+        personas: [
+          {
+            email: "ana@example.com",
+            atrasadas: 1,
+            tareas: [{ id: 7, titulo: "Llamar al ponente", departamento: "eventos", deadline: "2020-01-01", padre: null }],
+          },
+          { email: "bea@example.com", atrasadas: 0, tareas: [] },
+        ],
       },
     });
   });
@@ -173,6 +185,12 @@ describe("MesaPanel", () => {
     expect(screen.getByText("Todo el club")).toBeInTheDocument();
     expect(screen.getByText("Sin responsable", { selector: ".is-vacio" })).toBeInTheDocument();
     expect(screen.getByText("Sin moverse 20 días")).toBeInTheDocument();
+    expect(screen.getByText("Carteles · 1/2")).toBeInTheDocument();
+    expect(screen.getByText(/Fases \(2 · 1 vencida\)/)).toBeInTheDocument();
+    expect(screen.getByText(/Stand · venció el/)).toHaveClass("is-vencida");
+    expect(screen.getByText(/1 abierta/)).toBeInTheDocument();
+    expect(screen.getByText(/1 atrasada/)).toBeInTheDocument();
+    expect(screen.getByText("Libre")).toBeInTheDocument();
     expect(screen.getByText(/Imprimir carteles/)).toBeInTheDocument();
     expect(screen.getByText("Nada atrasado. Así da gusto.")).toBeInTheDocument();
   });

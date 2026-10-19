@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 
+import { Esqueleto } from "../feedback/Esqueleto";
 import { enviarNotificaciones, getAdminRegistrations } from "../../api/admin";
 import { normalizar } from "../../utils/texto";
 import type { ApiFailure } from "../../types/api";
@@ -134,7 +135,7 @@ export function InscripcionesView() {
   }
 
   return (
-    <>
+    <section className="mkt-panel-react shadcn-scope">
       {aviso ? <AlertBanner variant={aviso.variant} message={aviso.message} /> : null}
       <AdminToolbar
         total={registros.length}
@@ -149,10 +150,7 @@ export function InscripcionesView() {
       />
 
       {isLoading ? (
-        <div className="section-card admin-placeholder">
-          <p className="eyebrow">Cargando</p>
-          <h1>Obteniendo inscripciones...</h1>
-        </div>
+        <Esqueleto filas={5} />
       ) : (
         <>
           <AdminStats registros={encontrados} />
@@ -196,6 +194,6 @@ export function InscripcionesView() {
           />
         </>
       )}
-    </>
+    </section>
   );
 }

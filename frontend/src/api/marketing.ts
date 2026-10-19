@@ -64,8 +64,11 @@ export function apiDepto(depto: Team) {
 
   return {
     // --- Campaigns ---
-    getCampaigns: () =>
-      apiRequest<{ ok: true; campaigns: CampaignResumen[] }>(`${BASE}/campaigns`),
+    /** Con `deptos`, los proyectos de todos ellos en una sola petición. */
+    getCampaigns: (deptos?: Team[]) =>
+      apiRequest<{ ok: true; campaigns: CampaignResumen[] }>(
+        `${BASE}/campaigns${deptos?.length ? `?deptos=${deptos.join(",")}` : ""}`,
+      ),
 
     getCampaign: (id: number) =>
       apiRequest<{ ok: true; campaign: CampaignDetalle }>(`${BASE}/campaigns/${id}`),
@@ -142,8 +145,11 @@ export function apiDepto(depto: Team) {
     // Un solo juego de métodos para todos: el backend los sirve con el
     // mismo CRUD y solo cambian los campos que se le mandan.
 
-    listarRegistros: (recurso: Recurso) =>
-      apiRequest<{ ok: true } & Record<string, Registro[]>>(`${BASE}/${recurso}`),
+    /** Con `deptos`, las de todos ellos en una sola petición. */
+    listarRegistros: (recurso: Recurso, deptos?: Team[]) =>
+      apiRequest<{ ok: true } & Record<string, Registro[]>>(
+        `${BASE}/${recurso}${deptos?.length ? `?deptos=${deptos.join(",")}` : ""}`,
+      ),
 
     crearRegistro: (recurso: Recurso, datos: Record<string, unknown>) =>
       post<{ ok: true; registro: Registro }>(`/${recurso}`, datos),

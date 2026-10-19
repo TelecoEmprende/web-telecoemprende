@@ -55,7 +55,7 @@ export function PlataformaPanel() {
   return (
     <>
       <header className="crm-cabecera-react">
-        <h3 className="crm-h1">Plataforma</h3>
+        <h3 className="crm-k">Plataforma</h3>
         <button
           type="button"
           className="mkt-btn-mini-react"

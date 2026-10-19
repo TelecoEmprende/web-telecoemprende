@@ -43,14 +43,14 @@ class RegistrosTestCase(unittest.TestCase):
         app.app.config["TESTING"] = True
         self.client = app.app.test_client()
 
-    def login(self, equipos=("eventos", "ingenieria"), cargo="boardmember"):
+    def login(self, equipos=("eventos", "ingenieria"), cargo="boardmember", email="iker@example.com"):
         conn = equipo_service._get_connection()
         with conn.cursor() as cur:
             cur.execute(
                 "INSERT INTO members (email, password_hash, preferred_departments, role)"
                 " VALUES (%s, %s, %s, %s)",
                 (
-                    "iker@example.com",
+                    email,
                     generate_password_hash("test-equipo"),
                     list(equipos),
                     cargo,
@@ -60,7 +60,7 @@ class RegistrosTestCase(unittest.TestCase):
         conn.close()
         respuesta = self.client.post(
             "/api/equipo/login",
-            json={"email": "iker@example.com", "password": "test-equipo"},
+            json={"email": email, "password": "test-equipo"},
         )
         self.assertEqual(respuesta.status_code, 200)
 
@@ -126,6 +126,75 @@ class RegistrosTestCase(unittest.TestCase):
         self.assertEqual(
             self.client.delete(f"/api/ingenieria/reuniones/{fila_id}").status_code, 404
         )
+
+    def test_varios_departamentos_en_una_peticion(self):
+        self.login()
+        self.client.post("/api/eventos/reuniones", json={"titulo": "De eventos"})
+        self.client.post("/api/ingenieria/reuniones", json={"titulo": "De ingeniería"})
+        self.client.post("/api/eventos/reuniones", json={"titulo": "Semanal", "club": True})
+        self.client.post("/api/marketing/reuniones", json={"titulo": "De marketing"})
+
+        filas = self.client.get("/api/eventos/reuniones?deptos=eventos,ingenieria").get_json()["reuniones"]
+        self.assertEqual(sorted(r["titulo"] for r in filas), ["De eventos", "De ingeniería", "Semanal"])
+        self.assertEqual(self.client.get("/api/eventos/reuniones?deptos=nada").status_code, 400)
+
+    # --- Reuniones de directiva ---
+
+    def _de_directiva(self, **extra):
+        self.login()  # boardmember
+        respuesta = self.client.post(
+            "/api/eventos/reuniones",
+            json={"titulo": "Junta", "fecha": "2026-10-20", "directiva": True, **extra},
+        )
+        self.assertEqual(respuesta.status_code, 201, respuesta.get_json())
+        return respuesta.get_json()["registro"]
+
+    def _entrar_sin_cargo(self):
+        self.client.post("/api/equipo/logout")
+        self.login(cargo="", email="ana@example.com")
+
+    def test_una_de_directiva_por_defecto_solo_la_ve_la_directiva(self):
+        fila = self._de_directiva()
+        self.assertEqual((fila["departamento"], fila["solo_directiva"]), ("directiva", True))
+        for depto in ("eventos", "marketing", "ingenieria"):
+            titulos = [r["titulo"] for r in self.client.get(f"/api/{depto}/reuniones").get_json()["reuniones"]]
+            self.assertEqual(titulos, ["Junta"], depto)
+
+        self._entrar_sin_cargo()
+        self.assertEqual(self.client.get("/api/eventos/reuniones").get_json()["reuniones"], [])
+        calendario = self.client.get("/api/equipo/calendario-equipo?desde=2026-10-01&hasta=2026-10-31")
+        self.assertNotIn("Junta", [i["titulo"] for i in calendario.get_json()["items"]])
+        historial = self.client.get("/api/equipo/historial").get_json()["eventos"]
+        self.assertNotIn("Junta", [e["titulo"] for e in historial])
+        self.assertEqual(self.client.put(f"/api/eventos/reuniones/{fila['id']}", json={"titulo": "X"}).status_code, 404)
+        self.assertEqual(self.client.delete(f"/api/eventos/reuniones/{fila['id']}").status_code, 404)
+
+    def test_la_directiva_elige_que_la_vea_todo_el_club_pero_solo_ella_la_toca(self):
+        fila = self._de_directiva(solo_directiva=False)
+
+        self._entrar_sin_cargo()
+        self.assertEqual([r["titulo"] for r in self.client.get("/api/marketing/reuniones").get_json()["reuniones"]], ["Junta"])
+        self.assertEqual(self.client.put(f"/api/eventos/reuniones/{fila['id']}", json={"titulo": "X"}).status_code, 404)
+
+    def test_sin_cargo_no_se_convoca_una_de_directiva(self):
+        self.login(cargo="")
+        respuesta = self.client.post("/api/eventos/reuniones", json={"titulo": "Junta", "directiva": True})
+        self.assertEqual(respuesta.status_code, 403)
+
+    def test_una_borrada_de_directiva_no_sale_en_la_papelera_de_los_demas(self):
+        fila = self._de_directiva()
+        self.client.delete(f"/api/eventos/reuniones/{fila['id']}")
+        self.assertEqual([e["titulo"] for e in self.client.get("/api/equipo/papelera").get_json()["elementos"]], ["Junta"])
+
+        self._entrar_sin_cargo()
+        self.assertEqual(self.client.get("/api/equipo/papelera").get_json()["elementos"], [])
+        self.assertEqual(self.client.post(f"/api/equipo/papelera/reunion/{fila['id']}/restaurar").status_code, 404)
+
+    def test_solo_las_de_directiva_pueden_ser_solo_de_la_directiva(self):
+        self.login()
+        fila_id = self.client.post("/api/eventos/reuniones", json={"titulo": "Semanal"}).get_json()["registro"]["id"]
+        respuesta = self.client.put(f"/api/eventos/reuniones/{fila_id}", json={"solo_directiva": True})
+        self.assertEqual(respuesta.status_code, 400)
 
     def test_el_titulo_es_obligatorio_al_crear(self):
         self.login()

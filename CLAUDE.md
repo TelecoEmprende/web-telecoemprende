@@ -39,17 +39,20 @@ npm run dev       # Vite dev server at http://localhost:5173, proxies /api to ht
 npm run build     # tsc -b && vite build -> frontend/dist
 npm test          # vitest run
 npx vitest run <path/to/file.test.tsx>   # single test file
-npx tsc --noEmit -p .                    # type-check only
+npx tsc --noEmit -p tsconfig.app.json   # type-check only (`-p .` checks nothing: tsconfig.json is just references)
 ```
 
 ### Backend (root)
 
 ```bash
-pip install -r requirements.txt
-python app.py                              # runs on :5000, debug=True
-python -m unittest discover -s tests -v    # all backend tests (tests/test_*.py; needs TEST_DATABASE_URL)
-python -m unittest tests.test_api.<TestClass>.<test_method>   # single test
+python3 -m venv .venv && .venv/bin/pip install -r requirements.txt   # if the repo folder moves, recreate with `python3 -m venv --clear .venv` (scripts hardcode the old path)
+.venv/bin/python app.py                    # runs on :5000, debug=True (on macOS :5000 is often taken by AirPlay: `PORT=5001 .venv/bin/python app.py` + `API_PROXY=http://127.0.0.1:5001 npm run dev`)
+export TEST_DATABASE_URL=postgresql://telecoemprende:telecoemprende@localhost:55434/telecoemprende_test
+.venv/bin/python -m unittest discover -s tests -v    # all backend tests (tests/test_*.py)
+.venv/bin/python -m unittest discover -s tests -p "test_api.py" -k <test_method>   # one file / test (tests import each other by bare name, so `tests.test_x` doesn't work)
 ```
+
+The test database is the Docker container `teleco-test-pg` (not part of `docker-compose.yml`). If it's gone: `docker run -d --name teleco-test-pg -p 55434:5432 -e POSTGRES_USER=telecoemprende -e POSTGRES_PASSWORD=telecoemprende -e POSTGRES_DB=telecoemprende_test postgres:16-alpine`.
 
 ### `demo/` and `juego/` (standalone, not part of the main frontend)
 

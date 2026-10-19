@@ -6,6 +6,8 @@ import {
   getCalendarioEventos,
   updateCalendarioEvento,
 } from "../../api/admin";
+import { Esqueleto } from "../feedback/Esqueleto";
+import { CabeceraPanel } from "../equipo/CabeceraPanel";
 import { AlertBanner } from "../feedback/AlertBanner";
 import {
   AlertDialog,
@@ -132,17 +134,13 @@ export function CalendarioPanel() {
   }
 
   return (
-    <section className="admin-card-react shadcn-scope mt-7">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          {/* El título ya está en la barra superior. */}
-          <p className="crm-s">Eventos del club: los ve todo el equipo en su Inicio y en el Calendario.</p>
-        </div>
+    <section className="mkt-panel-react shadcn-scope">
+      <CabeceraPanel descripcion="Eventos del club: los ve todo el equipo en su Inicio y en el Calendario.">
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
-            <Button type="button" onClick={abrirCrear}>
-              Nuevo evento
-            </Button>
+            <button type="button" className="crm-btn" onClick={abrirCrear}>
+              + Nuevo evento
+            </button>
           </DialogTrigger>
           <DialogContent>
             <form onSubmit={handleGuardar} className="flex flex-col gap-4">
@@ -201,14 +199,14 @@ export function CalendarioPanel() {
             </form>
           </DialogContent>
         </Dialog>
-      </div>
+      </CabeceraPanel>
 
       {message ? <AlertBanner variant={messageVariant} message={message} /> : null}
 
       {isLoading ? (
-        <p className="mt-4">Cargando eventos...</p>
+        <Esqueleto filas={3} />
       ) : (
-        <div className="mt-4 flex flex-col gap-2">
+        <div className="flex flex-col gap-2">
           {eventos.map((evento) => (
             <div
               key={evento.id}
@@ -241,7 +239,7 @@ export function CalendarioPanel() {
             </div>
           ))}
           {eventos.length === 0 ? (
-            <p className="text-muted-foreground">Todavía no hay eventos en el calendario.</p>
+            <p className="mkt-vacio-react">Todavía no hay eventos en el calendario.</p>
           ) : null}
         </div>
       )}

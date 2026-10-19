@@ -96,6 +96,24 @@ class CronTests(unittest.TestCase):
         tareas_avisadas = aviso.call_args[0][0]
         self.assertEqual([t["titulo"] for t in tareas_avisadas], ["Diseñar cartel"])
 
+    def test_recuerda_las_reuniones_de_mañana(self):
+        mañana = (date.today() + timedelta(days=1)).isoformat()
+        conn = marketing_service._get_connection()
+        with conn.cursor() as cur:
+            cur.execute("DELETE FROM meetings")
+        conn.commit()
+        conn.close()
+        self.client.post("/api/marketing/reuniones", json={"titulo": "Semanal", "fecha": mañana})
+        self.client.post("/api/marketing/reuniones", json={"titulo": "Otro día", "fecha": "2020-01-01"})
+
+        with patch("backend.api.cron.aviso_reuniones_manana") as aviso:
+            aviso.return_value = True
+            respuesta = self.client.post(
+                "/api/cron/avisar-deadlines", headers={"Authorization": "Bearer test-cron-secret"}
+            )
+        self.assertEqual(respuesta.get_json()["reuniones"], 1)
+        self.assertEqual([r["titulo"] for r in aviso.call_args[0][0]], ["Semanal"])
+
     def test_purga_auditoria_e_inscripciones_de_hace_mas_de_un_año(self):
         conn = equipo_service._get_connection()
         with conn.cursor() as cur:

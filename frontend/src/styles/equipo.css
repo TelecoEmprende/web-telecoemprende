@@ -228,10 +228,13 @@
   top: 0;
   z-index: 10;
   display: flex;
+  /* En móvil el selector de departamentos baja a otra línea: en una sola, las
+     casillas se salían por la derecha y la página entera deslizaba de lado. */
+  flex-wrap: wrap;
   align-items: center;
-  gap: 12px;
-  height: 60px;
-  padding: 0 20px;
+  gap: 8px 12px;
+  min-height: 60px;
+  padding: 10px 20px;
   border-bottom: 1px solid var(--color-divider);
   background: var(--color-surface);
 }
@@ -925,17 +928,52 @@
   gap: 12px;
 }
 
-.crm-h1 {
+.crm-cabecera-react > .crm-s {
   margin: 0;
-  /* El boceto escribe el saludo en la tipografía de cuerpo, no en la
-     display: es una frase, no un cartel. Anton solo grita los titulares. */
-  font-family: var(--font-body);
-  text-transform: none;
-  font-size: 1.5rem;
-  font-weight: 700;
-  line-height: 1.15;
-  letter-spacing: -0.015em;
-  color: var(--color-noche);
+  font-size: 0.86rem;
+}
+
+.reu-acuerdos-react {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.reu-acuerdo-react {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--color-divider);
+  font-size: 0.9rem;
+}
+
+.reu-acuerdo-react:last-child {
+  border-bottom: 0;
+}
+
+.reu-acuerdo-form-react {
+  display: flex;
+  flex: 1 1 100%;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.reu-fieldset-react {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.crm-cabecera-acciones-react {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
 }
 
 .crm-sub {
@@ -1081,6 +1119,12 @@ button.crm-tag-azul-react:hover {
   cursor: pointer;
 }
 
+a.crm-btn {
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+}
+
 .crm-btn-ghost-react {
   border: 1px solid rgba(var(--color-noche-rgb), 0.14);
   background: var(--color-surface);
@@ -1103,7 +1147,7 @@ button.crm-tag-azul-react:hover {
 .crm-tag,
 .crm-check,
 .crm-enlace-react,
-.crm-input-react {
+.crm-buscador-react label {
   transition: background var(--dur-fast) var(--ease-out),
     border-color var(--dur-fast) var(--ease-out);
 }
@@ -1135,12 +1179,16 @@ a.crm-tag:focus-visible,
   cursor: pointer;
 }
 
-.crm-check {
+/* `input.` para ganar a `.field-group-react input` (ancho completo, 54px de
+   alto): dentro de un formulario, la casilla se convertía en un bloque. */
+input.crm-check {
   appearance: none;
   flex: none;
   width: 18px;
   height: 18px;
+  min-height: 0;
   margin: 0;
+  padding: 0;
   border: 1.5px solid rgba(var(--color-noche-rgb), 0.22);
   border-radius: 5px;
   background: var(--color-surface);
@@ -1237,10 +1285,6 @@ a.crm-tag:focus-visible,
 /* Cabecera o barra que encabeza un panel entero (no una caja): necesita su
    propio hueco debajo. Dentro de `.crm-c` no hace falta -- ahí el espacio lo
    pone el `gap` de la caja --, por eso la regla mira quién es el padre. */
-.mkt-panel-react > .crm-cabecera-react,
-.mkt-panel-react > .crm-barra-react {
-  margin-bottom: 16px;
-}
 
 /* Barra de herramientas de un panel: buscador, filtros y la acción. Va sobre
    el fondo, no dentro de una caja -- como la fila de chips del boceto. */
@@ -1251,24 +1295,79 @@ a.crm-tag:focus-visible,
   gap: 8px;
 }
 
-/* El buscador ocupa lo que necesita, no la fila entera: estirado de lado a
-   lado empujaba los filtros contra el borde y competía con el tablero. */
-.crm-input-react {
-  flex: 0 1 320px;
+/* El buscador (`Buscador.tsx`) ocupa lo que necesita, no la fila entera:
+   estirado de lado a lado empujaba los filtros contra el borde. El reparto
+   flex solo dentro de una barra: en una columna (la lista de Notas), un
+   `flex-basis` se aplica al alto y lo estiraba media pantalla. */
+.crm-buscador-react {
+  display: flex;
+  width: 100%;
+  max-width: 420px;
+  align-items: center;
+  gap: 12px;
   min-width: 0;
   margin-right: auto;
-  padding: 9px 12px;
+}
+
+.crm-barra-react > .crm-buscador-react {
+  flex: 0 1 360px;
+}
+
+.crm-buscador-react label {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 0 12px;
   border: 1px solid rgba(var(--color-noche-rgb), 0.14);
   border-radius: var(--radius-md);
   background: var(--color-surface);
+  color: var(--color-text-muted);
+}
+
+.crm-buscador-react label:focus-within {
+  outline: 2px solid var(--color-azul);
+  outline-offset: -1px;
+}
+
+.crm-buscador-react svg {
+  width: 15px;
+  height: 15px;
+  flex: none;
+}
+
+.crm-buscador-react input {
+  flex: 1;
+  min-width: 0;
+  padding: 9px 0;
+  border: 0;
+  background: none;
   color: var(--color-noche);
   font-family: inherit;
   font-size: 0.82rem;
 }
 
-.crm-input-react:focus {
-  outline: 2px solid var(--color-azul);
-  outline-offset: -1px;
+.crm-buscador-react input:focus {
+  outline: none;
+}
+
+.crm-buscador-cuenta-react {
+  flex: none;
+  color: var(--color-text-muted);
+  font-size: 0.82rem;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 720px) {
+  .crm-buscador-react {
+    flex-basis: 100%;
+    max-width: none;
+  }
+
+  .crm-buscador-react input {
+    min-height: 42px;
+  }
 }
 
 /* Cajita con casilla dentro: el filtro de departamentos de la barra. */
@@ -1277,6 +1376,11 @@ a.crm-tag:focus-visible,
   align-items: center;
   gap: 7px;
   cursor: pointer;
+}
+
+/* Dentro de un campo de formulario (columna), la cajita no se estira. */
+.field-group-react > .crm-tag {
+  align-self: flex-start;
 }
 
 .crm-tag-check-react .crm-check {
@@ -1330,7 +1434,7 @@ a.crm-tag:focus-visible,
   color: var(--color-noche);
 }
 
-.crm-react .crm-input-react {
+.crm-react .crm-buscador-react input {
   caret-color: var(--color-azul);
 }
 
@@ -1424,7 +1528,10 @@ a.crm-tag:focus-visible,
   height: 15px;
 }
 
-.crm-select-react {
+/* También cualquier `select` de una barra de filtros, para que uno nuevo no
+   salga con el estilo del navegador. */
+.crm-select-react,
+.crm-barra-react select {
   padding: 8px 10px;
   border: 1px solid rgba(var(--color-noche-rgb), 0.14);
   border-radius: var(--radius-md);
@@ -1435,7 +1542,8 @@ a.crm-tag:focus-visible,
   font-weight: 500;
 }
 
-.crm-select-react:focus-visible {
+.crm-select-react:focus-visible,
+.crm-barra-react select:focus-visible {
   outline: 2px solid var(--color-azul);
   outline-offset: 1px;
 }
@@ -1710,6 +1818,11 @@ kbd {
   .inicio-kpis-react {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  /* Como en `.mkt-tiles-react`: la impar del final, a lo ancho. */
+  .inicio-kpis-react > :last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+  }
 }
 
 @container (max-width: 620px) {
@@ -1749,41 +1862,6 @@ kbd {
   top: 76px;
   max-height: calc(100vh - 100px);
   overflow: hidden;
-}
-
-.notas-buscar-react {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 0 10px;
-  border: 1px solid rgba(var(--color-noche-rgb), 0.12);
-  border-radius: var(--radius-md);
-  color: var(--color-text-muted);
-}
-
-.notas-buscar-react svg {
-  width: 15px;
-  height: 15px;
-  flex: none;
-}
-
-.notas-buscar-react input {
-  flex: 1;
-  min-width: 0;
-  padding: 9px 0;
-  border: 0;
-  background: none;
-  color: var(--color-noche);
-  font-family: inherit;
-  font-size: 0.82rem;
-}
-
-.notas-buscar-react input:focus {
-  outline: none;
-}
-
-.notas-buscar-react:focus-within {
-  border-color: var(--color-azul);
 }
 
 .notas-items-react {
@@ -2307,6 +2385,16 @@ kbd {
   padding-inline: 8px;
 }
 
+/* shadcn corta el contenido en modo icono (`overflow-hidden`), pero aquí
+   «Más» va abierto y el pie se apila: en una ventana baja las entradas de
+   abajo quedaban fuera sin poder deslizar. Sin barra visible, para que los
+   iconos sigan centrados en el carril. */
+[data-state="collapsed"] .crm-sidebar-react [data-slot="sidebar-content"] {
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+
 [data-state="collapsed"] .crm-sidebar-react .workspace-item-react {
   padding: 0;
   justify-content: center;
@@ -2751,12 +2839,6 @@ span.cal-capa-react {
    Ingeniería, el estado de la plataforma y los servicios debajo.
    ========================================================================== */
 
-.herr-react {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
 .herr-rejilla-react {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
@@ -2855,7 +2937,6 @@ span.cal-capa-react {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  margin-top: 6px;
 }
 
 /* Campos nativos del CRM con la misma esquina que el resto (14px). `:where`
@@ -3081,6 +3162,74 @@ span.cal-capa-react {
 .mesa-proyecto-react.is-estancado .mesa-movimiento-react {
   color: var(--color-info-text);
   font-weight: 700;
+}
+
+.mesa-fases-react {
+  grid-column: 1 / -1;
+  font-size: 0.84rem;
+  color: var(--color-text-muted);
+}
+
+.mesa-fases-react summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.mesa-fases-react .is-vencida,
+.mesa-persona-react .is-atrasada {
+  color: var(--color-info-text);
+  font-weight: 700;
+}
+
+.mesa-personas-react {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+}
+
+.mesa-persona-react {
+  display: grid;
+  grid-template-columns: minmax(140px, 220px) 1fr;
+  align-items: start;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--color-divider);
+  font-size: 0.9rem;
+}
+
+.mesa-persona-react:last-child {
+  border-bottom: 0;
+}
+
+.mesa-persona-react > em {
+  font-style: normal;
+  color: var(--color-text-muted);
+}
+
+.mesa-persona-react summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.mesa-persona-react details ul {
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.mesa-persona-react details em {
+  font-style: normal;
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+}
+
+.mesa-fases-react ul {
+  margin: 6px 0 0;
+  padding-left: 18px;
+  font-variant-numeric: tabular-nums;
 }
 
 .mesa-columnas-react {

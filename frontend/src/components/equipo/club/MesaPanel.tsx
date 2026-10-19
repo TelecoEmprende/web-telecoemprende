@@ -1,16 +1,17 @@
 import { useCallback, useEffect, useState } from "react";
 
+import { CabeceraPanel } from "../CabeceraPanel";
+import { Esqueleto } from "../../feedback/Esqueleto";
 import { getMesa } from "../../../api/club";
 import { apiDepto } from "../../../api/marketing";
 import { AlertBanner } from "../../feedback/AlertBanner";
-import { Esqueleto } from "../../feedback/Esqueleto";
 import { Badge } from "@/components/ui/badge";
 import { AvatarResponsable, etiquetaDe } from "../marketing/Avatares";
 import { Contador } from "../../movimiento";
 import { etiquetaAmbito } from "./AmbitoChips";
 import { HistorialLista } from "./HistorialLista";
 import type { ApiFailure } from "../../../types/api";
-import type { EventoHistorial, Mesa } from "../../../types/club";
+import type { EventoHistorial, Mesa, ProyectoDeMesa } from "../../../types/club";
 import { DEPTO_LABEL, type Team } from "../../../types/equipo";
 import { PROYECTO_ESTADO_LABEL, diasHasta, formatearFecha } from "../../../types/marketing";
 
@@ -26,6 +27,13 @@ function sinMoverse(dias: number | null) {
   if (dias === null) return "Sin actividad todavía";
   if (dias === 0) return "Movido hoy";
   return dias === 1 ? "Movido ayer" : `Sin moverse ${dias} días`;
+}
+
+/** Una fase con fecha pasada y tareas sin acabar. Sin fecha no se avisa: la
+ *  fecha de una fase es opcional. */
+function faseVencida(f: ProyectoDeMesa["entregables"][number]) {
+  const dias = f.fecha ? diasHasta(f.fecha) : null;
+  return dias !== null && dias < 0 && (f.total === 0 || f.acabadas < f.total);
 }
 
 function plazo(deadline: string | null) {
@@ -82,6 +90,8 @@ export function MesaPanel({ email, nombre, onAbrirProyecto }: Props) {
     <section className="mkt-panel-react">
       {error ? <AlertBanner variant="error" message={error} /> : null}
 
+      <CabeceraPanel descripcion="Lo que se mira en la reunión semanal: proyectos vivos con su responsable, siguiente paso y fases, tareas sin dueño y atrasadas." />
+
       <div className="mkt-tiles-react">
         <div className="crm-c mkt-tile-react">
           <p className="crm-k">Proyectos vivos</p>
@@ -115,6 +125,7 @@ export function MesaPanel({ email, nombre, onAbrirProyecto }: Props) {
           <ul className="mesa-proyectos-react">
             {mesa.proyectos.map((p) => {
               const pct = p.total_tasks === 0 ? 0 : Math.round((100 * p.tareas_acabadas) / p.total_tasks);
+              const vencidas = p.entregables.filter(faseVencida).length;
               return (
                 <li key={p.id} className={`mesa-proyecto-react${p.estancado ? " is-estancado" : ""}`}>
                   <button
@@ -161,9 +172,72 @@ export function MesaPanel({ email, nombre, onAbrirProyecto }: Props) {
                     )}
                   </span>
                   <span className="mesa-movimiento-react">{sinMoverse(p.dias_sin_movimiento)}</span>
+                  {p.entregables.length > 0 ? (
+                    <details className="mesa-fases-react">
+                      <summary>
+                        Fases ({p.entregables.length}
+                        {vencidas > 0 ? ` · ${vencidas} vencida${vencidas === 1 ? "" : "s"}` : ""}
+                        )
+                      </summary>
+                      <ul>
+                        {p.entregables.map((e) => (
+                          <li key={e.id} className={faseVencida(e) ? "is-vencida" : undefined}>
+                            {e.titulo}
+                            {e.fecha ? ` · ${faseVencida(e) ? "venció el " : ""}${formatearFecha(e.fecha)}` : ""}
+                            {" · "}
+                            {e.total === 0 ? "sin tareas" : `${e.acabadas}/${e.total}`}
+                          </li>
+                        ))}
+                      </ul>
+                    </details>
+                  ) : null}
                 </li>
               );
             })}
+          </ul>
+        )}
+      </div>
+
+      <div className="crm-c mkt-grupo-react">
+        <h4 className="mkt-grupo-titulo-react">Por persona</h4>
+        {mesa.personas.length === 0 ? (
+          <p className="mkt-vacio-inline-react">No hay cuentas activas.</p>
+        ) : (
+          <ul className="mesa-personas-react">
+            {mesa.personas.map((persona) => (
+              <li key={persona.email} className="mesa-persona-react">
+                <span className="mkt-responsable-react">
+                  <AvatarResponsable email={persona.email} />
+                  {etiquetaDe(persona.email)}
+                </span>
+                {persona.tareas.length === 0 ? (
+                  <em>Libre</em>
+                ) : (
+                  <details>
+                    <summary>
+                      {persona.tareas.length} abierta{persona.tareas.length === 1 ? "" : "s"}
+                      {persona.atrasadas > 0 ? (
+                        <strong className="is-atrasada">
+                          {" "}· {persona.atrasadas} atrasada{persona.atrasadas === 1 ? "" : "s"}
+                        </strong>
+                      ) : null}
+                    </summary>
+                    <ul>
+                      {persona.tareas.map((t) => (
+                        <li key={t.id}>
+                          {t.titulo}
+                          <em>
+                            {" "}· {DEPTO_LABEL[t.departamento]}
+                            {t.padre ? ` · ${t.padre}` : ""}
+                            {t.deadline ? ` · ${plazo(t.deadline)}` : ""}
+                          </em>
+                        </li>
+                      ))}
+                    </ul>
+                  </details>
+                )}
+              </li>
+            ))}
           </ul>
         )}
       </div>

@@ -51,6 +51,23 @@ class AmbitoTests(ProyectosClubTestCase):
             nombres = [c["nombre"] for c in self.client.get(f"/api/{depto}/campaigns").get_json()["campaigns"]]
             self.assertEqual(nombres, ["Feria de empleo"], depto)
 
+    def test_varios_departamentos_en_una_peticion_cada_proyecto_una_vez(self):
+        club = self.crear_campaign(nombre="Feria", departamentos=["marketing", "eventos", "ingenieria"])
+        self.crear_campaign(nombre="Reels")  # solo marketing
+        self.crear_campaign(nombre="Hackathon", departamentos=["ingenieria"])
+        hecha = self.tarea(campaign_id=club["id"])
+        self.tarea(campaign_id=club["id"])
+        self.client.put(f"/api/marketing/tasks/{hecha['id']}", json={"estado": "acabado"})
+        self.client.delete(f"/api/marketing/tasks/{self.tarea(campaign_id=club['id'])['id']}")
+
+        campaigns = self.client.get("/api/marketing/campaigns?deptos=marketing,eventos").get_json()["campaigns"]
+        self.assertEqual(sorted(c["nombre"] for c in campaigns), ["Feria", "Reels"])
+        feria = next(c for c in campaigns if c["nombre"] == "Feria")
+        # La borrada (en la papelera) no cuenta.
+        self.assertEqual((feria["total_tasks"], feria["tareas_acabadas"]), (2, 1))
+
+        self.assertEqual(self.client.get("/api/marketing/campaigns?deptos=marketing,nada").status_code, 400)
+
     def test_un_proyecto_de_un_departamento_solo_sale_en_el_suyo(self):
         self.crear_campaign(nombre="Reels de otoño")  # por defecto, el de la ruta
 
@@ -321,6 +338,31 @@ class MesaTests(ProyectosClubTestCase):
         self.assertEqual(feria["siguiente_titulo"], "Imprimir")
         self.assertEqual(feria["siguiente_responsables"], ["ana@example.com"])
         self.assertFalse(feria["estancado"])
+
+    def test_cada_proyecto_trae_sus_fases_con_progreso(self):
+        proyecto = self.crear_campaign(nombre="Feria")
+        fase = self.crear_content(proyecto["id"], titulo="Cartel")
+        hecha = self.tarea(campaign_id=proyecto["id"], content_id=fase["id"])
+        self.tarea(campaign_id=proyecto["id"], content_id=fase["id"])
+        self.client.put(f"/api/marketing/tasks/{hecha['id']}", json={"estado": "acabado"})
+
+        fases = self.mesa()["mesa"]["proyectos"][0]["entregables"]
+        self.assertEqual([(f["titulo"], f["acabadas"], f["total"]) for f in fases], [("Cartel", 1, 2)])
+
+    def test_por_persona_lo_abierto_de_cada_uno_y_quien_esta_libre(self):
+        self.seed_acceso("ana@example.com")
+        self.seed_acceso("libre@example.com")
+        ayer = (date.today() - timedelta(days=1)).isoformat()
+        self.tarea(titulo="Vencida", deadline=ayer, responsables=["ana@example.com"])
+        self.tarea(titulo="Sin fecha", responsables=["ana@example.com"])
+        hecha = self.tarea(titulo="Hecha", responsables=["ana@example.com"])
+        self.client.put(f"/api/marketing/tasks/{hecha['id']}", json={"estado": "acabado"})
+
+        personas = {p["email"]: p for p in self.mesa()["mesa"]["personas"]}
+        self.assertEqual([t["titulo"] for t in personas["ana@example.com"]["tareas"]], ["Vencida", "Sin fecha"])
+        self.assertEqual(personas["ana@example.com"]["atrasadas"], 1)
+        self.assertEqual(personas["libre@example.com"]["tareas"], [])
+        self.assertEqual(self.mesa()["mesa"]["personas"][0]["email"], "ana@example.com")
 
     def test_tareas_sin_dueno_y_atrasadas(self):
         ayer = (date.today() - timedelta(days=1)).isoformat()

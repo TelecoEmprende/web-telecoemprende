@@ -1,7 +1,7 @@
-import { ClipboardCopy, Search } from "lucide-react";
+import { ClipboardCopy } from "lucide-react";
 
-import { Button } from "../ui/button";
-import { Input } from "../ui/input";
+import { CabeceraPanel } from "../equipo/CabeceraPanel";
+import { Buscador } from "../equipo/Buscador";
 import { motion, useReducedMotion } from "motion/react";
 import { SPRING_DEFAULT } from "@/components/smoothui/lib/animation";
 
@@ -44,54 +44,40 @@ export function AdminToolbar({
 
   return (
     <div className="mb-5">
-      <div className="mb-4 flex items-start justify-between gap-[18px] max-[720px]:flex-col">
-        <div>
-          {/* El título ("Inscripciones") ya está en la barra superior. */}
-          <p className="text-[0.78rem] leading-[1.4] text-muted-foreground">
-            {mostrados === total ? (
-              <>
-                Total actual: <strong>{total}</strong>
-              </>
-            ) : (
-              <>
-                <strong>{mostrados}</strong> de {total} inscripciones
-              </>
-            )}
-          </p>
-        </div>
+      <CabeceraPanel
+        descripcion={
+          mostrados === total ? (
+            <>
+              Las inscripciones recibidas (ya cerradas). Total actual: <strong>{total}</strong>
+            </>
+          ) : (
+            <>
+              <strong>{mostrados}</strong> de {total} inscripciones
+            </>
+          )
+        }
+      >
+        <button
+          type="button"
+          className="crm-btn crm-btn-ghost-react crm-btn-icono-react"
+          disabled={emails === 0}
+          onClick={onCopiarEmails}
+          title="Copia los emails de las filas que estás viendo"
+        >
+          <ClipboardCopy aria-hidden="true" />
+          Copiar emails ({emails})
+        </button>
+        <a className="crm-btn crm-btn-ghost-react" href={downloadUrl}>
+          Descargar Excel
+        </a>
+      </CabeceraPanel>
 
-        <div className="flex flex-wrap items-center gap-2.5 max-[720px]:w-full">
-          <Button
-            type="button"
-            variant="outline"
-            size="lg"
-            className="h-8 px-3 text-[0.78rem] font-semibold max-[720px]:w-full"
-            disabled={emails === 0}
-            onClick={onCopiarEmails}
-            title="Copia los emails de las filas que estás viendo"
-          >
-            <ClipboardCopy />
-            Copiar emails ({emails})
-          </Button>
-          <Button asChild variant="outline" size="lg" className="h-8 px-3 text-[0.78rem] font-semibold max-[720px]:w-full">
-            <a href={downloadUrl}>Descargar Excel</a>
-          </Button>
-        </div>
-      </div>
-
-      <div className="mb-4 relative max-w-[420px] max-[720px]:max-w-none">
-        <Search
-          size={16}
-          aria-hidden="true"
-          className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground"
-        />
-        <Input
-          type="search"
-          value={busqueda}
-          onChange={(event) => onBusquedaChange(event.target.value)}
+      <div className="my-4">
+        <Buscador
+          valor={busqueda}
+          onCambio={onBusquedaChange}
           placeholder="Buscar por nombre, email, escuela..."
-          aria-label="Buscar inscripciones"
-          className="h-9 pl-10"
+          etiqueta="Buscar inscripciones"
         />
       </div>
 

@@ -16,11 +16,12 @@ from dataclasses import dataclass
 from decimal import Decimal
 
 import psycopg2
+import psycopg2.errors
 from psycopg2.extras import Json, RealDictCursor
 
 from backend.config import DATABASE_URL
 from backend.services import historial
-from backend.services.db import PERSONAS, fijar_personas, id_de_persona
+from backend.services.db import PERSONAS, DatosInvalidos, fijar_personas, id_de_persona
 
 
 def _get_connection():
@@ -43,8 +44,10 @@ class Tabla:
     # Columnas JSONB: un `list` de Python se adaptaría a ARRAY, así que van
     # envueltas en `Json` al escribir.
     json: tuple[str, ...] = ()
-    # Además de las del departamento, enseña las del club (`department = ''`):
-    # la reunión semanal de todos no es de ningún departamento.
+    # Además de las del departamento, enseña las del club (`department = ''`)
+    # y las de la directiva (`'directiva'`): la reunión semanal de todos no es
+    # de ningún departamento. Las de directiva marcadas `board_only` solo las
+    # ve la directiva, y solo ella las escribe (ver `_alcance`).
     incluye_club: bool = False
     # Borrar manda a la papelera (30 días, ver `services/historial.py`) en vez
     # de quitar la fila: `entidad` es como se llama allí.
@@ -64,7 +67,7 @@ REUNIONES = Tabla(
     nombre="meetings",
     columnas={
         "titulo": "title", "fecha": "date", "hora": "start_time", "objetivo": "goal",
-        "asistentes": "asistentes", "contenido": "content",
+        "asistentes": "asistentes", "contenido": "content", "solo_directiva": "board_only",
     },
     orden="fecha DESC, hora DESC, id DESC",
     json=("contenido",),
@@ -102,24 +105,38 @@ def _serializar(fila: dict) -> dict:
     return salida
 
 
-def _alcance(tabla: Tabla, departamento: str | None, sobre_tabla: bool = True) -> tuple[str, list]:
+def _alcance(
+    tabla: Tabla, departamento: str | list[str] | None, sobre_tabla: bool = True,
+    directiva: bool = False,
+) -> tuple[str, list]:
     """Cláusula y parámetros que acotan una fila a su departamento. Sobre la
     tabla (escrituras) también deja fuera lo que está en la papelera; la vista
     `_v` con la que se lee ya lo deja fuera, y su columna se llama como en la
-    API."""
+    API. Quien no es de la directiva no lee las suyas marcadas como privadas ni
+    escribe ninguna de las suyas."""
     sin_borrar = " AND deleted_at IS NULL" if tabla.papelera and sobre_tabla else ""
     columna = "department" if sobre_tabla else "departamento"
+    fuera = ""
+    if tabla.incluye_club and not directiva:
+        fuera = " AND department <> 'directiva'" if sobre_tabla else " AND NOT solo_directiva"
+    # Leer acepta varios departamentos a la vez; escribir, siempre uno.
+    departamentos = departamento if isinstance(departamento, list) else [departamento]
     if tabla.incluye_club:
-        return f" AND {columna} IN (%s, ''){sin_borrar}", [departamento]
-    return f" AND {columna} = %s{sin_borrar}", [departamento]
+        return (
+            f" AND ({columna} = ANY(%s) OR {columna} IN ('', 'directiva')){fuera}{sin_borrar}",
+            [departamentos],
+        )
+    return f" AND {columna} = ANY(%s){sin_borrar}", [departamentos]
 
 
 def _adaptar(tabla: Tabla, campos: dict) -> dict:
     return {c: Json(v) if c in tabla.json else v for c, v in campos.items()}
 
 
-def listar(tabla: Tabla, departamento: str | None = None) -> list[dict]:
-    donde, valores = _alcance(tabla, departamento, sobre_tabla=False)
+def listar(
+    tabla: Tabla, departamento: str | list[str] | None = None, directiva: bool = False
+) -> list[dict]:
+    donde, valores = _alcance(tabla, departamento, sobre_tabla=False, directiva=directiva)
     with _get_connection() as conn:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute(
@@ -168,7 +185,8 @@ def _campo_personas(tabla: Tabla) -> str | None:
 
 
 def actualizar(
-    tabla: Tabla, fila_id: int, campos: dict, departamento: str | None = None
+    tabla: Tabla, fila_id: int, campos: dict, departamento: str | None = None,
+    directiva: bool = False,
 ) -> bool:
     """El departamento va en el WHERE del propio UPDATE: pasar el id de una
     fila de otro departamento no actualiza nada, sin SELECT previo."""
@@ -182,15 +200,20 @@ def actualizar(
         return False
 
     asignaciones.append("updated_at = NOW()")
-    donde, valores_alcance = _alcance(tabla, departamento)
+    donde, valores_alcance = _alcance(tabla, departamento, directiva=directiva)
 
     with _get_connection() as conn:
         with conn.cursor() as cur:
-            cur.execute(
-                f"UPDATE {tabla.nombre} SET {', '.join(asignaciones)}"
-                f" WHERE id = %s{donde}",
-                [*valores, fila_id, *valores_alcance],
-            )
+            try:
+                cur.execute(
+                    f"UPDATE {tabla.nombre} SET {', '.join(asignaciones)}"
+                    f" WHERE id = %s{donde}",
+                    [*valores, fila_id, *valores_alcance],
+                )
+            except psycopg2.errors.CheckViolation:
+                # P. ej. marcar como «solo la directiva» una reunión que no es
+                # de la directiva: lo para el CHECK de la tabla.
+                raise DatosInvalidos("Ese cambio no está permitido.") from None
             actualizado = cur.rowcount > 0
             if actualizado and personas is not None:
                 fijar_personas(cur, tabla.nombre, fila_id, personas)
@@ -199,9 +222,10 @@ def actualizar(
 
 
 def eliminar(
-    tabla: Tabla, fila_id: int, departamento: str | None = None, autor: str = ""
+    tabla: Tabla, fila_id: int, departamento: str | None = None, autor: str = "",
+    directiva: bool = False,
 ) -> bool:
-    donde, valores = _alcance(tabla, departamento)
+    donde, valores = _alcance(tabla, departamento, directiva=directiva)
     with _get_connection() as conn:
         if tabla.papelera:
             with conn.cursor(cursor_factory=RealDictCursor) as cur:
@@ -218,6 +242,19 @@ def eliminar(
             eliminado = cur.rowcount > 0
         conn.commit()
     return eliminado
+
+
+def reuniones_del_dia(dia) -> list[dict]:
+    """Las reuniones de un día, de cualquier ámbito (el aviso decide cuáles
+    se anuncian)."""
+    with _get_connection() as conn:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(
+                "SELECT id, titulo, fecha, hora, objetivo, asistentes, departamento, solo_directiva"
+                " FROM meetings_v WHERE fecha = %s ORDER BY hora, id",
+                (dia,),
+            )
+            return [_serializar(f) for f in cur.fetchall()]
 
 
 def accesos_club() -> list[dict]:

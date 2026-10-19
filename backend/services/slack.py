@@ -9,7 +9,10 @@ operación que lo dispara.
 import json
 import logging
 import urllib.error
+import urllib.parse
 import urllib.request
+from datetime import date
+from functools import lru_cache
 
 from backend.config import SLACK_BOT_TOKEN, SLACK_WEBHOOK_URL
 
@@ -80,8 +83,51 @@ def _quien(email: str) -> str:
     return email.split("@")[0] if email else "alguien"
 
 
+# ponytail: caché en memoria del proceso (se pierde en cada arranque en frío y
+# también guarda los fallos); si las búsquedas pesan, guardar el id en `members`.
+@lru_cache(maxsize=512)
+def _id_de_slack(email: str) -> str:
+    """El usuario de Slack con ese correo (`users.lookupByEmail`, necesita el
+    permiso `users:read.email` en la app del bot), o "" si no hay token, no
+    existe o Slack no contesta."""
+    if not SLACK_BOT_TOKEN or not email:
+        return ""
+    peticion = urllib.request.Request(
+        "https://slack.com/api/users.lookupByEmail?" + urllib.parse.urlencode({"email": email}),
+        headers={"Authorization": f"Bearer {SLACK_BOT_TOKEN}"},
+    )
+    try:
+        with urllib.request.urlopen(peticion, timeout=3) as resp:
+            data = json.loads(resp.read())
+    except (urllib.error.URLError, urllib.error.HTTPError, OSError, ValueError) as exc:
+        logger.error("fallo buscando a %s en Slack: %s", email, exc)
+        return ""
+    return data.get("user", {}).get("id", "") if data.get("ok") else ""
+
+
+def _mencion(email: str) -> str:
+    """A quien le toca algo (responsable, asistente): mencionado, para que le
+    llegue el aviso aunque no mire el canal. Sin cuenta en Slack, su nombre."""
+    slack_id = _id_de_slack(email.lower()) if email else ""
+    return f"<@{slack_id}>" if slack_id else _quien(email)
+
+
+_DIAS = ("lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo")
+_MESES = ("ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic")
+
+
+def _cuando(fecha: str, hora: str = "") -> str:
+    """«jueves 22 oct · 18:00» a partir de la fecha ISO de la reunión."""
+    try:
+        dia = date.fromisoformat(fecha)
+    except (TypeError, ValueError):
+        return "sin fecha"
+    texto = f"{_DIAS[dia.weekday()]} {dia.day} {_MESES[dia.month - 1]}"
+    return f"{texto} · {hora}" if hora else texto
+
+
 def tarea_creada(tarea: dict, departamento: str, autor: str) -> bool:
-    responsables = ", ".join(_quien(r) for r in tarea.get("responsables") or [])
+    responsables = ", ".join(_mencion(r) for r in tarea.get("responsables") or [])
     linea = (
         f":pushpin: *{_quien(autor)}* ha creado una tarea en *{departamento}*: "
         f"*{tarea.get('titulo', '')}*"
@@ -111,7 +157,7 @@ def aviso_deadlines_manana(tareas: list[dict]) -> bool:
 
     lineas = [":alarm_clock: *Vence mañana:*"]
     for tarea in tareas:
-        responsables = ", ".join(_quien(r) for r in tarea.get("responsables") or [])
+        responsables = ", ".join(_mencion(r) for r in tarea.get("responsables") or [])
         linea = f"• *{tarea.get('titulo', '')}* ({tarea.get('departamento', '')})"
         if responsables:
             linea += f" — {responsables}"
@@ -121,7 +167,7 @@ def aviso_deadlines_manana(tareas: list[dict]) -> bool:
 
 
 def tarea_comentada(tarea: dict, texto: str, departamento: str, autor: str) -> bool:
-    responsables = ", ".join(_quien(r) for r in tarea.get("responsables") or [])
+    responsables = ", ".join(_mencion(r) for r in tarea.get("responsables") or [] if r != autor)
     resumen = texto if len(texto) <= 200 else texto[:200] + "…"
     linea = (
         f":speech_balloon: *{_quien(autor)}* comenta en *{tarea.get('titulo', '')}* "
@@ -159,7 +205,7 @@ def resumen_mesa(mesa: dict) -> bool:
     if atrasadas:
         lineas.append(f":rotating_light: *{len(atrasadas)} tarea(s) atrasada(s):*")
         for t in atrasadas[:8]:
-            quien = ", ".join(_quien(r) for r in t.get("responsables") or []) or "sin dueño"
+            quien = ", ".join(_mencion(r) for r in t.get("responsables") or []) or "sin dueño"
             lineas.append(f"• {t['titulo']} ({t['departamento']}) — {quien}, venció el {t['deadline']}")
     if sin_dueno:
         lineas.append(f":raising_hand: *{len(sin_dueno)} tarea(s) sin dueño* — ¿quién se la queda?")
@@ -168,10 +214,50 @@ def resumen_mesa(mesa: dict) -> bool:
     if estancados:
         lineas.append(f":hourglass: *{len(estancados)} proyecto(s) sin moverse* en {mesa.get('dias_estancado', 14)}+ días:")
         for p in estancados[:8]:
-            lineas.append(f"• {p['nombre']} — {p.get('responsable') and _quien(p['responsable']) or 'sin responsable'}")
+            lineas.append(f"• {p['nombre']} — {p.get('responsable') and _mencion(p['responsable']) or 'sin responsable'}")
     if sin_responsable:
         lineas.append(
             f":bust_in_silhouette: *{len(sin_responsable)} proyecto(s) sin responsable:* "
             + ", ".join(p["nombre"] for p in sin_responsable[:8])
         )
+    return enviar("\n".join(lineas))
+
+
+_AMBITO = {"": "todo el club", "directiva": "directiva", "marketing": "Marketing",
+           "eventos": "Eventos", "ingenieria": "Ingeniería"}
+
+
+def _lineas_reunion(reunion: dict) -> list[str]:
+    lineas = []
+    if reunion.get("objetivo"):
+        objetivo = reunion["objetivo"]
+        lineas.append(f"> {objetivo if len(objetivo) <= 200 else objetivo[:200] + '…'}")
+    if reunion.get("asistentes"):
+        lineas.append("> Convocados: " + ", ".join(_mencion(a) for a in reunion["asistentes"]))
+    return lineas
+
+
+def reunion_convocada(reunion: dict, autor: str) -> bool:
+    """Al convocar una reunión con fecha. Las de la directiva que solo ve ella
+    no se anuncian: el canal es de todo el club."""
+    if reunion.get("solo_directiva") or not reunion.get("fecha"):
+        return False
+    ambito = _AMBITO.get(reunion.get("departamento", ""), reunion.get("departamento", ""))
+    cabecera = (
+        f":date: *{_quien(autor)}* convoca *{reunion.get('titulo', '')}* ({ambito}): "
+        f"{_cuando(reunion['fecha'], reunion.get('hora', ''))}"
+    )
+    return enviar("\n".join([cabecera, *_lineas_reunion(reunion)]))
+
+
+def aviso_reuniones_manana(reuniones: list[dict]) -> bool:
+    """Recordatorio del día antes, junto con el de tareas del cron diario."""
+    publicas = [r for r in reuniones if not r.get("solo_directiva")]
+    if not publicas:
+        return False
+    lineas = [":bell: *Mañana hay reunión:*"]
+    for r in publicas:
+        ambito = _AMBITO.get(r.get("departamento", ""), r.get("departamento", ""))
+        lineas.append(f"• *{r.get('titulo', '')}* ({ambito}) — {_cuando(r['fecha'], r.get('hora', ''))}")
+        lineas += ["  " + linea for linea in _lineas_reunion(r)]
     return enviar("\n".join(lineas))
