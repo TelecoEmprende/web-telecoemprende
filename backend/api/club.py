@@ -9,7 +9,7 @@ solo de admin; a los 30 días se vacía sola (ver `api/cron.py`).
 
 from flask import Blueprint, jsonify, request
 
-from backend.api.marketing import DatosInvalidos
+from backend.api.marketing import DatosInvalidos, es_cargo_vp_o_admin
 from backend.api.sesion import requiere_sesion
 from backend.schemas import build_response
 from backend.services import historial
@@ -27,7 +27,7 @@ def api_mesa():
     return jsonify({
         "ok": True,
         "mesa": mesa_del_club(),
-        "actividad": historial.listar(yo, limite=15),
+        "actividad": historial.listar(yo, limite=15, directiva=es_cargo_vp_o_admin()),
     }), 200
 
 
@@ -55,6 +55,7 @@ def api_historial():
         entidad_id=_entero(request.args.get("id")),
         proyecto_id=_entero(request.args.get("proyecto_id")),
         limite=_entero(request.args.get("limite")) or 50,
+        directiva=es_cargo_vp_o_admin(),
     )
     return jsonify({"ok": True, "eventos": eventos}), 200
 
@@ -66,7 +67,7 @@ def api_papelera():
     return jsonify({
         "ok": True,
         "dias": historial.DIAS_EN_PAPELERA,
-        "elementos": historial.listar_papelera(yo),
+        "elementos": historial.listar_papelera(yo, es_cargo_vp_o_admin()),
     }), 200
 
 
@@ -76,7 +77,7 @@ def api_restaurar(entidad: str, fila_id: int):
     yo = equipo_session_info()["email"]
     if entidad not in historial.TABLAS:
         raise DatosInvalidos("Tipo no válido.")
-    if not historial.restaurar(entidad, fila_id, yo):
+    if not historial.restaurar(entidad, fila_id, yo, es_cargo_vp_o_admin()):
         return jsonify(build_response(False, "No está en la papelera.")), 404
     return jsonify(build_response(True, "Restaurado.")), 200
 

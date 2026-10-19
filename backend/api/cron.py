@@ -13,10 +13,15 @@ from flask import Blueprint, jsonify, request
 
 from backend.config import CRON_SECRET, EQUIPOS_VALIDOS
 from backend.schemas import build_response
-from backend.services import auditoria, historial
+from backend.services import auditoria, historial, registros
 from backend.services.registrations import purgar_inscripciones_antiguas
 from backend.services.marketing import mesa_del_club, salud_equipo, tareas_que_vencen
-from backend.services.slack import aviso_deadlines_manana, resumen_mesa, resumen_salud_equipo
+from backend.services.slack import (
+    aviso_deadlines_manana,
+    aviso_reuniones_manana,
+    resumen_mesa,
+    resumen_salud_equipo,
+)
 
 logger = logging.getLogger("telecoemprende.cron")
 
@@ -31,8 +36,9 @@ def _autorizado() -> bool:
 
 @cron_api.route("/avisar-deadlines", methods=["POST"])
 def api_avisar_deadlines():
-    """Un aviso a Slack por cada tarea (de cualquier departamento) que vence
-    mañana y sigue sin acabar. Pensado para correr una vez al día."""
+    """Un aviso a Slack con las tareas (de cualquier departamento) que vencen
+    mañana y siguen sin acabar, y otro con las reuniones de mañana. Pensado
+    para correr una vez al día."""
     if not _autorizado():
         return jsonify(build_response(False, "No autorizado.")), 401
 
@@ -40,6 +46,12 @@ def api_avisar_deadlines():
     tareas = tareas_que_vencen(mañana)
     enviado = aviso_deadlines_manana(tareas)
     logger.info("cron avisar-deadlines: %s tarea(s), enviado=%s", len(tareas), enviado)
+    try:
+        reuniones = registros.reuniones_del_dia(mañana)
+        reuniones_enviado = aviso_reuniones_manana(reuniones)
+    except Exception:
+        logger.exception("cron avisar-deadlines: fallo con las reuniones de mañana")
+        reuniones, reuniones_enviado = [], False
 
     # De paso, una vez al día, la limpieza: la papelera de más de 30 días y
     # los datos personales que ya han cumplido su plazo (auditoría e
@@ -56,7 +68,10 @@ def api_avisar_deadlines():
         except Exception:
             logger.exception("cron avisar-deadlines: fallo limpiando %s", nombre)
             borradas[nombre] = 0
-    return jsonify({"ok": True, "tareas": len(tareas), "enviado": enviado, **borradas}), 200
+    return jsonify({
+        "ok": True, "tareas": len(tareas), "enviado": enviado,
+        "reuniones": len(reuniones), "reuniones_enviado": reuniones_enviado, **borradas,
+    }), 200
 
 
 @cron_api.route("/resumen-equipo", methods=["POST"])

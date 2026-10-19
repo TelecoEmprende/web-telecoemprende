@@ -351,7 +351,7 @@ def api_equipo_calendario_cruzado():
         "ok": True,
         "desde": desde.isoformat(),
         "hasta": hasta.isoformat(),
-        "items": calendario_equipo(desde, hasta, departamentos),
+        "items": calendario_equipo(desde, hasta, departamentos, es_cargo_vp_o_admin()),
     }), 200
 
 

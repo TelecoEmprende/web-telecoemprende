@@ -40,24 +40,31 @@ def _serializar(fila: dict) -> dict:
 # Campaigns
 # --------------------------------------------------------------------------
 
-def listar_campaigns(departamento: str) -> list[dict]:
-    """Los proyectos cuyo ámbito incluye el departamento: los suyos, los que
-    comparte con otros y los de todo el club."""
+def listar_campaigns(departamentos: list[str]) -> list[dict]:
+    """Los proyectos cuyo ámbito toca alguno de los departamentos: los suyos,
+    los que comparten con otros y los de todo el club, cada uno una vez. Los
+    recuentos van sobre las tablas base: `tasks_v` montaría los responsables
+    de cada tarea solo para contarlas."""
     with _get_connection() as conn:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute("""
                 SELECT c.*,
-                       (SELECT COUNT(*) FROM deliverables_v co WHERE co.campaign_id = c.id)
-                           AS total_contents,
-                       (SELECT COUNT(*) FROM tasks_v t WHERE t.campaign_id = c.id)
-                           AS total_tasks,
-                       (SELECT COUNT(*) FROM tasks_v t
-                            WHERE t.campaign_id = c.id AND t.estado = 'acabado')
-                           AS tareas_acabadas
+                       COALESCE(d.total, 0) AS total_contents,
+                       COALESCE(t.total, 0) AS total_tasks,
+                       COALESCE(t.acabadas, 0) AS tareas_acabadas
                 FROM projects_v c
-                WHERE %s = ANY(c.departamentos)
+                LEFT JOIN LATERAL (
+                    SELECT COUNT(*) AS total FROM deliverables
+                    WHERE project_id = c.id AND deleted_at IS NULL
+                ) d ON TRUE
+                LEFT JOIN LATERAL (
+                    SELECT COUNT(*) AS total,
+                           COUNT(*) FILTER (WHERE status = 'acabado') AS acabadas
+                    FROM tasks WHERE project_id = c.id AND deleted_at IS NULL
+                ) t ON TRUE
+                WHERE c.departamentos && %s::text[]
                 ORDER BY COALESCE(c.fecha, c.created_at::date) DESC, c.id DESC
-            """, (departamento,))
+            """, (departamentos,))
             return [_serializar(f) for f in cur.fetchall()]
 
 
@@ -637,7 +644,7 @@ def crear_task_comment(task_id: int, autor: str, texto: str) -> dict:
 # Calendario
 # --------------------------------------------------------------------------
 
-def calendario(desde: date, hasta: date, departamento: str) -> list[dict]:
+def calendario(desde: date, hasta: date, departamento: str, directiva: bool = False) -> list[dict]:
     """Vista de solo lectura sobre lo que ya existe: no hay tabla de calendario.
 
     Devuelve deadlines de tareas, fechas de publicación de contenidos y
@@ -683,7 +690,8 @@ def calendario(desde: date, hasta: date, departamento: str) -> list[dict]:
                            r.asistentes AS responsables, NULLIF(r.hora, '') AS hora
                     FROM meetings_v r
                     WHERE r.fecha BETWEEN %(desde)s AND %(hasta)s
-                      AND r.departamento IN (%(departamento)s, '')
+                      AND r.departamento IN (%(departamento)s, '', 'directiva')
+                      AND (%(directiva)s OR NOT r.solo_directiva)
                 ) x
                 ORDER BY fecha,
                          -- La publicación ancla el día; después las tareas por
@@ -696,12 +704,14 @@ def calendario(desde: date, hasta: date, departamento: str) -> list[dict]:
                          hora NULLS LAST,
                          titulo
                 """,
-                {"desde": desde, "hasta": hasta, "departamento": departamento},
+                {"desde": desde, "hasta": hasta, "departamento": departamento, "directiva": directiva},
             )
             return [_serializar(f) for f in cur.fetchall()]
 
 
-def calendario_equipo(desde: date, hasta: date, departamentos: list[str]) -> list[dict]:
+def calendario_equipo(
+    desde: date, hasta: date, departamentos: list[str], directiva: bool = False
+) -> list[dict]:
     """Como `calendario()`, pero de varios departamentos a la vez y con
     `departamento` en cada fila -- para la lectura cruzada de `/equipo`
     (ver `GET /api/equipo/calendario-equipo`), que no está atada a un solo
@@ -745,7 +755,8 @@ def calendario_equipo(desde: date, hasta: date, departamentos: list[str]) -> lis
                            r.departamento
                     FROM meetings_v r
                     WHERE r.fecha BETWEEN %(desde)s AND %(hasta)s
-                      AND (r.departamento = ANY(%(departamentos)s) OR r.departamento = '')
+                      AND (r.departamento = ANY(%(departamentos)s) OR r.departamento IN ('', 'directiva'))
+                      AND (%(directiva)s OR NOT r.solo_directiva)
                     UNION ALL
                     -- Los eventos que pone el club desde /admin (charlas de
                     -- alumni, feria, asambleas...). Sin filtro de
@@ -770,7 +781,7 @@ def calendario_equipo(desde: date, hasta: date, departamentos: list[str]) -> lis
                          hora NULLS LAST,
                          titulo
                 """,
-                {"desde": desde, "hasta": hasta, "departamentos": departamentos},
+                {"desde": desde, "hasta": hasta, "departamentos": departamentos, "directiva": directiva},
             )
             return [_serializar(f) for f in cur.fetchall()]
 
@@ -925,8 +936,21 @@ def mesa_del_club() -> dict:
                        COALESCE(a.acabadas, 0) AS tareas_acabadas,
                        GREATEST(c.updated_at, a.ultima) AS ultima_actividad,
                        n.titulo AS siguiente_titulo, n.deadline AS siguiente_deadline,
-                       n.responsables AS siguiente_responsables
+                       n.responsables AS siguiente_responsables,
+                       COALESCE(e.entregables, '[]'::json) AS entregables
                 FROM projects_v c
+                LEFT JOIN LATERAL (
+                    SELECT json_agg(json_build_object(
+                               'id', d.id, 'titulo', d.titulo, 'fecha', d.fecha_publicacion,
+                               'total', COALESCE(x.total, 0), 'acabadas', COALESCE(x.acabadas, 0)
+                           ) ORDER BY d.fecha_publicacion NULLS LAST, d.id) AS entregables
+                    FROM deliverables_v d
+                    LEFT JOIN LATERAL (
+                        SELECT COUNT(*) AS total, COUNT(*) FILTER (WHERE estado = 'acabado') AS acabadas
+                        FROM tasks_v WHERE content_id = d.id
+                    ) x ON TRUE
+                    WHERE d.campaign_id = c.id
+                ) e ON TRUE
                 LEFT JOIN LATERAL (
                     SELECT COUNT(*) AS total,
                            COUNT(*) FILTER (WHERE estado = 'acabado') AS acabadas,
@@ -985,10 +1009,45 @@ def mesa_del_club() -> dict:
             )
             atrasadas = [_serializar(f) for f in cur.fetchall()]
 
+            # Por persona: lo abierto de cada cuenta activa, también de quien no
+            # lleva nada (así se ve quién está libre).
+            cur.execute(
+                """
+                WITH abiertas AS (
+                    SELECT r.email, t.id, t.titulo, t.departamento, t.deadline,
+                           COALESCE(co.title, c.name) AS padre
+                    FROM tasks_v t
+                    CROSS JOIN LATERAL unnest(t.responsables) AS r(email)
+                    LEFT JOIN deliverables co ON co.id = t.content_id
+                    LEFT JOIN projects c ON c.id = t.campaign_id
+                    WHERE t.estado <> 'acabado'
+                )
+                SELECT m.email, a.id, a.titulo, a.departamento, a.deadline, a.padre
+                FROM members m LEFT JOIN abiertas a ON a.email = m.email
+                WHERE m.active
+                ORDER BY m.email, COALESCE(a.deadline, '9999-12-31'::date), a.id
+                """
+            )
+            por_email: dict[str, list[dict]] = {}
+            for f in cur.fetchall():
+                tareas = por_email.setdefault(f["email"], [])
+                if f["id"] is not None:
+                    tareas.append(_serializar({k: v for k, v in f.items() if k != "email"}))
+    personas = [
+        {
+            "email": email,
+            "tareas": tareas,
+            "atrasadas": sum(1 for t in tareas if t["deadline"] and t["deadline"] < hoy.isoformat()),
+        }
+        for email, tareas in por_email.items()
+    ]
+    personas.sort(key=lambda p: (-len(p["tareas"]), p["email"]))
+
     return {
         "proyectos": proyectos,
         "sin_dueno": sin_dueno,
         "atrasadas": atrasadas,
+        "personas": personas,
         "sin_responsable": sum(1 for p in proyectos if not p["responsable"]),
         "estancados": sum(1 for p in proyectos if p["estancado"]),
         "dias_estancado": DIAS_ESTANCADO,
