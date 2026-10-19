@@ -1,9 +1,10 @@
-import { Search } from "lucide-react";
 import { useEffect, useState } from "react";
 
+import { Esqueleto } from "../feedback/Esqueleto";
+import { CabeceraPanel } from "../equipo/CabeceraPanel";
+import { Buscador } from "../equipo/Buscador";
 import { getAuditoria, type RegistroAuditoria } from "../../api/admin";
 import { AlertBanner } from "../feedback/AlertBanner";
-import { Input } from "../ui/input";
 import type { ApiFailure } from "../../types/api";
 import { DEPTO_LABEL, type Team } from "../../types/equipo";
 
@@ -95,29 +96,23 @@ export function AuditoriaPanel() {
   }, [busqueda]);
 
   return (
-    <section className="admin-card-react shadcn-scope">
-      <p className="crm-s max-w-[72ch]">
-        Cada cambio hecho en /equipo, las entradas y salidas y las descargas de datos personales.
-        Se guarda quién, qué y cuándo, nunca lo que se escribió.
-      </p>
+    <section className="mkt-panel-react shadcn-scope">
+      <CabeceraPanel descripcion="Cada cambio hecho en /equipo, las entradas y salidas y las descargas de datos personales. Se guarda quién, qué y cuándo, nunca lo que se escribió." />
 
-      <div className="cuentas-buscador-react mt-4">
-        <Search aria-hidden="true" />
-        <Input
-          type="search"
-          value={busqueda}
-          onChange={(event) => setBusqueda(event.target.value)}
-          placeholder="Buscar por email o por lo que se tocó (tasks, notas...)"
-          aria-label="Buscar en la auditoría"
-        />
-      </div>
+      <div className="admin-card-react">
+      <Buscador
+        valor={busqueda}
+        onCambio={setBusqueda}
+        placeholder="Buscar por email o por lo que se tocó (tasks, notas...)"
+        etiqueta="Buscar en la auditoría"
+      />
 
       {error ? <AlertBanner variant="error" message={error} /> : null}
 
       {cargando ? (
-        <p className="mt-4 text-muted-foreground">Cargando...</p>
+        <Esqueleto filas={6} alto={44} />
       ) : registros.length === 0 ? (
-        <p className="mt-4 text-muted-foreground">
+        <p className="mkt-vacio-react">
           {busqueda.trim() ? `Nada coincide con «${busqueda.trim()}».` : "Todavía no hay nada registrado."}
         </p>
       ) : (
@@ -152,6 +147,7 @@ export function AuditoriaPanel() {
           </table>
         </div>
       )}
+      </div>
     </section>
   );
 }

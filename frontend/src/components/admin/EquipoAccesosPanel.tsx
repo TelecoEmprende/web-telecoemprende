@@ -1,4 +1,4 @@
-import { Camera, Search, ShieldCheck } from "lucide-react";
+import { Camera, ShieldCheck } from "lucide-react";
 import { motion } from "motion/react";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
@@ -10,6 +10,9 @@ import {
   ponerClaveProvisional,
   updateEquipoAcceso,
 } from "../../api/admin";
+import { Esqueleto } from "../feedback/Esqueleto";
+import { CabeceraPanel } from "../equipo/CabeceraPanel";
+import { Buscador } from "../equipo/Buscador";
 import { AvatarResponsable } from "../equipo/marketing/Avatares";
 import { AlertBanner } from "../feedback/AlertBanner";
 import { useEntradaDeFila } from "../movimiento";
@@ -377,48 +380,40 @@ export function EquipoAccesosPanel() {
   const nuevoValido = nuevosEquipos.length === TEAMS.length;
 
   return (
-    <section className="admin-card-react equipo-accesos-panel-react shadcn-scope">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          {/* El título ya está en la barra superior. */}
-          <p className="crm-s max-w-[72ch]">
+    <section className="mkt-panel-react shadcn-scope">
+      <CabeceraPanel
+        descripcion={
+          <>
             Todos somos de los tres departamentos: lo que importa es el orden. La{" "}
             <strong>1ª preferencia</strong> es donde se le proponen antes las tareas. El cargo
             es un título; el acceso al grupo Admin se da aparte, con la casilla{" "}
             <strong>Admin</strong>.
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Button type="button" variant="outline" size="sm" asChild>
-            <a href="/api/admin/equipo/pdf">Descargar PDF</a>
-          </Button>
-          {/* Datos personales guardados, con departamentos, cargo y foto. */}
-          <Button type="button" variant="outline" size="sm" asChild>
-            <a href="/api/admin/equipo/excel">Descargar Excel</a>
-          </Button>
-        </div>
-      </div>
+          </>
+        }
+      >
+        <a className="crm-btn crm-btn-ghost-react" href="/api/admin/equipo/pdf">
+          Descargar PDF
+        </a>
+        {/* Datos personales guardados, con departamentos, cargo y foto. */}
+        <a className="crm-btn crm-btn-ghost-react" href="/api/admin/equipo/excel">
+          Descargar Excel
+        </a>
+      </CabeceraPanel>
+
+      <div className="admin-card-react">
 
       {message ? <AlertBanner variant={messageVariant} message={message} /> : null}
 
-      <div className="cuentas-buscador-react mt-4">
-        <Search aria-hidden="true" />
-        <Input
-          type="search"
-          value={busqueda}
-          onChange={(event) => setBusqueda(event.target.value)}
-          placeholder="Buscar por nombre, apellidos o email"
-          aria-label="Buscar cuentas"
-        />
-        {busqueda.trim() ? (
-          <span className="cuentas-buscador-cuenta-react" aria-live="polite">
-            {ordenados.length} de {accesos.length}
-          </span>
-        ) : null}
-      </div>
+      <Buscador
+        valor={busqueda}
+        onCambio={setBusqueda}
+        placeholder="Buscar por nombre, apellidos o email"
+        etiqueta="Buscar cuentas"
+        cuenta={`${ordenados.length} de ${accesos.length}`}
+      />
 
       {isLoading ? (
-        <p>Cargando cuentas...</p>
+        <Esqueleto filas={5} />
       ) : (
         <div className="mt-4 overflow-x-auto">
           <table className="cuentas-tabla-react w-full min-[721px]:min-w-[1000px] border-separate border-spacing-y-2 text-sm">
@@ -580,7 +575,7 @@ export function EquipoAccesosPanel() {
               })}
               {ordenados.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="p-2 text-muted-foreground">
+                  <td colSpan={8} className="mkt-vacio-react">
                     {accesos.length === 0
                       ? "Todavía no hay cuentas dadas de alta."
                       : `Nadie coincide con «${busqueda.trim()}».`}
@@ -705,6 +700,7 @@ export function EquipoAccesosPanel() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      </div>
     </section>
   );
 }

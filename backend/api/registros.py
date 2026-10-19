@@ -11,10 +11,11 @@ resuelve `_montar_rutas`, que es la misma para todas. Aquí cuelga también
 
 from functools import wraps
 
-from flask import jsonify
+from flask import jsonify, request
 
 from backend.api.sesion import requiere_sesion
 from backend.api.marketing import (
+    DEPARTAMENTOS,
     DatosInvalidos,
     _autor,
     _fecha,
@@ -35,6 +36,7 @@ from backend.config import (
 )
 from backend.schemas import build_response
 from backend.services import registros as reg
+from backend.services import slack
 from backend.services.plataforma import estado_plataforma
 
 
@@ -105,6 +107,11 @@ def _campos_reunion(datos: dict) -> dict:
     if datos.get("club"):
         # Reunión de todo el club (no de un departamento): la lee `crear`.
         salida["club"] = True
+    if datos.get("directiva"):
+        # Reunión de la directiva: también la lee `crear`.
+        salida["directiva"] = True
+    if "solo_directiva" in datos:
+        salida["solo_directiva"] = bool(datos.get("solo_directiva"))
     return salida
 
 
@@ -142,7 +149,8 @@ def _solo_cargo_o_admin(func):
 
 
 def _montar_rutas(
-    ruta: str, tabla: reg.Tabla, leer_campos, obligatorio: str, solo_cargo: bool = False
+    ruta: str, tabla: reg.Tabla, leer_campos, obligatorio: str, solo_cargo: bool = False,
+    al_crear=None,
 ):
     """Las cuatro rutas CRUD de una entidad.
 
@@ -153,29 +161,51 @@ def _montar_rutas(
     depto_de = departamento_actual
 
     def listar():
-        return jsonify({"ok": True, ruta: reg.listar(tabla, depto_de())}), 200
+        # `?deptos=marketing,eventos`: varios a la vez en una sola petición.
+        deptos = [d for d in request.args.get("deptos", "").split(",") if d]
+        if any(d not in DEPARTAMENTOS for d in deptos):
+            raise DatosInvalidos("Departamento no válido.")
+        filas = reg.listar(tabla, deptos or depto_de(), es_cargo_vp_o_admin())
+        return jsonify({"ok": True, ruta: filas}), 200
 
     def crear():
         datos = _payload()
         campos = leer_campos(datos)
         if obligatorio not in campos:
             raise DatosInvalidos(f"Falta «{obligatorio}».")
-        # Solo las reuniones traen `club`: la de todos no es de un departamento.
-        departamento = "" if campos.pop("club", False) else depto_de()
+        directiva = es_cargo_vp_o_admin()
+        # Solo las reuniones traen `club` y `directiva`: no son de un departamento.
+        if campos.pop("directiva", False):
+            if not directiva:
+                return jsonify(build_response(False, "Solo la directiva convoca sus reuniones.")), 403
+            departamento = "directiva"
+            campos.setdefault("solo_directiva", True)
+        else:
+            departamento = "" if campos.pop("club", False) else depto_de()
+            # «Solo la directiva» es de las reuniones de directiva.
+            campos.pop("solo_directiva", None)
         fila = reg.crear(tabla, campos, _autor(), departamento)
+        if al_crear is not None:
+            al_crear(fila, _autor())
         return jsonify(build_response(True, "Creado.", registro=fila)), 201
 
     def actualizar(fila_id: int):
         campos = leer_campos(_payload())
         campos.pop("club", None)
+        campos.pop("directiva", None)
+        directiva = es_cargo_vp_o_admin()
+        if not directiva:
+            # No puede tocar una de directiva (las excluye `_alcance`), y
+            # marcar otra como privada no tiene sentido.
+            campos.pop("solo_directiva", None)
         if not campos:
             raise DatosInvalidos("No hay nada que actualizar.")
-        if not reg.actualizar(tabla, fila_id, campos, depto_de()):
+        if not reg.actualizar(tabla, fila_id, campos, depto_de(), directiva):
             return jsonify(build_response(False, "No encontrado.")), 404
         return jsonify(build_response(True, "Actualizado.")), 200
 
     def eliminar(fila_id: int):
-        if not reg.eliminar(tabla, fila_id, depto_de(), _autor()):
+        if not reg.eliminar(tabla, fila_id, depto_de(), _autor(), es_cargo_vp_o_admin()):
             return jsonify(build_response(False, "No encontrado.")), 404
         return jsonify(build_response(True, "Eliminado.")), 200
 
@@ -195,7 +225,7 @@ def _montar_rutas(
 
 
 _montar_rutas("presupuesto", reg.PRESUPUESTO, _campos_presupuesto, "concepto", solo_cargo=True)
-_montar_rutas("reuniones", reg.REUNIONES, _campos_reunion, "titulo")
+_montar_rutas("reuniones", reg.REUNIONES, _campos_reunion, "titulo", al_crear=slack.reunion_convocada)
 _montar_rutas("servicios", reg.SERVICIOS, _campos_servicio, "nombre")
 
 

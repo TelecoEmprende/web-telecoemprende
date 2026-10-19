@@ -1,6 +1,7 @@
 import base64
 import os
 import unittest
+from unittest import mock
 from datetime import date, timedelta
 
 os.environ["DATABASE_URL"] = os.environ.get(
@@ -1081,6 +1082,37 @@ class SlackTestCase(MarketingTestCase):
 
     def tearDown(self):
         marketing_api_slack.enviar = self._enviar_real
+
+    def test_quien_tiene_cuenta_en_slack_sale_mencionado(self):
+        self.login()
+        self.seed_acceso("diego@telecoemprende.es")
+        with mock.patch.object(marketing_api_slack, "_id_de_slack", lambda e: "U123" if e.startswith("diego") else ""):
+            self.client.post(
+                "/api/marketing/tasks",
+                json={"titulo": "Guion", "instrucciones": "x", "responsables": ["diego@telecoemprende.es"]},
+            )
+        self.assertIn("<@U123>", self.enviados[0])
+
+    def test_convocar_una_reunion_con_fecha_avisa_con_los_convocados(self):
+        self.login(cargo="boardmember")
+        self.seed_acceso("diego@telecoemprende.es")
+        self.client.post(
+            "/api/marketing/reuniones",
+            json={"titulo": "Semanal", "fecha": "2026-10-22", "hora": "18:00",
+                  "objetivo": "Repartir la feria", "asistentes": ["diego@telecoemprende.es"]},
+        )
+        self.assertEqual(len(self.enviados), 1)
+        for trozo in ("convoca", "Semanal", "jueves 22 oct · 18:00", "Repartir la feria", "diego"):
+            self.assertIn(trozo, self.enviados[0])
+
+    def test_sin_fecha_o_privada_de_la_directiva_no_se_anuncia(self):
+        self.login(cargo="boardmember")
+        self.client.post("/api/marketing/reuniones", json={"titulo": "Sin fecha"})
+        self.client.post(
+            "/api/marketing/reuniones",
+            json={"titulo": "Junta", "fecha": "2026-10-22", "directiva": True},
+        )
+        self.assertEqual(self.enviados, [])
 
     def test_crear_una_tarea_avisa_a_slack(self):
         self.login()

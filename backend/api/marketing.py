@@ -276,7 +276,12 @@ def _puede_repartir(anteriores: list[str], nuevos: list[str]) -> bool:
 @marketing_api.route("/campaigns", methods=["GET"])
 @requiere_sesion
 def api_listar_campaigns():
-    return jsonify({"ok": True, "campaigns": listar_campaigns(departamento_actual())}), 200
+    # `?deptos=marketing,eventos`: varios a la vez en una sola petición (todos
+    # somos de los tres). Sin él, el departamento de la ruta.
+    deptos = [d for d in request.args.get("deptos", "").split(",") if d]
+    if any(d not in DEPARTAMENTOS for d in deptos):
+        raise DatosInvalidos("Departamento no válido.")
+    return jsonify({"ok": True, "campaigns": listar_campaigns(deptos or [departamento_actual()])}), 200
 
 
 @marketing_api.route("/campaigns", methods=["POST"])
@@ -645,7 +650,7 @@ def api_calendario():
         "ok": True,
         "desde": desde.isoformat(),
         "hasta": hasta.isoformat(),
-        "items": calendario(desde, hasta, departamento_actual()),
+        "items": calendario(desde, hasta, departamento_actual(), es_cargo_vp_o_admin()),
     }), 200
 
 

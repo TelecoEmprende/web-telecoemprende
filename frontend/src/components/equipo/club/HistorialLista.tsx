@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 
+import { Esqueleto } from "../../feedback/Esqueleto";
 import { getHistorial } from "../../../api/club";
 import { etiquetaDe } from "../marketing/Avatares";
 import { AlertBanner } from "../../feedback/AlertBanner";
@@ -184,6 +185,6 @@ export function HistorialCargado({
   }, [proyectoId, entidad, id, limite]);
 
   if (error) return <AlertBanner variant="error" message={error} />;
-  if (eventos === null) return <p className="mkt-meta-react">Cargando…</p>;
+  if (eventos === null) return <Esqueleto filas={3} alto={36} />;
   return <HistorialLista eventos={eventos} />;
 }

@@ -57,13 +57,16 @@ def _integraciones() -> list[dict]:
             "nombre": "Avisos de Slack",
             "variable": "SLACK_WEBHOOK_URL",
             "configurada": bool(SLACK_WEBHOOK_URL),
-            "efecto": "No hay avisos de tareas nuevas ni de deadlines.",
+            "efecto": "No hay avisos de tareas, deadlines ni reuniones.",
         },
         {
             "nombre": "Bot de Slack",
             "variable": "SLACK_BOT_TOKEN + SLACK_SIGNING_SECRET",
             "configurada": bool(SLACK_BOT_TOKEN and SLACK_SIGNING_SECRET),
-            "efecto": "El bot no recibe ni contesta mensajes.",
+            "efecto": (
+                "El bot no contesta mensajes y los avisos no mencionan a nadie"
+                " (las menciones piden el permiso users:read.email en la app)."
+            ),
         },
         {
             "nombre": "Respuestas del bot (Gemini)",

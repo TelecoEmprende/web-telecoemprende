@@ -128,12 +128,22 @@ def _filtro_notas(alias: str = "h") -> str:
     )
 
 
+# Una reunión de directiva marcada como solo suya tampoco sale en los feeds de
+# quien no es de la directiva. Se exige que la reunión exista y no sea privada
+# (y no al revés): una privada ya borrada del todo no dejaría su título suelto.
+_FILTRO_REUNIONES = (
+    "(%s OR h.entity_type <> 'reunion' OR EXISTS ("
+    "  SELECT 1 FROM meetings r WHERE r.id = h.entity_id AND NOT r.board_only))"
+)
+
+
 def listar(
     yo: str,
     entidad: str | None = None,
     entidad_id: int | None = None,
     proyecto_id: int | None = None,
     limite: int = 50,
+    directiva: bool = False,
 ) -> list[dict]:
     donde, valores = ["TRUE"], []
     if entidad is not None:
@@ -148,6 +158,8 @@ def listar(
         valores += [proyecto_id, proyecto_id]
     donde.append(_filtro_notas())
     valores.append(yo)
+    donde.append(_FILTRO_REUNIONES)
+    valores.append(directiva)
     with _get_connection() as conn:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute(
@@ -220,7 +232,7 @@ _PROYECTO_DE = {
 }
 
 
-def listar_papelera(yo: str) -> list[dict]:
+def listar_papelera(yo: str, directiva: bool = False) -> list[dict]:
     """Lo borrado en los últimos 30 días, de cualquier tipo. Las notas
     privadas, solo para su autor; lo borrado con su proyecto cuelga de él y no
     sale suelto (se restaura con el proyecto)."""
@@ -253,12 +265,12 @@ def listar_papelera(yo: str) -> list[dict]:
                       AND (NOT n.is_private OR n.created_by_id = (SELECT id FROM members WHERE email = %s))
                     UNION ALL
                     SELECT 'reunion', r.id, r.title, r.deleted_at, r.deleted_by_id, NULL
-                    FROM meetings r WHERE r.deleted_at IS NOT NULL
+                    FROM meetings r WHERE r.deleted_at IS NOT NULL AND (%s OR NOT r.board_only)
                 ) x
                 WHERE x.deleted_at > NOW() - make_interval(days => {DIAS_EN_PAPELERA})
                 ORDER BY x.deleted_at DESC
                 """,
-                (yo,),
+                (yo, directiva),
             )
             filas = cur.fetchall()
             ids = {f["deleted_by_id"] for f in filas if f["deleted_by_id"]}
@@ -283,7 +295,7 @@ def listar_papelera(yo: str) -> list[dict]:
     return salida
 
 
-def restaurar(entidad: str, entidad_id: int, autor: str) -> bool:
+def restaurar(entidad: str, entidad_id: int, autor: str, directiva: bool = False) -> bool:
     """Saca de la papelera una fila y lo que se borró con ella. False si no
     está en la papelera. Un entregable o una tarea no se restauran dentro de
     un proyecto o entregable que sigue borrado: primero ese."""
@@ -299,8 +311,14 @@ def restaurar(entidad: str, entidad_id: int, autor: str) -> bool:
                     " AND (NOT is_private OR created_by_id = (SELECT id FROM members WHERE email = %s))"
                     if entidad == "nota"
                     else ""
-                ),
-                [entidad_id, *([autor] if entidad == "nota" else [])],
+                )
+                # Las de directiva solo las escribe la directiva (ver `registros._alcance`).
+                + (" AND (%s OR department <> 'directiva')" if entidad == "reunion" else ""),
+                [
+                    entidad_id,
+                    *([autor] if entidad == "nota" else []),
+                    *([directiva] if entidad == "reunion" else []),
+                ],
             )
             fila = cur.fetchone()
             if fila is None:

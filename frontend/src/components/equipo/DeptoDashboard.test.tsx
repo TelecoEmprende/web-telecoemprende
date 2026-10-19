@@ -820,6 +820,93 @@ describe("/equipo — panel de Marketing", () => {
     );
   });
 
+  it("marcar una tarea del proyecto se ve al momento, sin volver a pedirlo", async () => {
+    const proyecto = {
+      id: 1, nombre: "Vuelta al cole", objetivo: "", audiencia: "", fecha: null,
+      departamento: "marketing", departamentos: ["marketing"], estado: "activo", responsable: "",
+      contents: [
+        {
+          id: 1, campaign_id: 1, titulo: "Reel", tipo: "", plataforma: "", fecha_publicacion: null,
+          estado: "idea", script: "", copy_texto: "", cta: "", hashtags: "", idea_visual: "",
+          responsables: [], enlaces: [], created_at: "", updated_at: "",
+          tasks: [{ ...TAREA, estado: "pendiente" }],
+        },
+      ],
+      tasks_sueltas: [],
+    };
+    getCampaign.mockResolvedValue({ ok: true, campaign: proyecto });
+    let responder: (v: unknown) => void = () => {};
+    updateTask.mockImplementation(() => new Promise((r) => (responder = r)));
+
+    render(
+      <MemoryRouter initialEntries={["/equipo?campaign=1"]}>
+        <EquipoPage />
+      </MemoryRouter>,
+    );
+    const casilla = await screen.findByRole("checkbox", { name: /Escribir guion/ });
+    await userEvent.click(casilla);
+
+    // Marcada antes de que el servidor conteste, y sin recargar el proyecto.
+    expect(casilla).toBeChecked();
+    expect(updateTask).toHaveBeenCalledWith(1, { estado: "acabado" });
+    responder({ ok: true });
+    await waitFor(() => expect(getCampaign).toHaveBeenCalledTimes(1));
+  });
+
+  it("añadir una tarea desde un entregable manda instrucciones (son obligatorias)", async () => {
+    getCampaign.mockResolvedValue({
+      ok: true,
+      campaign: {
+        id: 1, nombre: "Vuelta al cole", objetivo: "", audiencia: "", fecha: null,
+        departamento: "marketing", departamentos: ["marketing"], estado: "activo", responsable: "",
+        contents: [
+          {
+            id: 1, campaign_id: 1, titulo: "Reel", tipo: "", plataforma: "", fecha_publicacion: null,
+            estado: "idea", script: "", copy_texto: "", cta: "", hashtags: "", idea_visual: "",
+            responsables: [], enlaces: [], created_at: "", updated_at: "", tasks: [],
+          },
+        ],
+        tasks_sueltas: [],
+      },
+    });
+    render(
+      <MemoryRouter initialEntries={["/equipo?campaign=1"]}>
+        <EquipoPage />
+      </MemoryRouter>,
+    );
+    await userEvent.type(await screen.findByPlaceholderText(/Añadir tarea/), "Grabar");
+    await userEvent.click(screen.getByRole("button", { name: "Añadir" }));
+
+    await waitFor(() =>
+      expect(createTask).toHaveBeenCalledWith({
+        titulo: "Grabar",
+        content_id: 1,
+        instrucciones: "Del entregable «Reel» de «Vuelta al cole».",
+      }),
+    );
+  });
+
+  it("si el servidor rechaza la tarea marcada, el proyecto vuelve a como estaba", async () => {
+    const proyecto = {
+      id: 1, nombre: "Vuelta al cole", objetivo: "", audiencia: "", fecha: null,
+      departamento: "marketing", departamentos: ["marketing"], estado: "activo", responsable: "",
+      contents: [],
+      tasks_sueltas: [{ ...TAREA, content_id: null, estado: "pendiente" }],
+    };
+    getCampaign.mockResolvedValue({ ok: true, campaign: proyecto });
+    updateTask.mockRejectedValue({ ok: false, message: "No" });
+
+    render(
+      <MemoryRouter initialEntries={["/equipo?campaign=1"]}>
+        <EquipoPage />
+      </MemoryRouter>,
+    );
+    await userEvent.click(await screen.findByRole("checkbox", { name: /Escribir guion/ }));
+
+    await waitFor(() => expect(getCampaign).toHaveBeenCalledTimes(2));
+    expect(screen.getByRole("checkbox", { name: /Escribir guion/ })).not.toBeChecked();
+  });
+
   it("la navegación marca la pestaña activa", async () => {
     await renderMarketing();
 
@@ -1058,7 +1145,8 @@ describe("/equipo — panel de Eventos", () => {
 
     // Por defecto se ven los dos departamentos a la vez -- no hace falta
     // elegir uno para entrar.
-    await waitFor(() => expect(deptosPedidos).toEqual(expect.arrayContaining(["marketing", "eventos"])));
+    // Los dos en una sola petición.
+    await waitFor(() => expect(getCampaigns).toHaveBeenLastCalledWith(["marketing", "eventos"]));
 
     const selector = screen.getByRole("group", { name: "Departamentos visibles" });
     const casillaEventos = within(selector).getByRole("checkbox", { name: "Eventos" });
@@ -1070,7 +1158,7 @@ describe("/equipo — panel de Eventos", () => {
     await userEvent.click(casillaEventos);
 
     expect(screen.getByRole("heading", { level: 2, name: "Proyectos" })).toBeInTheDocument();
-    await waitFor(() => expect(new Set(deptosPedidos)).toEqual(new Set(["marketing"])));
+    await waitFor(() => expect(getCampaigns).toHaveBeenLastCalledWith(["marketing"]));
   });
 });
 
