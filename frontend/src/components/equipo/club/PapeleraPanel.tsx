@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
 
+import { CabeceraPanel } from "../CabeceraPanel";
+import { Esqueleto } from "../../feedback/Esqueleto";
 import { borrarParaSiempre, getPapelera, restaurar } from "../../../api/club";
 import { AlertBanner } from "../../feedback/AlertBanner";
-import { Esqueleto } from "../../feedback/Esqueleto";
 import { etiquetaDe } from "../marketing/Avatares";
 import type { ApiFailure } from "../../../types/api";
 import type { ElementoPapelera } from "../../../types/club";
@@ -70,11 +71,9 @@ export function PapeleraPanel({ esAdmin }: { esAdmin: boolean }) {
       {error ? <AlertBanner variant="error" message={error} /> : null}
       {aviso ? <AlertBanner variant="success" message={aviso} /> : null}
 
-      <p className="crm-s max-w-[72ch]">
-        Lo que se borra de Proyectos, Tareas y Notas se queda aquí {dias} días, y cualquiera puede
-        devolverlo. Un proyecto vuelve con sus entregables y tareas. Pasado ese tiempo se borra
-        solo.
-      </p>
+      <CabeceraPanel
+        descripcion={`Lo que se borra de Proyectos, Tareas y Notas se queda aquí ${dias} días, y cualquiera puede devolverlo. Un proyecto vuelve con sus entregables y tareas. Pasado ese tiempo se borra solo.`}
+      />
 
       {elementos.length === 0 ? (
         <p className="mkt-vacio-react">La papelera está vacía.</p>

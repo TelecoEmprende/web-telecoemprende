@@ -1,11 +1,12 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft, Lock, Pin, PinOff, Plus, Search, Trash2 } from "lucide-react";
+import { ArrowLeft, Lock, Pin, PinOff, Plus, Trash2 } from "lucide-react";
 import { motion } from "motion/react";
 
+import { Buscador } from "../Buscador";
+import { Esqueleto } from "../../feedback/Esqueleto";
 import { actualizarNota, crearNota, eliminarNota, listarNotas, obtenerNota } from "../../../api/notas";
 import { restaurar } from "../../../api/club";
 import { AlertBanner } from "../../feedback/AlertBanner";
-import { Esqueleto } from "../../feedback/Esqueleto";
 import { useEntradaDeFila } from "../../movimiento";
 import { etiquetaDe } from "../marketing/Avatares";
 import type { ApiFailure } from "../../../types/api";
@@ -197,15 +198,7 @@ export function NotasPanel({ email, teams, notaInicial, onNotaAbierta }: Props) 
             <Plus aria-hidden="true" /> Nueva
           </button>
         </div>
-        <label className="notas-buscar-react">
-          <Search aria-hidden="true" />
-          <input
-            type="search"
-            placeholder="Buscar en notas"
-            value={busqueda}
-            onChange={(e) => setBusqueda(e.target.value)}
-          />
-        </label>
+        <Buscador valor={busqueda} onCambio={setBusqueda} placeholder="Buscar en notas" />
         <div className="crm-tags-react" role="group" aria-label="Filtrar notas">
           {filtros.map((f) => (
             <button

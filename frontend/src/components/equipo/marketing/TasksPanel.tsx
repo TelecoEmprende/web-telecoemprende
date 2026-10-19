@@ -3,6 +3,9 @@ import {
 } from "motion/react";
 import { FormEvent, useEffect, useRef, useState, type ReactNode } from "react";
 
+import { CabeceraPanel } from "../CabeceraPanel";
+import { Buscador } from "../Buscador";
+import { Esqueleto } from "../../feedback/Esqueleto";
 import { AvataresDeResponsables } from "./Avatares";
 import { SelectorMiembros } from "./SelectorMiembros";
 import { TaskDialog } from "./TaskDialog";
@@ -11,7 +14,6 @@ import { apiDepto } from "../../../api/marketing";
 import { DeptoProvider, useDirectorio, useYo } from "../DeptoApi";
 import { AlertBanner } from "../../feedback/AlertBanner";
 import { ContadorCaracteres } from "../../feedback/ContadorCaracteres";
-import { Esqueleto } from "../../feedback/Esqueleto";
 import { Badge } from "@/components/ui/badge";
 import { Contador, useEntradaDeFila } from "../../movimiento";
 import { SPRING_DEFAULT } from "@/components/smoothui/lib/animation";
@@ -287,14 +289,24 @@ export function TasksPanel({ deptos, teams, vpDe, puedeAsignarEnTodo }: Props) {
         />
       ) : null}
 
-      <header className="crm-barra-react">
-        <input
-          type="search"
-          className="crm-input-react"
-          value={busqueda}
+      <CabeceraPanel descripcion="Lo que hay que hacer, por estado. Arrastra una tarjeta para moverla de columna.">
+        {deptosDondeCrear.length > 0 ? (
+          <button
+            type="button"
+            className="crm-btn"
+            onClick={() => setMostrarFormulario((abierto) => !abierto)}
+          >
+            {mostrarFormulario ? "Cancelar" : "+ Nueva tarea"}
+          </button>
+        ) : null}
+      </CabeceraPanel>
+
+      <div className="crm-barra-react">
+        <Buscador
+          valor={busqueda}
+          onCambio={setBusqueda}
           placeholder="Buscar por título..."
-          aria-label="Buscar tareas por título"
-          onChange={(event) => setBusqueda(event.target.value)}
+          etiqueta="Buscar tareas por título"
         />
         <label className={`crm-tag crm-tag-check-react${soloMias ? " crm-tag-activo-react" : ""}`}>
           <input
@@ -313,16 +325,7 @@ export function TasksPanel({ deptos, teams, vpDe, puedeAsignarEnTodo }: Props) {
         >
           Completadas
         </button>
-        {deptosDondeCrear.length > 0 ? (
-          <button
-            type="button"
-            className="crm-btn"
-            onClick={() => setMostrarFormulario((abierto) => !abierto)}
-          >
-            {mostrarFormulario ? "Cancelar" : "+ Nueva tarea"}
-          </button>
-        ) : null}
-      </header>
+      </div>
 
       {mostrarFormulario && deptosDondeCrear.length > 0 ? (
         <form className="mkt-form-react" onSubmit={crear}>

@@ -2,9 +2,10 @@ import { motion } from "motion/react";
 import { FormEvent, ReactNode, useCallback, useEffect, useState } from "react";
 import { Pencil, Trash2 } from "lucide-react";
 
+import { CabeceraPanel } from "../CabeceraPanel";
+import { Esqueleto } from "../../feedback/Esqueleto";
 import { useApi } from "../DeptoApi";
 import { AlertBanner } from "../../feedback/AlertBanner";
-import { Esqueleto } from "../../feedback/Esqueleto";
 import { SelectorMiembros } from "../marketing/SelectorMiembros";
 import { useEntradaDeFila } from "../../movimiento";
 import {
@@ -117,18 +118,11 @@ export function RegistrosPanel({
     <section className="mkt-panel-react">
       {error ? <AlertBanner variant="error" message={error} /> : null}
 
-      {/* Sin repetir el título: ya lo pinta la barra del shell. Aquí solo la
-          frase que explica de qué va el panel. */}
-      <header className="crm-cabecera-react">
-        <p className="crm-s">{descripcion}</p>
-        <button
-          type="button"
-          className="crm-btn"
-          onClick={() => setCreando(true)}
-        >
+      <CabeceraPanel descripcion={descripcion}>
+        <button type="button" className="crm-btn" onClick={() => setCreando(true)}>
           + {etiquetaNuevo}
         </button>
-      </header>
+      </CabeceraPanel>
 
       {cabecera ? cabecera(registros) : null}
 

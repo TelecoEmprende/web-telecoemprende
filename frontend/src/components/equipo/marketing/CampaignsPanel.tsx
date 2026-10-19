@@ -1,11 +1,12 @@
 import { motion, useReducedMotion } from "motion/react";
 import { FormEvent, useCallback, useEffect, useState } from "react";
 
+import { CabeceraPanel } from "../CabeceraPanel";
+import { Esqueleto } from "../../feedback/Esqueleto";
 import { restaurar } from "../../../api/club";
 import { apiDepto } from "../../../api/marketing";
 import { AlertBanner } from "../../feedback/AlertBanner";
 import { ContadorCaracteres } from "../../feedback/ContadorCaracteres";
-import { Esqueleto } from "../../feedback/Esqueleto";
 import { AmbitoChips, etiquetaAmbito } from "../club/AmbitoChips";
 import { HistorialCargado } from "../club/HistorialLista";
 import { ResponsableSelect } from "../club/ResponsableSelect";
@@ -34,6 +35,7 @@ import {
   type Content,
   type ContentEstado,
   type Task,
+  type TaskEstado,
 } from "../../../types/marketing";
 
 function mensajeDeError(error: unknown, porDefecto: string) {
@@ -249,13 +251,12 @@ export function CampaignsPanel({ deptos, campaignInicial, onCampaignAbierta, onA
     }
   }, []);
 
+  // Solo la primera carga enseña el esqueleto: al recargar tras un cambio, la
+  // lista (o el proyecto abierto) se queda en pantalla y se actualiza encima.
   const cargarCampaigns = useCallback(async () => {
-    setIsLoading(true);
     try {
-      const respuestas = await Promise.all(deptos.map((d) => apiDepto(d).getCampaigns()));
-      // Un proyecto de varios departamentos sale en cada uno: una sola vez.
-      const todas = respuestas.flatMap((r) => r.campaigns);
-      setCampaigns([...new Map(todas.map((c) => [c.id, c])).values()]);
+      const respuesta = await apiDepto(deptos[0]).getCampaigns(deptos);
+      setCampaigns(respuesta.campaigns);
       setError(null);
     } catch (err) {
       setError(mensajeDeError(err, "No se pudieron cargar los proyectos."));
@@ -474,19 +475,34 @@ export function CampaignsPanel({ deptos, campaignInicial, onCampaignAbierta, onA
     if (!detalle) return;
     // Al desmarcar se vuelve a "en progreso", no a "pendiente": alguien que
     // desmarca está corrigiendo, no deshaciendo todo el trabajo hecho.
-    const estado = task.estado === "acabado" ? "en_progreso" : "acabado";
+    const estado: TaskEstado = task.estado === "acabado" ? "en_progreso" : "acabado";
+    // La casilla cambia al momento; si el servidor dice que no, se recarga
+    // el proyecto tal como está.
+    const conEstado = (t: Task) => (t.id === task.id ? { ...t, estado } : t);
+    setDetalle({
+      ...detalle,
+      contents: detalle.contents.map((c) => ({ ...c, tasks: c.tasks.map(conEstado) })),
+      tasks_sueltas: detalle.tasks_sueltas.map(conEstado),
+    });
     try {
       await apiDepto(detalle.departamento).updateTask(task.id, { estado });
-      await recargarDetalle();
     } catch (err) {
       setError(mensajeDeError(err, "No se pudo actualizar la tarea."));
+      await recargarDetalle();
     }
   }
 
   async function añadirTarea(contentId: number, titulo: string) {
     if (!detalle) return;
     try {
-      await apiDepto(detalle.departamento).createTask({ titulo, content_id: contentId });
+      // Las instrucciones son obligatorias al crear una tarea: sin ellas, el
+      // alta rápida desde un entregable fallaba siempre con un 400.
+      const entregable = detalle.contents.find((c) => c.id === contentId);
+      await apiDepto(detalle.departamento).createTask({
+        titulo,
+        content_id: contentId,
+        instrucciones: `Del entregable «${entregable?.titulo ?? ""}» de «${detalle.nombre}».`,
+      });
       await recargarDetalle();
     } catch (err) {
       setError(mensajeDeError(err, "No se pudo crear la tarea."));
@@ -531,7 +547,11 @@ export function CampaignsPanel({ deptos, campaignInicial, onCampaignAbierta, onA
         <button
           type="button"
           className="mkt-volver-react"
-          onClick={() => setDetalle(null)}
+          onClick={() => {
+            setDetalle(null);
+            // Lo hecho dentro (tareas marcadas, entregables) cambia el progreso.
+            void cargarCampaigns();
+          }}
         >
           ← Todos los proyectos
         </button>
@@ -832,13 +852,22 @@ export function CampaignsPanel({ deptos, campaignInicial, onCampaignAbierta, onA
       {error ? <AlertBanner variant="error" message={error} /> : null}
       {avisoBanner}
 
-      <header className="crm-cabecera-react">
-        <h3 className="crm-h1">
+      <CabeceraPanel descripcion="Cada proyecto tiene sus entregables, y cada entregable sus tareas. Cualquiera puede crear y editar.">
+        <button
+          type="button"
+          className="crm-btn"
+          onClick={() => setMostrarFormulario((abierto) => !abierto)}
+        >
+          {mostrarFormulario ? "Cancelar" : "+ Nuevo proyecto"}
+        </button>
+      </CabeceraPanel>
+
+      <div className="crm-barra-react">
+        <p className="crm-k mr-auto">
           {visibles.length === 0
             ? "Sin proyectos"
             : `${visibles.length} ${visibles.length === 1 ? "proyecto" : "proyectos"}`}
-        </h3>
-        <div className="crm-tags-react">
+        </p>
           <select
             value={filtroEstado}
             aria-label="Filtrar por estado"
@@ -864,15 +893,7 @@ export function CampaignsPanel({ deptos, campaignInicial, onCampaignAbierta, onA
               Archivadas ({archivadasCount})
             </label>
           ) : null}
-          <button
-            type="button"
-            className="crm-btn"
-            onClick={() => setMostrarFormulario((abierto) => !abierto)}
-          >
-            {mostrarFormulario ? "Cancelar" : "+ Nuevo proyecto"}
-          </button>
-        </div>
-      </header>
+      </div>
 
       {mostrarFormulario ? (
         <form className="mkt-form-react" onSubmit={enviarNueva}>

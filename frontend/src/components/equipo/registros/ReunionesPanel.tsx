@@ -1,11 +1,12 @@
 import { motion } from "motion/react";
 import { FormEvent, lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
 
+import { CabeceraPanel } from "../CabeceraPanel";
+import { Esqueleto } from "../../feedback/Esqueleto";
 import { restaurar } from "../../../api/club";
 import { apiDepto } from "../../../api/marketing";
 import { AlertBanner } from "../../feedback/AlertBanner";
 import { ContadorCaracteres } from "../../feedback/ContadorCaracteres";
-import { Esqueleto } from "../../feedback/Esqueleto";
 import { Badge } from "@/components/ui/badge";
 import { AvataresDeResponsables } from "../marketing/Avatares";
 import { SelectorMiembros } from "../marketing/SelectorMiembros";
@@ -36,7 +37,47 @@ const PLANTILLA_ACTA = [
 
 const GUARDADO_MS = 800;
 
-type Bloque = { type?: string; props?: { checked?: boolean }; children?: unknown };
+type Bloque = {
+  id?: string;
+  type?: string;
+  props?: { checked?: boolean };
+  content?: unknown;
+  children?: unknown;
+};
+
+/** El texto de un bloque de BlockNote: `content` es un texto o una lista de
+ *  trozos con su `text`. */
+function textoDelBloque(b: Bloque): string {
+  if (typeof b.content === "string") return b.content;
+  if (!Array.isArray(b.content)) return "";
+  return b.content.map((t) => (typeof t?.text === "string" ? t.text : "")).join("");
+}
+
+/** Los acuerdos sin pasar a tarea: las casillas sin marcar del acta que tienen
+ *  texto, en orden. */
+export function acuerdosPendientes(contenido: unknown): { id: string; texto: string }[] {
+  if (!Array.isArray(contenido)) return [];
+  return (contenido as Bloque[]).flatMap((b) => [
+    ...(b.type === "checkListItem" && !b.props?.checked && b.id && textoDelBloque(b).trim()
+      ? [{ id: b.id, texto: textoDelBloque(b).trim() }]
+      : []),
+    ...acuerdosPendientes(b.children),
+  ]);
+}
+
+/** Marca el acuerdo como hecho en el acta y deja escrito que ya es una tarea,
+ *  para que no se pase dos veces ni siga contando como pendiente. */
+export function marcarComoTarea(contenido: unknown, id: string): unknown {
+  if (!Array.isArray(contenido)) return contenido;
+  return (contenido as Bloque[]).map((b) => {
+    if (b.id !== id) return { ...b, children: marcarComoTarea(b.children, id) };
+    const aviso = { type: "text", text: " → tarea creada", styles: { italic: true } };
+    const content = Array.isArray(b.content)
+      ? [...b.content, aviso]
+      : [{ type: "text", text: textoDelBloque(b), styles: {} }, aviso];
+    return { ...b, props: { ...b.props, checked: true }, content };
+  });
+}
 
 /** Casillas del acta todavía sin marcar. */
 export function pendientesDelActa(contenido: unknown): number {
@@ -52,13 +93,107 @@ export function pendientesDelActa(contenido: unknown): number {
 
 function ambitoDe(r: Registro) {
   const depto = textoDe(r, "departamento");
+  if (depto === "directiva") return r.solo_directiva ? "Directiva · privada" : "Directiva";
   return depto === "" ? "Todo el club" : DEPTO_LABEL[depto as Team] ?? depto;
+}
+
+type Ambito = Team | "club" | "directiva";
+
+/** Un acuerdo del acta convertido en tarea: con responsable y fecha, para que
+ *  salga en Tareas y en la Mesa en vez de quedarse escrito en el acta. */
+function PasarATarea({
+  acuerdo,
+  deptoInicial,
+  elegirDepto,
+  reunion,
+  onCreada,
+}: {
+  acuerdo: { id: string; texto: string };
+  deptoInicial: Team;
+  /** Reunión de todo el club o de la directiva: la tarea no tiene un
+   *  departamento evidente, así que se elige. */
+  elegirDepto: boolean;
+  reunion: string;
+  onCreada: (id: string) => void;
+}) {
+  const [abierto, setAbierto] = useState(false);
+  const [depto, setDepto] = useState<Team>(deptoInicial);
+  const [responsables, setResponsables] = useState<string[]>([]);
+  const [deadline, setDeadline] = useState("");
+  const [guardando, setGuardando] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function crear() {
+    setGuardando(true);
+    try {
+      await apiDepto(depto).createTask({
+        titulo: acuerdo.texto.slice(0, MAX_TITULO_LEN),
+        instrucciones: `Acuerdo de la reunión «${reunion}».`,
+        responsables,
+        deadline: deadline || null,
+      });
+      onCreada(acuerdo.id);
+    } catch (err) {
+      setError((err as ApiFailure)?.message || "No se pudo crear la tarea.");
+      setGuardando(false);
+    }
+  }
+
+  return (
+    <li className="reu-acuerdo-react">
+      <span>{acuerdo.texto}</span>
+      {abierto ? (
+        <div className="reu-acuerdo-form-react">
+          {error ? <AlertBanner variant="error" message={error} /> : null}
+          {elegirDepto ? (
+            <select
+              className="crm-select-react"
+              aria-label="Departamento de la tarea"
+              value={depto}
+              onChange={(e) => setDepto(e.target.value as Team)}
+            >
+              {TEAMS.map((t) => (
+                <option key={t} value={t}>
+                  {DEPTO_LABEL[t]}
+                </option>
+              ))}
+            </select>
+          ) : null}
+          <SelectorMiembros
+            id={`acuerdo-${acuerdo.id}`}
+            seleccionados={responsables}
+            onCambiar={setResponsables}
+            deptos={[depto]}
+            proponer
+          />
+          <input
+            type="date"
+            value={deadline}
+            aria-label="Para cuándo"
+            onChange={(e) => setDeadline(e.target.value)}
+          />
+          <button type="button" className="crm-btn" disabled={guardando} onClick={() => void crear()}>
+            {guardando ? "Creando..." : "Crear tarea"}
+          </button>
+          <button type="button" className="crm-btn crm-btn-ghost-react" onClick={() => setAbierto(false)}>
+            Cancelar
+          </button>
+        </div>
+      ) : (
+        <button type="button" className="crm-btn crm-btn-ghost-react" onClick={() => setAbierto(true)}>
+          Pasar a tarea
+        </button>
+      )}
+    </li>
+  );
 }
 
 type Props = {
   /** Departamentos que se ven a la vez (el filtro de la barra). La reunión de
-   *  todo el club sale en cualquiera de ellos, una sola vez. */
+   *  todo el club o de la directiva sale en cualquiera de ellos, una sola vez. */
   deptos: Team[];
+  /** Cargo, VP o admin: convoca y edita las de la directiva y ve las privadas. */
+  esDirectiva: boolean;
 };
 
 /**
@@ -66,7 +201,7 @@ type Props = {
  * documento como una nota (títulos, listas, casillas). El acta se guarda sola.
  * Las casillas sin marcar del acta salen como pendientes de la reunión.
  */
-export function ReunionesPanel({ deptos }: Props) {
+export function ReunionesPanel({ deptos, esDirectiva }: Props) {
   const entradaFila = useEntradaDeFila();
   const directorio = useDirectorio();
   const [reuniones, setReuniones] = useState<Registro[]>([]);
@@ -84,15 +219,19 @@ export function ReunionesPanel({ deptos }: Props) {
   const [titulo, setTitulo] = useState("");
   const [fecha, setFecha] = useState("");
   const [hora, setHora] = useState("");
-  const [ambito, setAmbito] = useState<Team | "club">("club");
+  const [ambito, setAmbito] = useState<Ambito>("club");
+  const [soloDirectiva, setSoloDirectiva] = useState(true);
+  // Cambia cuando el acta se reescribe desde fuera del editor (al pasar un
+  // acuerdo a tarea): el editor se monta de nuevo con el contenido nuevo.
+  const [versionActa, setVersionActa] = useState(0);
+  const [tareaCreada, setTareaCreada] = useState<string | null>(null);
 
   const api = apiDepto(deptos[0]);
 
   const cargar = useCallback(async () => {
     try {
-      const respuestas = await Promise.all(deptos.map((d) => apiDepto(d).listarRegistros("reuniones")));
-      const todas = respuestas.flatMap((r) => r.reuniones ?? []);
-      setReuniones([...new Map(todas.map((r) => [r.id, r])).values()]);
+      const respuesta = await apiDepto(deptos[0]).listarRegistros("reuniones", deptos);
+      setReuniones(respuesta.reuniones ?? []);
       setError(null);
     } catch (err) {
       setError((err as ApiFailure)?.message || "No se pudieron cargar las reuniones.");
@@ -135,6 +274,7 @@ export function ReunionesPanel({ deptos }: Props) {
   async function cerrar() {
     await guardarYa();
     setAbierta(null);
+    setTareaCreada(null);
     await cargar();
   }
 
@@ -142,13 +282,14 @@ export function ReunionesPanel({ deptos }: Props) {
     event.preventDefault();
     if (!titulo.trim()) return;
     try {
-      const donde = ambito === "club" ? deptos[0] : ambito;
+      const donde = ambito === "club" || ambito === "directiva" ? deptos[0] : ambito;
       const r = await apiDepto(donde).crearRegistro("reuniones", {
         titulo,
         fecha: fecha || null,
         hora,
         contenido: PLANTILLA_ACTA,
         ...(ambito === "club" ? { club: true } : {}),
+        ...(ambito === "directiva" ? { directiva: true, solo_directiva: soloDirectiva } : {}),
       });
       setTitulo("");
       setFecha("");
@@ -204,6 +345,13 @@ export function ReunionesPanel({ deptos }: Props) {
   // --- Una reunión abierta ---
   if (abierta) {
     const asistentes = listaDe(abierta, "asistentes");
+    const deDirectiva = textoDe(abierta, "departamento") === "directiva";
+    // Una de la directiva abierta a todo el club se lee, pero solo la toca ella.
+    const soloLeer = deDirectiva && !esDirectiva;
+    const acuerdos = soloLeer ? [] : acuerdosPendientes(abierta.contenido);
+    const deptoDeLaReunion = (TEAMS as string[]).includes(textoDe(abierta, "departamento"))
+      ? (textoDe(abierta, "departamento") as Team)
+      : null;
     return (
       <section className="mkt-panel-react">
         {error ? <AlertBanner variant="error" message={error} /> : null}
@@ -212,6 +360,7 @@ export function ReunionesPanel({ deptos }: Props) {
           ← Todas las reuniones
         </button>
 
+        <fieldset className="reu-fieldset-react" disabled={soloLeer}>
         <div className="mkt-form-react reu-ficha-react">
           <div className="field-group-react">
             <label htmlFor="reu-titulo">Título</label>
@@ -245,6 +394,17 @@ export function ReunionesPanel({ deptos }: Props) {
             <div className="field-group-react">
               <label>De quién es</label>
               <p className="mkt-meta-react reu-ambito-react">{ambitoDe(abierta)}</p>
+              {deDirectiva && esDirectiva ? (
+                <label className="crm-tag crm-tag-check-react">
+                  <input
+                    type="checkbox"
+                    className="crm-check"
+                    checked={Boolean(abierta.solo_directiva)}
+                    onChange={(e) => cambiar({ solo_directiva: e.target.checked })}
+                  />
+                  Solo la ve la directiva
+                </label>
+              ) : null}
             </div>
           </div>
           <div className="field-group-react">
@@ -267,11 +427,14 @@ export function ReunionesPanel({ deptos }: Props) {
             <ContadorCaracteres valor={textoDe(abierta, "objetivo")} maximo={MAX_TEXTO_LARGO_LEN} />
           </div>
         </div>
+        </fieldset>
 
         <div className="reu-acta-cabecera-react">
           <h4 className="mkt-grupo-titulo-react">Acta y acuerdos</h4>
           <span className="crm-s notas-guardado-react" role="status">
-            {estadoGuardado === "guardando"
+            {soloLeer
+              ? "Solo lectura: la edita la directiva"
+              : estadoGuardado === "guardando"
               ? "Guardando…"
               : estadoGuardado === "pendiente"
                 ? "Sin guardar"
@@ -281,20 +444,50 @@ export function ReunionesPanel({ deptos }: Props) {
         <div className="notas-editor-react reu-acta-react">
           <Suspense fallback={<Esqueleto filas={4} alto={28} />}>
             <NotaEditor
-              key={abierta.id}
+              key={`${abierta.id}-${versionActa}`}
               inicial={Array.isArray(abierta.contenido) ? abierta.contenido : []}
-              editable
+              editable={!soloLeer}
               onCambio={(contenido) => cambiar({ contenido })}
             />
           </Suspense>
         </div>
 
-        <div className="mkt-zona-peligro-react">
-          <button type="button" className="mkt-btn-borrar-react" onClick={() => void borrar()}>
-            Enviar reunión a la papelera
-          </button>
-          <p className="mkt-meta-react">Con su acta: se puede restaurar durante 30 días.</p>
-        </div>
+        {tareaCreada ? (
+          <AlertBanner variant="success" message={`«${tareaCreada}» ya es una tarea: sale en Tareas y en la Mesa.`} />
+        ) : null}
+        {acuerdos.length > 0 ? (
+          <div className="crm-c mkt-grupo-react">
+            <h4 className="mkt-grupo-titulo-react">Acuerdos sin pasar a tarea</h4>
+            <p className="crm-s">
+              Las casillas sin marcar del acta. Dales responsable y fecha para que no se queden aquí.
+            </p>
+            <ul className="reu-acuerdos-react">
+              {acuerdos.map((a) => (
+                <PasarATarea
+                  key={a.id}
+                  acuerdo={a}
+                  deptoInicial={deptoDeLaReunion ?? deptos[0]}
+                  elegirDepto={deptoDeLaReunion === null}
+                  reunion={textoDe(abierta, "titulo")}
+                  onCreada={(id) => {
+                    cambiar({ contenido: marcarComoTarea(abierta.contenido, id) });
+                    setVersionActa((v) => v + 1);
+                    setTareaCreada(a.texto);
+                  }}
+                />
+              ))}
+            </ul>
+          </div>
+        ) : null}
+
+        {soloLeer ? null : (
+          <div className="mkt-zona-peligro-react">
+            <button type="button" className="mkt-btn-borrar-react" onClick={() => void borrar()}>
+              Enviar reunión a la papelera
+            </button>
+            <p className="mkt-meta-react">Con su acta: se puede restaurar durante 30 días.</p>
+          </div>
+        )}
       </section>
     );
   }
@@ -339,15 +532,11 @@ export function ReunionesPanel({ deptos }: Props) {
       {error ? <AlertBanner variant="error" message={error} /> : null}
       {avisoBanner}
 
-      <header className="crm-cabecera-react">
-        <p className="crm-s max-w-[72ch]">
-          Convocatoria, asistentes, objetivo y el acta, que se escribe como una nota. Lo que se
-          acordó queda escrito donde se puede buscar.
-        </p>
+      <CabeceraPanel descripcion="Convocatoria, asistentes, objetivo y el acta, que se escribe como una nota. Lo que se acordó queda escrito donde se puede buscar.">
         <button type="button" className="crm-btn" onClick={() => setCreando((a) => !a)}>
           {creando ? "Cancelar" : "+ Nueva reunión"}
         </button>
-      </header>
+      </CabeceraPanel>
 
       {creando ? (
         <form className="mkt-form-react" onSubmit={crear}>
@@ -376,15 +565,27 @@ export function ReunionesPanel({ deptos }: Props) {
               <select
                 id="reu-nueva-ambito"
                 value={ambito}
-                onChange={(e) => setAmbito(e.target.value as Team | "club")}
+                onChange={(e) => setAmbito(e.target.value as Ambito)}
               >
                 <option value="club">Todo el club</option>
+                {esDirectiva ? <option value="directiva">Directiva</option> : null}
                 {TEAMS.map((t) => (
                   <option key={t} value={t}>
                     {DEPTO_LABEL[t]}
                   </option>
                 ))}
               </select>
+              {ambito === "directiva" ? (
+                <label className="crm-tag crm-tag-check-react">
+                  <input
+                    type="checkbox"
+                    className="crm-check"
+                    checked={soloDirectiva}
+                    onChange={(e) => setSoloDirectiva(e.target.checked)}
+                  />
+                  Solo la ve la directiva
+                </label>
+              ) : null}
             </div>
           </div>
           <p className="mkt-meta-react">

@@ -63,12 +63,16 @@ export type ProyectoDeMesa = Pick<
   siguiente_titulo: string | null;
   siguiente_deadline: string | null;
   siguiente_responsables: string[] | null;
+  /** Las fases del proyecto: cada entregable con sus tareas acabadas. */
+  entregables: { id: number; titulo: string; fecha: string | null; total: number; acabadas: number }[];
 };
 
 export type Mesa = {
   proyectos: ProyectoDeMesa[];
   sin_dueno: TareaDeMesa[];
   atrasadas: TareaDeMesa[];
+  /** Cada cuenta activa con lo que tiene abierto, la más cargada primero. */
+  personas: { email: string; tareas: TareaDeMesa[]; atrasadas: number }[];
   sin_responsable: number;
   estancados: number;
   dias_estancado: number;

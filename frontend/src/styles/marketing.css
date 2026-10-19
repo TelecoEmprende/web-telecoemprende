@@ -297,10 +297,23 @@
 }
 
 .mkt-campaigns-react li {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 12px;
   min-width: 0;
+}
+
+/* La acción de la fila (Duplicar) no puede ir dentro de la tarjeta, que ya es
+   un botón: se pinta encima, en su esquina, en vez de quedar suelta fuera. */
+.mkt-campaigns-react li > .mkt-btn-mini-react {
+  position: absolute;
+  top: 14px;
+  right: 16px;
+}
+
+.mkt-campaigns-react li:has(> .mkt-btn-mini-react) .mkt-campaign-nombre-react {
+  padding-right: 96px;
 }
 
 .mkt-campaign-card-react {
@@ -1835,7 +1848,9 @@ button.mkt-evento-react:active {
 
 .mkt-tiles-react {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  /* Las que quepan por fila, todas del mismo ancho: con 4 columnas fijas, la
+     quinta cifra de la Mesa se quedaba sola en otra fila. */
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
   gap: 16px;
   margin-bottom: 16px;
 }
@@ -1871,6 +1886,12 @@ button.mkt-evento-react:active {
 @container (max-width: 720px) {
   .mkt-tiles-react {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  /* Con un número impar de cifras, la última ocupa la fila entera en vez de
+     quedarse sola a media fila. */
+  .mkt-tiles-react > :last-child:nth-child(odd) {
+    grid-column: 1 / -1;
   }
 }
 
@@ -2550,4 +2571,27 @@ button.mkt-evento-react {
   align-items: center;
   gap: 8px;
   font-weight: 600;
+}
+
+/* Todo panel de /equipo es una columna con el mismo hueco entre sus piezas
+   (cabecera, avisos, barra, tarjetas, listas). El espacio lo pone el panel y
+   no cada pieza: con márgenes sueltos, según qué dos quedaban juntas había
+   hueco doble o ninguno (un aviso pegado a la tarjeta de debajo).
+   Va al final de la última hoja que se carga (ver main.tsx) para que anule
+   los márgenes que traen las piezas (`.alert-banner`, `.mkt-grupo-react`...). */
+.mkt-panel-react {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+
+.mkt-panel-react > * {
+  margin-block: 0;
+}
+
+/* Un botón o enlace suelto (← Volver, Crear...) no se estira a todo el ancho. */
+.mkt-panel-react > button,
+.mkt-panel-react > a {
+  align-self: flex-start;
 }

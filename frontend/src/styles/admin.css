@@ -1,10 +1,6 @@
 /* Las vistas del grupo Admin de /equipo (inscripciones, cuentas,
    calendario del club). Lo de dentro va con Tailwind + shadcn. */
 
-.admin-placeholder {
-  margin: 0;
-}
-
 /* Misma caja que `.crm-c` del resto de /equipo. */
 .admin-card-react {
   background: var(--color-surface);
@@ -17,12 +13,6 @@
   .admin-card-react {
     padding: 14px;
   }
-}
-
-/* ---------- Accesos de equipo (/equipo) ---------- */
-
-.equipo-accesos-panel-react {
-  margin-top: 28px;
 }
 
 /* ---------- Cuentas del equipo ---------- */
@@ -171,42 +161,12 @@
     box-shadow: none;
   }
 
-  /* Objetivo táctil de 44px en los botones de las vistas de Admin. */
-  .admin-card-react [data-slot="button"],
-  .admin-card-react [data-slot="dialog-trigger"],
-  .admin-card-react [data-slot="select-trigger"] {
+  /* Objetivo táctil de 44px en los botones de los paneles de /equipo. */
+  .mkt-panel-react [data-slot="button"],
+  .mkt-panel-react [data-slot="dialog-trigger"],
+  .mkt-panel-react [data-slot="select-trigger"] {
     min-height: 44px;
   }
-}
-
-/* Buscador de Cuentas: lupa dentro del campo y recuento al lado. */
-.cuentas-buscador-react {
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  max-width: 460px;
-}
-
-.cuentas-buscador-react > svg {
-  position: absolute;
-  left: 12px;
-  width: 16px;
-  height: 16px;
-  color: var(--color-text-muted);
-  pointer-events: none;
-}
-
-.cuentas-buscador-react [data-slot="input"] {
-  min-height: 44px;
-  padding-left: 36px;
-}
-
-.cuentas-buscador-cuenta-react {
-  flex: none;
-  color: var(--color-text-muted);
-  font-size: 0.82rem;
-  font-variant-numeric: tabular-nums;
 }
 
 /* ---------- Auditoría ---------- */

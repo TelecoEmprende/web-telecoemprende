@@ -1,9 +1,12 @@
 import { motion } from "motion/react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { Buscador } from "../Buscador";
+import { normalizar } from "../../../utils/texto";
+import { CabeceraPanel } from "../CabeceraPanel";
+import { Esqueleto } from "../../feedback/Esqueleto";
 import { getMiembrosClub } from "../../../api/marketing";
 import { AlertBanner } from "../../feedback/AlertBanner";
-import { Esqueleto } from "../../feedback/Esqueleto";
 import {
   AvatarResponsable,
   etiquetaDe,
@@ -67,6 +70,7 @@ export function MembersPanel() {
   // somos de los tres, así que lo que separa a unos de otros es ese orden.
   const [filtroDepto, setFiltroDepto] = useState<Team | null>(null);
   const [filtroCarga, setFiltroCarga] = useState<"" | NivelCarga>("");
+  const [busqueda, setBusqueda] = useState("");
   const [abierto, setAbierto] = useState<string | null>(null);
 
   const cargar = useCallback(async () => {
@@ -95,6 +99,10 @@ export function MembersPanel() {
   const visibles = useMemo(
     () =>
       miembros
+        .filter((m) => {
+          const q = normalizar(busqueda.trim());
+          return q === "" || normalizar([nombreCorto(m), m.apellidos, ...m.tags].join(" ")).includes(q);
+        })
         .filter((m) => filtroDepto === null || m.equipos[0] === filtroDepto)
         .filter((m) => filtro === null || m.tags.includes(filtro))
         .filter((m) => filtroCarga === "" || nivelCarga(m.abiertas) === filtroCarga)
@@ -102,7 +110,7 @@ export function MembersPanel() {
         // asignar algo, y esa es la respuesta.
         .slice()
         .sort((a, b) => a.abiertas - b.abiertas || a.email.localeCompare(b.email)),
-    [miembros, filtro, filtroCarga, filtroDepto],
+    [miembros, busqueda, filtro, filtroCarga, filtroDepto],
   );
 
   if (isLoading) return <Esqueleto filas={4} alto={68} />;
@@ -111,8 +119,16 @@ export function MembersPanel() {
     <section className="mkt-panel-react">
       {error ? <AlertBanner variant="error" message={error} /> : null}
 
-      <header className="crm-cabecera-react">
-        <div className="ml-auto flex flex-wrap items-center gap-3">
+      <CabeceraPanel descripcion="Todo el club, con su orden de departamentos, habilidades y cuántas tareas abiertas lleva cada uno." />
+
+      <div className="crm-barra-react">
+        <Buscador
+          valor={busqueda}
+          onCambio={setBusqueda}
+          placeholder="Buscar por nombre o habilidad"
+          etiqueta="Buscar miembros"
+          cuenta={`${visibles.length} de ${miembros.length}`}
+        />
           <div className="crm-tags-react" role="group" aria-label="Filtrar por 1ª preferencia">
             {[null, ...TEAMS].map((d) => (
               <button
@@ -150,7 +166,6 @@ export function MembersPanel() {
             </div>
           ) : null}
           <select
-            className="h-8 rounded-lg border border-input bg-transparent px-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
             value={filtroCarga}
             onChange={(e) => setFiltroCarga(e.target.value as "" | NivelCarga)}
             aria-label="Filtrar por carga"
@@ -160,8 +175,7 @@ export function MembersPanel() {
             <option value="media">Carga media</option>
             <option value="alta">Carga alta</option>
           </select>
-        </div>
-      </header>
+      </div>
 
       {visibles.length === 0 ? (
         <p className="mkt-vacio-react">

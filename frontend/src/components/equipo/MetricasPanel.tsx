@@ -1,9 +1,10 @@
 import { motion, useReducedMotion } from "motion/react";
 import { useEffect, useState } from "react";
 
+import { CabeceraPanel } from "./CabeceraPanel";
+import { Esqueleto } from "../feedback/Esqueleto";
 import { getMetricas } from "../../api/equipo";
 import { AlertBanner } from "../feedback/AlertBanner";
-import { Esqueleto } from "../feedback/Esqueleto";
 import { AvatarResponsable, etiquetaDe } from "./marketing/Avatares";
 import { GraficasClub } from "./GraficasClub";
 import { Contador, FilaAnimada } from "../movimiento";
@@ -63,10 +64,10 @@ export function MetricasPanel() {
   const maxSemanal = Math.max(1, ...metricas.participacion_semanal.map((s) => s.cerradas));
 
   return (
-    <>
-      <header className="crm-cabecera-react">
-        <span className="crm-s ml-auto">Últimos {metricas.dias_periodo} días</span>
-      </header>
+    <section className="mkt-panel-react">
+      <CabeceraPanel
+        descripcion={`Cómo va el club en los últimos ${metricas.dias_periodo} días: carga de cada uno, actividad y reparto entre departamentos.`}
+      />
 
       <div className="mkt-tiles-react">
         <div className="crm-c mkt-tile-react">
@@ -210,6 +211,6 @@ export function MetricasPanel() {
           </ul>
         )}
       </div>
-    </>
+    </section>
   );
 }

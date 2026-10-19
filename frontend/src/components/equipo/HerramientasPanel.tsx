@@ -1,6 +1,7 @@
 import { ChevronRight, Link2, MessageCircle } from "lucide-react";
 import { useEffect, useState, type ComponentType } from "react";
 
+import { CabeceraPanel } from "./CabeceraPanel";
 import { getAccesos } from "../../api/equipo";
 import { DeptoProvider, DirectorioProvider } from "./DeptoApi";
 import { PlataformaPanel } from "./PlataformaPanel";
@@ -87,7 +88,8 @@ export function HerramientasPanel({ teams }: Props) {
   ];
 
   return (
-    <div className="herr-react">
+    <div className="mkt-panel-react">
+      <CabeceraPanel descripcion="Los enlaces del club en un solo sitio: chat, documentos, eventos y lo que Ingeniería abre para todos." />
       <section className="crm-c herr-accesos-react" aria-labelledby="herr-accesos-titulo">
         <div className="crm-cabecera-react">
           <p className="crm-k" id="herr-accesos-titulo">Accesos del club</p>
