@@ -190,7 +190,8 @@ def _montar_rutas(
         return jsonify(build_response(True, "Creado.", registro=fila)), 201
 
     def actualizar(fila_id: int):
-        campos = leer_campos(_payload())
+        datos = _payload()
+        campos = leer_campos(datos)
         campos.pop("club", None)
         campos.pop("directiva", None)
         directiva = es_cargo_vp_o_admin()
@@ -198,6 +199,18 @@ def _montar_rutas(
             # No puede tocar una de directiva (las excluye `_alcance`), y
             # marcar otra como privada no tiene sentido.
             campos.pop("solo_directiva", None)
+        if tabla is reg.REUNIONES and "departamento" in datos:
+            # Cambiar «de quién es» una reunión ya creada: un departamento,
+            # todo el club ('') o la directiva (solo la directiva la hace suya).
+            nuevo = str(datos["departamento"] or "")
+            if nuevo not in ("", "directiva", *DEPARTAMENTOS):
+                raise DatosInvalidos("Ese ámbito no existe.")
+            if nuevo == "directiva" and not directiva:
+                return jsonify(build_response(False, "Solo la directiva convoca sus reuniones.")), 403
+            campos["departamento"] = nuevo
+            if nuevo != "directiva":
+                # «Solo la ve la directiva» es solo de las suyas (CHECK de la 0014).
+                campos["solo_directiva"] = False
         if not campos:
             raise DatosInvalidos("No hay nada que actualizar.")
         if not reg.actualizar(tabla, fila_id, campos, depto_de(), directiva):

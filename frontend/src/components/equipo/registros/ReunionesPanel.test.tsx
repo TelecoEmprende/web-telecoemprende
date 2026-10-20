@@ -158,6 +158,43 @@ describe("acuerdos de una reunión de todo el club", () => {
   });
 });
 
+describe("cambiar de quién es una reunión ya creada", () => {
+  it("se guarda por la ruta del departamento que tenía, y lo siguiente por la del nuevo", async () => {
+    deptosUsados.length = 0;
+    listarRegistros.mockReset().mockResolvedValue({
+      ok: true,
+      reuniones: [{ ...JUNTA, departamento: "", titulo: "Reunión directiva" }],
+    });
+    actualizarRegistro.mockReset().mockResolvedValue({ ok: true });
+    render(<ReunionesPanel deptos={["eventos", "marketing"]} esDirectiva />);
+    await userEvent.click(await screen.findByRole("button", { name: /Reunión directiva/ }));
+
+    await userEvent.selectOptions(screen.getByLabelText("De quién es"), "marketing");
+    await waitFor(() =>
+      expect(actualizarRegistro).toHaveBeenCalledWith(
+        "reuniones", 5, { departamento: "marketing", solo_directiva: false },
+      ),
+    );
+    // Era de todo el club: ese guardado va por la ruta del primero marcado.
+    expect(deptosUsados).toEqual(["eventos"]);
+
+    await userEvent.type(screen.getByLabelText("Título"), "!");
+    await waitFor(() => expect(actualizarRegistro).toHaveBeenCalledTimes(2));
+    expect(deptosUsados).toEqual(["eventos", "marketing"]);
+  });
+
+  it("solo la directiva ve la opción Directiva", async () => {
+    listarRegistros.mockReset().mockResolvedValue({
+      ok: true,
+      reuniones: [{ ...JUNTA, departamento: "", titulo: "Semanal" }],
+    });
+    render(<ReunionesPanel deptos={["eventos"]} esDirectiva={false} />);
+    await userEvent.click(await screen.findByRole("button", { name: /Semanal/ }));
+    expect(screen.queryByRole("option", { name: "Directiva" })).not.toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "Marketing" })).toBeInTheDocument();
+  });
+});
+
 describe("editar una reunión ya creada", () => {
   it("se guarda por la ruta de su departamento, no por la del primero visible", async () => {
     deptosUsados.length = 0;

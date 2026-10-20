@@ -196,6 +196,47 @@ class RegistrosTestCase(unittest.TestCase):
         respuesta = self.client.put(f"/api/eventos/reuniones/{fila_id}", json={"solo_directiva": True})
         self.assertEqual(respuesta.status_code, 400)
 
+    def test_cambiar_de_quien_es_una_reunion_ya_creada(self):
+        self.login()
+        fila_id = self.client.post(
+            "/api/eventos/reuniones", json={"titulo": "Reunión directiva", "club": True}
+        ).get_json()["registro"]["id"]
+
+        # De todo el club a la directiva: ya no la ve quien no es de la directiva.
+        self.assertEqual(
+            self.client.put(
+                f"/api/eventos/reuniones/{fila_id}", json={"departamento": "directiva", "solo_directiva": True}
+            ).status_code,
+            200,
+        )
+        fila = self.client.get("/api/eventos/reuniones").get_json()["reuniones"][0]
+        self.assertEqual((fila["departamento"], fila["solo_directiva"]), ("directiva", True))
+
+        # Y de vuelta a un departamento: «solo la directiva» se quita sola.
+        self.assertEqual(
+            self.client.put(f"/api/eventos/reuniones/{fila_id}", json={"departamento": "marketing"}).status_code,
+            200,
+        )
+        fila = self.client.get("/api/marketing/reuniones").get_json()["reuniones"][0]
+        self.assertEqual((fila["departamento"], fila["solo_directiva"]), ("marketing", False))
+        self.assertEqual(
+            self.client.put(f"/api/marketing/reuniones/{fila_id}", json={"departamento": "nada"}).status_code,
+            400,
+        )
+
+    def test_sin_cargo_no_se_pasa_una_reunion_a_la_directiva(self):
+        self.login(cargo="")
+        fila_id = self.client.post(
+            "/api/eventos/reuniones", json={"titulo": "Semanal", "club": True}
+        ).get_json()["registro"]["id"]
+        respuesta = self.client.put(f"/api/eventos/reuniones/{fila_id}", json={"departamento": "directiva"})
+        self.assertEqual(respuesta.status_code, 403)
+        # A un departamento sí: cualquiera edita todo.
+        self.assertEqual(
+            self.client.put(f"/api/eventos/reuniones/{fila_id}", json={"departamento": "eventos"}).status_code,
+            200,
+        )
+
     def test_el_titulo_es_obligatorio_al_crear(self):
         self.login()
         self.assertEqual(
