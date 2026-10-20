@@ -29,6 +29,7 @@ import {
   MAX_TEXTO_LARGO_LEN,
   MAX_TITULO_LEN,
   TASK_ESTADO_LABEL,
+  diasHasta,
   formatearFecha,
   type CampaignDetalle,
   type CampaignResumen,
@@ -37,6 +38,20 @@ import {
   type Task,
   type TaskEstado,
 } from "../../../types/marketing";
+
+/** «1 tarea», «3 tareas». */
+function cuantas(n: number, una: string, varias: string) {
+  return `${n} ${n === 1 ? una : varias}`;
+}
+
+/** Un entregable cuya fecha ya pasó con tareas sin acabar (o sin ninguna): el
+ *  mismo criterio que `faseVencida` en la Mesa, para que no se contradigan. */
+function entregableAtrasado(content: Content & { tasks?: Task[] }) {
+  const dias = diasHasta(content.fecha_publicacion);
+  if (dias === null || dias >= 0) return false;
+  const tareas = content.tasks ?? [];
+  return tareas.length === 0 || tareas.some((t) => t.estado !== "acabado");
+}
 
 function mensajeDeError(error: unknown, porDefecto: string) {
   const fallo = error as ApiFailure;
@@ -62,8 +77,8 @@ function ProgresoCampaign({ tareas }: { tareas: Task[] }) {
       </div>
       <span className="mkt-progreso-texto-react">
         {acabadas === tareas.length
-          ? `Todo listo · ${tareas.length} tareas`
-          : `${acabadas} de ${tareas.length} tareas`}
+          ? `Todo listo · ${cuantas(tareas.length, "tarea", "tareas")}`
+          : `${acabadas} de ${cuantas(tareas.length, "tarea", "tareas")}`}
       </span>
     </div>
   );
@@ -732,6 +747,11 @@ export function CampaignsPanel({ deptos, campaignInicial, onCampaignAbierta, onA
                         .filter(Boolean)
                         .join(" · ") || "Sin tipo ni plataforma"}
                     </p>
+                    {entregableAtrasado(content) ? (
+                      <span className="crm-tag crm-tag-rojo-react">
+                        Atrasado · era para el {formatearFecha(content.fecha_publicacion)}
+                      </span>
+                    ) : null}
                   </div>
                   <div className="mkt-content-acciones-react">
                     <select
@@ -762,7 +782,7 @@ export function CampaignsPanel({ deptos, campaignInicial, onCampaignAbierta, onA
                       className="mkt-btn-borrar-react"
                       onClick={() => void borrarContent(content)}
                     >
-                      Eliminar
+                      Enviar a la papelera
                     </button>
                   </div>
                 </header>
@@ -1001,7 +1021,8 @@ export function CampaignsPanel({ deptos, campaignInicial, onCampaignAbierta, onA
                   <span className="mkt-campaign-objetivo-react">{campaign.objetivo}</span>
                 ) : null}
                 <span className="mkt-meta-react">
-                  {campaign.total_contents} entregables · {campaign.total_tasks} tareas
+                  {cuantas(campaign.total_contents, "entregable", "entregables")} ·{" "}
+                  {cuantas(campaign.total_tasks, "tarea", "tareas")}
                   {campaign.fecha ? ` · ${formatearFecha(campaign.fecha, true)}` : ""}
                 </span>
                 {campaign.total_tasks > 0 ? (

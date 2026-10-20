@@ -69,6 +69,10 @@ export type Panel =
   | "presupuesto"
   | "reuniones";
 
+/** Lo que un botón del Inicio pide hacer al llegar a su apartado («Nueva
+ *  tarea» abre el formulario, no solo el tablero). */
+export type AccionInicio = "nueva-tarea" | "nueva-nota" | "buscar-miembro";
+
 export type Seccion =
   | "club" | "mesa" | "notas" | "papelera" | "herramientas" | "metricas" | "calendario" | Panel
   // Lo que antes era /admin: solo con `tieneAccesoAdmin` (Ingeniería y board).

@@ -77,10 +77,18 @@ export function formatearValor(campo: string, valor: unknown): string {
     return DEPTO_LABEL[texto as Team] ?? texto;
   }
   if (campo === "responsables" || campo === "responsable") return etiquetaDe(texto);
-  if (/^\d{4}-\d{2}-\d{2}/.test(texto) && ["deadline", "fecha", "fecha_publicacion"].includes(campo)) {
-    return formatearFecha(texto.slice(0, 10), true);
-  }
+  // Cualquier fecha (con o sin hora) se lee como fecha, nunca como ISO crudo.
+  if (/^\d{4}-\d{2}-\d{2}(T|$)/.test(texto)) return formatearFecha(texto.slice(0, 10), true);
   return texto.length > 80 ? `${texto.slice(0, 80)}…` : texto;
+}
+
+/** Campos que cambian solos al cambiar otro (marcar «acabado» pone la fecha de
+ *  cierre): no son algo que alguien haya hecho, así que no se cuentan. */
+const DERIVADOS = new Set(["completado_en", "updated_at"]);
+
+/** «el estado» → «El estado», para empezar una línea del detalle. */
+function conMayuscula(texto: string) {
+  return texto.charAt(0).toUpperCase() + texto.slice(1);
 }
 
 /** «Ana cambió el estado de «Feria» de Activo a En pausa». */
@@ -95,8 +103,10 @@ export function describirEvento(e: EventoHistorial): { quien: string; frase: str
     case "restaurar":
       return { quien, frase: `restauró ${que}`, detalle: [] };
     default: {
-      if (e.cambios.length === 1) {
-        const c = e.cambios[0];
+      const cambios = e.cambios.filter((c) => !DERIVADOS.has(c.campo));
+      if (cambios.length === 0) return { quien, frase: `editó ${que}`, detalle: [] };
+      if (cambios.length === 1) {
+        const c = cambios[0];
         const campo = CAMPO[c.campo] ?? c.campo;
         // El contenido de una nota o un acta no se copia: solo consta que cambió.
         if (c.campo === "contenido") return { quien, frase: `editó el contenido de ${que}`, detalle: [] };
@@ -106,7 +116,7 @@ export function describirEvento(e: EventoHistorial): { quien: string; frase: str
           detalle: [c],
         };
       }
-      return { quien, frase: `editó ${que}`, detalle: e.cambios };
+      return { quien, frase: `editó ${que}`, detalle: cambios };
     }
   }
 }
@@ -135,7 +145,7 @@ export function HistorialLista({ eventos }: { eventos: EventoHistorial[] }) {
                         <>Cambió el contenido</>
                       ) : (
                         <>
-                          {CAMPO[c.campo] ?? c.campo}: <s>{formatearValor(c.campo, c.antes)}</s>{" "}
+                          {conMayuscula(CAMPO[c.campo] ?? c.campo)}: <s>{formatearValor(c.campo, c.antes)}</s>{" "}
                           → <b>{formatearValor(c.campo, c.despues)}</b>
                         </>
                       )}

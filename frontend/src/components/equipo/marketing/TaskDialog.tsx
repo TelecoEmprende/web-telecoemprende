@@ -192,7 +192,15 @@ export function TaskDialog({
 
   return (
     <Dialog open onOpenChange={(abierto) => !abierto && onCerrar()}>
-      <DialogContent className="mkt-dialogo-react">
+      <DialogContent
+        className="mkt-dialogo-react"
+        // Radix enfoca el primer campo y le selecciona el texto: una tecla
+        // borraba el título. El foco va al diálogo, sin seleccionar nada.
+        onOpenAutoFocus={(event) => {
+          event.preventDefault();
+          (event.currentTarget as HTMLElement | null)?.focus();
+        }}
+      >
         <DialogHeader>
           <DialogTitle>{task.titulo}</DialogTitle>
           <DialogDescription>
@@ -306,25 +314,14 @@ export function TaskDialog({
             </div>
           </div>
 
-          <div className="mkt-form-fila-react">
-            <div className="field-group-react">
-              <label htmlFor="td-deadline">Fecha límite</label>
-              <input
-                id="td-deadline"
-                type="date"
-                value={deadline}
-                onChange={(event) => setDeadline(event.target.value)}
-              />
-            </div>
-            <div className="field-group-react">
-              <label htmlFor="td-hora">Hora (opcional)</label>
-              <input
-                id="td-hora"
-                type="time"
-                value={hora}
-                onChange={(event) => setHora(event.target.value)}
-              />
-            </div>
+          <div className="field-group-react">
+            <label htmlFor="td-deadline">Fecha límite</label>
+            <input
+              id="td-deadline"
+              type="date"
+              value={deadline}
+              onChange={(event) => setDeadline(event.target.value)}
+            />
           </div>
 
           {/* ---- Checklist ---- */}
@@ -431,6 +428,21 @@ export function TaskDialog({
             )}
           </div>
 
+          {/* Lo que se usa poco va plegado; si ya tiene algo, se abre solo para
+              que no quede escondido. */}
+          <details className="mkt-mas-detalles-react" open={Boolean(hora || tags || enlaces.trim())}>
+            <summary>Hora, etiquetas y enlaces</summary>
+
+          <div className="field-group-react">
+            <label htmlFor="td-hora">Hora (opcional)</label>
+            <input
+              id="td-hora"
+              type="time"
+              value={hora}
+              onChange={(event) => setHora(event.target.value)}
+            />
+          </div>
+
           <div className="field-group-react">
             <label htmlFor="td-tags">Etiquetas (separadas por comas)</label>
             <input
@@ -462,6 +474,7 @@ export function TaskDialog({
           </div>
 
           <AdjuntosDeContent enlaces={desdeLineas(enlaces)} />
+          </details>
 
           <div className="mkt-checklist-react">
             <p className="mkt-adjuntos-titulo-react">
@@ -476,7 +489,9 @@ export function TaskDialog({
                   <li key={c.id} className="mkt-comentario-react">
                     <span className="mkt-comentario-cabecera-react">
                       <b>{etiquetaDe(c.autor, directorio[c.autor])}</b>
-                      <span className="mkt-meta-react">{c.created_at.slice(0, 16).replace("T", " ")}</span>
+                      <time className="mkt-meta-react" dateTime={c.created_at}>
+                        {new Date(c.created_at).toLocaleString("es-ES", { dateStyle: "medium", timeStyle: "short" })}
+                      </time>
                     </span>
                     <p className="mkt-comentario-texto-react">{c.texto}</p>
                   </li>

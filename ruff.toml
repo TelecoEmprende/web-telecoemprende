@@ -1,0 +1,6 @@
+# Solo lo que es un fallo seguro (nombres sin definir, imports sin usar,
+# errores de sintaxis): el estilo no se toca. `.venv/bin/ruff check .`
+extend-exclude = ["frontend", "demo", "juego"]
+
+[lint]
+select = ["F", "E9"]

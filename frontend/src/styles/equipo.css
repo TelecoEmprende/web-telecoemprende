@@ -557,7 +557,8 @@
   border-color: var(--color-azul);
 }
 
-/* El botón de la home (`.in-btn-impulso`): blanco sobre Impulso, solo ≥18 px. */
+/* El botón de la home (`.in-btn-impulso`): blanco sobre Impulso, que solo
+   llega (3:1) como texto grande: 19 px en negrita. */
 .acceso-boton-react {
   display: inline-flex;
   align-items: center;
@@ -571,8 +572,8 @@
   background: var(--color-impulso);
   color: var(--color-text-on-dark);
   font: inherit;
-  font-size: 1.125rem;
-  font-weight: 600;
+  font-size: 1.1875rem;
+  font-weight: 700;
   cursor: pointer;
   transition: transform var(--dur-press) var(--ease-out);
 }
@@ -910,12 +911,11 @@
 
 .crm-k {
   margin: 0;
-  font-size: 0.66rem;
+  font-size: 0.75rem;
   font-weight: 700;
   letter-spacing: var(--tracking-label);
   text-transform: uppercase;
-  /* A este tamaño, medio Noche se queda en 3:1 sobre blanco. */
-  color: rgba(var(--color-noche-rgb), 0.62);
+  color: rgba(var(--color-noche-rgb), 0.72);
 }
 
 /* Cabecera de caja: rótulo a la izquierda, filtros o enlace a la derecha.
@@ -1046,7 +1046,7 @@ button.crm-row-cuerpo-react {
   background: rgba(var(--color-noche-rgb), 0.05);
   color: rgba(var(--color-noche-rgb), 0.78);
   font-family: inherit;
-  font-size: 0.7rem;
+  font-size: 0.75rem;
   font-weight: 600;
   line-height: 1.2;
   white-space: nowrap;
@@ -1069,6 +1069,13 @@ button.crm-tag.crm-tag-activo-react:hover {
   color: var(--color-info-text);
 }
 
+/* Atrasada: lo que ya venció y sigue sin acabar. Mismo aspecto en Inicio, el
+   tablero y los entregables de un proyecto. */
+.crm-tag-rojo-react {
+  background: var(--color-error-bg);
+  color: var(--color-error-text);
+}
+
 .crm-tag-verde-react {
   background: var(--color-success-bg);
   color: var(--color-success-text);
@@ -1078,7 +1085,7 @@ button.crm-tag.crm-tag-activo-react:hover {
 .crm-tag-bloque-react {
   display: block;
   padding: 5px 7px;
-  font-size: 0.66rem;
+  font-size: 0.72rem;
   white-space: normal;
   overflow-wrap: anywhere;
 }
@@ -1107,6 +1114,8 @@ button.crm-tag-azul-react:hover {
   border: 0;
   border-radius: var(--radius-md);
   background: var(--color-impulso);
+  /* Blanco sobre Impulso, como en la web, por decisión de marca (oct 2026),
+     aunque a este tamaño se queda en 3,4:1. */
   color: var(--color-blanco);
   font-family: inherit;
   font-size: 0.78rem;
@@ -1131,8 +1140,9 @@ a.crm-btn {
   border-color: rgba(var(--color-noche-rgb), 0.28);
 }
 
+/* Oscurece hacia Noche: con texto blanco, así gana contraste al pasar. */
 .crm-btn:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--color-impulso) 88%, #000);
+  background: color-mix(in srgb, var(--color-impulso) 88%, var(--color-noche));
 }
 
 .crm-btn-ghost-react:hover:not(:disabled) {
@@ -1268,7 +1278,7 @@ input.crm-check {
 }
 
 .crm-semana-hoy-react .crm-s {
-  color: var(--color-impulso);
+  color: var(--color-azul);
   font-weight: 700;
 }
 
@@ -1767,8 +1777,9 @@ kbd {
   min-width: 22px;
   height: 22px;
   border-radius: 50%;
-  background: var(--color-impulso);
-  color: var(--color-text-on-dark);
+  /* Azul como el «hoy» del Calendario: el mismo día no cambia de color. */
+  background: var(--color-azul);
+  color: var(--color-blanco);
 }
 
 /* Fecha en bloque en "Próximos eventos": el día grande, el mes debajo. */
@@ -1933,9 +1944,20 @@ kbd {
   color: var(--color-text-muted);
 }
 
+/* El tono de texto de Impulso (`info-text`): el Impulso puro sobre blanco
+   se queda en 3,4:1 a este tamaño. */
 .notas-item-checks-react {
-  color: var(--color-impulso);
+  color: var(--color-info-text);
   font-weight: 700;
+}
+
+/* Las casillas de notas y actas con el color de marca, no el azul del
+   navegador, y un poco más grandes para el dedo. */
+.notas-editor-react .bn-editor input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--color-impulso);
+  cursor: pointer;
 }
 
 .notas-vacio-react {
@@ -2019,6 +2041,33 @@ kbd {
   letter-spacing: -0.015em;
   line-height: 1.25;
   color: var(--color-noche);
+}
+
+/* El acta de una reunión: en Notas el editor ocupa la página, pero aquí iba
+   suelto sobre el fondo y sus títulos superaban al de la sección. Va en su
+   tarjeta y con titulares por debajo de «Acta y acuerdos». */
+.notas-editor-react.reu-acta-react {
+  margin: 0;
+  padding: 12px 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+}
+
+.notas-editor-react.reu-acta-react .bn-editor {
+  padding-inline: 44px 20px;
+}
+
+.reu-acta-react .bn-editor h1 {
+  font-size: 1.25rem;
+}
+
+.reu-acta-react .bn-editor h2 {
+  font-size: 1.1rem;
+}
+
+.reu-acta-react .bn-editor h3 {
+  font-size: 1rem;
 }
 
 .notas-placeholder-react {
@@ -2126,11 +2175,11 @@ kbd {
 }
 
 .crm-sidebar-react [data-slot="sidebar-group-label"] {
-  font-size: 0.68rem;
+  font-size: 0.75rem;
   font-weight: 600;
   letter-spacing: var(--tracking-label);
   text-transform: uppercase;
-  color: rgba(var(--color-noche-rgb), 0.5);
+  color: rgba(var(--color-noche-rgb), 0.68);
 }
 
 /* ---------- Marca y contexto ---------- */
@@ -2793,6 +2842,95 @@ span.cal-capa-react {
   margin: 0;
 }
 
+/* Agenda del día tocado (solo móvil, ver CalendarPanel): cada cosa entera,
+   con la franja de su capa como en la celda. */
+.cal-agenda-react {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--color-divider);
+}
+
+.cal-agenda-cabecera-react {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.cal-agenda-cabecera-react h4 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--color-noche);
+}
+
+.cal-agenda-lista-react {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.cal-v3-react .cal-agenda-item-react {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 0;
+  border-left: 3px solid var(--franja);
+  border-radius: var(--radius-md);
+  background: rgba(var(--color-noche-rgb), 0.04);
+  color: var(--color-noche);
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-align: left;
+  justify-content: flex-start;
+}
+
+.cal-v3-react .cal-agenda-item-react .mkt-evento-hora-react {
+  flex: none;
+  font-size: inherit;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.cal-v3-react .cal-agenda-item-react .mkt-evento-texto-react {
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+}
+
+/* En el móvil, toda la celda es el botón del día (el número estira su área
+   con ::after) y las rayas de color no se tocan: no caben dedos en 6 px. */
+@media (max-width: 767px) {
+  .cal-celda-react {
+    position: relative;
+  }
+
+  .cal-v3-react .cal-mes-react .mkt-evento-react,
+  .cal-mas-react {
+    pointer-events: none;
+  }
+
+  .cal-numero-react::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+  }
+
+  .cal-dia-visto-react .cal-numero-react {
+    background: var(--color-noche);
+    color: var(--color-blanco);
+  }
+
+  .cal-dia-visto-react {
+    box-shadow: inset 0 0 0 2px var(--color-noche);
+  }
+}
+
 @container (max-width: 760px) {
   .cal-tarjeta-react {
     padding: 14px 12px 14px;
@@ -3166,14 +3304,69 @@ span.cal-capa-react {
   color: var(--color-text-muted);
 }
 
-.mesa-fases-react summary {
+/* Desplegables de la Mesa: un chevron dibujado (no el triángulo del
+   navegador) que gira al abrir. */
+.mesa-fases-react summary,
+.mesa-persona-react summary,
+.mkt-mas-detalles-react > summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+  list-style: none;
   cursor: pointer;
   font-weight: 600;
 }
 
+.mesa-fases-react summary::-webkit-details-marker,
+.mesa-persona-react summary::-webkit-details-marker,
+.mkt-mas-detalles-react > summary::-webkit-details-marker {
+  display: none;
+}
+
+.mesa-fases-react summary::before,
+.mesa-persona-react summary::before,
+.mkt-mas-detalles-react > summary::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border: solid currentColor;
+  border-width: 0 1.5px 1.5px 0;
+  transform: rotate(-45deg);
+  transition: transform var(--dur-fast) var(--ease-out);
+}
+
+.mesa-fases-react[open] > summary::before,
+.mesa-persona-react details[open] > summary::before,
+.mkt-mas-detalles-react[open] > summary::before {
+  transform: rotate(45deg);
+}
+
+/* «Hora, etiquetas y enlaces» del diálogo de tarea. */
+.mkt-mas-detalles-react {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 18px;
+  color: var(--color-noche);
+}
+
+.mkt-mas-detalles-react[open] > summary {
+  margin-bottom: 10px;
+}
+
+.mesa-fases-react summary:focus-visible,
+.mesa-persona-react summary:focus-visible,
+.mkt-mas-detalles-react > summary:focus-visible {
+  outline: 2px solid var(--color-azul);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* El mismo rojo de «atrasada» que en Inicio, el tablero y los proyectos. */
 .mesa-fases-react .is-vencida,
 .mesa-persona-react .is-atrasada {
-  color: var(--color-info-text);
+  color: var(--color-error-text);
   font-weight: 700;
 }
 
@@ -3200,11 +3393,6 @@ span.cal-capa-react {
 .mesa-persona-react > em {
   font-style: normal;
   color: var(--color-text-muted);
-}
-
-.mesa-persona-react summary {
-  cursor: pointer;
-  font-weight: 600;
 }
 
 .mesa-persona-react details ul {

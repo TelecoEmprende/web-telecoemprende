@@ -311,6 +311,8 @@ export type BalanceDepartamento = {
 export type MetricasClub = {
   dias_periodo: number;
   balance_departamentos: Record<Team, BalanceDepartamento>;
+  /** Tareas administrativas (de ningún departamento). */
+  administrativas: { abiertas: number; vencidas: number };
   total_activos: number;
   sobrecargados: number;
   inactivos: number;

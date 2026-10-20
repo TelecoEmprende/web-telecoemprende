@@ -104,13 +104,20 @@ const MARGEN_COJERA = 15;
  * opción), frente a cuánto trabajo abierto tiene. Todo sale de las cuentas y de
  * las tareas; nada se teclea.
  */
-export function GraficasClub({ balance }: { balance: Record<Team, BalanceDepartamento> }) {
+export function GraficasClub({
+  balance,
+  administrativas = { abiertas: 0, vencidas: 0 },
+}: {
+  balance: Record<Team, BalanceDepartamento>;
+  /** Las de ningún departamento: fuera del reparto, pero sí en atrasadas. */
+  administrativas?: { abiertas: number; vencidas: number };
+}) {
   const porPosicion = (i: number) =>
     Object.fromEntries(TEAMS.map((t) => [t, balance[t].preferencias[i]])) as Record<Team, number>;
 
   const totalPrimera = TEAMS.reduce((n, t) => n + balance[t].preferencias[0], 0);
   const totalAbiertas = TEAMS.reduce((n, t) => n + balance[t].abiertas, 0);
-  const totalVencidas = TEAMS.reduce((n, t) => n + balance[t].vencidas, 0);
+  const totalVencidas = TEAMS.reduce((n, t) => n + balance[t].vencidas, 0) + administrativas.vencidas;
   const pct = (n: number, total: number) => (total === 0 ? 0 : (100 * n) / total);
 
   const cojea = TEAMS.map((t) => ({
@@ -182,13 +189,23 @@ export function GraficasClub({ balance }: { balance: Record<Team, BalanceDeparta
         <p className="mkt-meta-react">Ninguna tarea atrasada.</p>
       ) : (
         <Barras
-          barras={TEAMS.map((t) => ({
-            etiqueta: DEPTO_LABEL[t],
-            pct: pct(balance[t].vencidas, Math.max(...TEAMS.map((x) => balance[x].vencidas))),
-            texto: `${balance[t].vencidas}`,
+          barras={[
+            ...TEAMS.map((t) => ({ etiqueta: DEPTO_LABEL[t], vencidas: balance[t].vencidas })),
+            { etiqueta: "Administrativo", vencidas: administrativas.vencidas },
+          ].map((fila, _, filas) => ({
+            etiqueta: fila.etiqueta,
+            pct: pct(fila.vencidas, Math.max(...filas.map((x) => x.vencidas))),
+            texto: `${fila.vencidas}`,
           }))}
         />
       )}
+      {administrativas.abiertas > 0 ? (
+        <p className="mkt-meta-react">
+          {administrativas.abiertas === 1
+            ? "Además hay 1 tarea administrativa abierta, que no cuenta en el reparto por departamento."
+            : `Además hay ${administrativas.abiertas} tareas administrativas abiertas, que no cuentan en el reparto por departamento.`}
+        </p>
+      ) : null}
     </div>
   );
 }
