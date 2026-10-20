@@ -799,6 +799,14 @@ class TareasAdministrativasTests(MarketingTestCase):
         )
         self.assertEqual(respuesta.status_code, 403)
 
+    def test_metricas_las_cuentan_aparte(self):
+        self.login(equipos=["marketing", "eventos", "ingenieria"])
+        self.crear(deadline="2020-01-01")
+
+        metricas = self.client.get("/api/equipo/metricas").get_json()["metricas"]
+        self.assertEqual(metricas["administrativas"], {"abiertas": 1, "vencidas": 1})
+        self.assertNotIn("administrativo", metricas["balance_departamentos"])
+
     def test_se_pasa_a_un_departamento_y_vuelve(self):
         self.login(equipos=["marketing", "eventos", "ingenieria"])
         tarea = self.crear()
@@ -1189,8 +1197,16 @@ class SlackTestCase(MarketingTestCase):
 
         self.assertEqual(len(self.enviados), 1)
         self.assertIn("Guion del reel", self.enviados[0])
-        self.assertIn("marketing", self.enviados[0])
+        self.assertIn("*Marketing*", self.enviados[0])
         self.assertIn("diego", self.enviados[0])
+
+    def test_una_administrativa_sale_con_su_nombre_en_slack(self):
+        self.login()
+        self.client.post(
+            "/api/marketing/tasks",
+            json={"titulo": "Pagar la cuota", "administrativo": True},
+        )
+        self.assertIn("*Administrativo*", self.enviados[0])
 
     def test_cambiar_de_estado_avisa_a_slack(self):
         self.login()

@@ -1453,6 +1453,12 @@ def metricas_club(dias_periodo: int = 30) -> dict:
     return {
         "dias_periodo": dias_periodo,
         "balance_departamentos": balance,
+        # Las administrativas no son de ningún departamento: van aparte, sin
+        # preferencias que comparar.
+        "administrativas": {
+            "abiertas": trabajo_depto.get(ADMINISTRATIVO, (0, 0))[0],
+            "vencidas": trabajo_depto.get(ADMINISTRATIVO, (0, 0))[1],
+        },
         "total_activos": len(activos),
         "sobrecargados": sum(1 for m in miembros if m["abiertas"] >= 4),
         "inactivos": sum(1 for m in miembros if m["dias_inactivo"] is not None and m["dias_inactivo"] >= 15),
