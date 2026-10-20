@@ -126,10 +126,19 @@ def _cuando(fecha: str, hora: str = "") -> str:
     return f"{texto} · {hora}" if hora else texto
 
 
+_AMBITO = {"": "todo el club", "directiva": "directiva", "marketing": "Marketing",
+           "eventos": "Eventos", "ingenieria": "Ingeniería", "administrativo": "Administrativo"}
+
+
+def _tablero(departamento: str) -> str:
+    """«Marketing», «Administrativo»...: el nombre que se ve, no el valor guardado."""
+    return _AMBITO.get(departamento, departamento)
+
+
 def tarea_creada(tarea: dict, departamento: str, autor: str) -> bool:
     responsables = ", ".join(_mencion(r) for r in tarea.get("responsables") or [])
     linea = (
-        f":pushpin: *{_quien(autor)}* ha creado una tarea en *{departamento}*: "
+        f":pushpin: *{_quien(autor)}* ha creado una tarea en *{_tablero(departamento)}*: "
         f"*{tarea.get('titulo', '')}*"
     )
     if responsables:
@@ -143,7 +152,7 @@ def tarea_cambia_estado(tarea: dict, estado: str, departamento: str, autor: str)
     emoji = _EMOJI_ESTADO.get(estado, ":arrows_counterclockwise:")
     etiqueta = _ETIQUETA_ESTADO.get(estado, estado)
     return enviar(
-        f"{emoji} *{tarea.get('titulo', '')}* ({departamento}) pasa a *{etiqueta}*"
+        f"{emoji} *{tarea.get('titulo', '')}* ({_tablero(departamento)}) pasa a *{etiqueta}*"
         f" — {_quien(autor)}"
     )
 
@@ -158,7 +167,7 @@ def aviso_deadlines_manana(tareas: list[dict]) -> bool:
     lineas = [":alarm_clock: *Vence mañana:*"]
     for tarea in tareas:
         responsables = ", ".join(_mencion(r) for r in tarea.get("responsables") or [])
-        linea = f"• *{tarea.get('titulo', '')}* ({tarea.get('departamento', '')})"
+        linea = f"• *{tarea.get('titulo', '')}* ({_tablero(tarea.get('departamento', ''))})"
         if responsables:
             linea += f" — {responsables}"
         lineas.append(linea)
@@ -171,7 +180,7 @@ def tarea_comentada(tarea: dict, texto: str, departamento: str, autor: str) -> b
     resumen = texto if len(texto) <= 200 else texto[:200] + "…"
     linea = (
         f":speech_balloon: *{_quien(autor)}* comenta en *{tarea.get('titulo', '')}* "
-        f"({departamento})"
+        f"({_tablero(departamento)})"
     )
     if responsables:
         linea += f"\n> Para: {responsables}"
@@ -185,7 +194,7 @@ def resumen_salud_equipo(salud: dict, departamento: str) -> bool:
     pct = salud.get("pct_a_tiempo")
     a_tiempo = f"{pct}% de las tareas acabadas a tiempo" if pct is not None else "sin tareas acabadas con plazo"
     return enviar(
-        f":bar_chart: *Salud de {departamento}*: {salud['sobrecargados']} sobrecargado(s), "
+        f":bar_chart: *Salud de {_tablero(departamento)}*: {salud['sobrecargados']} sobrecargado(s), "
         f"{salud['inactivos']} inactivo(s) +15 días, {a_tiempo}"
     )
 
@@ -206,11 +215,11 @@ def resumen_mesa(mesa: dict) -> bool:
         lineas.append(f":rotating_light: *{len(atrasadas)} tarea(s) atrasada(s):*")
         for t in atrasadas[:8]:
             quien = ", ".join(_mencion(r) for r in t.get("responsables") or []) or "sin dueño"
-            lineas.append(f"• {t['titulo']} ({t['departamento']}) — {quien}, venció el {t['deadline']}")
+            lineas.append(f"• {t['titulo']} ({_tablero(t['departamento'])}) — {quien}, venció el {t['deadline']}")
     if sin_dueno:
         lineas.append(f":raising_hand: *{len(sin_dueno)} tarea(s) sin dueño* — ¿quién se la queda?")
         for t in sin_dueno[:8]:
-            lineas.append(f"• {t['titulo']} ({t['departamento']})")
+            lineas.append(f"• {t['titulo']} ({_tablero(t['departamento'])})")
     if estancados:
         lineas.append(f":hourglass: *{len(estancados)} proyecto(s) sin moverse* en {mesa.get('dias_estancado', 14)}+ días:")
         for p in estancados[:8]:
@@ -221,10 +230,6 @@ def resumen_mesa(mesa: dict) -> bool:
             + ", ".join(p["nombre"] for p in sin_responsable[:8])
         )
     return enviar("\n".join(lineas))
-
-
-_AMBITO = {"": "todo el club", "directiva": "directiva", "marketing": "Marketing",
-           "eventos": "Eventos", "ingenieria": "Ingeniería"}
 
 
 def _lineas_reunion(reunion: dict) -> list[str]:

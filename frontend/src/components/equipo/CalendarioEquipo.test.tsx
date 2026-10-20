@@ -9,6 +9,7 @@ const getMisTareas = vi.fn();
 const getMisProyectos = vi.fn();
 const getMiembrosClub = vi.fn();
 const getEventosLuma = vi.fn();
+const getCalendarioEquipo = vi.fn();
 
 vi.mock("../../api/notas", () => ({
   listarNotas: () => Promise.resolve({ ok: true, notas: [] }),
@@ -20,6 +21,7 @@ vi.mock("../../api/equipo", () => ({
   getMisTareas: () => getMisTareas(),
   getMisProyectos: () => getMisProyectos(),
   getEventosLuma: () => getEventosLuma(),
+  getCalendarioEquipo: (...args: unknown[]) => getCalendarioEquipo(...args),
 }));
 
 // Sin mock, `apiDepto` haría peticiones de verdad contra jsdom.
@@ -36,6 +38,28 @@ describe("CalendarioEquipo — tu agenda", () => {
     getMisProyectos.mockReset().mockResolvedValue({ ok: true, proyectos: [] });
     getMiembrosClub.mockReset().mockResolvedValue({ ok: true, miembros: [] });
     getEventosLuma.mockReset().mockResolvedValue({ ok: true, calendario: "", eventos: [] });
+    getCalendarioEquipo.mockReset().mockResolvedValue({ ok: true, desde: "", hasta: "", items: [] });
+  });
+
+  it("la rejilla de la semana enseña las reuniones, de la misma fuente que el Calendario", async () => {
+    getEquipoSession.mockResolvedValue({
+      ok: true, authenticated: true, teams: ["marketing"], vp_de: [], cargo: "",
+      email: "abril@example.com", nombre: "Abril",
+    });
+    const hoy = new Date();
+    const fecha = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, "0")}-${String(hoy.getDate()).padStart(2, "0")}`;
+    getCalendarioEquipo.mockResolvedValue({
+      ok: true, desde: "", hasta: "",
+      items: [
+        { origen: "reunion", id: 7, titulo: "Junta semanal", fecha, hora: "18:00" },
+        { origen: "task", id: 8, titulo: "No soy reunión", fecha, hora: null },
+      ],
+    });
+
+    render(<CalendarioEquipo onIrA={() => {}} />);
+
+    expect(await screen.findByText("Junta semanal 18:00")).toBeInTheDocument();
+    expect(screen.queryByText(/No soy reunión/)).not.toBeInTheDocument();
   });
 
   it("los eventos de Luma salen en «Esta semana», con su enlace, y no hay tarjeta de pendientes", async () => {
@@ -110,7 +134,9 @@ describe("CalendarioEquipo — tu agenda", () => {
 
     render(<CalendarioEquipo onIrA={() => {}} />);
 
-    const cuando = await screen.findByText(/Hace \d+ días/);
-    expect(cuando).toHaveClass("crm-tag-ambar-react");
+    // Con texto y en el rojo de «atrasada», y la cabecera lo cuenta.
+    const cuando = await screen.findByText(/Atrasada · hace \d+ días/);
+    expect(cuando).toHaveClass("crm-tag-rojo-react");
+    expect(screen.getByText(/Semana del .* · 1 tarea atrasada$/)).toBeInTheDocument();
   });
 });

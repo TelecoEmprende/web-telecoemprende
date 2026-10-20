@@ -14,7 +14,6 @@ os.environ["SLACK_SIGNING_SECRET"] = "test-signing-secret"
 
 import app  # noqa: E402
 import backend.services.equipo as equipo_service  # noqa: E402
-import backend.services.marketing as marketing_service  # noqa: E402
 import backend.services.registrations as registration_service  # noqa: E402
 import backend.services.security as security_service  # noqa: E402
 from backend.config import MAX_LOGIN_ATTEMPTS_PER_WINDOW  # noqa: E402

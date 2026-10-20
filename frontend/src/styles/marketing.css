@@ -52,15 +52,15 @@
    del hero de una página de aterrizaje. Es la acción principal de cada
    panel (crear, guardar, asignar) -- `.mkt-btn-mini-react` se queda como
    estaba para todo lo demás. */
-/* En /equipo los botones son más pequeños que en la web pública; a ese tamaño
-   el blanco sobre Impulso no llega, así que el texto va en Noche (4.6:1). */
+/* Blanco sobre Impulso, como en la web, por decisión de marca (oct 2026),
+   aunque a este tamaño se queda en 3,4:1. */
 .mkt-btn-react {
   min-height: 44px;
   padding: 11px 20px;
   border: none;
   border-radius: var(--radius-md);
   background: var(--color-impulso);
-  color: var(--color-noche);
+  color: var(--color-blanco);
   font-family: inherit;
   font-size: 0.95rem;
   font-weight: 700;
@@ -433,8 +433,11 @@
   color: var(--color-noche);
 }
 
+/* Envuelve: la cabecera de un proyecto lleva cinco botones y en el móvil se
+   salía de la pantalla. */
 .mkt-content-acciones-react {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 8px;
 }
@@ -579,8 +582,13 @@
   background: rgba(var(--color-azul-rgb), 0.06);
 }
 
+/* Pestañas de columna: solo en pantallas estrechas (ver más abajo). */
+.mkt-tablero-pestanas-react {
+  display: none;
+}
+
 /* Cabecera de columna: nombre a la izquierda, recuento en pastilla a la derecha. */
-.mkt-columna-react h4 {
+.mkt-columna-react h3 {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -803,17 +811,17 @@
    apagada se queda en el gris neutro del sistema. */
 .crm-tag[aria-pressed="true"] {
   background: rgba(var(--color-noche-rgb), 0.85);
-  color: #fff;
+  color: var(--color-blanco);
 }
 
 .crm-tag-azul-react[aria-pressed="true"] {
   background: var(--color-azul);
-  color: #fff;
+  color: var(--color-blanco);
 }
 
 .crm-tag-ambar-react[aria-pressed="true"] {
   background: var(--color-impulso);
-  color: #fff;
+  color: var(--color-blanco);
 }
 
 /* ---------- Directorio de miembros: variante tabla ---------- */
@@ -1251,21 +1259,21 @@
     grid-template-columns: 1fr;
   }
 
-  /* Apilar las 4 columnas en vertical obligaba a pasar las 8 tarjetas de
-     "Pendiente" antes de llegar a "Por revisar"/"Acabado" -- justo lo
-     contrario de "qué falta para el jueves". Desplazable en horizontal, como
-     el calendario un poco más abajo: cada columna sigue entera, se llega a
-     cualquiera con un swipe en vez de un scroll larguísimo. */
-  .mkt-tablero-react {
+  /* Apilar las 4 columnas obligaba a pasar todo «Pendiente» antes de llegar a
+     «Acabado», y un carril horizontal pedía arrastrar dentro de algo que ya
+     se desplaza con el dedo. Una columna a la vez, elegida con pestañas. */
+  .mkt-tablero-pestanas-react {
     display: flex;
-    overflow-x: auto;
-    scroll-snap-type: x proximity;
-    padding-bottom: 4px;
+    flex-wrap: wrap;
+    gap: 6px;
   }
 
-  .mkt-columna-react {
-    flex: 0 0 260px;
-    scroll-snap-align: start;
+  .mkt-tablero-react {
+    display: block;
+  }
+
+  .mkt-columna-react:not([data-activa-movil]) {
+    display: none;
   }
 
   /* El scroll va en la columna que contiene la rejilla, no en el panel: al
@@ -1675,19 +1683,20 @@ button.mkt-evento-react:active {
     grid-template-columns: 1fr;
   }
 
-  /* Mismo motivo que en el `@media` de más abajo: en columna estrecha (con
-     el sidebar expandido) el tablero pasa a desplazarse en horizontal en vez
-     de apilar las 4 columnas una debajo de otra. */
-  .mkt-tablero-react {
+  /* Mismo motivo que en el `@media (max-width: 620px)`: en columna estrecha
+     (con el sidebar expandido), una columna a la vez con pestañas. */
+  .mkt-tablero-pestanas-react {
     display: flex;
-    overflow-x: auto;
-    scroll-snap-type: x proximity;
-    padding-bottom: 4px;
+    flex-wrap: wrap;
+    gap: 6px;
   }
 
-  .mkt-columna-react {
-    flex: 0 0 260px;
-    scroll-snap-align: start;
+  .mkt-tablero-react {
+    display: block;
+  }
+
+  .mkt-columna-react:not([data-activa-movil]) {
+    display: none;
   }
 }
 
@@ -1864,12 +1873,16 @@ button.mkt-evento-react:active {
   background: var(--color-error-bg);
 }
 
+/* Las cifras van en Anton, como los KPI del Inicio: un mismo dato no cambia
+   de letra según la pantalla. */
 .mkt-tile-numero-react {
-  font-size: 1.8rem;
-  font-weight: 700;
-  letter-spacing: -0.03em;
+  font-family: var(--font-display);
+  font-size: 2rem;
+  font-weight: 400;
+  letter-spacing: var(--tracking-display);
   color: var(--color-noche);
-  line-height: 1.1;
+  line-height: 1.05;
+  font-variant-numeric: tabular-nums;
 }
 
 .mkt-tile-alerta-react .mkt-tile-numero-react,
@@ -2594,4 +2607,34 @@ button.mkt-evento-react {
 .mkt-panel-react > button,
 .mkt-panel-react > a {
   align-self: flex-start;
+}
+
+/* Con el dedo, todo lo que se toca mide al menos 44 px de alto (la mitad del
+   club entra desde el móvil). Con ratón se queda la densidad de escritorio. */
+@media (pointer: coarse) {
+  .crm-react .crm-btn,
+  .crm-react .mkt-btn-mini-react,
+  .crm-react .mkt-btn-mini-peligro-react,
+  .crm-react .crm-select-react,
+  .crm-react .crm-barra-react select,
+  .crm-react .crm-buscador-react input,
+  .crm-react button.crm-tag,
+  .crm-react label.crm-tag,
+  .crm-react a.crm-tag,
+  .crm-react .crm-enlace-react {
+    min-height: 44px;
+  }
+
+  .crm-react button.crm-tag,
+  .crm-react label.crm-tag,
+  .crm-react a.crm-tag,
+  .crm-react .crm-enlace-react {
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .crm-react [data-slot="sidebar-trigger"] {
+    width: 44px;
+    height: 44px;
+  }
 }

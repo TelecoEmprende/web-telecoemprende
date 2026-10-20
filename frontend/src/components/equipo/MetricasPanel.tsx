@@ -93,7 +93,10 @@ export function MetricasPanel() {
         </div>
       </div>
 
-      <GraficasClub balance={metricas.balance_departamentos} />
+      <GraficasClub
+        balance={metricas.balance_departamentos}
+        administrativas={metricas.administrativas}
+      />
 
       {(metricas.alertas_inactividad.length > 0 || metricas.alertas_departamento.length > 0) && (
         <div className="crm-c mkt-grupo-react">

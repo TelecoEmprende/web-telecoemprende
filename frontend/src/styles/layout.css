@@ -5,7 +5,10 @@
   margin-bottom: 18px;
 }
 
-.field-group-react label {
+/* `.field-titulo-react`: el título de un grupo que no es un único campo
+   (casillas, un texto fijo), con el aspecto de una etiqueta. */
+.field-group-react label,
+.field-group-react > .field-titulo-react {
   font-weight: 700;
   color: var(--color-slate);
 }

@@ -186,7 +186,7 @@ describe("MesaPanel", () => {
     expect(screen.getByText("Sin responsable", { selector: ".is-vacio" })).toBeInTheDocument();
     expect(screen.getByText("Sin moverse 20 días")).toBeInTheDocument();
     expect(screen.getByText("Carteles · 1/2")).toBeInTheDocument();
-    expect(screen.getByText(/Fases \(2 · 1 vencida\)/)).toBeInTheDocument();
+    expect(screen.getByText(/Entregables \(2 · 1 vencido\)/)).toBeInTheDocument();
     expect(screen.getByText(/Stand · venció el/)).toHaveClass("is-vencida");
     expect(screen.getByText(/1 abierta/)).toBeInTheDocument();
     expect(screen.getByText(/1 atrasada/)).toBeInTheDocument();

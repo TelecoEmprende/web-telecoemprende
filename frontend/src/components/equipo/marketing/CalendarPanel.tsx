@@ -15,9 +15,10 @@ import { AlertBanner } from "../../feedback/AlertBanner";
 import { Esqueleto } from "../../feedback/Esqueleto";
 import { AvataresDeResponsables } from "./Avatares";
 import { TaskDialog } from "./TaskDialog";
+import { useIsMobile } from "@/hooks/use-mobile";
 import type { ApiFailure } from "../../../types/api";
 import { formatearFecha, type CalendarioItem, type Task } from "../../../types/marketing";
-import { ADMINISTRATIVO, DEPTO_LABEL, TEAMS, etiquetaTablero, type Team } from "../../../types/equipo";
+import { ADMINISTRATIVO, DEPTO_LABEL, TEAMS, etiquetaTablero, type Tablero, type Team } from "../../../types/equipo";
 
 /** La cajita de departamento del sistema (ver CalendarioEquipo). */
 /** El color de un elemento en la rejilla es el de su departamento, el mismo
@@ -248,7 +249,7 @@ export function CalendarPanel({
   // A qué departamento se da de alta una tarea nueva: si la persona está en
   // uno solo no hay nada que elegir; si está en varios, un desplegable lo
   // deja explícito en vez de adivinar (ver formularioNuevaTarea).
-  const [deptoNuevaTarea, setDeptoNuevaTarea] = useState<Team>(teams[0]);
+  const [deptoNuevaTarea, setDeptoNuevaTarea] = useState<Tablero>(teams[0]);
 
   const [cursor, setCursor] = useState(() => {
     const hoy = new Date();
@@ -264,6 +265,10 @@ export function CalendarPanel({
   const [todosDepartamentos, setTodosDepartamentos] = useState(true);
   const [deptosFiltro, setDeptosFiltro] = useState<Team[]>(TEAMS);
   const [diaAbierto, setDiaAbierto] = useState<string | null>(null);
+  // En el móvil las celdas del mes son barras sin texto: tocar un día enseña
+  // debajo su agenda legible (y desde ahí se añade), en vez de crear sin ver.
+  const esMovil = useIsMobile();
+  const [diaVisto, setDiaVisto] = useState<string>(() => iso(new Date()));
   const [seleccionado, setSeleccionado] = useState<CalendarioItem | null>(null);
   // Una tarea del calendario abre el MISMO diálogo que en el tablero, no una
   // ficha aparte: se edita, se comenta y se mueve de estado sin salir de
@@ -485,7 +490,11 @@ export function CalendarPanel({
     if (!titulo) return;
 
     try {
-      await apiDepto(deptoNuevaTarea).createTask({ titulo, deadline: fecha });
+      await apiDepto(deptoNuevaTarea).createTask({
+        ...(deptoNuevaTarea === ADMINISTRATIVO ? { administrativo: true } : {}),
+        titulo,
+        deadline: fecha,
+      });
       setTituloNuevo("");
       setDiaAbierto(null);
       await cargar(cursor);
@@ -547,20 +556,18 @@ export function CalendarPanel({
           void crearEnDia(clave);
         }}
       >
-        {teams.length > 1 ? (
-          <select
-            className="mkt-btn-mini-react"
-            value={deptoNuevaTarea}
-            aria-label="Departamento de la tarea nueva"
-            onChange={(event) => setDeptoNuevaTarea(event.target.value as Team)}
-          >
-            {teams.map((team) => (
-              <option key={team} value={team}>
-                {DEPTO_LABEL[team]}
-              </option>
-            ))}
-          </select>
-        ) : null}
+        <select
+          className="mkt-btn-mini-react"
+          value={deptoNuevaTarea}
+          aria-label="En qué tablero sale la tarea nueva"
+          onChange={(event) => setDeptoNuevaTarea(event.target.value as Tablero)}
+        >
+          {[...teams, ADMINISTRATIVO].map((t) => (
+            <option key={t} value={t}>
+              {etiquetaTablero(t)}
+            </option>
+          ))}
+        </select>
         <input
           type="text"
           autoFocus
@@ -585,7 +592,7 @@ export function CalendarPanel({
 
       <header className="cal-cabecera-react">
         <p className="crm-sub">
-          Tareas, publicaciones, reuniones, eventos del club y de Luma, en hora de Madrid.
+          Tareas, entregables, reuniones, eventos del club y de Luma, en hora de Madrid.
         </p>
         {vista === "mes" ? (
           <button
@@ -595,6 +602,7 @@ export function CalendarPanel({
               const ahora = new Date();
               setCursor(new Date(ahora.getFullYear(), ahora.getMonth(), 1));
               setTituloNuevo("");
+              setDiaVisto(hoy);
               setDiaAbierto(hoy);
             }}
           >
@@ -713,16 +721,26 @@ export function CalendarPanel({
                 key={clave}
                 className={`cal-celda-react${clave === hoy ? " cal-hoy-celda-react" : ""}${
                   fuera ? " cal-fuera-react" : ""
-                }${finde ? " cal-finde-react" : ""}`}
+                }${finde ? " cal-finde-react" : ""}${esMovil && clave === diaVisto ? " cal-dia-visto-react" : ""}`}
               >
                 <button
                   type="button"
                   className="cal-numero-react"
                   disabled={fuera}
-                  aria-label={`Añadir tarea el ${fecha.getDate()} de ${MESES[fecha.getMonth()]}`}
+                  aria-label={
+                    esMovil
+                      ? `Ver el ${fecha.getDate()} de ${MESES[fecha.getMonth()]}${delDia.length ? ` (${delDia.length})` : ""}`
+                      : `Añadir tarea el ${fecha.getDate()} de ${MESES[fecha.getMonth()]}`
+                  }
+                  aria-pressed={esMovil ? clave === diaVisto : undefined}
                   onClick={() => {
                     setTituloNuevo("");
-                    setDiaAbierto(diaAbierto === clave ? null : clave);
+                    if (esMovil) {
+                      setDiaVisto(clave);
+                      setDiaAbierto(null);
+                    } else {
+                      setDiaAbierto(diaAbierto === clave ? null : clave);
+                    }
                   }}
                 >
                   {fecha.getDate()}
@@ -743,7 +761,7 @@ export function CalendarPanel({
                   </button>
                 ) : null}
 
-                {diaAbierto === clave
+                {!esMovil && diaAbierto === clave
                   ? formularioNuevaTarea(clave, `${fecha.getDate()}`)
                   : null}
               </div>
@@ -752,8 +770,39 @@ export function CalendarPanel({
         </div>
       ) : null}
 
+      {!isLoading && vista === "mes" && esMovil ? (
+        // La agenda del día tocado, con cada cosa entera y legible.
+        <section className="cal-agenda-react" aria-labelledby="cal-agenda-titulo">
+          <div className="cal-agenda-cabecera-react">
+            <h4 id="cal-agenda-titulo">{formatearFecha(diaVisto, true)}</h4>
+            <button
+              type="button"
+              className="crm-btn crm-btn-ghost-react"
+              onClick={() => {
+                setTituloNuevo("");
+                setDiaAbierto(diaAbierto === diaVisto ? null : diaVisto);
+              }}
+            >
+              + Añadir tarea
+            </button>
+          </div>
+          {diaAbierto === diaVisto ? formularioNuevaTarea(diaVisto, formatearFecha(diaVisto, true)) : null}
+          {(porDia[diaVisto] ?? []).length === 0 ? (
+            <p className="mkt-vacio-inline-react">Nada este día.</p>
+          ) : (
+            <div className="cal-agenda-lista-react">
+              {(porDia[diaVisto] ?? []).map((item) => botonEvento(item, { className: "cal-agenda-item-react" }))}
+            </div>
+          )}
+        </section>
+      ) : null}
+
       {!isLoading && vista === "mes" ? (
-        <p className="crm-s cal-pista-react">Toca el número de un día para añadir una tarea ahí.</p>
+        <p className="crm-s cal-pista-react">
+          {esMovil
+            ? "Toca un día para ver lo que tiene."
+            : "Toca el número de un día para añadir una tarea ahí."}
+        </p>
       ) : null}
 
       {/* Vista semana: una rejilla de horas de verdad, como Google Calendar.

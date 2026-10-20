@@ -30,4 +30,18 @@ describe("GraficasClub", () => {
     expect(screen.queryByText(/Ahí cojea el club/)).not.toBeInTheDocument();
     expect(screen.getByText("Ninguna tarea atrasada.")).toBeInTheDocument();
   });
+
+  it("las administrativas salen en atrasadas, aparte del reparto por departamento", () => {
+    const vacio = { preferencias: [1, 1, 1] as [number, number, number], abiertas: 0, vencidas: 0 };
+    render(
+      <GraficasClub
+        balance={{ marketing: vacio, eventos: vacio, ingenieria: vacio }}
+        administrativas={{ abiertas: 3, vencidas: 2 }}
+      />,
+    );
+
+    expect(screen.queryByText("Ninguna tarea atrasada.")).not.toBeInTheDocument();
+    expect(screen.getByText("Administrativo")).toBeInTheDocument();
+    expect(screen.getByText(/Además hay 3 tareas administrativas abiertas/)).toBeInTheDocument();
+  });
 });

@@ -1,5 +1,5 @@
 import { DeptoProvider, DirectorioProvider, YoProvider } from "./DeptoApi";
-import type { Panel } from "./EquipoSidebar";
+import type { AccionInicio, Panel } from "./EquipoSidebar";
 import { CalendarPanel } from "./marketing/CalendarPanel";
 import { CampaignsPanel } from "./marketing/CampaignsPanel";
 import { MembersPanel } from "./marketing/MembersPanel";
@@ -38,6 +38,8 @@ type Props = {
   onAbrirNota: (id: number) => void;
   /** Email de quien ha entrado. */
   yo?: string;
+  /** Lo que pidió un botón del Inicio («Nueva tarea», «Buscar miembro»). */
+  accionInicio?: AccionInicio | null;
 };
 
 /**
@@ -50,7 +52,7 @@ type Props = {
  */
 export function DeptoDashboard({
   depto, deptos, seccion, teams, campaignInicial, onCampaignAbierta, onAbrirCampaign, vpDe, puedeAsignarEnTodo,
-  onAbrirNota, yo = "",
+  onAbrirNota, yo = "", accionInicio = null,
 }: Props) {
   return (
     <DeptoProvider value={depto}>
@@ -70,6 +72,7 @@ export function DeptoDashboard({
             teams={teams}
             vpDe={vpDe}
             puedeAsignarEnTodo={puedeAsignarEnTodo}
+            abrirFormulario={accionInicio === "nueva-tarea"}
           />
         ) : null}
         {seccion === "calendario" ? (
@@ -80,7 +83,10 @@ export function DeptoDashboard({
             onAbrirCampaign={onAbrirCampaign}
           />
         ) : null}
-        {seccion === "miembros" ? <MembersPanel /> : null}
+        {seccion === "miembros" ? <MembersPanel
+            enfocarBuscador={accionInicio === "buscar-miembro"}
+            puedeAsignar={puedeAsignarEnTodo || vpDe.length > 0}
+          /> : null}
         {seccion === "presupuesto" ? <PresupuestoPanel /> : null}
         {seccion === "reuniones" ? (
           <ReunionesPanel deptos={deptos} esDirectiva={puedeAsignarEnTodo || vpDe.length > 0} />

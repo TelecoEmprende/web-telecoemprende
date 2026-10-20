@@ -6,6 +6,7 @@ cookie. Se verifica el header que Vercel añade solo a la petición,
 https://vercel.com/docs/cron-jobs/manage-cron-jobs).
 """
 
+import hmac
 import logging
 from datetime import date, timedelta
 
@@ -31,7 +32,10 @@ cron_api = Blueprint("cron_api", __name__, url_prefix="/api/cron")
 def _autorizado() -> bool:
     # Sin CRON_SECRET configurado, la ruta no se puede activar por accidente
     # -- ni con un header vacío ni con uno adivinado.
-    return bool(CRON_SECRET) and request.headers.get("Authorization") == f"Bearer {CRON_SECRET}"
+    # compare_digest: comparar en tiempo constante no da pistas del secreto.
+    return bool(CRON_SECRET) and hmac.compare_digest(
+        request.headers.get("Authorization", ""), f"Bearer {CRON_SECRET}"
+    )
 
 
 @cron_api.route("/avisar-deadlines", methods=["POST"])

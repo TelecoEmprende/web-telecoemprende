@@ -114,6 +114,7 @@ export function NotasDelProyecto({ proyectoId, proyectoNombre, departamento, onA
       {sueltas.length > 0 ? (
         <div className="proyecto-notas-enlazar-react">
           <select
+            className="crm-select-react"
             value={elegida}
             aria-label="Nota que enlazar a este proyecto"
             onChange={(event) => setElegida(event.target.value)}

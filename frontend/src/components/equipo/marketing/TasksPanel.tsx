@@ -78,6 +78,8 @@ type Props = {
    *  (`_puede_asignar_tareas`). Mirar solo el cargo dejaba a ingeniería con
    *  permisos de servidor que la interfaz le escondía. */
   puedeAsignarEnTodo: boolean;
+  /** Llega desde «Nueva tarea» del Inicio: el formulario ya abierto. */
+  abrirFormulario?: boolean;
 };
 
 /**
@@ -89,7 +91,7 @@ type Props = {
  * CADA tarea pueden crearla o reasignarla; un miembro raso sigue pudiendo
  * mover su propia tarea de estado.
  */
-export function TasksPanel({ deptos, teams, vpDe, puedeAsignarEnTodo }: Props) {
+export function TasksPanel({ deptos, teams, vpDe, puedeAsignarEnTodo, abrirFormulario = false }: Props) {
   const yo = useYo();
   const directorio = useDirectorio();
   const entradaTarjeta = useEntradaDeFila();
@@ -100,7 +102,7 @@ export function TasksPanel({ deptos, teams, vpDe, puedeAsignarEnTodo }: Props) {
   const [busqueda, setBusqueda] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [mostrarFormulario, setMostrarFormulario] = useState(false);
+  const [mostrarFormulario, setMostrarFormulario] = useState(abrirFormulario);
   // El historial es de solo lectura y se pide aparte: las acabadas hace más
   // de un día ya no vienen en `tasks` (ver `listar_tasks` en el backend), así
   // que "Completadas" es una vista distinta, no un filtro sobre esta lista.
@@ -110,6 +112,8 @@ export function TasksPanel({ deptos, teams, vpDe, puedeAsignarEnTodo }: Props) {
   const [abierta, setAbierta] = useState<Task | null>(null);
   const movidaRef = useRef<number | null>(null);
   const [sobreColumna, setSobreColumna] = useState<TaskEstado | null>(null);
+  // La columna que se ve en el móvil (en escritorio se ven las cuatro).
+  const [columnaMovil, setColumnaMovil] = useState<TaskEstado>("pendiente");
   const [ultimoMovimiento, setUltimoMovimiento] = useState<{
     taskId: number;
     departamento: Team;
@@ -297,7 +301,7 @@ export function TasksPanel({ deptos, teams, vpDe, puedeAsignarEnTodo }: Props) {
         />
       ) : null}
 
-      <CabeceraPanel descripcion="Lo que hay que hacer, por estado. Arrastra una tarjeta para moverla de columna.">
+      <CabeceraPanel descripcion="Lo que hay que hacer, por estado. Arrastra una tarjeta para moverla de columna, o ábrela y cambia su estado.">
         {deptosDondeCrear.length > 0 ? (
           <button
             type="button"
@@ -539,6 +543,24 @@ export function TasksPanel({ deptos, teams, vpDe, puedeAsignarEnTodo }: Props) {
         </p>
       ) : null}
 
+      {/* En el móvil no cabe un tablero de cuatro columnas que hay que arrastrar
+          dentro de un carril con scroll: se ve una columna y se cambia con estas
+          pestañas (en escritorio no salen, ver marketing.css). */}
+      <div className="mkt-tablero-pestanas-react" role="tablist" aria-label="Columna del tablero">
+        {TASK_ESTADOS.map((estado) => (
+          <button
+            key={estado}
+            type="button"
+            role="tab"
+            aria-selected={columnaMovil === estado}
+            className={`crm-tag${columnaMovil === estado ? " crm-tag-activo-react" : ""}`}
+            onClick={() => setColumnaMovil(estado)}
+          >
+            {TASK_ESTADO_LABEL[estado]} · {visibles.filter((t) => t.estado === estado).length}
+          </button>
+        ))}
+      </div>
+
       <LayoutGroup id="tablero-tareas">
       <div className="mkt-tablero-react">
         {TASK_ESTADOS.map((estado) => {
@@ -551,13 +573,14 @@ export function TasksPanel({ deptos, teams, vpDe, puedeAsignarEnTodo }: Props) {
               key={estado}
               className={`mkt-columna-react${sobreColumna === estado ? " mkt-columna-sobre-react" : ""}`}
               data-estado={estado}
+              data-activa-movil={columnaMovil === estado ? "true" : undefined}
             >
-              <h4>
+              <h3>
                 {TASK_ESTADO_LABEL[estado]}
                 <Badge variant="outline" className="mkt-contador-react">
                   <Contador valor={columna.length} />
                 </Badge>
-              </h4>
+              </h3>
 
               {columna.length === 0 ? (
                 <p className="mkt-vacio-inline-react">Nada aquí.</p>
@@ -639,11 +662,14 @@ export function TasksPanel({ deptos, teams, vpDe, puedeAsignarEnTodo }: Props) {
                               </span>
                             ) : null}
                             {task.deadline ? (
-                              <span
-                                className={`mkt-fecha-react${vencida ? " mkt-vencida-react" : ""}`}
-                              >
-                                {formatearFecha(task.deadline)}
-                              </span>
+                              vencida ? (
+                                // Con texto y no solo color: «atrasada» se entiende sin verlo.
+                                <span className="crm-tag crm-tag-rojo-react">
+                                  Atrasada · {formatearFecha(task.deadline)}
+                                </span>
+                              ) : (
+                                <span className="mkt-fecha-react">{formatearFecha(task.deadline)}</span>
+                              )
                             ) : null}
                             {task.checklist.length > 0 ? (
                               <span className="mkt-fecha-react">

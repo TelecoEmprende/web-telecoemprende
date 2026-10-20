@@ -59,8 +59,18 @@ function puestoDe(m: Miembro) {
   return "";
 }
 
-export function MembersPanel() {
+/** `enfocarBuscador`: llega desde «Buscar miembro» del Inicio. `puedeAsignar`:
+ *  board o VP, los únicos que dan tareas a otras personas. */
+export function MembersPanel({
+  enfocarBuscador = false,
+  puedeAsignar = false,
+}: {
+  enfocarBuscador?: boolean;
+  puedeAsignar?: boolean;
+}) {
   const entradaFila = useEntradaDeFila();
+  // Se guarda al montar: el buscador sale después del esqueleto de carga.
+  const [enfocar] = useState(enfocarBuscador);
 
   const [miembros, setMiembros] = useState<Miembro[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -125,6 +135,7 @@ export function MembersPanel() {
         <Buscador
           valor={busqueda}
           onCambio={setBusqueda}
+          autoFocus={enfocar}
           placeholder="Buscar por nombre o habilidad"
           etiqueta="Buscar miembros"
           cuenta={`${visibles.length} de ${miembros.length}`}
@@ -245,6 +256,7 @@ export function MembersPanel() {
         <MemberDialog
           email={abierto}
           habilidadesConocidas={habilidades}
+          puedeAsignar={puedeAsignar}
           onCerrar={() => setAbierto(null)}
           onGuardado={() => void cargar()}
         />

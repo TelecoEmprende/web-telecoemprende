@@ -13,7 +13,6 @@ os.environ["CRON_SECRET"] = "test-cron-secret"
 os.environ["SLACK_SIGNING_SECRET"] = "test-signing-secret"
 
 import app  # noqa: E402
-import backend.services.equipo as equipo_service  # noqa: E402
 import backend.services.notas as notas_service  # noqa: E402
 import backend.services.security as security_service  # noqa: E402
 from werkzeug.security import generate_password_hash  # noqa: E402
@@ -118,7 +117,6 @@ class NotasTestCase(unittest.TestCase):
 
 
     def test_notas_enlazadas_a_un_proyecto(self):
-        import backend.services.marketing as marketing_service
 
         migrar()
         conn = notas_service._get_connection()

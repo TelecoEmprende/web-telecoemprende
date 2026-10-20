@@ -6,7 +6,8 @@ import { getMesa } from "../../../api/club";
 import { apiDepto } from "../../../api/marketing";
 import { AlertBanner } from "../../feedback/AlertBanner";
 import { Badge } from "@/components/ui/badge";
-import { AvatarResponsable, etiquetaDe } from "../marketing/Avatares";
+import { AvatarResponsable, etiquetaDe as etiquetaAdivinada } from "../marketing/Avatares";
+import { useDirectorio } from "../DeptoApi";
 import { Contador } from "../../movimiento";
 import { etiquetaAmbito } from "./AmbitoChips";
 import { HistorialLista } from "./HistorialLista";
@@ -50,6 +51,10 @@ function plazo(deadline: string | null) {
  * hay en el club; no se mantiene aparte.
  */
 export function MesaPanel({ email, nombre, onAbrirProyecto }: Props) {
+  const directorio = useDirectorio();
+  // El nombre real del directorio; sin él, el que se adivina del email.
+  const etiquetaDe = (correo: string, nombreReal?: string) =>
+    etiquetaAdivinada(correo, nombreReal ?? directorio[correo]);
   const [mesa, setMesa] = useState<Mesa | null>(null);
   const [actividad, setActividad] = useState<EventoHistorial[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -174,9 +179,10 @@ export function MesaPanel({ email, nombre, onAbrirProyecto }: Props) {
                   <span className="mesa-movimiento-react">{sinMoverse(p.dias_sin_movimiento)}</span>
                   {p.entregables.length > 0 ? (
                     <details className="mesa-fases-react">
+                      {/* «Entregables», como en Proyectos: antes aquí se llamaban «Fases». */}
                       <summary>
-                        Fases ({p.entregables.length}
-                        {vencidas > 0 ? ` · ${vencidas} vencida${vencidas === 1 ? "" : "s"}` : ""}
+                        Entregables ({p.entregables.length}
+                        {vencidas > 0 ? ` · ${vencidas} vencido${vencidas === 1 ? "" : "s"}` : ""}
                         )
                       </summary>
                       <ul>
