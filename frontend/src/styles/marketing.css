@@ -2638,3 +2638,21 @@ button.mkt-evento-react {
     height: 44px;
   }
 }
+
+.mkt-selector-buscar-react {
+  width: 100%;
+  min-height: 40px;
+  margin-bottom: 6px;
+  padding: 8px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-family: inherit;
+  font-size: 0.9rem;
+}
+
+.mkt-selector-buscar-react:focus-visible {
+  outline: 2px solid var(--color-impulso);
+  outline-offset: 1px;
+}
