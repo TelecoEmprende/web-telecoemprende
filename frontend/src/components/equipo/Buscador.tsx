@@ -9,17 +9,19 @@ type Props = {
   etiqueta?: string;
   /** Recuento al lado («3 de 12»), solo mientras se busca. */
   cuenta?: ReactNode;
+  autoFocus?: boolean;
 };
 
 /** El buscador de todos los apartados de /equipo: lupa dentro del campo y,
  *  si se pasa, el recuento de lo encontrado al lado. */
-export function Buscador({ valor, onCambio, placeholder, etiqueta, cuenta }: Props) {
+export function Buscador({ valor, onCambio, placeholder, etiqueta, cuenta, autoFocus }: Props) {
   return (
     <div className="crm-buscador-react">
       <label>
         <Search aria-hidden="true" />
         <input
           type="search"
+          autoFocus={autoFocus}
           value={valor}
           placeholder={placeholder}
           aria-label={etiqueta ?? placeholder}

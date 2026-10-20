@@ -3,6 +3,7 @@ import { FormEvent, useMemo, useState, useEffect } from "react";
 
 import {
   createEquipoCalendarioEvento,
+  getCalendarioEquipo,
   getEquipoCalendario,
   getEquipoSession,
   getEventosLuma,
@@ -10,11 +11,12 @@ import {
   getMisTareas,
 } from "../../api/equipo";
 import { apiDepto, getMiembrosClub } from "../../api/marketing";
-import type { Seccion } from "./EquipoSidebar";
+import type { AccionInicio, Seccion } from "./EquipoSidebar";
 import { DeptoProvider } from "./DeptoApi";
 import { AvatarResponsable, etiquetaDe } from "./marketing/Avatares";
 import { TaskDialog } from "./marketing/TaskDialog";
 import { Contador, useEntradaDeFila } from "../movimiento";
+import { Esqueleto } from "../feedback/Esqueleto";
 import { listarNotas } from "../../api/notas";
 import type { Miembro } from "../../types/marketing";
 import type { NotaResumen } from "../../types/notas";
@@ -24,6 +26,7 @@ import { ADMINISTRATIVO, DEPTO_LABEL, SLACK_CLUB, etiquetaTablero, type EventoCa
 import {
   diasHasta,
   formatearFecha as formatearFechaCorta,
+  type CalendarioItem,
   type ProyectoResumen,
   type Task,
 } from "../../types/marketing";
@@ -133,7 +136,7 @@ function rangoSemana(lunes: Date, domingo: Date) {
 type Props = {
   /** Cambiar de sección del workspace (Calendario, Tareas...), para
    *  los atajos de la cabecera. */
-  onIrA: (seccion: Seccion) => void;
+  onIrA: (seccion: Seccion, accion?: AccionInicio) => void;
   /** Abrir una nota concreta en "Notas". */
   onAbrirNota?: (id: number) => void;
 };
@@ -155,9 +158,10 @@ export function CalendarioEquipo({ onIrA, onAbrirNota }: Props) {
   const [creandoEvento, setCreandoEvento] = useState(false);
   const [errorEvento, setErrorEvento] = useState<string | null>(null);
   const puedeAnadirEvento = vpDe.length > 0;
-  // "Asignadas a mí" filtra por responsable; "Mis departamentos" (por
-  // defecto) es lo de siempre: todo lo abierto de los departamentos propios.
-  const [filtroTareas, setFiltroTareas] = useState<"mias" | "departamentos">("departamentos");
+  // Hasta que llegan las tareas no se dice «nada pendiente»: sería un vacío falso.
+  const [cargandoTareas, setCargandoTareas] = useState(true);
+  // Las reuniones de la semana, de cualquier departamento (las de la rejilla).
+  const [reunionesSemana, setReunionesSemana] = useState<CalendarioItem[]>([]);
   const [directorio, setDirectorio] = useState<Miembro[]>([]);
   const [marcandoHecha, setMarcandoHecha] = useState<number | null>(null);
   const [notas, setNotas] = useState<NotaResumen[]>([]);
@@ -181,6 +185,8 @@ export function CalendarioEquipo({ onIrA, onAbrirNota }: Props) {
       setTareas(respuesta.tareas);
     } catch {
       // Sin agenda disponible: la sección no aparece, sin más.
+    } finally {
+      setCargandoTareas(false);
     }
   }
 
@@ -214,6 +220,16 @@ export function CalendarioEquipo({ onIrA, onAbrirNota }: Props) {
         // Tareas abiertas de cualquier departamento al que pertenezca.
         void cargarTareas();
 
+        // Las reuniones de esta semana: la misma fuente que el Calendario.
+        const [lunes, , , , , , domingo] = celdasDeLaSemana(new Date());
+        getCalendarioEquipo(iso(lunes), iso(domingo))
+          .then((r) => {
+            if (active && r.ok) setReunionesSemana(r.items.filter((i) => i.origen === "reunion"));
+          })
+          .catch(() => {
+            // Sin calendario cruzado: la rejilla enseña el resto igual.
+          });
+
         getMisProyectos()
           .then((respuesta) => {
             if (active) setProyectos(respuesta.proyectos);
@@ -238,14 +254,6 @@ export function CalendarioEquipo({ onIrA, onAbrirNota }: Props) {
       active = false;
     };
   }, []);
-
-  const tareasVisibles = useMemo(
-    () =>
-      filtroTareas === "mias"
-        ? tareas.filter((t) => t.responsables.includes(email))
-        : tareas,
-    [tareas, filtroTareas, email],
-  );
 
   /** A quién escribir cuando te atascas: el VP de cada departamento tuyo y la
    *  presidencia del club. Ocupa el sitio del "Quién es quién" del boceto --
@@ -366,6 +374,21 @@ export function CalendarioEquipo({ onIrA, onAbrirNota }: Props) {
   }, [tareas, semana]);
 
   const tareasAbiertas = tareas.filter((t) => t.estado !== "acabado");
+  // Lo que ya venció y sigue abierto: va antes que lo que vence esta semana.
+  const atrasadas = tareasAbiertas.filter((t) => {
+    const dias = diasHasta(t.deadline);
+    return dias !== null && dias < 0;
+  }).length;
+  const reunionesPorDia = reunionesSemana.reduce<Record<string, CalendarioItem[]>>((acc, r) => {
+    (acc[r.fecha] ??= []).push(r);
+    return acc;
+  }, {});
+  const resumenSemana = [
+    atrasadas > 0 ? `${atrasadas} ${atrasadas === 1 ? "tarea atrasada" : "tareas atrasadas"}` : null,
+    tareasQueVencenEstaSemana > 0
+      ? `${tareasQueVencenEstaSemana} ${tareasQueVencenEstaSemana === 1 ? "vence" : "vencen"} esta semana`
+      : null,
+  ].filter(Boolean);
   const proximoEvento = proximos[0];
   const diasProximo = proximoEvento ? diasHasta(proximoEvento.fecha) : null;
 
@@ -374,24 +397,29 @@ export function CalendarioEquipo({ onIrA, onAbrirNota }: Props) {
     <>
       <section className="inicio-hero-react" aria-labelledby="inicio-saludo">
         <div className="inicio-hero-texto-react">
-          <p className="inicio-hero-fecha-react">Semana del {rangoSemana(semana[0], semana[6])}</p>
+          {/* Sin rótulo encima del saludo: la semana va debajo, con el resumen. */}
           <h1 id="inicio-saludo" className="inicio-hero-saludo-react">
             {saludoDeAhora()}{nombre ? `, ${nombre}` : ""}
           </h1>
           <p className="inicio-hero-sub-react">
-            {tareasQueVencenEstaSemana === 0
-              ? "ninguna tarea vence esta semana"
-              : `${tareasQueVencenEstaSemana} ${tareasQueVencenEstaSemana === 1 ? "tarea vence" : "tareas vencen"} esta semana`}
+            {[
+              `Semana del ${rangoSemana(semana[0], semana[6])}`,
+              ...(cargandoTareas
+                ? []
+                : resumenSemana.length > 0
+                  ? resumenSemana
+                  : ["nada atrasado ni nada que venza esta semana"]),
+            ].join(" · ")}
           </p>
         </div>
         <div className="inicio-hero-acciones-react">
-          <button type="button" className="crm-btn" onClick={() => onIrA("tareas")}>
+          <button type="button" className="crm-btn" onClick={() => onIrA("tareas", "nueva-tarea")}>
             Nueva tarea
           </button>
-          <button type="button" className="inicio-btn-claro-react" onClick={() => onIrA("notas")}>
+          <button type="button" className="inicio-btn-claro-react" onClick={() => onIrA("notas", "nueva-nota")}>
             Nueva nota
           </button>
-          <button type="button" className="inicio-btn-claro-react" onClick={() => onIrA("miembros")}>
+          <button type="button" className="inicio-btn-claro-react" onClick={() => onIrA("miembros", "buscar-miembro")}>
             Buscar miembro
           </button>
         </div>
@@ -400,16 +428,32 @@ export function CalendarioEquipo({ onIrA, onAbrirNota }: Props) {
       <div className="inicio-kpis-react">
         <button type="button" className="inicio-kpi-react" onClick={() => onIrA("tareas")}>
           <span className="crm-k">Tareas abiertas</span>
-          <Contador className="inicio-kpi-num-react" valor={tareasAbiertas.length} />
-          <span className="crm-s">en tus departamentos</span>
+          {cargandoTareas ? (
+            <span className="inicio-kpi-num-react" aria-label="Cargando">—</span>
+          ) : (
+            <Contador className="inicio-kpi-num-react" valor={tareasAbiertas.length} />
+          )}
+          <span className="crm-s">asignadas a ti</span>
         </button>
         <button type="button" className="inicio-kpi-react" onClick={() => onIrA("calendario")}>
-          <span className="crm-k">Vencen esta semana</span>
-          <Contador
-            className={`inicio-kpi-num-react${tareasQueVencenEstaSemana > 0 ? " inicio-kpi-alerta-react" : ""}`}
-            valor={tareasQueVencenEstaSemana}
-          />
-          <span className="crm-s">de lunes a domingo</span>
+          <span className="crm-k">{atrasadas > 0 ? "Atrasadas" : "Vencen esta semana"}</span>
+          {cargandoTareas ? (
+            <span className="inicio-kpi-num-react" aria-label="Cargando">—</span>
+          ) : (
+            <Contador
+              className={`inicio-kpi-num-react${
+                atrasadas > 0 || tareasQueVencenEstaSemana > 0 ? " inicio-kpi-alerta-react" : ""
+              }`}
+              valor={atrasadas > 0 ? atrasadas : tareasQueVencenEstaSemana}
+            />
+          )}
+          <span className="crm-s">
+            {atrasadas === 0
+              ? "de lunes a domingo"
+              : tareasQueVencenEstaSemana > 0
+                ? `y ${tareasQueVencenEstaSemana} ${tareasQueVencenEstaSemana === 1 ? "vence" : "vencen"} esta semana`
+                : "ya pasó su fecha"}
+          </span>
         </button>
         <button type="button" className="inicio-kpi-react" onClick={() => onIrA("calendario")}>
           <span className="crm-k">Próximo evento</span>
@@ -422,37 +466,23 @@ export function CalendarioEquipo({ onIrA, onAbrirNota }: Props) {
 
       <div className="inicio-bento-react">
           <section className="crm-c inicio-span-7-react">
+            {/* Solo las asignadas a ti (es lo que trae `/mis-tareas`): el filtro
+                «Mis departamentos» que había enseñaba lo mismo. Ordenadas por
+                fecha, así que lo atrasado sale arriba. */}
             <div className="crm-cabecera-react">
-              <p className="crm-k">Mis tareas de la semana</p>
-              <div className="crm-tags-react" role="group" aria-label="Filtrar tareas">
-                <button
-                  type="button"
-                  className={`crm-tag${filtroTareas === "mias" ? " crm-tag-activo-react" : ""}`}
-                  aria-pressed={filtroTareas === "mias"}
-                  onClick={() => setFiltroTareas("mias")}
-                >
-                  Asignadas a mí
-                </button>
-                <button
-                  type="button"
-                  className={`crm-tag${filtroTareas === "departamentos" ? " crm-tag-activo-react" : ""}`}
-                  aria-pressed={filtroTareas === "departamentos"}
-                  onClick={() => setFiltroTareas("departamentos")}
-                >
-                  Mis departamentos
-                </button>
-              </div>
+              <p className="crm-k">Mis tareas</p>
+              <button type="button" className="crm-enlace-react" onClick={() => onIrA("tareas")}>
+                Ver el tablero
+              </button>
             </div>
 
-            {tareasVisibles.length === 0 ? (
-              <p className="crm-s">
-                {filtroTareas === "mias"
-                  ? "No tienes ninguna tarea asignada ahora mismo."
-                  : "Nada pendiente en ningún departamento ahora mismo."}
-              </p>
+            {cargandoTareas ? (
+              <Esqueleto filas={3} alto={52} />
+            ) : tareas.length === 0 ? (
+              <p className="crm-s">No tienes ninguna tarea asignada ahora mismo.</p>
             ) : (
               <div className="inicio-scroll-react">
-                {tareasVisibles.map((tarea, indice) => {
+                {tareas.map((tarea, indice) => {
                   const otros = tarea.responsables
                     .filter((r) => r !== email)
                     .map((r) => etiquetaDe(r, undefined));
@@ -498,9 +528,11 @@ export function CalendarioEquipo({ onIrA, onAbrirNota }: Props) {
                         <span className="crm-tag crm-tag-verde-react">Hecho</span>
                       ) : (
                         <span
-                          className={`crm-tag${vencida || dias === 0 ? " crm-tag-ambar-react" : ""}`}
+                          className={`crm-tag${
+                            vencida ? " crm-tag-rojo-react" : dias === 0 ? " crm-tag-ambar-react" : ""
+                          }`}
                         >
-                          {cuandoTarea(tarea.deadline)}
+                          {vencida ? `Atrasada · ${cuandoTarea(tarea.deadline).toLowerCase()}` : cuandoTarea(tarea.deadline)}
                         </span>
                       )}
                     </motion.div>
@@ -585,7 +617,7 @@ export function CalendarioEquipo({ onIrA, onAbrirNota }: Props) {
                 No hay nada apuntado.{" "}
                 {puedeAnadirEvento
                   ? "Añade el primero con el botón de arriba."
-                  : "Los eventos del club se añaden desde el panel de administración."}
+                  : "Cuando la directiva apunte un evento, saldrá aquí."}
               </p>
             ) : (
               <div className="inicio-scroll-react">
@@ -661,6 +693,12 @@ export function CalendarioEquipo({ onIrA, onAbrirNota }: Props) {
                         </span>
                       ),
                     )}
+                    {(reunionesPorDia[clave] ?? []).map((reunion) => (
+                      <span key={`r-${reunion.id}`} className="crm-tag crm-tag-bloque-react">
+                        {reunion.titulo}
+                        {reunion.hora ? ` ${reunion.hora}` : ""}
+                      </span>
+                    ))}
                     {(tareasPorDia[clave] ?? []).map((tarea) => (
                       <span
                         key={`t-${tarea.id}`}

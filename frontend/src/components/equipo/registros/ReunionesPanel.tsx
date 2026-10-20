@@ -36,6 +36,8 @@ const PLANTILLA_ACTA = [
 ];
 
 const GUARDADO_MS = 800;
+// Si guardar falla (sin red, error del servidor), se reintenta cada tanto.
+const REINTENTO_MS = 5000;
 
 type Bloque = {
   id?: string;
@@ -288,9 +290,21 @@ export function ReunionesPanel({ deptos, esDirectiva }: Props) {
     try {
       await apiDe(abierta).actualizarRegistro("reuniones", abierta.id, cambios);
       setEstadoGuardado("guardado");
+      setError(null);
     } catch (err) {
-      setError((err as ApiFailure)?.message || "No se pudo guardar la reunión.");
+      // Lo que no se pudo guardar vuelve a la cola (sin pisar lo escrito
+      // después) y se reintenta solo: nunca se pierde.
+      pendiente.current = { ...cambios, ...pendiente.current };
+      const fallo = err as ApiFailure;
+      setError(
+        `${fallo?.message || "No se pudo guardar la reunión."} Lo escrito sigue aquí${
+          fallo?.reintentable ? " y se volverá a intentar solo." : "."
+        }`,
+      );
       setEstadoGuardado("pendiente");
+      if (fallo?.reintentable) {
+        temporizador.current = window.setTimeout(() => void guardarYa(), REINTENTO_MS);
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [abierta?.id]);
@@ -426,8 +440,10 @@ export function ReunionesPanel({ deptos, esDirectiva }: Props) {
               />
             </div>
             <div className="field-group-react">
-              <label>De quién es</label>
-              <p className="mkt-meta-react reu-ambito-react">{ambitoDe(abierta)}</p>
+              <span className="field-titulo-react" id="reu-ambito-titulo">De quién es</span>
+              <p className="mkt-meta-react reu-ambito-react" aria-labelledby="reu-ambito-titulo">
+                {ambitoDe(abierta)}
+              </p>
               {deDirectiva && esDirectiva ? (
                 <label className="crm-tag crm-tag-check-react">
                   <input
@@ -526,8 +542,17 @@ export function ReunionesPanel({ deptos, esDirectiva }: Props) {
   }
 
   // --- Listado ---
-  const hoy = new Date().toISOString().slice(0, 10);
-  const proximas = reuniones.filter((r) => textoDe(r, "fecha") >= hoy || textoDe(r, "fecha") === "");
+  // Fecha local, no `toISOString()` (UTC): de madrugada en Madrid daba el día anterior.
+  const ahora = new Date();
+  const hoy = `${ahora.getFullYear()}-${String(ahora.getMonth() + 1).padStart(2, "0")}-${String(ahora.getDate()).padStart(2, "0")}`;
+  // La más cercana primero; las que no tienen fecha, al final.
+  const proximas = reuniones
+    .filter((r) => textoDe(r, "fecha") >= hoy || textoDe(r, "fecha") === "")
+    .sort((a, b) => {
+      const fa = textoDe(a, "fecha") || "9999";
+      const fb = textoDe(b, "fecha") || "9999";
+      return fa === fb ? textoDe(a, "hora").localeCompare(textoDe(b, "hora")) : fa.localeCompare(fb);
+    });
   const pasadas = reuniones.filter((r) => textoDe(r, "fecha") !== "" && textoDe(r, "fecha") < hoy);
 
   const tarjeta = (r: Registro, indice: number) => {

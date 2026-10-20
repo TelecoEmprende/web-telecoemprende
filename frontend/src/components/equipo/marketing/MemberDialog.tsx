@@ -31,6 +31,8 @@ type Props = {
   /** Habilidades ya apuntadas en el departamento, para el selector -- las
    *  calcula `MembersPanel.tsx`, que ya recorre a todos los miembros. */
   habilidadesConocidas: string[];
+  /** Board o VP. Sin eso, «Asignar tarea» solo sale en la ficha propia. */
+  puedeAsignar?: boolean;
   onCerrar: () => void;
   /** Para refrescar el directorio cuando cambian las etiquetas o se le asigna
    *  una tarea nueva (cambia su carga). */
@@ -61,7 +63,7 @@ const VERBO_ACTIVIDAD: Record<TaskEstado, string> = {
  * etiquetas y la nota, que viven en `members` porque son de la persona
  * y no del departamento -- así Eventos e Ingeniería ven las mismas.
  */
-export function MemberDialog({ email, habilidadesConocidas, onCerrar, onGuardado }: Props) {
+export function MemberDialog({ email, habilidadesConocidas, puedeAsignar = false, onCerrar, onGuardado }: Props) {
   const [ficha, setFicha] = useState<FichaMiembro | null>(null);
   const [tags, setTags] = useState<string[]>([]);
   const [nuevaHabilidad, setNuevaHabilidad] = useState("");
@@ -313,15 +315,17 @@ export function MemberDialog({ email, habilidadesConocidas, onCerrar, onGuardado
                 </span>
               ) : null}
 
-              <div className="mkt-ficha-contacto-react">
-                <button
-                  type="button"
-                  className="mkt-btn-react"
-                  onClick={() => setAsignando((abierto) => !abierto)}
-                >
-                  + Asignar tarea
-                </button>
-              </div>
+              {puedeAsignar || ficha.es_yo ? (
+                <div className="mkt-ficha-contacto-react">
+                  <button
+                    type="button"
+                    className="mkt-btn-react"
+                    onClick={() => setAsignando((abierto) => !abierto)}
+                  >
+                    + Asignar tarea
+                  </button>
+                </div>
+              ) : null}
 
               {asignando ? (
                 <form className="mkt-ficha-asignar-react" onSubmit={asignarTarea}>
@@ -437,7 +441,8 @@ export function MemberDialog({ email, habilidadesConocidas, onCerrar, onGuardado
 
               {proximos.length > 0 ? (
                 <section className="mkt-ficha-bloque-react">
-                  <h4>Próximos eventos</h4>
+                  {/* Son sus fechas (tareas, reuniones...), no solo eventos. */}
+                  <h4>Próximas fechas</h4>
                   <ul className="mkt-ficha-actividad-react">
                     {proximos.map((item) => (
                       <li key={`${item.origen}-${item.id}`}>
@@ -468,27 +473,35 @@ export function MemberDialog({ email, habilidadesConocidas, onCerrar, onGuardado
                 {editandoPerfil ? (
                   <>
                     <div className="field-group-react">
-                      <label htmlFor="mf-tags">Habilidades</label>
-                      <select
-                        id="mf-tags"
-                        multiple
-                        size={5}
-                        value={tags}
-                        className="w-full rounded-lg border border-input bg-transparent px-2.5 py-1.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-                        onChange={(e) => {
-                          setTags([...e.target.selectedOptions].map((o) => o.value));
-                          setGuardado(false);
-                        }}
-                      >
-                        {opcionesHabilidad.map((tag) => (
-                          <option key={tag} value={tag}>
-                            {tag}
-                          </option>
-                        ))}
-                      </select>
-                      <p className="mkt-meta-react">
-                        Ctrl/Cmd + clic para elegir varias, o clic y arrastrar.
-                      </p>
+                      {/* Casillas y no un <select multiple>: ese pide Ctrl/Cmd + clic
+                          y en el móvil no se puede usar. */}
+                      <span className="field-titulo-react">Habilidades</span>
+                      {opcionesHabilidad.length > 0 ? (
+                        <div className="mkt-etiquetas-react" role="group" aria-label="Habilidades">
+                          {opcionesHabilidad.map((tag) => {
+                            const elegida = tags.includes(tag);
+                            return (
+                              <label
+                                key={tag}
+                                className={`crm-tag crm-tag-check-react${elegida ? " crm-tag-activo-react" : ""}`}
+                              >
+                                <input
+                                  type="checkbox"
+                                  className="crm-check"
+                                  checked={elegida}
+                                  onChange={() => {
+                                    setTags((actuales) =>
+                                      elegida ? actuales.filter((t) => t !== tag) : [...actuales, tag],
+                                    );
+                                    setGuardado(false);
+                                  }}
+                                />
+                                {tag}
+                              </label>
+                            );
+                          })}
+                        </div>
+                      ) : null}
                       <div className="mt-1.5 flex gap-1.5">
                         <input
                           type="text"

@@ -15,7 +15,8 @@ type Props = {
 export function CabeceraPanel({ descripcion, children }: Props) {
   return (
     <header className="crm-cabecera-react">
-      <p className="crm-s max-w-[72ch]">{descripcion}</p>
+      {/* 60ch: con Inter, 72ch daba líneas de ~90 caracteres, demasiado largas. */}
+      <p className="crm-s max-w-[60ch]">{descripcion}</p>
       {children ? <div className="crm-cabecera-acciones-react">{children}</div> : null}
     </header>
   );

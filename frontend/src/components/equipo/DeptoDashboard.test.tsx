@@ -163,7 +163,7 @@ async function renderMarketing() {
       <EquipoPage />
     </MemoryRouter>,
   );
-  await screen.findByText(/tarea vence|tareas vencen|ninguna tarea vence/);
+  await screen.findByText(/atrasadas?|vencen? esta semana|nada atrasado/);
 }
 
 describe("/equipo — panel de Marketing", () => {
@@ -995,7 +995,7 @@ describe("/equipo — panel de Marketing", () => {
     const dia = await screen.findByRole("button", { name: /^Añadir tarea el 15 de/ });
     await userEvent.click(dia);
     await userEvent.selectOptions(
-      screen.getByLabelText("Departamento de la tarea nueva"),
+      screen.getByLabelText("En qué tablero sale la tarea nueva"),
       "ingenieria",
     );
 
@@ -1109,7 +1109,7 @@ describe("/equipo — panel de Eventos", () => {
         <EquipoPage />
       </MemoryRouter>,
     );
-    await screen.findByText(/tarea vence|tareas vencen|ninguna tarea vence/);
+    await screen.findByText(/atrasadas?|vencen? esta semana|nada atrasado/);
   }
 
   it("Eventos tiene su navegación completa, con las etiquetas genéricas del sidebar", async () => {
@@ -1177,7 +1177,7 @@ describe("/equipo — panel de Eventos", () => {
         <EquipoPage />
       </MemoryRouter>,
     );
-    await screen.findByText(/tarea vence|tareas vencen|ninguna tarea vence/);
+    await screen.findByText(/atrasadas?|vencen? esta semana|nada atrasado/);
 
     // Un solo "Proyectos" en el sidebar, no uno por departamento; el título
     // de la página es siempre el mismo rótulo genérico, nunca cambia con el

@@ -3,6 +3,7 @@ import { ArrowLeft, Lock, Pin, PinOff, Plus, Trash2 } from "lucide-react";
 import { motion } from "motion/react";
 
 import { Buscador } from "../Buscador";
+import { CabeceraPanel } from "../CabeceraPanel";
 import { Esqueleto } from "../../feedback/Esqueleto";
 import { actualizarNota, crearNota, eliminarNota, listarNotas, obtenerNota } from "../../../api/notas";
 import { restaurar } from "../../../api/club";
@@ -24,6 +25,8 @@ type Props = {
   /** Nota que abrir al entrar (desde el Inicio). */
   notaInicial: number | null;
   onNotaAbierta: () => void;
+  /** Llega desde «Nueva nota» del Inicio: se crea una al entrar. */
+  nuevaAlEntrar?: boolean;
 };
 
 /** Dónde vive la nota, como etiqueta corta. */
@@ -41,8 +44,10 @@ function ambitoDe(nota: { departamento: Ambito; privada: boolean }) {
  * guardar que olvidar.
  */
 const GUARDADO_MS = 800;
+// Si guardar falla (sin red, error del servidor), se reintenta cada tanto.
+const REINTENTO_MS = 5000;
 
-export function NotasPanel({ email, teams, notaInicial, onNotaAbierta }: Props) {
+export function NotasPanel({ email, teams, notaInicial, onNotaAbierta, nuevaAlEntrar = false }: Props) {
   const entradaFila = useEntradaDeFila();
   const [notas, setNotas] = useState<NotaResumen[]>([]);
   const [cargando, setCargando] = useState(true);
@@ -78,10 +83,22 @@ export function NotasPanel({ email, teams, notaInicial, onNotaAbierta }: Props) 
     try {
       await actualizarNota(abierta.id, cambios);
       setEstadoGuardado("guardado");
+      setError(null);
       void cargar();
     } catch (err) {
+      // Lo que no se pudo guardar vuelve a la cola (sin pisar lo escrito
+      // después) y se reintenta solo: nunca se pierde.
+      pendiente.current = { ...cambios, ...pendiente.current };
       setEstadoGuardado("pendiente");
-      setError((err as ApiFailure)?.message || "No se pudo guardar la nota.");
+      const fallo = err as ApiFailure;
+      setError(
+        `${fallo?.message || "No se pudo guardar la nota."} Lo escrito sigue aquí${
+          fallo?.reintentable ? " y se volverá a intentar solo." : "."
+        }`,
+      );
+      if (fallo?.reintentable) {
+        temporizador.current = window.setTimeout(() => void guardarYa(), REINTENTO_MS);
+      }
     }
   }
 
@@ -117,6 +134,15 @@ export function NotasPanel({ email, teams, notaInicial, onNotaAbierta }: Props) 
     onNotaAbierta();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [notaInicial]);
+
+  // Una sola vez aunque React monte dos veces en desarrollo (StrictMode).
+  const nuevaCreada = useRef(false);
+  useEffect(() => {
+    if (!nuevaAlEntrar || nuevaCreada.current) return;
+    nuevaCreada.current = true;
+    void nueva();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Lo que quede sin guardar al salir de la sección no se pierde.
   const abiertaRef = useRef(abierta);
@@ -190,13 +216,17 @@ export function NotasPanel({ email, teams, notaInicial, onNotaAbierta }: Props) 
   if (cargando) return <Esqueleto filas={5} alto={56} />;
 
   return (
+    // Como el resto de apartados: frase y acción principal arriba, luego el contenido.
+    <div className="mkt-panel-react">
+    <CabeceraPanel descripcion="Páginas del club: actas, wikis, listas. Las casillas sin marcar salen en el Inicio como pendientes.">
+      <button type="button" className="crm-btn crm-btn-icono-react" onClick={() => void nueva()}>
+        <Plus aria-hidden="true" /> Nueva nota
+      </button>
+    </CabeceraPanel>
     <section className={`notas-react${abierta ? " notas-con-abierta-react" : ""}`}>
       <aside className="notas-lista-react crm-c" aria-label="Notas">
         <div className="crm-cabecera-react">
           <p className="crm-k">{visibles.length} {visibles.length === 1 ? "nota" : "notas"}</p>
-          <button type="button" className="crm-btn crm-btn-icono-react" onClick={() => void nueva()}>
-            <Plus aria-hidden="true" /> Nueva
-          </button>
         </div>
         <Buscador valor={busqueda} onCambio={setBusqueda} placeholder="Buscar en notas" />
         <div className="crm-tags-react" role="group" aria-label="Filtrar notas">
@@ -367,5 +397,6 @@ export function NotasPanel({ email, teams, notaInicial, onNotaAbierta }: Props) 
         )}
       </div>
     </section>
+    </div>
   );
 }

@@ -13,6 +13,7 @@ import {
   EquipoSidebar,
   equiposConPanel,
   seccionesDe,
+  type AccionInicio,
   type Panel,
   type Seccion,
 } from "../components/equipo/EquipoSidebar";
@@ -24,6 +25,7 @@ import {
 } from "../components/equipo/RecuperarClave";
 import { DeptoDashboard } from "../components/equipo/DeptoDashboard";
 import { MesaPanel } from "../components/equipo/club/MesaPanel";
+import { DirectorioProvider } from "../components/equipo/DeptoApi";
 import { PapeleraPanel } from "../components/equipo/club/PapeleraPanel";
 import { HerramientasPanel } from "../components/equipo/HerramientasPanel";
 import { MetricasPanel } from "../components/equipo/MetricasPanel";
@@ -80,6 +82,12 @@ export function EquipoPage() {
   const [campaignInicial, setCampaignInicial] = useState<number | null>(null);
   // La nota que "Notas" abre al montar (desde el Inicio).
   const [notaInicial, setNotaInicial] = useState<number | null>(null);
+  // Lo que pidió un botón del Inicio. Vale solo para el panel que se monta al
+  // llegar: al cambiar de sección se olvida (ver el efecto de abajo).
+  const [accionInicio, setAccionInicio] = useState<AccionInicio | null>(null);
+  useEffect(() => {
+    setAccionInicio(null);
+  }, [seccion]);
   const [searchParams, setSearchParams] = useSearchParams();
   // Recuperar la contraseña: el enlace del correo trae `?recuperar=<token>`, y
   // «¿Olvidaste tu contraseña?» pide ese enlace.
@@ -380,10 +388,20 @@ export function EquipoPage() {
           <div className="workspace-contenido-react">
             <PanelAnimado llave={seccion}>
             {seccion === "club" ? (
-              <CalendarioEquipo onIrA={setSeccion} onAbrirNota={abrirNota} />
+              <CalendarioEquipo
+                onIrA={(destino, accion) => {
+                  setSeccion(destino);
+                  setAccionInicio(accion ?? null);
+                }}
+                onAbrirNota={abrirNota}
+              />
             ) : null}
             {seccion === "mesa" ? (
-              <MesaPanel email={perfil.email} nombre={perfil.nombre} onAbrirProyecto={abrirCampaign} />
+              // Con el directorio, cada persona sale con su nombre real y no con
+              // uno adivinado del email (igual que en el resto de paneles).
+              <DirectorioProvider>
+                <MesaPanel email={perfil.email} nombre={perfil.nombre} onAbrirProyecto={abrirCampaign} />
+              </DirectorioProvider>
             ) : null}
             {seccion === "papelera" ? <PapeleraPanel esAdmin={esAdmin} /> : null}
             {seccion === "notas" ? (
@@ -392,6 +410,7 @@ export function EquipoPage() {
                 teams={teams}
                 notaInicial={notaInicial}
                 onNotaAbierta={() => setNotaInicial(null)}
+                nuevaAlEntrar={accionInicio === "nueva-nota"}
               />
             ) : null}
             {seccion === "metricas" ? <MetricasPanel /> : null}
@@ -419,6 +438,7 @@ export function EquipoPage() {
                 puedeAsignarEnTodo={puedeAsignarEnTodo}
                 onAbrirNota={abrirNota}
                 yo={perfil.email}
+                accionInicio={accionInicio}
               />
             ) : null}
             </PanelAnimado>
