@@ -9,11 +9,16 @@ const crearRegistro = vi.fn();
 const createTask = vi.fn();
 const actualizarRegistro = vi.fn();
 
+const deptosUsados: string[] = [];
+
 vi.mock("../../../api/marketing", () => ({
-  apiDepto: () => ({
+  apiDepto: (depto: string) => ({
     listarRegistros: (...args: unknown[]) => listarRegistros(...args),
     crearRegistro: (...args: unknown[]) => crearRegistro(...args),
-    actualizarRegistro: (...args: unknown[]) => actualizarRegistro(...args),
+    actualizarRegistro: (...args: unknown[]) => {
+      deptosUsados.push(depto);
+      return actualizarRegistro(...args);
+    },
     createTask: (...args: unknown[]) => createTask(...args),
     getMiembros: vi.fn().mockResolvedValue({ ok: true, miembros: [] }),
   }),
@@ -124,5 +129,25 @@ describe("acuerdos del acta", () => {
         expect.objectContaining({ contenido: marcarComoTarea(ACTA, "b") }),
       ),
     );
+  });
+});
+
+describe("editar una reunión ya creada", () => {
+  it("se guarda por la ruta de su departamento, no por la del primero visible", async () => {
+    deptosUsados.length = 0;
+    listarRegistros.mockReset().mockResolvedValue({
+      ok: true,
+      reuniones: [{ ...JUNTA, departamento: "eventos", titulo: "Plano de la feria" }],
+    });
+    actualizarRegistro.mockReset().mockResolvedValue({ ok: true });
+    render(<ReunionesPanel deptos={["ingenieria", "marketing", "eventos"]} esDirectiva={false} />);
+    await userEvent.click(await screen.findByRole("button", { name: /Plano de la feria/ }));
+
+    const titulo = screen.getByLabelText("Título");
+    expect(titulo).toBeEnabled();
+    await userEvent.type(titulo, " v2");
+
+    await waitFor(() => expect(actualizarRegistro).toHaveBeenCalled());
+    expect(new Set(deptosUsados)).toEqual(new Set(["eventos"]));
   });
 });

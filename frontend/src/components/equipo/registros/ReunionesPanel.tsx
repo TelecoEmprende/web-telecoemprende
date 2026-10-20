@@ -226,7 +226,13 @@ export function ReunionesPanel({ deptos, esDirectiva }: Props) {
   const [versionActa, setVersionActa] = useState(0);
   const [tareaCreada, setTareaCreada] = useState<string | null>(null);
 
-  const api = apiDepto(deptos[0]);
+  // Cada reunión se guarda por la ruta de su departamento: el backend solo deja
+  // tocar desde una ruta las suyas, las del club y las de la directiva. Con
+  // `deptos[0]`, una reunión de Eventos vista con los tres marcados daba 404.
+  const apiDe = (r: Registro) => {
+    const depto = textoDe(r, "departamento");
+    return apiDepto((TEAMS as string[]).includes(depto) ? (depto as Team) : deptos[0]);
+  };
 
   const cargar = useCallback(async () => {
     try {
@@ -252,7 +258,7 @@ export function ReunionesPanel({ deptos, esDirectiva }: Props) {
     if (Object.keys(cambios).length === 0 || !abierta) return;
     setEstadoGuardado("guardando");
     try {
-      await api.actualizarRegistro("reuniones", abierta.id, cambios);
+      await apiDe(abierta).actualizarRegistro("reuniones", abierta.id, cambios);
       setEstadoGuardado("guardado");
     } catch (err) {
       setError((err as ApiFailure)?.message || "No se pudo guardar la reunión.");
@@ -309,7 +315,7 @@ export function ReunionesPanel({ deptos, esDirectiva }: Props) {
     window.clearTimeout(temporizador.current);
     pendiente.current = {};
     try {
-      await api.eliminarRegistro("reuniones", id);
+      await apiDe(abierta).eliminarRegistro("reuniones", id);
       setAbierta(null);
       await cargar();
       setAviso({

@@ -11,7 +11,7 @@ import { AmbitoChips, etiquetaAmbito } from "../club/AmbitoChips";
 import { HistorialCargado } from "../club/HistorialLista";
 import { ResponsableSelect } from "../club/ResponsableSelect";
 import { AvatarResponsable, etiquetaDe } from "./Avatares";
-import { useDirectorio } from "../DeptoApi";
+import { DeptoProvider, useDirectorio } from "../DeptoApi";
 import { AdjuntosDeContent } from "./AdjuntosDeContent";
 import { ContentEditor } from "./ContentEditor";
 import { NotasDelProyecto } from "./NotasDelProyecto";
@@ -828,14 +828,18 @@ export function CampaignsPanel({ deptos, campaignInicial, onCampaignAbierta, onA
         </div>
 
         {editando ? (
-          <ContentEditor
-            content={editando}
-            onCerrar={() => setEditando(null)}
-            onGuardado={() => {
-              setEditando(null);
-              void recargarDetalle();
-            }}
-          />
+          // Guarda por la ruta del proyecto, no por la del departamento que se
+          // está mirando: un proyecto solo de Eventos no se tocaba desde otra.
+          <DeptoProvider value={detalle.departamento}>
+            <ContentEditor
+              content={editando}
+              onCerrar={() => setEditando(null)}
+              onGuardado={() => {
+                setEditando(null);
+                void recargarDetalle();
+              }}
+            />
+          </DeptoProvider>
         ) : null}
       </section>
     );
