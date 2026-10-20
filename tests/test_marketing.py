@@ -683,12 +683,16 @@ class TaskAsignacionTests(MarketingTestCase):
         self.login(vp_de=[], cargo="boardmember")
         self.assertEqual(self.crear_task_directo().status_code, 201)
 
-    def test_instrucciones_obligatorias(self):
+    def test_instrucciones_opcionales(self):
         self.login(vp_de=["marketing"])
         respuesta = self.client.post(
             "/api/marketing/tasks", json={"titulo": "Escribir guion"}
         )
-        self.assertEqual(respuesta.status_code, 400)
+        self.assertEqual(respuesta.status_code, 201, respuesta.get_json())
+        tarea = respuesta.get_json()["task"]
+        self.assertEqual(tarea["instrucciones"], "")
+        editar = self.client.put(f"/api/marketing/tasks/{tarea['id']}", json={"instrucciones": ""})
+        self.assertEqual(editar.status_code, 200)
 
     def test_miembro_raso_puede_mover_su_propia_tarea_de_estado(self):
         self.login(vp_de=["marketing"])

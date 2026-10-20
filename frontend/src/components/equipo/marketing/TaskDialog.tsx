@@ -154,10 +154,6 @@ export function TaskDialog({
       setError("El título es obligatorio.");
       return;
     }
-    if (!instrucciones.trim()) {
-      setError("Las instrucciones son obligatorias.");
-      return;
-    }
 
     setIsSaving(true);
     setError(null);
@@ -245,11 +241,10 @@ export function TaskDialog({
           </div>
 
           <div className="field-group-react">
-            <label htmlFor="td-instrucciones">Instrucciones</label>
+            <label htmlFor="td-instrucciones">Instrucciones (opcional)</label>
             <textarea
               id="td-instrucciones"
               rows={3}
-              required
               value={instrucciones}
               placeholder="Cómo se hace: a quién se escribe, qué plantilla se usa..."
               onChange={(event) => setInstrucciones(event.target.value)}

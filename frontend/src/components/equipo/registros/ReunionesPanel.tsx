@@ -161,12 +161,11 @@ function PasarATarea({
             />
           </div>
           <div className="field-group-react">
-            <label htmlFor={`${id}-instrucciones`}>Instrucciones</label>
+            <label htmlFor={`${id}-instrucciones`}>Instrucciones (opcional)</label>
             <textarea
               id={`${id}-instrucciones`}
               rows={3}
               value={instrucciones}
-              required
               onChange={(e) => setInstrucciones(e.target.value)}
             />
           </div>

@@ -189,7 +189,7 @@ export function TasksPanel({ deptos, teams, vpDe, puedeAsignarEnTodo }: Props) {
 
   async function crear(event: FormEvent) {
     event.preventDefault();
-    if (!titulo.trim() || !instrucciones.trim() || deptosNuevaTarea.length === 0) return;
+    if (!titulo.trim() || deptosNuevaTarea.length === 0) return;
 
     try {
       await Promise.all(
@@ -391,11 +391,10 @@ export function TasksPanel({ deptos, teams, vpDe, puedeAsignarEnTodo }: Props) {
             <ContadorCaracteres valor={titulo} maximo={MAX_TITULO_LEN} />
           </div>
           <div className="field-group-react">
-            <label htmlFor="tp-instrucciones">Instrucciones</label>
+            <label htmlFor="tp-instrucciones">Instrucciones (opcional)</label>
             <textarea
               id="tp-instrucciones"
               rows={2}
-              required
               value={instrucciones}
               placeholder="Cómo se hace: a quién se escribe, qué plantilla se usa..."
               onChange={(event) => setInstrucciones(event.target.value)}
@@ -466,7 +465,7 @@ export function TasksPanel({ deptos, teams, vpDe, puedeAsignarEnTodo }: Props) {
             type="submit"
             className="mkt-btn-react"
             disabled={
-              !titulo.trim() || !instrucciones.trim() || deptosNuevaTarea.length === 0
+              !titulo.trim() || deptosNuevaTarea.length === 0
             }
           >
             Crear tarea

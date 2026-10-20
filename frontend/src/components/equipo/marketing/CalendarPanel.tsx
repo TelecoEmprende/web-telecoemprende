@@ -485,9 +485,7 @@ export function CalendarPanel({
     if (!titulo) return;
 
     try {
-      // `instrucciones` es obligatorio en el backend: desde aquí solo hay
-      // título, así que hace de instrucciones hasta que alguien las amplíe.
-      await apiDepto(deptoNuevaTarea).createTask({ titulo, instrucciones: titulo, deadline: fecha });
+      await apiDepto(deptoNuevaTarea).createTask({ titulo, deadline: fecha });
       setTituloNuevo("");
       setDiaAbierto(null);
       await cargar(cursor);

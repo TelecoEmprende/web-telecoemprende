@@ -500,14 +500,7 @@ export function CampaignsPanel({ deptos, campaignInicial, onCampaignAbierta, onA
   async function añadirTarea(contentId: number, titulo: string) {
     if (!detalle) return;
     try {
-      // Las instrucciones son obligatorias al crear una tarea: sin ellas, el
-      // alta rápida desde un entregable fallaba siempre con un 400.
-      const entregable = detalle.contents.find((c) => c.id === contentId);
-      await apiDepto(detalle.departamento).createTask({
-        titulo,
-        content_id: contentId,
-        instrucciones: `Del entregable «${entregable?.titulo ?? ""}» de «${detalle.nombre}».`,
-      });
+      await apiDepto(detalle.departamento).createTask({ titulo, content_id: contentId });
       await recargarDetalle();
     } catch (err) {
       setError(mensajeDeError(err, "No se pudo crear la tarea."));

@@ -493,7 +493,7 @@ def api_crear_task():
             datos, "descripcion", maximo=MAX_TEXTO_LARGO_LEN, multilinea=True
         ),
         instrucciones=_texto(
-            datos, "instrucciones", obligatorio=True,
+            datos, "instrucciones",
             maximo=MAX_TEXTO_LARGO_LEN, multilinea=True,
         ),
         estado=_opcion(datos, "estado", TASK_ESTADOS, "pendiente"),
@@ -536,7 +536,7 @@ def api_actualizar_task(task_id: int):
         )
     if "instrucciones" in datos:
         campos["instrucciones"] = _texto(
-            datos, "instrucciones", obligatorio=True,
+            datos, "instrucciones",
             maximo=MAX_TEXTO_LARGO_LEN, multilinea=True,
         )
     if "estado" in datos:

@@ -87,7 +87,7 @@ y restaurar.
 ## Tareas
 
 **Para qué:** quién hace qué y en qué estado está.
-**Una tarea lleva:** título e instrucciones (obligatorios); responsables, fecha,
+**Una tarea lleva:** título (obligatorio); instrucciones, responsables, fecha,
 proyecto y entregable (opcionales). Estados: pendiente → en progreso → por
 revisar → acabado (los cuatro se usan).
 **Tablero:** el de un departamento o **Administrativo**, para lo que no es de
