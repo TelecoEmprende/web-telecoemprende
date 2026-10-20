@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/dialog";
 import { aFotoPerfil } from "../../../utils/imagen";
 import type { ApiFailure } from "../../../types/api";
-import { CARGO_LABEL, DEPTO_LABEL, type Team } from "../../../types/equipo";
+import { CARGO_LABEL, DEPTO_LABEL, etiquetaTablero, type Team } from "../../../types/equipo";
 import {
   diasHasta,
   formatearFecha,
@@ -396,7 +396,7 @@ export function MemberDialog({ email, habilidadesConocidas, onCerrar, onGuardado
                             <b>{tarea.titulo}</b>
                             <em>
                               {" · "}
-                              {DEPTO_LABEL[tarea.departamento]}
+                              {etiquetaTablero(tarea.departamento)}
                               {tarea.padre ? ` · ${tarea.padre}` : ""}
                             </em>
                           </span>

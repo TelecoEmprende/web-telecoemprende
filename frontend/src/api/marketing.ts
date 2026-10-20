@@ -11,7 +11,7 @@ import type {
   Task,
   TaskComment,
 } from "../types/marketing";
-import type { Team } from "../types/equipo";
+import { ADMINISTRATIVO, type Tablero, type Team } from "../types/equipo";
 import type {
   EstadoPlataforma,
   Recurso,
@@ -50,8 +50,10 @@ export const updateFichaMiembro = (
  * tienen que ir pasando el departamento en cada llamada, lo reciben ya atado
  * vía `useApi()` (ver `DeptoApi.tsx`).
  */
-export function apiDepto(depto: Team) {
-  const BASE = `/api/${depto}`;
+export function apiDepto(depto: Tablero) {
+  // Una tarea administrativa se lee y se guarda desde la ruta de cualquier
+  // departamento (el backend la incluye en los tres).
+  const BASE = `/api/${depto === ADMINISTRATIVO ? "marketing" : depto}`;
 
   const post = <T,>(ruta: string, body: unknown) =>
     apiRequest<T>(`${BASE}${ruta}`, { method: "POST", body: JSON.stringify(body) });
@@ -110,7 +112,8 @@ export function apiDepto(depto: Team) {
     getTasksArchivadas: () =>
       apiRequest<{ ok: true; tasks: Task[] }>(`${BASE}/tasks/archivadas`),
 
-    createTask: (datos: Partial<Task>) => post<{ ok: true; task: Task }>("/tasks", datos),
+    createTask: (datos: Partial<Task> & { administrativo?: boolean }) =>
+      post<{ ok: true; task: Task }>("/tasks", datos),
 
     /** Una tarea entera por id. El calendario solo tiene de ella un resumen
      *  (`CalendarioItem`), y el diálogo de edición necesita el resto. */

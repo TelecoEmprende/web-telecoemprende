@@ -16,7 +16,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import type { ApiFailure } from "../../../types/api";
-import { DEPTO_LABEL, type Team } from "../../../types/equipo";
+import { ADMINISTRATIVO, etiquetaTablero, type Tablero, type Team } from "../../../types/equipo";
 import {
   MAX_TEXTO_LARGO_LEN,
   MAX_TITULO_LEN,
@@ -91,7 +91,7 @@ export function TaskDialog({
   const [descripcion, setDescripcion] = useState(task.descripcion);
   const [instrucciones, setInstrucciones] = useState(task.instrucciones);
   const [estado, setEstado] = useState<TaskEstado>(task.estado);
-  const [departamento, setDepartamento] = useState<Team>(task.departamento as Team);
+  const [departamento, setDepartamento] = useState<Tablero>(task.departamento as Tablero);
   const [prioridad, setPrioridad] = useState<Prioridad>(task.prioridad);
   const [deadline, setDeadline] = useState(task.deadline ?? "");
   const [hora, setHora] = useState(task.hora);
@@ -152,10 +152,6 @@ export function TaskDialog({
     event.preventDefault();
     if (!titulo.trim()) {
       setError("El título es obligatorio.");
-      return;
-    }
-    if (!instrucciones.trim()) {
-      setError("Las instrucciones son obligatorias.");
       return;
     }
 
@@ -245,11 +241,10 @@ export function TaskDialog({
           </div>
 
           <div className="field-group-react">
-            <label htmlFor="td-instrucciones">Instrucciones</label>
+            <label htmlFor="td-instrucciones">Instrucciones (opcional)</label>
             <textarea
               id="td-instrucciones"
               rows={3}
-              required
               value={instrucciones}
               placeholder="Cómo se hace: a quién se escribe, qué plantilla se usa..."
               onChange={(event) => setInstrucciones(event.target.value)}
@@ -257,24 +252,24 @@ export function TaskDialog({
             <ContadorCaracteres valor={instrucciones} maximo={MAX_TEXTO_LARGO_LEN} />
           </div>
 
-          {puedeAsignar && deptosDisponibles.length > 1 ? (
+          {puedeAsignar && deptosDisponibles.length > 0 ? (
             <div className="field-group-react">
-              <label htmlFor="td-depto">Departamento</label>
+              <label htmlFor="td-depto">En qué tablero sale</label>
               <select
                 id="td-depto"
                 value={departamento}
-                onChange={(event) => setDepartamento(event.target.value as Team)}
+                onChange={(event) => setDepartamento(event.target.value as Tablero)}
               >
-                {deptosDisponibles.map((d) => (
+                {[...new Set<Tablero>([task.departamento as Tablero, ...deptosDisponibles, ADMINISTRATIVO])].map((d) => (
                   <option key={d} value={d}>
-                    {DEPTO_LABEL[d]}
+                    {etiquetaTablero(d)}
                   </option>
                 ))}
               </select>
-              {departamento !== task.departamento ? (
+              {departamento !== task.departamento && task.campaign_id ? (
                 <p className="mkt-meta-react">
                   Al guardar deja de colgar de su proyecto o entregable: son de{" "}
-                  {DEPTO_LABEL[task.departamento as Team]}.
+                  {etiquetaTablero(task.departamento)}.
                 </p>
               ) : null}
             </div>
@@ -405,7 +400,7 @@ export function TaskDialog({
                 id="td-responsables"
                 seleccionados={responsables}
                 onCambiar={setResponsables}
-                deptos={[departamento]}
+                deptos={departamento === ADMINISTRATIVO ? undefined : [departamento]}
                 proponer
               />
             ) : (
