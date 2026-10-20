@@ -107,7 +107,7 @@ cerrado) y responsable.
 - Crear, editar, archivar, duplicar y borrar/restaurar un proyecto.
 - Dentro: crear, editar y borrar entregables; añadir tareas rápidas a un
   entregable y marcarlas.
-- Todo lo anterior en un proyecto que **no** es del primer departamento marcado.
+- Todo lo anterior en un proyecto que **no** es del primer departamento marcado, con tareas de otro departamento dentro y abierto desde un enlace compartido.
 
 ## Calendario
 
@@ -157,7 +157,7 @@ restaura algo dentro de un proyecto que sigue borrado.
 
 ## Admin
 
-Métricas y Presupuesto (cargo, VP o admin); Inscripciones, Cuentas del equipo,
+Métricas y Presupuesto de Eventos (cargo, VP o admin); Inscripciones, Cuentas del equipo,
 Calendario del club y Auditoría (admin).
 
 ## Pendiente de decidir (fuera de la prioridad actual)

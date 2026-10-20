@@ -907,6 +907,51 @@ describe("/equipo — panel de Marketing", () => {
     expect(screen.getByRole("checkbox", { name: /Escribir guion/ })).not.toBeChecked();
   });
 
+  it("un enlace a un proyecto de otro departamento lo busca en los demás y lo abre", async () => {
+    getCampaign.mockReset()
+      .mockRejectedValueOnce({ ok: false, message: "No encontrado." })
+      .mockResolvedValue({
+        ok: true,
+        campaign: {
+          id: 1, nombre: "Feria", objetivo: "", audiencia: "", fecha: null,
+          departamento: "eventos", departamentos: ["eventos"], estado: "activo", responsable: "",
+          contents: [], tasks_sueltas: [],
+        },
+      });
+    render(
+      <MemoryRouter initialEntries={["/equipo?campaign=1"]}>
+        <EquipoPage />
+      </MemoryRouter>,
+    );
+    expect(await screen.findByRole("heading", { name: "Feria" })).toBeInTheDocument();
+    expect(getCampaign).toHaveBeenCalledTimes(2);
+  });
+
+  it("una tarea de otro departamento dentro del proyecto se marca por la ruta del suyo", async () => {
+    getCampaign.mockResolvedValue({
+      ok: true,
+      campaign: {
+        id: 1, nombre: "Vuelta al cole", objetivo: "", audiencia: "", fecha: null,
+        departamento: "marketing", departamentos: ["marketing", "eventos"], estado: "activo", responsable: "",
+        contents: [],
+        tasks_sueltas: [{ ...TAREA, content_id: null, estado: "pendiente", departamento: "eventos" }],
+      },
+    });
+    updateTask.mockResolvedValue({ ok: true });
+
+    render(
+      <MemoryRouter initialEntries={["/equipo?campaign=1"]}>
+        <EquipoPage />
+      </MemoryRouter>,
+    );
+    const casilla = await screen.findByRole("checkbox", { name: /Escribir guion/ });
+    deptosPedidos.length = 0;
+    await userEvent.click(casilla);
+
+    await waitFor(() => expect(updateTask).toHaveBeenCalledWith(1, { estado: "acabado" }));
+    expect(deptosPedidos).toContain("eventos");
+  });
+
   it("la navegación marca la pestaña activa", async () => {
     await renderMarketing();
 

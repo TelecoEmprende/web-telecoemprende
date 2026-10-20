@@ -19,7 +19,7 @@ import { Badge } from "@/components/ui/badge";
 import { useEntradaDeFila } from "../../movimiento";
 import { SPRING_DEFAULT } from "@/components/smoothui/lib/animation";
 import type { ApiFailure } from "../../../types/api";
-import type { Team } from "../../../types/equipo";
+import { TEAMS, type Team } from "../../../types/equipo";
 import {
   CONTENT_ESTADOS,
   CONTENT_ESTADO_LABEL,
@@ -203,8 +203,7 @@ type Props = {
    *  barra decide cuáles (ver `EquipoPage.tsx`). */
   deptos: Team[];
   /** Campaña que hay que abrir directamente (viene del calendario o de un
-   *  enlace compartido); su departamento es siempre `deptos[0]`, porque
-   *  quien la manda ya acota el filtro a ese departamento. */
+   *  enlace compartido); se busca primero en `deptos[0]`. */
   campaignInicial: number | null;
   onCampaignAbierta: () => void;
   /** Abre una nota enlazada en Notas. */
@@ -241,14 +240,21 @@ export function CampaignsPanel({ deptos, campaignInicial, onCampaignAbierta, onA
   const [aviso, setAviso] = useState<{ texto: string; deshacer?: () => Promise<void> } | null>(null);
   const directorio = useDirectorio();
 
+  // Un enlace compartido no dice de qué departamento es el proyecto: si no
+  // está en `depto`, se prueba en los otros (todos somos de los tres).
   const abrir = useCallback(async (id: number, depto: Team) => {
-    try {
-      const respuesta = await apiDepto(depto).getCampaign(id);
-      setDetalle(respuesta.campaign);
-      setError(null);
-    } catch (err) {
-      setError(mensajeDeError(err, "No se pudo abrir el proyecto."));
+    let ultimo: unknown = null;
+    for (const d of [depto, ...TEAMS.filter((t) => t !== depto)]) {
+      try {
+        const respuesta = await apiDepto(d).getCampaign(id);
+        setDetalle(respuesta.campaign);
+        setError(null);
+        return;
+      } catch (err) {
+        ultimo = err;
+      }
     }
+    setError(mensajeDeError(ultimo, "No se pudo abrir el proyecto."));
   }, []);
 
   // Solo la primera carga enseña el esqueleto: al recargar tras un cambio, la
@@ -271,9 +277,6 @@ export function CampaignsPanel({ deptos, campaignInicial, onCampaignAbierta, onA
   }, [cargarCampaigns]);
 
   useEffect(() => {
-    // El departamento de una campaña que llega por enlace o desde el
-    // calendario ya viene acotado en `deptos` (ver `EquipoPage.tsx`), así que
-    // siempre es el primero.
     if (campaignInicial !== null) {
       void abrir(campaignInicial, deptos[0]);
       onCampaignAbierta();
@@ -485,7 +488,9 @@ export function CampaignsPanel({ deptos, campaignInicial, onCampaignAbierta, onA
       tasks_sueltas: detalle.tasks_sueltas.map(conEstado),
     });
     try {
-      await apiDepto(detalle.departamento).updateTask(task.id, { estado });
+      // Un proyecto trae tareas de cualquier departamento: cada una se guarda
+      // por la ruta del suyo, no por la del proyecto.
+      await apiDepto((task.departamento as Team) || detalle.departamento).updateTask(task.id, { estado });
     } catch (err) {
       setError(mensajeDeError(err, "No se pudo actualizar la tarea."));
       await recargarDetalle();
