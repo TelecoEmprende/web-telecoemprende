@@ -40,6 +40,8 @@ type Props = {
   yo?: string;
   /** Lo que pidió un botón del Inicio («Nueva tarea», «Buscar miembro»). */
   accionInicio?: AccionInicio | null;
+  /** Casilla «Administrativo» de la barra de Tareas. */
+  filtroAdministrativas?: { ver: boolean; solo: boolean };
 };
 
 /**
@@ -52,7 +54,7 @@ type Props = {
  */
 export function DeptoDashboard({
   depto, deptos, seccion, teams, campaignInicial, onCampaignAbierta, onAbrirCampaign, vpDe, puedeAsignarEnTodo,
-  onAbrirNota, yo = "", accionInicio = null,
+  onAbrirNota, yo = "", accionInicio = null, filtroAdministrativas = { ver: true, solo: false },
 }: Props) {
   return (
     <DeptoProvider value={depto}>
@@ -73,6 +75,7 @@ export function DeptoDashboard({
             vpDe={vpDe}
             puedeAsignarEnTodo={puedeAsignarEnTodo}
             abrirFormulario={accionInicio === "nueva-tarea"}
+            filtroAdministrativas={filtroAdministrativas}
           />
         ) : null}
         {seccion === "calendario" ? (

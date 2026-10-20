@@ -62,6 +62,10 @@ const ESTADOS: Record<string, string> = {
 
 /** Un valor del historial, tal como se lee en una frase. */
 export function formatearValor(campo: string, valor: unknown): string {
+  // El ámbito de una reunión: '' es todo el club, no «nada».
+  if (campo === "departamento" && (valor === "" || valor === "directiva")) {
+    return valor === "" ? "Todo el club" : "Directiva";
+  }
   if (valor === null || valor === undefined || valor === "") return "nada";
   if (Array.isArray(valor)) {
     if (valor.length === 0) return "nadie";

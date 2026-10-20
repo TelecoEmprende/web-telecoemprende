@@ -143,9 +143,9 @@ las convoca y edita la directiva (cargo, VP o admin); por defecto solo las ve
 ella, y se pueden abrir a todo el club (entonces el resto las lee pero no las
 edita).
 **Casos:**
-- Crear, editar (título, fecha, hora, convocados, objetivo, acta) y borrar una
-  reunión **ya creada** de cualquier departamento, con cualquier casilla
-  marcada.
+- Crear, editar (título, fecha, hora, de quién es, convocados, objetivo, acta)
+  y borrar una reunión **ya creada** de cualquier departamento, con cualquier
+  casilla marcada. Pasarla a Directiva solo puede la directiva.
 - Pegar un acta de Notion y que salgan sus acuerdos.
 - Pasar un acuerdo a tarea: antes de crearla se edita título, instrucciones,
   para quién, fecha y tablero (por defecto el de la reunión, o Administrativo

@@ -259,10 +259,13 @@ export function ReunionesPanel({ deptos, esDirectiva }: Props) {
   // Cada reunión se guarda por la ruta de su departamento: el backend solo deja
   // tocar desde una ruta las suyas, las del club y las de la directiva. Con
   // `deptos[0]`, una reunión de Eventos vista con los tres marcados daba 404.
-  const apiDe = (r: Registro) => {
-    const depto = textoDe(r, "departamento");
-    return apiDepto((TEAMS as string[]).includes(depto) ? (depto as Team) : deptos[0]);
-  };
+  const rutaDe = (depto: string) =>
+    apiDepto((TEAMS as string[]).includes(depto) ? (depto as Team) : deptos[0]);
+  const apiDe = (r: Registro) => rutaDe(textoDe(r, "departamento"));
+  // «De quién es» se puede cambiar: el guardado tiene que ir por la ruta del
+  // departamento que la reunión tiene EN EL SERVIDOR, no por la del nuevo
+  // (que aún no es suyo hasta que se guarde).
+  const deptoEnServidor = useRef("");
 
   const cargar = useCallback(async () => {
     try {
@@ -288,7 +291,8 @@ export function ReunionesPanel({ deptos, esDirectiva }: Props) {
     if (Object.keys(cambios).length === 0 || !abierta) return;
     setEstadoGuardado("guardando");
     try {
-      await apiDe(abierta).actualizarRegistro("reuniones", abierta.id, cambios);
+      await rutaDe(deptoEnServidor.current).actualizarRegistro("reuniones", abierta.id, cambios);
+      if ("departamento" in cambios) deptoEnServidor.current = String(cambios.departamento ?? "");
       setEstadoGuardado("guardado");
       setError(null);
     } catch (err) {
@@ -306,6 +310,12 @@ export function ReunionesPanel({ deptos, esDirectiva }: Props) {
         temporizador.current = window.setTimeout(() => void guardarYa(), REINTENTO_MS);
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [abierta?.id]);
+
+  // Al abrir otra reunión, su departamento es el que tiene guardado.
+  useEffect(() => {
+    deptoEnServidor.current = abierta ? textoDe(abierta, "departamento") : "";
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [abierta?.id]);
 
@@ -440,10 +450,27 @@ export function ReunionesPanel({ deptos, esDirectiva }: Props) {
               />
             </div>
             <div className="field-group-react">
-              <span className="field-titulo-react" id="reu-ambito-titulo">De quién es</span>
-              <p className="mkt-meta-react reu-ambito-react" aria-labelledby="reu-ambito-titulo">
-                {ambitoDe(abierta)}
-              </p>
+              <label htmlFor="reu-ambito">De quién es</label>
+              <select
+                id="reu-ambito"
+                value={textoDe(abierta, "departamento") || "club"}
+                onChange={(e) => {
+                  const valor = e.target.value;
+                  cambiar({
+                    departamento: valor === "club" ? "" : valor,
+                    // Como al convocarla: una de directiva nace solo para ella.
+                    solo_directiva: valor === "directiva",
+                  });
+                }}
+              >
+                <option value="club">Todo el club</option>
+                {esDirectiva || deDirectiva ? <option value="directiva">Directiva</option> : null}
+                {TEAMS.map((t) => (
+                  <option key={t} value={t}>
+                    {DEPTO_LABEL[t]}
+                  </option>
+                ))}
+              </select>
               {deDirectiva && esDirectiva ? (
                 <label className="crm-tag crm-tag-check-react">
                   <input

@@ -1167,6 +1167,59 @@ describe("/equipo — panel de Eventos", () => {
     expect(deptosPedidos).not.toContain("marketing");
   });
 
+  it("el Calendario tiene la capa «Administrativo», que se apaga y se enciende", async () => {
+    getCalendarioEquipo.mockResolvedValue({
+      ok: true, desde: "", hasta: "",
+      items: [
+        {
+          origen: "task", id: 4, titulo: "Renovar dominio", fecha: enDias(1), estado: "pendiente",
+          campaign_id: null, detalle: "", prioridad: "media", padre: null, responsables: [], hora: null,
+          departamento: "administrativo",
+        },
+      ],
+    });
+    await renderMarketing();
+    await userEvent.click(screen.getByRole("button", { name: "Calendario" }));
+    expect(await screen.findByRole("button", { name: /Renovar dominio/ })).toBeInTheDocument();
+
+    const capa = screen.getByRole("button", { name: "Administrativo" });
+    await userEvent.click(capa);
+    expect(capa).toHaveAttribute("aria-pressed", "false");
+    expect(screen.queryByRole("button", { name: /Renovar dominio/ })).not.toBeInTheDocument();
+    await userEvent.click(capa);
+    expect(screen.getByRole("button", { name: /Renovar dominio/ })).toBeInTheDocument();
+  });
+
+  it("en Tareas, la casilla «Administrativo» oculta las administrativas o deja verlas solas", async () => {
+    teamsDeSesion = ["marketing", "eventos"];
+    vpDeSesion = ["marketing", "eventos"];
+    getTasks.mockResolvedValue({
+      ok: true,
+      usuario: YO,
+      tasks: tareas(
+        { titulo: "Guion del reel", departamento: "marketing" },
+        { titulo: "Pagar la cuota", departamento: "administrativo" },
+      ),
+    });
+    await renderMarketing();
+    await userEvent.click(screen.getByRole("button", { name: "Tareas" }));
+    expect(await screen.findByRole("button", { name: /Pagar la cuota/ })).toBeInTheDocument();
+    const barra = screen.getByRole("group", { name: "Departamentos visibles" });
+
+    // Sin administrativas.
+    await userEvent.click(within(barra).getByLabelText("Administrativo"));
+    expect(screen.queryByRole("button", { name: /Pagar la cuota/ })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Guion del reel/ })).toBeInTheDocument();
+
+    // Solo administrativas: con ella marcada, se desmarcan los departamentos.
+    await userEvent.click(within(barra).getByLabelText("Administrativo"));
+    await userEvent.click(within(barra).getByLabelText("Marketing"));
+    await userEvent.click(within(barra).getByLabelText("Eventos"));
+    expect(within(barra).getByLabelText("Marketing")).not.toBeChecked();
+    expect(screen.getByRole("button", { name: /Pagar la cuota/ })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Guion del reel/ })).not.toBeInTheDocument();
+  });
+
   it("con más de un departamento, Proyectos junta los dos por defecto y el filtro deja acotar a uno", async () => {
     teamsDeSesion = ["marketing", "eventos"];
     vpDeSesion = ["marketing", "eventos"];

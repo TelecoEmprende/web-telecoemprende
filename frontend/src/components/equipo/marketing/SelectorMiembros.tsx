@@ -5,6 +5,7 @@ import { useApi, useDepto } from "../DeptoApi";
 import { AvatarResponsable, etiquetaDe, mediaAbiertas, sobrecargado } from "./Avatares";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { normalizar } from "../../../utils/texto";
 import type { Team } from "../../../types/equipo";
 import type { Miembro } from "../../../types/marketing";
 
@@ -21,6 +22,9 @@ type Props = {
   /** Al asignar tareas: propone a quien tiene el departamento como mejor
    *  preferencia, salvo que vaya sobrecargado (ver `sobrecargado`). */
   proponer?: boolean;
+  /** Una sola persona (responsable de proyecto): elegir cierra la lista y
+   *  volver a tocar a la elegida la quita. */
+  unico?: boolean;
 };
 
 const ORDINAL = ["1ª", "2ª", "3ª"];
@@ -60,10 +64,13 @@ export function SelectorMiembros({
   onCambiar,
   deptos,
   proponer = false,
+  unico = false,
 }: Props) {
   const { getMiembros } = useApi();
   const deptoActual = useDepto();
   const [miembros, setMiembros] = useState<Miembro[]>([]);
+  const [abierto, setAbierto] = useState(false);
+  const [busqueda, setBusqueda] = useState("");
   // Solo decide la preferencia que se enseña, no quién sale en la lista.
   const deptosRoster = deptos?.length ? deptos : [deptoActual];
 
@@ -82,6 +89,11 @@ export function SelectorMiembros({
   }, [getMiembros]);
 
   function alternar(email: string) {
+    if (unico) {
+      onCambiar(seleccionados.includes(email) ? [] : [email]);
+      setAbierto(false);
+      return;
+    }
     onCambiar(
       seleccionados.includes(email)
         ? seleccionados.filter((e) => e !== email)
@@ -98,17 +110,29 @@ export function SelectorMiembros({
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [miembros, deptosRoster.join(",")],
   );
+  // Se escribe un trozo del nombre (sin tildes ni mayúsculas) y la lista se
+  // reduce; el orden de asignación se mantiene.
+  const q = normalizar(busqueda.trim());
+  const visibles = q
+    ? ordenados.filter((m) => normalizar(`${m.nombre} ${m.apellidos} ${m.email}`).includes(q))
+    : ordenados;
   // La propuesta es el primero del orden: mejor preferencia y menos carga.
   const media = useMemo(() => mediaAbiertas(miembros), [miembros]);
   const propuesta = proponer && seleccionados.length === 0 ? ordenados[0] : undefined;
 
   return (
     <div className="mkt-selector-react">
-      <Popover>
+      <Popover
+        open={abierto}
+        onOpenChange={(siguiente) => {
+          setAbierto(siguiente);
+          if (!siguiente) setBusqueda("");
+        }}
+      >
         <PopoverTrigger asChild>
           <button type="button" id={id} className="mkt-selector-miembros-react">
             {seleccionados.length === 0 ? (
-              <span className="mkt-selector-placeholder-react">Elegir personas...</span>
+              <span className="mkt-selector-placeholder-react">{unico ? "Sin responsable" : "Elegir personas..."}</span>
             ) : (
               <span className="mkt-selector-elegidos-react">
                 {seleccionados.map((email) => (
@@ -126,8 +150,26 @@ export function SelectorMiembros({
           {miembros.length === 0 ? (
             <p className="mkt-selector-vacio-react">Nadie en el equipo todavía.</p>
           ) : (
+            <>
+            <input
+              type="search"
+              className="mkt-selector-buscar-react"
+              placeholder="Escribe un nombre..."
+              aria-label="Buscar persona"
+              value={busqueda}
+              autoFocus
+              onChange={(e) => setBusqueda(e.target.value)}
+              onKeyDown={(e) => {
+                // Enter elige a la primera que queda, sin soltar el teclado.
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  if (visibles[0]) alternar(visibles[0].email);
+                }
+              }}
+            />
+            {visibles.length === 0 ? <p className="mkt-selector-vacio-react">Nadie se llama así.</p> : null}
             <ul className="mkt-selector-lista-react">
-              {ordenados.map((m) => {
+              {visibles.map((m) => {
                 const pref = preferencia(m, deptosRoster);
                 return (
                   <li key={m.email}>
@@ -155,6 +197,7 @@ export function SelectorMiembros({
                 );
               })}
             </ul>
+            </>
           )}
         </PopoverContent>
       </Popover>
