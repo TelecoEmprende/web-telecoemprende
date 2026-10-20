@@ -85,6 +85,10 @@ export function EquipoPage() {
   // Lo que pidió un botón del Inicio. Vale solo para el panel que se monta al
   // llegar: al cambiar de sección se olvida (ver el efecto de abajo).
   const [accionInicio, setAccionInicio] = useState<AccionInicio | null>(null);
+  // Filtro del tablero de Tareas: las administrativas (de ningún departamento)
+  // se ven o no, y se pueden ver solas desmarcando los tres departamentos.
+  const [verAdministrativas, setVerAdministrativas] = useState(true);
+  const [soloAdministrativas, setSoloAdministrativas] = useState(false);
   useEffect(() => {
     setAccionInicio(null);
   }, [seccion]);
@@ -330,13 +334,32 @@ export function EquipoPage() {
 
   const titulo = seccionesDe(teams).find((s) => s.id === seccion)?.label ?? TITULO_ADMIN[seccion] ?? "";
   function alternarDepto(team: Team) {
-    setDeptosFiltro((actuales) => {
-      const activos = equiposDelPanel.filter((t) => actuales.includes(t));
-      const base = activos.length > 0 ? activos : equiposDelPanel;
-      const siguiente = base.includes(team) ? base.filter((t) => t !== team) : [...base, team];
-      // El resto de deptosFiltro (de otros paneles) se conserva tal cual.
-      return [...actuales.filter((t) => !equiposDelPanel.includes(t)), ...siguiente];
-    });
+    // En Tareas, con «Administrativo» marcado se pueden desmarcar los tres
+    // departamentos: entonces solo se ven las administrativas.
+    if (seccion === "tareas" && soloAdministrativas) {
+      setSoloAdministrativas(false);
+      setDeptosFiltro((actuales) => [...actuales.filter((t) => !equiposDelPanel.includes(t)), team]);
+      return;
+    }
+    const activos = equiposDelPanel.filter((t) => deptosFiltro.includes(t));
+    const base = activos.length > 0 ? activos : equiposDelPanel;
+    const siguiente = base.includes(team) ? base.filter((t) => t !== team) : [...base, team];
+    if (siguiente.length === 0 && seccion === "tareas" && verAdministrativas) {
+      setSoloAdministrativas(true);
+      return;
+    }
+    // El resto de deptosFiltro (de otros paneles) se conserva tal cual.
+    setDeptosFiltro((actuales) => [...actuales.filter((t) => !equiposDelPanel.includes(t)), ...siguiente]);
+  }
+
+  function alternarAdministrativas() {
+    if (!verAdministrativas) {
+      setVerAdministrativas(true);
+      return;
+    }
+    // Sin departamentos ni administrativas no quedaría nada: vuelven los tres.
+    setSoloAdministrativas(false);
+    setVerAdministrativas(false);
   }
 
   return (
@@ -365,22 +388,37 @@ export function EquipoPage() {
             {/* Miembros filtra dentro de su panel (con "Todos"), no aquí. */}
             {equiposDelPanel.length > 1 && seccion !== "miembros" ? (
               <div className="workspace-selector-depto-react" role="group" aria-label="Departamentos visibles">
-                {equiposDelPanel.map((team) => (
+                {equiposDelPanel.map((team) => {
+                  const marcado = !(seccion === "tareas" && soloAdministrativas) && deptosDelPanel.includes(team);
+                  return (
+                    <label
+                      key={team}
+                      className={`crm-tag crm-tag-check-react${marcado ? " crm-tag-azul-react" : ""}`}
+                    >
+                      <input
+                        type="checkbox"
+                        className="crm-check"
+                        checked={marcado}
+                        onChange={() => alternarDepto(team)}
+                      />
+                      {DEPTO_LABEL[team]}
+                    </label>
+                  );
+                })}
+                {/* Las administrativas no son de ningún departamento: su propia casilla. */}
+                {seccion === "tareas" ? (
                   <label
-                    key={team}
-                    className={`crm-tag crm-tag-check-react${
-                      deptosDelPanel.includes(team) ? " crm-tag-azul-react" : ""
-                    }`}
+                    className={`crm-tag crm-tag-check-react${verAdministrativas ? " crm-tag-azul-react" : ""}`}
                   >
                     <input
                       type="checkbox"
                       className="crm-check"
-                      checked={deptosDelPanel.includes(team)}
-                      onChange={() => alternarDepto(team)}
+                      checked={verAdministrativas}
+                      onChange={alternarAdministrativas}
                     />
-                    {DEPTO_LABEL[team]}
+                    Administrativo
                   </label>
-                ))}
+                ) : null}
               </div>
             ) : null}
           </header>
@@ -439,6 +477,7 @@ export function EquipoPage() {
                 onAbrirNota={abrirNota}
                 yo={perfil.email}
                 accionInicio={accionInicio}
+                filtroAdministrativas={{ ver: verAdministrativas, solo: soloAdministrativas }}
               />
             ) : null}
             </PanelAnimado>

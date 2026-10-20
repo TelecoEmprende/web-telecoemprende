@@ -28,10 +28,11 @@ const DEPTO_EVENTO: Record<string, string> = {
   marketing: "mkt-evento-marketing-react",
   eventos: "mkt-evento-eventos-react",
   ingenieria: "mkt-evento-ingenieria-react",
+  administrativo: "mkt-evento-administrativo-react",
 };
 
 const ORIGEN_LABEL: Record<CalendarioItem["origen"], string> = {
-  content: "Publicación",
+  content: "Entregable",
   task: "Tarea",
   reunion: "Reunión",
   club: "Evento del club",
@@ -285,6 +286,7 @@ export function CalendarPanel({
   // el feed solo trae los que aún no han pasado.
   const [luma, setLuma] = useState<CalendarioItem[]>([]);
   const [verLuma, setVerLuma] = useState(true);
+  const [verAdministrativas, setVerAdministrativas] = useState(true);
   // Se busca un mes con datos una sola vez, en el primer montaje. Después el
   // usuario manda: si navega a un mes vacío, se queda ahí.
   const [yaBuscado, setYaBuscado] = useState(false);
@@ -440,6 +442,8 @@ export function CalendarPanel({
   }
 
   const porDia = [...items, ...(verLuma ? luma : [])]
+    // Las administrativas son una capa más: se encienden y apagan como Luma.
+    .filter((item) => verAdministrativas || item.departamento !== ADMINISTRATIVO)
     .sort((a, b) => (a.hora ?? "").localeCompare(b.hora ?? ""))
     .reduce<Record<string, CalendarioItem[]>>((acc, item) => {
       (acc[item.fecha] ??= []).push(item);
@@ -675,6 +679,14 @@ export function CalendarPanel({
                 </button>
               ))
             : null}
+          <button
+            type="button"
+            className="cal-capa-react cal-capa-administrativo-react"
+            aria-pressed={verAdministrativas}
+            onClick={() => setVerAdministrativas((v) => !v)}
+          >
+            Administrativo
+          </button>
           {/* Los eventos del club salen siempre: no es un filtro, es la
               leyenda de su color. */}
           <span className="cal-capa-react cal-capa-club-react" aria-pressed="true">
