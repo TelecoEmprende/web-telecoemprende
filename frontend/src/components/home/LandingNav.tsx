@@ -58,6 +58,8 @@ export function LandingNav() {
 
     sections.forEach((section) => observer.observe(section));
     return () => observer.disconnect();
+    // Los ids de las secciones no cambian con el idioma: basta con montarlo una vez.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [onHomePage]);
 
   return (

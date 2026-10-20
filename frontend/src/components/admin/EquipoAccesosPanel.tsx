@@ -298,6 +298,7 @@ export function EquipoAccesosPanel() {
 
   useEffect(() => {
     void cargar();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   /** Guarda unos campos de una cuenta y, si va bien, los aplica en la tabla. */
