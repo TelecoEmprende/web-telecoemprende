@@ -68,6 +68,8 @@ REUNIONES = Tabla(
     columnas={
         "titulo": "title", "fecha": "date", "hora": "start_time", "objetivo": "goal",
         "asistentes": "asistentes", "contenido": "content", "solo_directiva": "board_only",
+        # Solo al editar (cambiar «de quién es»); al crear lo decide `crear`.
+        "departamento": "department",
     },
     orden="fecha DESC, hora DESC, id DESC",
     json=("contenido",),

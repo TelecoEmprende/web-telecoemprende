@@ -2670,6 +2670,7 @@ span.cal-capa-react {
 .cal-capa-marketing-react { --capa: var(--color-impulso); }
 .cal-capa-eventos-react { --capa: var(--color-noche); }
 .cal-capa-club-react { --capa: var(--color-chispa); }
+.cal-capa-administrativo-react { --capa: var(--color-slate); }
 .cal-capa-luma-react { --capa: var(--color-chispa); }
 
 .cal-capa-luma-react::before {
@@ -2788,6 +2789,7 @@ span.cal-capa-react {
 .cal-v3-react .mkt-evento-marketing-react { --franja: var(--color-impulso); }
 .cal-v3-react .mkt-evento-eventos-react { --franja: var(--color-noche); }
 .cal-v3-react .mkt-evento-club-react { --franja: var(--color-chispa); }
+.cal-v3-react .mkt-evento-administrativo-react { --franja: var(--color-slate); }
 
 .cal-v3-react .mkt-evento-luma-react {
   --franja: var(--color-chispa);
@@ -3077,6 +3079,22 @@ span.cal-capa-react {
    deja la especificidad en cero: cualquier campo con su propio radio gana. */
 :where(.shadcn-scope) :where(select, textarea, input:not([type="checkbox"], [type="radio"], [type="file"], [type="color"], [type="range"])) {
   border-radius: var(--radius-md);
+}
+
+/* La flecha nativa del <select> se pega al borde y no se puede mover: se
+   quita y se pinta una con dos degradados, a 14px del borde. Incluye los
+   diálogos porque salen en un portal fuera de `.crm-react`. */
+:is(.crm-react, [role="dialog"]) select:not([multiple]) {
+  appearance: none;
+  padding-right: 34px;
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--color-text-muted) 50%),
+    linear-gradient(135deg, var(--color-text-muted) 50%, transparent 50%);
+  background-position:
+    calc(100% - 19px) 50%,
+    calc(100% - 14px) 50%;
+  background-size: 5px 5px;
+  background-repeat: no-repeat;
 }
 
 /* ---------- Gráficas del club (Métricas) ---------- */

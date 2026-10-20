@@ -80,6 +80,8 @@ type Props = {
   puedeAsignarEnTodo: boolean;
   /** Llega desde «Nueva tarea» del Inicio: el formulario ya abierto. */
   abrirFormulario?: boolean;
+  /** Casilla «Administrativo» de la barra de arriba (ver EquipoPage). */
+  filtroAdministrativas?: { ver: boolean; solo: boolean };
 };
 
 /**
@@ -91,7 +93,18 @@ type Props = {
  * CADA tarea pueden crearla o reasignarla; un miembro raso sigue pudiendo
  * mover su propia tarea de estado.
  */
-export function TasksPanel({ deptos, teams, vpDe, puedeAsignarEnTodo, abrirFormulario = false }: Props) {
+export function TasksPanel({
+  deptos,
+  teams,
+  vpDe,
+  puedeAsignarEnTodo,
+  abrirFormulario = false,
+  filtroAdministrativas = { ver: true, solo: false },
+}: Props) {
+  // Casilla «Administrativo» de la barra: una administrativa sale si está
+  // marcada; las de departamento, salvo que se vean solo las administrativas.
+  const pasaTablero = (t: Task) =>
+    t.departamento === ADMINISTRATIVO ? filtroAdministrativas.ver : !filtroAdministrativas.solo;
   const yo = useYo();
   const directorio = useDirectorio();
   const entradaTarjeta = useEntradaDeFila();
@@ -268,9 +281,11 @@ export function TasksPanel({ deptos, teams, vpDe, puedeAsignarEnTodo, abrirFormu
 
   const filtroTexto = busqueda.trim().toLowerCase();
   const visibles = tasks
+    .filter(pasaTablero)
     .filter((t) => !soloMias || t.responsables.includes(usuario))
     .filter((t) => !filtroTexto || t.titulo.toLowerCase().includes(filtroTexto));
   const archivadasVisibles = archivadas
+    .filter(pasaTablero)
     .filter((t) => !soloMias || t.responsables.includes(usuario))
     .filter((t) => !filtroTexto || t.titulo.toLowerCase().includes(filtroTexto));
 

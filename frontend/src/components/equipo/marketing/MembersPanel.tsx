@@ -116,10 +116,14 @@ export function MembersPanel({
         .filter((m) => filtroDepto === null || m.equipos[0] === filtroDepto)
         .filter((m) => filtro === null || m.tags.includes(filtro))
         .filter((m) => filtroCarga === "" || nivelCarga(m.abiertas) === filtroCarga)
-        // Más libres primero: el directorio se abre para decidir a quién
-        // asignar algo, y esa es la respuesta.
+        // Con «Todos», por nombre, como un directorio. Filtrando por
+        // preferencia se busca a quién asignar algo: más libres primero.
         .slice()
-        .sort((a, b) => a.abiertas - b.abiertas || a.email.localeCompare(b.email)),
+        .sort((a, b) =>
+          filtroDepto === null
+            ? nombreCorto(a).localeCompare(nombreCorto(b), "es")
+            : a.abiertas - b.abiertas || a.email.localeCompare(b.email),
+        ),
     [miembros, busqueda, filtro, filtroCarga, filtroDepto],
   );
 
