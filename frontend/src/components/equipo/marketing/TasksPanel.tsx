@@ -18,7 +18,7 @@ import { Badge } from "@/components/ui/badge";
 import { Contador, useEntradaDeFila } from "../../movimiento";
 import { SPRING_DEFAULT } from "@/components/smoothui/lib/animation";
 import type { ApiFailure } from "../../../types/api";
-import { DEPTO_LABEL, TEAMS, type Team } from "../../../types/equipo";
+import { ADMINISTRATIVO, TEAMS, etiquetaTablero, type Tablero, type Team } from "../../../types/equipo";
 import {
   MAX_TITULO_LEN,
   PRIORIDADES,
@@ -44,6 +44,10 @@ const DEPTO_TAG: Record<string, string> = {
   marketing: "crm-tag-ambar-react",
   eventos: "",
 };
+
+function sinRepetir(tareas: Task[]): Task[] {
+  return [...new Map(tareas.map((t) => [t.id, t])).values()];
+}
 
 /** Antes por fecha límite (sin fecha, al final), luego por prioridad: lo
  *  urgente arriba de cada columna en vez del orden en que se crearon. */
@@ -123,8 +127,9 @@ export function TasksPanel({ deptos, teams, vpDe, puedeAsignarEnTodo }: Props) {
   const [deadline, setDeadline] = useState("");
   const [hora, setHora] = useState("");
   const [responsables, setResponsables] = useState<string[]>([]);
-  function puedeAsignarEn(depto: Team) {
-    return puedeAsignarEnTodo || vpDe.includes(depto);
+  function puedeAsignarEn(depto: Tablero) {
+    // Una administrativa no es de nadie: la reparte cualquier VP (como en el backend).
+    return puedeAsignarEnTodo || (depto === ADMINISTRATIVO ? vpDe.length > 0 : vpDe.includes(depto));
   }
   // De dónde sale a qué departamentos se puede dar de alta una tarea: todo el
   // club si asigna en todo (esté o no dado de alta ahí), o los suyos propios
@@ -133,11 +138,12 @@ export function TasksPanel({ deptos, teams, vpDe, puedeAsignarEnTodo }: Props) {
   const deptosDondePuedeAsignar = (puedeAsignarEnTodo ? TEAMS : teams).filter(puedeAsignarEn);
   // Crear una tarea puede cualquiera, en cualquiera de los tres departamentos:
   // sin dueño o para sí. Repartirla a otras personas es de board y VPs.
-  const deptosDondeCrear = TEAMS;
+  // Más «Administrativo»: lo que no es de ningún departamento (sale en los tres).
+  const deptosDondeCrear: Tablero[] = [...TEAMS, ADMINISTRATIVO];
   // Varios a la vez: una misma tarea que toca a dos departamentos se da de
   // alta una vez en cada uno (no hay tarea compartida, cada tablero tiene la
   // suya y la mueve de estado por su cuenta).
-  const [deptosNuevaTarea, setDeptosNuevaTarea] = useState<Team[]>([deptos[0]].filter(Boolean));
+  const [deptosNuevaTarea, setDeptosNuevaTarea] = useState<Tablero[]>([deptos[0]].filter(Boolean));
 
   useEffect(() => {
     void cargar();
@@ -151,7 +157,8 @@ export function TasksPanel({ deptos, teams, vpDe, puedeAsignarEnTodo }: Props) {
     setIsLoading(true);
     try {
       const respuestas = await Promise.all(deptos.map((d) => apiDepto(d).getTasks()));
-      setTasks(respuestas.flatMap((r) => r.tasks));
+      // Una administrativa llega en la respuesta de cada departamento: una vez.
+      setTasks(sinRepetir(respuestas.flatMap((r) => r.tasks)));
       setUsuario(respuestas[0]?.usuario ?? "");
       setError(null);
     } catch (err) {
@@ -165,7 +172,7 @@ export function TasksPanel({ deptos, teams, vpDe, puedeAsignarEnTodo }: Props) {
     setCargandoArchivadas(true);
     try {
       const respuestas = await Promise.all(deptos.map((d) => apiDepto(d).getTasksArchivadas()));
-      setArchivadas(respuestas.flatMap((r) => r.tasks));
+      setArchivadas(sinRepetir(respuestas.flatMap((r) => r.tasks)));
       setError(null);
     } catch (err) {
       setError((err as ApiFailure)?.message || "No se pudo cargar el historial.");
@@ -182,12 +189,13 @@ export function TasksPanel({ deptos, teams, vpDe, puedeAsignarEnTodo }: Props) {
 
   async function crear(event: FormEvent) {
     event.preventDefault();
-    if (!titulo.trim() || !instrucciones.trim() || deptosNuevaTarea.length === 0) return;
+    if (!titulo.trim() || deptosNuevaTarea.length === 0) return;
 
     try {
       await Promise.all(
         deptosNuevaTarea.map((d) =>
           apiDepto(d).createTask({
+            ...(d === ADMINISTRATIVO ? { administrativo: true } : {}),
             titulo,
             instrucciones,
             prioridad,
@@ -331,7 +339,7 @@ export function TasksPanel({ deptos, teams, vpDe, puedeAsignarEnTodo }: Props) {
         <form className="mkt-form-react" onSubmit={crear}>
           {deptosDondeCrear.length > 1 ? (
             <div className="mkt-form-deptos-react">
-              <span>Departamentos</span>
+              <span>En qué tablero sale</span>
               <div className="mkt-etiquetas-react">
                 {deptosDondeCrear.map((d) => {
                   const elegido = deptosNuevaTarea.includes(d);
@@ -347,16 +355,19 @@ export function TasksPanel({ deptos, teams, vpDe, puedeAsignarEnTodo }: Props) {
                         // El filtro de la barra tiene una casilla con el
                         // mismo texto: sin esto, "Marketing" a secas no dice
                         // si se está filtrando la vista o eligiendo destino.
-                        aria-label={`Crear en ${DEPTO_LABEL[d]}`}
+                        aria-label={`Crear en ${etiquetaTablero(d)}`}
                         onChange={() =>
                           setDeptosNuevaTarea((actuales) =>
                             elegido
                               ? actuales.filter((otro) => otro !== d)
-                              : [...actuales, d],
+                              : // Administrativa o de departamentos, no las dos.
+                                d === ADMINISTRATIVO
+                                ? [d]
+                                : [...actuales.filter((otro) => otro !== ADMINISTRATIVO), d],
                           )
                         }
                       />
-                      {DEPTO_LABEL[d]}
+                      {etiquetaTablero(d)}
                     </label>
                   );
                 })}
@@ -380,11 +391,10 @@ export function TasksPanel({ deptos, teams, vpDe, puedeAsignarEnTodo }: Props) {
             <ContadorCaracteres valor={titulo} maximo={MAX_TITULO_LEN} />
           </div>
           <div className="field-group-react">
-            <label htmlFor="tp-instrucciones">Instrucciones</label>
+            <label htmlFor="tp-instrucciones">Instrucciones (opcional)</label>
             <textarea
               id="tp-instrucciones"
               rows={2}
-              required
               value={instrucciones}
               placeholder="Cómo se hace: a quién se escribe, qué plantilla se usa..."
               onChange={(event) => setInstrucciones(event.target.value)}
@@ -431,7 +441,7 @@ export function TasksPanel({ deptos, teams, vpDe, puedeAsignarEnTodo }: Props) {
                 id="tp-responsables"
                 seleccionados={responsables}
                 onCambiar={setResponsables}
-                deptos={deptosNuevaTarea}
+                deptos={deptosNuevaTarea.filter((d): d is Team => d !== ADMINISTRATIVO)}
                 proponer
               />
             ) : (
@@ -455,7 +465,7 @@ export function TasksPanel({ deptos, teams, vpDe, puedeAsignarEnTodo }: Props) {
             type="submit"
             className="mkt-btn-react"
             disabled={
-              !titulo.trim() || !instrucciones.trim() || deptosNuevaTarea.length === 0
+              !titulo.trim() || deptosNuevaTarea.length === 0
             }
           >
             Crear tarea
@@ -488,7 +498,7 @@ export function TasksPanel({ deptos, teams, vpDe, puedeAsignarEnTodo }: Props) {
                   {variosDeptos ? (
                     <span className="mkt-etiquetas-react">
                       <span className={`crm-tag ${DEPTO_TAG[task.departamento] ?? ""}`}>
-                        {DEPTO_LABEL[task.departamento as Team]}
+                        {etiquetaTablero(task.departamento)}
                       </span>
                     </span>
                   ) : null}
@@ -596,7 +606,7 @@ export function TasksPanel({ deptos, teams, vpDe, puedeAsignarEnTodo }: Props) {
                         {variosDeptos ? (
                           <span className="mkt-etiquetas-react">
                             <span className={`crm-tag ${DEPTO_TAG[task.departamento] ?? ""}`}>
-                              {DEPTO_LABEL[task.departamento as Team]}
+                              {etiquetaTablero(task.departamento)}
                             </span>
                           </span>
                         ) : null}

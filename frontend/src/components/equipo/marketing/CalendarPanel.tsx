@@ -17,7 +17,7 @@ import { AvataresDeResponsables } from "./Avatares";
 import { TaskDialog } from "./TaskDialog";
 import type { ApiFailure } from "../../../types/api";
 import { formatearFecha, type CalendarioItem, type Task } from "../../../types/marketing";
-import { DEPTO_LABEL, TEAMS, type Team } from "../../../types/equipo";
+import { ADMINISTRATIVO, DEPTO_LABEL, TEAMS, etiquetaTablero, type Team } from "../../../types/equipo";
 
 /** La cajita de departamento del sistema (ver CalendarioEquipo). */
 /** El color de un elemento en la rejilla es el de su departamento, el mismo
@@ -485,9 +485,7 @@ export function CalendarPanel({
     if (!titulo) return;
 
     try {
-      // `instrucciones` es obligatorio en el backend: desde aquí solo hay
-      // título, así que hace de instrucciones hasta que alguien las amplíe.
-      await apiDepto(deptoNuevaTarea).createTask({ titulo, instrucciones: titulo, deadline: fecha });
+      await apiDepto(deptoNuevaTarea).createTask({ titulo, deadline: fecha });
       setTituloNuevo("");
       setDiaAbierto(null);
       await cargar(cursor);
@@ -507,7 +505,9 @@ export function CalendarPanel({
         : item.origen === "luma"
           ? " mkt-evento-luma-react"
           : "";
-    const etiquetaDepto = item.departamento ? DEPTO_LABEL[item.departamento as Team] : null;
+    const etiquetaDepto =
+      item.origen === "task" ? etiquetaTablero(item.departamento ?? "") || null
+        : item.departamento ? DEPTO_LABEL[item.departamento as Team] : null;
 
     return (
       <button
@@ -926,7 +926,9 @@ export function CalendarPanel({
             task={tareaAbierta ?? resumenComoTarea(tareaPedida)}
             cargando={tareaAbierta === null}
             puedeAsignar={
-              puedeAsignarEnTodo || vpDe.includes(tareaPedida.departamento as Team)
+              puedeAsignarEnTodo ||
+              vpDe.includes(tareaPedida.departamento as Team) ||
+              (tareaPedida.departamento === ADMINISTRATIVO && vpDe.length > 0)
             }
             deptosDisponibles={puedeAsignarEnTodo ? TEAMS : vpDe}
             onAbrirCampaign={

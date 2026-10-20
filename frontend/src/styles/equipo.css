@@ -955,11 +955,7 @@
 }
 
 .reu-acuerdo-form-react {
-  display: flex;
   flex: 1 1 100%;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
 }
 
 .reu-fieldset-react {

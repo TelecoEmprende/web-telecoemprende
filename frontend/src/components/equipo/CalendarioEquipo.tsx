@@ -20,7 +20,7 @@ import type { Miembro } from "../../types/marketing";
 import type { NotaResumen } from "../../types/notas";
 import { DURATION, EASE_OUT } from "@/components/smoothui/lib/animation";
 import type { ApiFailure } from "../../types/api";
-import { DEPTO_LABEL, SLACK_CLUB, type EventoCalendario, type EventoLuma, type Team } from "../../types/equipo";
+import { ADMINISTRATIVO, DEPTO_LABEL, SLACK_CLUB, etiquetaTablero, type EventoCalendario, type EventoLuma, type Team } from "../../types/equipo";
 import {
   diasHasta,
   formatearFecha as formatearFechaCorta,
@@ -492,7 +492,7 @@ export function CalendarioEquipo({ onIrA, onAbrirNota }: Props) {
                         </div>
                       </button>
                       <span className={`crm-tag ${DEPTO_TAG[tarea.departamento] ?? ""}`}>
-                        {DEPTO_LABEL[tarea.departamento as Team] ?? tarea.departamento}
+                        {etiquetaTablero(tarea.departamento)}
                       </span>
                       {hecha ? (
                         <span className="crm-tag crm-tag-verde-react">Hecho</span>
@@ -794,7 +794,11 @@ export function CalendarioEquipo({ onIrA, onAbrirNota }: Props) {
         <DeptoProvider value={tareaAbierta.departamento as Team}>
           <TaskDialog
             task={tareaAbierta}
-            puedeAsignar={cargo !== "" || vpDe.includes(tareaAbierta.departamento)}
+            puedeAsignar={
+              cargo !== "" ||
+              vpDe.includes(tareaAbierta.departamento) ||
+              (tareaAbierta.departamento === ADMINISTRATIVO && vpDe.length > 0)
+            }
             onCerrar={() => setTareaAbierta(null)}
             onGuardado={async () => {
               setTareaAbierta(null);

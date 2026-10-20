@@ -22,6 +22,11 @@ from backend.config import DATABASE_URL
 from backend.services import historial
 from backend.services.db import PERSONAS, fijar_personas, id_de_persona, ids_de_personas
 
+# Una tarea administrativa no es de ningún departamento (un correo, papeleo):
+# sale en los tres tableros y se ve, edita y borra desde la ruta de cualquiera
+# (las consultas de tareas filtran `IN (%s, 'administrativo')`).
+ADMINISTRATIVO = "administrativo"
+
 
 def _get_connection():
     return psycopg2.connect(DATABASE_URL)
@@ -412,7 +417,7 @@ def listar_tasks(departamento: str) -> list[dict]:
                 FROM tasks_v t
                 LEFT JOIN deliverables co ON co.id = t.content_id
                 LEFT JOIN projects c ON c.id = t.campaign_id
-                WHERE t.departamento = %s
+                WHERE t.departamento IN (%s, 'administrativo')
                   AND NOT (t.estado = 'acabado' AND COALESCE(t.completado_en, t.updated_at) < now() - interval '1 day')
                 ORDER BY COALESCE(t.deadline, '9999-12-31'::date), t.id
                 """,
@@ -437,7 +442,7 @@ def listar_tasks_archivadas(departamento: str) -> list[dict]:
                 FROM tasks_v t
                 LEFT JOIN deliverables co ON co.id = t.content_id
                 LEFT JOIN projects c ON c.id = t.campaign_id
-                WHERE t.departamento = %s
+                WHERE t.departamento IN (%s, 'administrativo')
                   AND t.estado = 'acabado' AND COALESCE(t.completado_en, t.updated_at) < now() - interval '1 day'
                 ORDER BY COALESCE(t.completado_en, t.updated_at) DESC
                 """,
@@ -494,7 +499,7 @@ def obtener_task(task_id: int, departamento: str) -> dict | None:
     with _get_connection() as conn:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute(
-                "SELECT * FROM tasks_v WHERE id = %s AND departamento = %s",
+                "SELECT * FROM tasks_v WHERE id = %s AND departamento IN (%s, 'administrativo')",
                 (task_id, departamento),
             )
             fila = cur.fetchone()
@@ -584,7 +589,7 @@ def actualizar_task(task_id: int, departamento_actual: str, autor: str = "", **c
         "hora", "responsables", "tags", "checklist", "enlaces", "completado_en",
         "departamento", "campaign_id", "content_id",
     )
-    if campos.get("departamento") not in (None, departamento_actual):
+    if "departamento" in campos:
         # La campaña/contenido de los que cuelga son del departamento viejo
         # (`crear_task` lo exige), así que al mudarse se queda suelta en vez
         # de colgando de algo que ya no se ve desde su tablero.
@@ -681,7 +686,7 @@ def calendario(desde: date, hasta: date, departamento: str, directiva: bool = Fa
                     LEFT JOIN deliverables co ON co.id = t.content_id
                     LEFT JOIN projects c ON c.id = t.campaign_id
                     WHERE t.deadline BETWEEN %(desde)s AND %(hasta)s
-                      AND t.departamento = %(departamento)s
+                      AND t.departamento IN (%(departamento)s, 'administrativo')
                     UNION ALL
                     SELECT 'reunion' AS origen, r.id, r.titulo,
                            r.fecha AS fecha, '' AS estado,
@@ -745,7 +750,7 @@ def calendario_equipo(
                     LEFT JOIN deliverables co ON co.id = t.content_id
                     LEFT JOIN projects c ON c.id = t.campaign_id
                     WHERE t.deadline BETWEEN %(desde)s AND %(hasta)s
-                      AND t.departamento = ANY(%(departamentos)s)
+                      AND (t.departamento = ANY(%(departamentos)s) OR t.departamento = 'administrativo')
                     UNION ALL
                     SELECT 'reunion' AS origen, r.id, r.titulo,
                            r.fecha AS fecha, '' AS estado,
@@ -797,7 +802,7 @@ def calendario_equipo(
 # papelera no se toca: se restaura primero.
 _ALCANCE_DEPTO = {
     "projects": "%s = ANY(departments) AND deleted_at IS NULL",
-    "tasks": "department = %s AND deleted_at IS NULL",
+    "tasks": "department IN (%s, 'administrativo') AND deleted_at IS NULL",
     "deliverables": (
         "project_id IN (SELECT id FROM projects WHERE %s = ANY(departments))"
         " AND deleted_at IS NULL"

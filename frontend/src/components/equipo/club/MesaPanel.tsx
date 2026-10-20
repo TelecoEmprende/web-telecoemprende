@@ -12,7 +12,7 @@ import { etiquetaAmbito } from "./AmbitoChips";
 import { HistorialLista } from "./HistorialLista";
 import type { ApiFailure } from "../../../types/api";
 import type { EventoHistorial, Mesa, ProyectoDeMesa } from "../../../types/club";
-import { DEPTO_LABEL, type Team } from "../../../types/equipo";
+import { etiquetaTablero, type Team } from "../../../types/equipo";
 import { PROYECTO_ESTADO_LABEL, diasHasta, formatearFecha } from "../../../types/marketing";
 
 type Props = {
@@ -227,7 +227,7 @@ export function MesaPanel({ email, nombre, onAbrirProyecto }: Props) {
                         <li key={t.id}>
                           {t.titulo}
                           <em>
-                            {" "}· {DEPTO_LABEL[t.departamento]}
+                            {" "}· {etiquetaTablero(t.departamento)}
                             {t.padre ? ` · ${t.padre}` : ""}
                             {t.deadline ? ` · ${plazo(t.deadline)}` : ""}
                           </em>
@@ -254,7 +254,7 @@ export function MesaPanel({ email, nombre, onAbrirProyecto }: Props) {
                   <span>
                     <strong>{t.titulo}</strong>
                     <em>
-                      {DEPTO_LABEL[t.departamento]}
+                      {etiquetaTablero(t.departamento)}
                       {t.padre ? ` · ${t.padre}` : ""}
                       {t.deadline ? ` · ${plazo(t.deadline)}` : ""}
                     </em>
@@ -285,7 +285,7 @@ export function MesaPanel({ email, nombre, onAbrirProyecto }: Props) {
                   <span>
                     <strong>{t.titulo}</strong>
                     <em>
-                      {DEPTO_LABEL[t.departamento]}
+                      {etiquetaTablero(t.departamento)}
                       {t.padre ? ` · ${t.padre}` : ""}
                       {` · ${plazo(t.deadline)}`}
                     </em>

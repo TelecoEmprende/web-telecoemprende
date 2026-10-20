@@ -133,10 +133,9 @@ export function EquipoPage() {
   }, []);
 
   // Enlace compartible (ver "Copiar enlace" en CampaignsPanel): al entrar con
-  // ?campaign=<id> en la URL se abre directo en Proyectos, acotado al primer
-  // departamento de la persona -- no resuelve el departamento por sí solo, si
-  // el enlace es de otro no aparece, pero evita tener que explicar "entra
-  // primero a Proyectos". Depende de `teams`, que llega async tras el login.
+  // ?campaign=<id> en la URL se abre directo en Proyectos (CampaignsPanel lo
+  // busca en los tres departamentos). Depende de `teams`, que llega async
+  // tras el login.
   useEffect(() => {
     if (teams.length === 0) return;
     const campaignId = Number(searchParams.get("campaign"));

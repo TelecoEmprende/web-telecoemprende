@@ -266,12 +266,13 @@ describe("/equipo — panel de Marketing", () => {
     expect(screen.queryByRole("button", { name: /Elegir personas/ })).not.toBeInTheDocument();
     expect(screen.getByLabelText(/Me la quedo yo/)).toBeInTheDocument();
 
+    // Las instrucciones son opcionales: con el título basta.
     await userEvent.type(screen.getByLabelText("Título"), "Cartel");
-    await userEvent.type(screen.getByLabelText("Instrucciones"), "Ver notas.");
     await userEvent.click(screen.getByRole("button", { name: "Crear tarea" }));
 
     await waitFor(() => expect(createTask).toHaveBeenCalled());
     expect(createTask.mock.calls[0][0].responsables).toEqual([]);
+    expect(createTask.mock.calls[0][0].instrucciones).toBe("");
   });
 
   it("admin asigna en todo el club aunque no sea VP de nada ni tenga cargo", async () => {
@@ -306,7 +307,7 @@ describe("/equipo — panel de Marketing", () => {
     await userEvent.click(screen.getByLabelText("Crear en Marketing"));
     await userEvent.click(screen.getByLabelText("Crear en Ingeniería"));
     await userEvent.type(screen.getByLabelText("Título"), "Preparar taller");
-    await userEvent.type(screen.getByLabelText("Instrucciones"), "Ver notas.");
+    await userEvent.type(screen.getByLabelText("Instrucciones (opcional)"), "Ver notas.");
     await userEvent.click(screen.getByRole("button", { name: "Crear tarea" }));
 
     await waitFor(() =>
@@ -330,7 +331,7 @@ describe("/equipo — panel de Marketing", () => {
     // Marketing ya viene marcado; se añade Ingeniería sin quitarlo.
     await userEvent.click(screen.getByLabelText("Crear en Ingeniería"));
     await userEvent.type(screen.getByLabelText("Título"), "Preparar taller");
-    await userEvent.type(screen.getByLabelText("Instrucciones"), "Ver notas.");
+    await userEvent.type(screen.getByLabelText("Instrucciones (opcional)"), "Ver notas.");
     await userEvent.click(screen.getByRole("button", { name: "Crear tarea" }));
 
     await waitFor(() => expect(createTask).toHaveBeenCalledTimes(2));
@@ -415,7 +416,7 @@ describe("/equipo — panel de Marketing", () => {
     const dialogo = await screen.findByRole("dialog");
     expect(within(dialogo).getByLabelText("Título")).toHaveValue("Escribir guion");
     expect(within(dialogo).getByLabelText("Descripción")).toBeInTheDocument();
-    expect(within(dialogo).getByLabelText("Instrucciones")).toHaveValue("Ver notas.");
+    expect(within(dialogo).getByLabelText("Instrucciones (opcional)")).toHaveValue("Ver notas.");
     expect(within(dialogo).getByLabelText("Estado")).toHaveValue("pendiente");
   });
 
@@ -508,7 +509,7 @@ describe("/equipo — panel de Marketing", () => {
 
     await waitFor(() => expect(getTask).toHaveBeenCalledWith(7));
     // Lo que distingue al diálogo de la ficha de resumen: se puede editar.
-    expect(await screen.findByLabelText("Instrucciones")).toBeInTheDocument();
+    expect(await screen.findByLabelText("Instrucciones (opcional)")).toBeInTheDocument();
   });
 
   it("el diálogo de la tarea abre antes de que llegue la red, no después", async () => {
@@ -537,7 +538,7 @@ describe("/equipo — panel de Marketing", () => {
     const dialogo = await screen.findByRole("dialog");
     expect(dialogo).toHaveTextContent("Escribir guion");
     expect(within(dialogo).getByRole("status", { name: "Cargando" })).toBeInTheDocument();
-    expect(within(dialogo).queryByLabelText("Instrucciones")).not.toBeInTheDocument();
+    expect(within(dialogo).queryByLabelText("Instrucciones (opcional)")).not.toBeInTheDocument();
 
     resolver({
       ok: true,
@@ -545,7 +546,7 @@ describe("/equipo — panel de Marketing", () => {
     });
 
     // Y al llegar, el formulario sustituye al esqueleto sin cerrar nada.
-    expect(await screen.findByLabelText("Instrucciones")).toHaveValue("Ver notas.");
+    expect(await screen.findByLabelText("Instrucciones (opcional)")).toHaveValue("Ver notas.");
   });
 
   it("un evento del club abre la ficha de resumen, que tampoco va debajo", async () => {
@@ -853,7 +854,7 @@ describe("/equipo — panel de Marketing", () => {
     await waitFor(() => expect(getCampaign).toHaveBeenCalledTimes(1));
   });
 
-  it("añadir una tarea desde un entregable manda instrucciones (son obligatorias)", async () => {
+  it("añadir una tarea desde un entregable la crea colgando de él", async () => {
     getCampaign.mockResolvedValue({
       ok: true,
       campaign: {
@@ -878,11 +879,7 @@ describe("/equipo — panel de Marketing", () => {
     await userEvent.click(screen.getByRole("button", { name: "Añadir" }));
 
     await waitFor(() =>
-      expect(createTask).toHaveBeenCalledWith({
-        titulo: "Grabar",
-        content_id: 1,
-        instrucciones: "Del entregable «Reel» de «Vuelta al cole».",
-      }),
+      expect(createTask).toHaveBeenCalledWith({ titulo: "Grabar", content_id: 1 }),
     );
   });
 
@@ -905,6 +902,51 @@ describe("/equipo — panel de Marketing", () => {
 
     await waitFor(() => expect(getCampaign).toHaveBeenCalledTimes(2));
     expect(screen.getByRole("checkbox", { name: /Escribir guion/ })).not.toBeChecked();
+  });
+
+  it("un enlace a un proyecto de otro departamento lo busca en los demás y lo abre", async () => {
+    getCampaign.mockReset()
+      .mockRejectedValueOnce({ ok: false, message: "No encontrado." })
+      .mockResolvedValue({
+        ok: true,
+        campaign: {
+          id: 1, nombre: "Feria", objetivo: "", audiencia: "", fecha: null,
+          departamento: "eventos", departamentos: ["eventos"], estado: "activo", responsable: "",
+          contents: [], tasks_sueltas: [],
+        },
+      });
+    render(
+      <MemoryRouter initialEntries={["/equipo?campaign=1"]}>
+        <EquipoPage />
+      </MemoryRouter>,
+    );
+    expect(await screen.findByRole("heading", { name: "Feria" })).toBeInTheDocument();
+    expect(getCampaign).toHaveBeenCalledTimes(2);
+  });
+
+  it("una tarea de otro departamento dentro del proyecto se marca por la ruta del suyo", async () => {
+    getCampaign.mockResolvedValue({
+      ok: true,
+      campaign: {
+        id: 1, nombre: "Vuelta al cole", objetivo: "", audiencia: "", fecha: null,
+        departamento: "marketing", departamentos: ["marketing", "eventos"], estado: "activo", responsable: "",
+        contents: [],
+        tasks_sueltas: [{ ...TAREA, content_id: null, estado: "pendiente", departamento: "eventos" }],
+      },
+    });
+    updateTask.mockResolvedValue({ ok: true });
+
+    render(
+      <MemoryRouter initialEntries={["/equipo?campaign=1"]}>
+        <EquipoPage />
+      </MemoryRouter>,
+    );
+    const casilla = await screen.findByRole("checkbox", { name: /Escribir guion/ });
+    deptosPedidos.length = 0;
+    await userEvent.click(casilla);
+
+    await waitFor(() => expect(updateTask).toHaveBeenCalledWith(1, { estado: "acabado" }));
+    expect(deptosPedidos).toContain("eventos");
   });
 
   it("la navegación marca la pestaña activa", async () => {

@@ -24,6 +24,18 @@ export const DEPTO_LABEL: Record<Team, string> = {
   ingenieria: "Ingeniería",
 };
 
+/** Una tarea administrativa no es de ningún departamento (un correo,
+ *  papeleo): sale en los tres tableros. Solo existe para tareas. */
+export const ADMINISTRATIVO = "administrativo" as const;
+export type Tablero = Team | typeof ADMINISTRATIVO;
+
+/** El nombre del tablero de una tarea: un departamento o «Administrativo». */
+export function etiquetaTablero(departamento: string): string {
+  return departamento === ADMINISTRATIVO
+    ? "Administrativo"
+    : (DEPTO_LABEL[departamento as Team] ?? departamento);
+}
+
 /** Título en el club, independiente del departamento y del permiso de admin
  *  (`admin` en la sesión, `es_admin` en la cuenta). */
 export type Cargo = "presidente" | "vicepresidente" | "boardmember" | "";
