@@ -112,10 +112,16 @@ describe("acuerdos del acta", () => {
     const botones = screen.getAllByRole("button", { name: "Pasar a tarea" });
     expect(botones).toHaveLength(2);
     await userEvent.click(botones[0]);
+    // Antes de crearla se puede cambiar todo: título, instrucciones, tablero...
+    const titulo = screen.getByLabelText("Tarea");
+    expect(titulo).toHaveValue("Reservar sala");
+    await userEvent.clear(titulo);
+    await userEvent.type(titulo, "Reservar sala B");
+    expect(screen.getByLabelText("En qué tablero sale")).toHaveValue("eventos");
     await userEvent.click(screen.getByRole("button", { name: "Crear tarea" }));
 
     expect(createTask).toHaveBeenCalledWith({
-      titulo: "Reservar sala",
+      titulo: "Reservar sala B",
       instrucciones: "Acuerdo de la reunión «Semanal».",
       responsables: [],
       deadline: null,

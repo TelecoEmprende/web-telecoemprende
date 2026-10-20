@@ -104,36 +104,40 @@ type Ambito = Team | "club" | "directiva";
 function PasarATarea({
   acuerdo,
   deptoInicial,
-  elegirDepto,
   reunion,
   onCreada,
 }: {
   acuerdo: { id: string; texto: string };
+  /** El de la reunión; si es de todo el club o de la directiva, el primero
+   *  marcado arriba. Todos somos de los tres: solo dice en qué tablero sale. */
   deptoInicial: Team;
-  /** Reunión de todo el club o de la directiva: la tarea no tiene un
-   *  departamento evidente, así que se elige. */
-  elegirDepto: boolean;
   reunion: string;
   onCreada: (id: string) => void;
 }) {
   const [abierto, setAbierto] = useState(false);
+  const [titulo, setTitulo] = useState(acuerdo.texto.slice(0, MAX_TITULO_LEN));
+  const [instrucciones, setInstrucciones] = useState(`Acuerdo de la reunión «${reunion}».`);
   const [depto, setDepto] = useState<Team>(deptoInicial);
   const [responsables, setResponsables] = useState<string[]>([]);
   const [deadline, setDeadline] = useState("");
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const id = `acuerdo-${acuerdo.id}`;
 
-  async function crear() {
+  async function crear(evento: FormEvent) {
+    evento.preventDefault();
     setGuardando(true);
+    setError(null);
     try {
       await apiDepto(depto).createTask({
-        titulo: acuerdo.texto.slice(0, MAX_TITULO_LEN),
-        instrucciones: `Acuerdo de la reunión «${reunion}».`,
+        titulo: titulo.trim(),
+        instrucciones: instrucciones.trim(),
         responsables,
         deadline: deadline || null,
       });
       onCreada(acuerdo.id);
     } catch (err) {
+      // Lo escrito se queda en el formulario para poder corregir y reintentar.
       setError((err as ApiFailure)?.message || "No se pudo crear la tarea.");
       setGuardando(false);
     }
@@ -143,42 +147,66 @@ function PasarATarea({
     <li className="reu-acuerdo-react">
       <span>{acuerdo.texto}</span>
       {abierto ? (
-        <div className="reu-acuerdo-form-react">
+        <form className="mkt-form-react reu-acuerdo-form-react" onSubmit={(e) => void crear(e)}>
           {error ? <AlertBanner variant="error" message={error} /> : null}
-          {elegirDepto ? (
-            <select
-              className="crm-select-react"
-              aria-label="Departamento de la tarea"
-              value={depto}
-              onChange={(e) => setDepto(e.target.value as Team)}
-            >
+          <div className="field-group-react">
+            <label htmlFor={`${id}-titulo`}>Tarea</label>
+            <input
+              id={`${id}-titulo`}
+              value={titulo}
+              maxLength={MAX_TITULO_LEN}
+              required
+              onChange={(e) => setTitulo(e.target.value)}
+            />
+          </div>
+          <div className="field-group-react">
+            <label htmlFor={`${id}-instrucciones`}>Instrucciones</label>
+            <textarea
+              id={`${id}-instrucciones`}
+              rows={3}
+              value={instrucciones}
+              required
+              onChange={(e) => setInstrucciones(e.target.value)}
+            />
+          </div>
+          <div className="field-group-react">
+            <label htmlFor={id}>Para quién</label>
+            <SelectorMiembros
+              id={id}
+              seleccionados={responsables}
+              onCambiar={setResponsables}
+              deptos={[depto]}
+              proponer
+            />
+          </div>
+          <div className="field-group-react">
+            <label htmlFor={`${id}-fecha`}>Para cuándo</label>
+            <input
+              id={`${id}-fecha`}
+              type="date"
+              value={deadline}
+              onChange={(e) => setDeadline(e.target.value)}
+            />
+          </div>
+          <div className="field-group-react">
+            <label htmlFor={`${id}-depto`}>En qué tablero sale</label>
+            <select id={`${id}-depto`} value={depto} onChange={(e) => setDepto(e.target.value as Team)}>
               {TEAMS.map((t) => (
                 <option key={t} value={t}>
                   {DEPTO_LABEL[t]}
                 </option>
               ))}
             </select>
-          ) : null}
-          <SelectorMiembros
-            id={`acuerdo-${acuerdo.id}`}
-            seleccionados={responsables}
-            onCambiar={setResponsables}
-            deptos={[depto]}
-            proponer
-          />
-          <input
-            type="date"
-            value={deadline}
-            aria-label="Para cuándo"
-            onChange={(e) => setDeadline(e.target.value)}
-          />
-          <button type="button" className="crm-btn" disabled={guardando} onClick={() => void crear()}>
-            {guardando ? "Creando..." : "Crear tarea"}
-          </button>
-          <button type="button" className="crm-btn crm-btn-ghost-react" onClick={() => setAbierto(false)}>
-            Cancelar
-          </button>
-        </div>
+          </div>
+          <div className="mkt-ficha-acciones-react">
+            <button type="submit" className="crm-btn" disabled={guardando}>
+              {guardando ? "Creando..." : "Crear tarea"}
+            </button>
+            <button type="button" className="crm-btn crm-btn-ghost-react" onClick={() => setAbierto(false)}>
+              Cancelar
+            </button>
+          </div>
+        </form>
       ) : (
         <button type="button" className="crm-btn crm-btn-ghost-react" onClick={() => setAbierto(true)}>
           Pasar a tarea
@@ -473,7 +501,6 @@ export function ReunionesPanel({ deptos, esDirectiva }: Props) {
                   key={a.id}
                   acuerdo={a}
                   deptoInicial={deptoDeLaReunion ?? deptos[0]}
-                  elegirDepto={deptoDeLaReunion === null}
                   reunion={textoDe(abierta, "titulo")}
                   onCreada={(id) => {
                     cambiar({ contenido: marcarComoTarea(abierta.contenido, id) });
