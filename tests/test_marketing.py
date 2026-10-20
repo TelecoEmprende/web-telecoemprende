@@ -753,6 +753,64 @@ class TaskAsignacionTests(MarketingTestCase):
         self.assertIsNone(mudada["campaign_id"])
 
 
+class TareasAdministrativasTests(MarketingTestCase):
+    """Una tarea administrativa no es de ningún departamento: sale en los tres
+    tableros y se edita desde cualquiera."""
+
+    def crear(self, **extra):
+        respuesta = self.client.post(
+            "/api/marketing/tasks",
+            json={"titulo": "Mandar correo al ponente", "instrucciones": "Ver acta.",
+                  "administrativo": True, **extra},
+        )
+        self.assertEqual(respuesta.status_code, 201, respuesta.get_json())
+        return respuesta.get_json()["task"]
+
+    def test_sale_en_los_tres_tableros_y_se_edita_desde_cualquiera(self):
+        self.login(equipos=["marketing", "eventos", "ingenieria"])
+        tarea = self.crear()
+        self.assertEqual(tarea["departamento"], "administrativo")
+
+        for depto in ("marketing", "eventos", "ingenieria"):
+            ids = [t["id"] for t in self.client.get(f"/api/{depto}/tasks").get_json()["tasks"]]
+            self.assertEqual(ids, [tarea["id"]], depto)
+        self.assertEqual(
+            self.client.put(f"/api/eventos/tasks/{tarea['id']}", json={"estado": "en_progreso"}).status_code,
+            200,
+        )
+        self.assertEqual(self.client.delete(f"/api/ingenieria/tasks/{tarea['id']}").status_code, 200)
+
+    def test_cualquier_vp_la_reparte_y_un_miembro_raso_no(self):
+        self.login(equipos=["marketing", "eventos", "ingenieria"], vp_de=["eventos"])
+        self.crear(responsables=["marketing@example.com"])
+        self.seed_acceso("otro@example.com")
+        self.assertEqual(self.crear(responsables=["otro@example.com"])["responsables"], ["otro@example.com"])
+
+        self.client.post("/api/equipo/logout")
+        self.login("raso@example.com", vp_de=[])
+        respuesta = self.client.post(
+            "/api/marketing/tasks",
+            json={"titulo": "X", "instrucciones": "Y", "administrativo": True,
+                  "responsables": ["otro@example.com"]},
+        )
+        self.assertEqual(respuesta.status_code, 403)
+
+    def test_se_pasa_a_un_departamento_y_vuelve(self):
+        self.login(equipos=["marketing", "eventos", "ingenieria"])
+        tarea = self.crear()
+
+        self.assertEqual(
+            self.client.put(f"/api/marketing/tasks/{tarea['id']}", json={"departamento": "marketing"}).status_code,
+            200,
+        )
+        self.assertEqual(self.client.get("/api/eventos/tasks").get_json()["tasks"], [])
+        self.assertEqual(
+            self.client.put(f"/api/marketing/tasks/{tarea['id']}", json={"departamento": "administrativo"}).status_code,
+            200,
+        )
+        self.assertEqual(len(self.client.get("/api/eventos/tasks").get_json()["tasks"]), 1)
+
+
 class CalendarioCruzadoTestCase(MarketingTestCase):
     """`/api/equipo/calendario-equipo`, el que pinta el panel Calendario de
     /equipo. Lo que se comprueba aquí es que los eventos del club (los que

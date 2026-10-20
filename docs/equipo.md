@@ -90,12 +90,18 @@ y restaurar.
 **Una tarea lleva:** título e instrucciones (obligatorios); responsables, fecha,
 proyecto y entregable (opcionales). Estados: pendiente → en progreso → por
 revisar → acabado (los cuatro se usan).
+**Tablero:** el de un departamento o **Administrativo**, para lo que no es de
+ninguno (mandar un correo, pagar algo, papeleo). Una administrativa sale en
+los tres tableros, una sola vez, y no cuelga de ningún proyecto. La reparte el
+board o cualquier VP.
 **Casos:**
 - Crear una tarea sin dueño o para mí (cualquiera); para otra persona (solo
   board y VPs; a los demás les sale un aviso claro).
 - Arrastrar de columna cambia el estado y se puede deshacer.
 - Abrir y editar una tarea de cualquier departamento, con cualquier
   combinación de casillas marcada.
+- Crear una administrativa; sale una vez con los tres marcados; pasarla a un
+  departamento y volver.
 
 ## Proyectos
 
@@ -141,7 +147,9 @@ edita).
   reunión **ya creada** de cualquier departamento, con cualquier casilla
   marcada.
 - Pegar un acta de Notion y que salgan sus acuerdos.
-- Pasar un acuerdo a tarea; queda marcado en el acta.
+- Pasar un acuerdo a tarea: antes de crearla se edita título, instrucciones,
+  para quién, fecha y tablero (por defecto el de la reunión, o Administrativo
+  si es de todo el club o de la directiva); queda marcado en el acta.
 
 ## Herramientas
 

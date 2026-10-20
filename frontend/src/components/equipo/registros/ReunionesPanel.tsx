@@ -13,7 +13,7 @@ import { SelectorMiembros } from "../marketing/SelectorMiembros";
 import { useDirectorio } from "../DeptoApi";
 import { useEntradaDeFila } from "../../movimiento";
 import type { ApiFailure } from "../../../types/api";
-import { DEPTO_LABEL, TEAMS, type Team } from "../../../types/equipo";
+import { ADMINISTRATIVO, DEPTO_LABEL, TEAMS, etiquetaTablero, type Tablero, type Team } from "../../../types/equipo";
 import { MAX_TEXTO_LARGO_LEN, MAX_TITULO_LEN, formatearFecha } from "../../../types/marketing";
 import { listaDe, textoDe, type Registro } from "../../../types/registros";
 
@@ -108,16 +108,16 @@ function PasarATarea({
   onCreada,
 }: {
   acuerdo: { id: string; texto: string };
-  /** El de la reunión; si es de todo el club o de la directiva, el primero
-   *  marcado arriba. Todos somos de los tres: solo dice en qué tablero sale. */
-  deptoInicial: Team;
+  /** El de la reunión; si es de todo el club o de la directiva,
+   *  «Administrativo». Todos somos de los tres: solo dice en qué tablero sale. */
+  deptoInicial: Tablero;
   reunion: string;
   onCreada: (id: string) => void;
 }) {
   const [abierto, setAbierto] = useState(false);
   const [titulo, setTitulo] = useState(acuerdo.texto.slice(0, MAX_TITULO_LEN));
   const [instrucciones, setInstrucciones] = useState(`Acuerdo de la reunión «${reunion}».`);
-  const [depto, setDepto] = useState<Team>(deptoInicial);
+  const [depto, setDepto] = useState<Tablero>(deptoInicial);
   const [responsables, setResponsables] = useState<string[]>([]);
   const [deadline, setDeadline] = useState("");
   const [guardando, setGuardando] = useState(false);
@@ -130,6 +130,7 @@ function PasarATarea({
     setError(null);
     try {
       await apiDepto(depto).createTask({
+        ...(depto === ADMINISTRATIVO ? { administrativo: true } : {}),
         titulo: titulo.trim(),
         instrucciones: instrucciones.trim(),
         responsables,
@@ -175,7 +176,7 @@ function PasarATarea({
               id={id}
               seleccionados={responsables}
               onCambiar={setResponsables}
-              deptos={[depto]}
+              deptos={depto === ADMINISTRATIVO ? undefined : [depto]}
               proponer
             />
           </div>
@@ -190,10 +191,10 @@ function PasarATarea({
           </div>
           <div className="field-group-react">
             <label htmlFor={`${id}-depto`}>En qué tablero sale</label>
-            <select id={`${id}-depto`} value={depto} onChange={(e) => setDepto(e.target.value as Team)}>
-              {TEAMS.map((t) => (
+            <select id={`${id}-depto`} value={depto} onChange={(e) => setDepto(e.target.value as Tablero)}>
+              {[...TEAMS, ADMINISTRATIVO].map((t) => (
                 <option key={t} value={t}>
-                  {DEPTO_LABEL[t]}
+                  {etiquetaTablero(t)}
                 </option>
               ))}
             </select>
@@ -500,7 +501,7 @@ export function ReunionesPanel({ deptos, esDirectiva }: Props) {
                 <PasarATarea
                   key={a.id}
                   acuerdo={a}
-                  deptoInicial={deptoDeLaReunion ?? deptos[0]}
+                  deptoInicial={deptoDeLaReunion ?? ADMINISTRATIVO}
                   reunion={textoDe(abierta, "titulo")}
                   onCreada={(id) => {
                     cambiar({ contenido: marcarComoTarea(abierta.contenido, id) });

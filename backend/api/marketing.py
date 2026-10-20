@@ -41,6 +41,7 @@ from backend.services.slack import (
     tarea_creada,
 )
 from backend.services.marketing import (
+    ADMINISTRATIVO,
     ESTADOS_PROYECTO,
     actualizar_campaign,
     crear_task_comment,
@@ -255,14 +256,17 @@ def _puede_asignar_tareas(departamento: str | None = None) -> bool:
         return True
     sesion = equipo_session_info()
     depto = departamento or departamento_actual()
+    if depto == ADMINISTRATIVO:
+        # No es de ningún departamento: la reparte el board o cualquier VP.
+        return sesion["cargo"] in CARGOS_VALIDOS or bool(sesion["vp_de"])
     return sesion["cargo"] in CARGOS_VALIDOS or depto in sesion["vp_de"]
 
 
-def _puede_repartir(anteriores: list[str], nuevos: list[str]) -> bool:
+def _puede_repartir(anteriores: list[str], nuevos: list[str], departamento: str | None = None) -> bool:
     """Board y VPs reparten tareas como quieran. Los demás solo pueden
     cogerse una sin dueño o soltar la suya: el cambio de responsables tiene que
     afectar únicamente a ellos mismos."""
-    if _puede_asignar_tareas():
+    if _puede_asignar_tareas(departamento):
         return True
     yo = _autor().lower()
     cambiados = set(map(str.lower, anteriores)) ^ set(map(str.lower, nuevos))
@@ -468,7 +472,8 @@ def api_crear_task():
     # Cualquiera crea una tarea (y la deja sin dueño, o se la queda). Asignarla
     # a otra persona es cosa de board y VPs: ver `_puede_repartir`.
     responsables = _lista_textos(datos, "responsables", MAX_RESPONSABLES)
-    if not _puede_repartir([], responsables):
+    departamento = ADMINISTRATIVO if datos.get("administrativo") is True else departamento_actual()
+    if not _puede_repartir([], responsables, departamento):
         return jsonify(build_response(False, "Solo board y VPs pueden asignar tareas a otras personas.")), 403
 
     def id_opcional(clave):
@@ -480,7 +485,7 @@ def api_crear_task():
         return valor
 
     task = crear_task(
-        departamento=departamento_actual(),
+        departamento=departamento,
         campaign_id=id_opcional("campaign_id"),
         content_id=id_opcional("content_id"),
         titulo=_texto(datos, "titulo", obligatorio=True),
@@ -505,7 +510,7 @@ def api_crear_task():
         return jsonify(build_response(False, "Campaña o contenido no encontrado.")), 404
 
     logger.info("marketing crea task id=%s", task["id"])
-    tarea_creada(task, departamento_actual(), _autor())
+    tarea_creada(task, departamento, _autor())
     return jsonify(build_response(True, "Tarea creada.", task=task)), 201
 
 
@@ -551,7 +556,9 @@ def api_actualizar_task(task_id: int):
         # guardado; por eso se compara contra lo guardado, no solo la
         # presencia de la clave).
         anterior = obtener_task(task_id, departamento_actual())
-        if anterior is not None and not _puede_repartir(anterior["responsables"], nuevos):
+        if anterior is not None and not _puede_repartir(
+            anterior["responsables"], nuevos, anterior["departamento"]
+        ):
             return jsonify(build_response(False, "Solo board y VPs pueden reasignar tareas.")), 403
         campos["responsables"] = nuevos
     if "tags" in datos:
@@ -563,11 +570,13 @@ def api_actualizar_task(task_id: int):
     if "departamento" in datos:
         # Mover una tarea de departamento es asignarla igual que crearla, y
         # hay que poder hacerlo en los dos: en el de origen para sacarla y en
-        # el de destino para meterla. La ruta sigue siendo la del de origen
-        # (es donde vive la fila ahora mismo).
-        destino = _opcion(datos, "departamento", DEPARTAMENTOS, departamento_actual())
-        if destino != departamento_actual():
-            if not _puede_asignar_tareas() or not _puede_asignar_tareas(destino):
+        # el de destino para meterla. El origen es el de la fila, que en una
+        # administrativa no es el de la ruta.
+        anterior = obtener_task(task_id, departamento_actual())
+        origen = anterior["departamento"] if anterior else departamento_actual()
+        destino = _opcion(datos, "departamento", DEPARTAMENTOS + (ADMINISTRATIVO,), origen)
+        if destino != origen:
+            if not _puede_asignar_tareas(origen) or not _puede_asignar_tareas(destino):
                 return jsonify(build_response(
                     False, "Solo board y VPs pueden mover tareas de departamento."
                 )), 403
@@ -582,7 +591,7 @@ def api_actualizar_task(task_id: int):
         tarea = obtener_task(task_id, departamento_actual())
         if tarea is not None:
             tarea_cambia_estado(
-                tarea, campos["estado"], departamento_actual(), _autor()
+                tarea, campos["estado"], tarea["departamento"], _autor()
             )
     return jsonify(build_response(True, "Tarea actualizada.")), 200
 
@@ -621,7 +630,7 @@ def api_crear_task_comment(task_id: int):
     )
     comentario = crear_task_comment(task_id, _autor(), texto)
     logger.info("marketing crea comentario task_id=%s", task_id)
-    tarea_comentada(tarea, texto, departamento_actual(), _autor())
+    tarea_comentada(tarea, texto, tarea["departamento"], _autor())
     return jsonify(build_response(True, "Comentario añadido.", comment=comentario)), 201
 
 

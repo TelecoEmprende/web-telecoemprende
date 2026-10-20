@@ -138,6 +138,26 @@ describe("acuerdos del acta", () => {
   });
 });
 
+describe("acuerdos de una reunión de todo el club", () => {
+  it("por defecto la tarea es administrativa: no es de ningún departamento", async () => {
+    listarRegistros.mockReset().mockResolvedValue({
+      ok: true,
+      reuniones: [{ ...JUNTA, departamento: "", titulo: "Asamblea", contenido: ACTA }],
+    });
+    createTask.mockReset().mockResolvedValue({ ok: true, task: { id: 9 } });
+    actualizarRegistro.mockReset().mockResolvedValue({ ok: true });
+    render(<ReunionesPanel deptos={["marketing"]} esDirectiva={false} />);
+    await userEvent.click(await screen.findByRole("button", { name: /Asamblea/ }));
+    await userEvent.click(screen.getAllByRole("button", { name: "Pasar a tarea" })[0]);
+
+    expect(screen.getByLabelText("En qué tablero sale")).toHaveValue("administrativo");
+    await userEvent.click(screen.getByRole("button", { name: "Crear tarea" }));
+    expect(createTask).toHaveBeenCalledWith(expect.objectContaining({ administrativo: true, titulo: "Reservar sala" }));
+    // El acta marcada se guarda aquí, no en mitad del test siguiente.
+    await waitFor(() => expect(actualizarRegistro).toHaveBeenCalled());
+  });
+});
+
 describe("editar una reunión ya creada", () => {
   it("se guarda por la ruta de su departamento, no por la del primero visible", async () => {
     deptosUsados.length = 0;
