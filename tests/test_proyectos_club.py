@@ -252,8 +252,12 @@ class PapeleraTests(ProyectosClubTestCase):
         self.client.delete(f"/api/marketing/tasks/{tarea['id']}")
 
         self.assertEqual(self.client.delete(f"/api/equipo/papelera/tarea/{tarea['id']}").status_code, 403)
-        with self.client.session_transaction() as s:
-            s["admin_auth"] = True
+        # Admin de verdad, en la cuenta: la cookie sola ya no da permisos.
+        conn = base.marketing_service._get_connection()
+        with conn.cursor() as cur:
+            cur.execute("UPDATE members SET is_admin = TRUE")
+        conn.commit()
+        conn.close()
         self.assertEqual(self.client.delete(f"/api/equipo/papelera/tarea/{tarea['id']}").status_code, 200)
         self.assertEqual(self.papelera(), [])
         self.assertEqual(self.client.post(f"/api/equipo/papelera/tarea/{tarea['id']}/restaurar").status_code, 404)
@@ -405,7 +409,7 @@ class CronMesaTests(ProyectosClubTestCase):
         with patch("backend.services.slack.enviar", side_effect=lambda t: mensajes.append(t) or True), patch(
             "backend.api.cron.resumen_salud_equipo", return_value=True
         ):
-            respuesta = self.client.post("/api/cron/resumen-equipo", headers=self.HEADERS)
+            respuesta = self.client.get("/api/cron/resumen-equipo", headers=self.HEADERS)
         self.assertEqual(respuesta.status_code, 200)
         self.assertTrue(respuesta.get_json()["mesa"])
         self.assertIn("Sin dueño", mensajes[0])
@@ -415,7 +419,7 @@ class CronMesaTests(ProyectosClubTestCase):
         with patch("backend.services.slack.enviar") as enviar, patch(
             "backend.api.cron.resumen_salud_equipo", return_value=True
         ):
-            respuesta = self.client.post("/api/cron/resumen-equipo", headers=self.HEADERS)
+            respuesta = self.client.get("/api/cron/resumen-equipo", headers=self.HEADERS)
         self.assertFalse(respuesta.get_json()["mesa"])
         enviar.assert_not_called()
 
@@ -429,7 +433,7 @@ class CronMesaTests(ProyectosClubTestCase):
         conn.close()
 
         with patch("backend.api.cron.aviso_deadlines_manana", return_value=False):
-            respuesta = self.client.post("/api/cron/avisar-deadlines", headers=self.HEADERS)
+            respuesta = self.client.get("/api/cron/avisar-deadlines", headers=self.HEADERS)
         self.assertEqual(respuesta.get_json()["vaciadas"], 1)
 
 

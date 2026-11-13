@@ -15,12 +15,10 @@ de la API (ver services/db.py).
 import json
 from datetime import date, datetime, timedelta
 
-import psycopg2
 from psycopg2.extras import RealDictCursor
 
-from backend.config import DATABASE_URL
 from backend.services import historial
-from backend.services.db import PERSONAS, fijar_personas, id_de_persona, ids_de_personas
+from backend.services.db import conexion, PERSONAS, fijar_personas, id_de_persona, ids_de_personas
 
 # Una tarea administrativa no es de ningún departamento (un correo, papeleo):
 # sale en los tres tableros y se ve, edita y borra desde la ruta de cualquiera
@@ -29,7 +27,7 @@ ADMINISTRATIVO = "administrativo"
 
 
 def _get_connection():
-    return psycopg2.connect(DATABASE_URL)
+    return conexion()
 
 
 def _serializar(fila: dict) -> dict:

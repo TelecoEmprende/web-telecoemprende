@@ -1,5 +1,6 @@
 import logging
 import re
+from datetime import date
 
 from flask import Blueprint, jsonify, request, send_file, session
 
@@ -473,8 +474,14 @@ def _validar_evento_calendario(payload: dict) -> str | None:
         return "El título es obligatorio y debe tener como máximo 150 caracteres."
     if len(descripcion) > 500:
         return "La descripción debe tener como máximo 500 caracteres."
-    if not _FECHA_RE.match(fecha):
-        return "La fecha debe tener el formato AAAA-MM-DD."
+    try:
+        # fromisoformat y no solo la forma: «2026-02-31» tiene buena pinta y
+        # la base de datos lo rechazaba con un 500.
+        if not _FECHA_RE.match(fecha):
+            raise ValueError
+        date.fromisoformat(fecha)
+    except ValueError:
+        return "La fecha debe tener el formato AAAA-MM-DD y existir."
     if hora and not _HORA_RE.match(hora):
         return "La hora debe tener el formato HH:MM, o dejarse vacía."
     return None

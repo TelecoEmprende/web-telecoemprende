@@ -1,0 +1,32 @@
+# Aplica las migraciones pendientes al fusionar en prod, para que un fallo de
+# esquema salga aquí, en rojo, y no como un 500 en la primera petición de
+# producción (la app sigue llamando a `migrar()` por si acaso; si ya están
+# hechas, no hace nada).
+#
+# Necesita el secreto DATABASE_URL del repositorio (Settings > Secrets and
+# variables > Actions) con la misma URL que la variable de Vercel. Sin él, el
+# paso se salta y avisa.
+name: Migraciones
+
+on:
+  push:
+    branches: [prod]
+
+jobs:
+  migrar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.txt
+      - name: Aplicar migraciones
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          if [ -z "$DATABASE_URL" ]; then
+            echo "::warning::Falta el secreto DATABASE_URL: las migraciones se aplicarán en la primera petición."
+            exit 0
+          fi
+          python -m backend.services.db

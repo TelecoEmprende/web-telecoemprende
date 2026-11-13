@@ -18,7 +18,7 @@ from backend.services.db import migrar  # noqa: E402
 
 class AuditoriaTestCase(unittest.TestCase):
     def setUp(self):
-        security_service.request_log.clear()
+        security_service.olvidar_intentos()
         migrar()
         auditoria.listar()  # crea la tabla
         conn = equipo_service._get_connection()

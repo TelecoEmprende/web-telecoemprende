@@ -19,13 +19,12 @@ import psycopg2
 import psycopg2.errors
 from psycopg2.extras import Json, RealDictCursor
 
-from backend.config import DATABASE_URL
 from backend.services import historial
-from backend.services.db import PERSONAS, DatosInvalidos, fijar_personas, id_de_persona
+from backend.services.db import conexion, PERSONAS, DatosInvalidos, fijar_personas, id_de_persona
 
 
 def _get_connection():
-    return psycopg2.connect(DATABASE_URL)
+    return conexion()
 
 
 @dataclass(frozen=True)

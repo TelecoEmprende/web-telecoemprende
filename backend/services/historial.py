@@ -17,10 +17,8 @@ apuntado (quién, qué y cuándo) y nada se borra de golpe:
 from datetime import date, datetime
 
 from psycopg2.extras import Json, RealDictCursor
-import psycopg2
 
-from backend.config import DATABASE_URL
-from backend.services.db import DatosInvalidos, id_de_persona
+from backend.services.db import conexion, DatosInvalidos, id_de_persona
 
 DIAS_EN_PAPELERA = 30
 
@@ -46,7 +44,7 @@ _MAX_VALOR = 200
 
 
 def _get_connection():
-    return psycopg2.connect(DATABASE_URL)
+    return conexion()
 
 
 # --------------------------------------------------------------------------
@@ -264,8 +262,9 @@ def listar_papelera(yo: str, directiva: bool = False) -> list[dict]:
                     WHERE n.deleted_at IS NOT NULL
                       AND (NOT n.is_private OR n.created_by_id = (SELECT id FROM members WHERE email = %s))
                     UNION ALL
+                    -- Solo lo que se puede restaurar (ver `restaurar`): las de directiva, a la directiva.
                     SELECT 'reunion', r.id, r.title, r.deleted_at, r.deleted_by_id, NULL
-                    FROM meetings r WHERE r.deleted_at IS NOT NULL AND (%s OR NOT r.board_only)
+                    FROM meetings r WHERE r.deleted_at IS NOT NULL AND (%s OR r.department <> 'directiva')
                 ) x
                 WHERE x.deleted_at > NOW() - make_interval(days => {DIAS_EN_PAPELERA})
                 ORDER BY x.deleted_at DESC

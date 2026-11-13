@@ -21,10 +21,65 @@ las vistas `<tabla>_v` devuelven las personas ya como emails.
 from pathlib import Path
 
 import psycopg2
+from flask import g, has_app_context
 
 from backend.config import DATABASE_URL
 
 MIGRACIONES = Path(__file__).resolve().parent.parent / "migrations"
+
+# Sin esto, una base de datos que no contesta deja la función colgada hasta
+# que Vercel la corta (300 s).
+SEGUNDOS_PARA_CONECTAR = 5
+
+
+def _conectar():
+    return psycopg2.connect(DATABASE_URL, connect_timeout=SEGUNDOS_PARA_CONECTAR)
+
+
+class _ConexionDePeticion:
+    """La conexión compartida de una petición. `with conn:` confirma (o
+    deshace) solo al salir del bloque más externo: una función de servicio que
+    llama a otra dentro de su `with` no le parte la transacción a medias."""
+
+    def __init__(self, conn):
+        self._conn = conn
+        self._nivel = 0
+
+    def __getattr__(self, nombre):
+        return getattr(self._conn, nombre)
+
+    def __enter__(self):
+        self._nivel += 1
+        return self
+
+    def __exit__(self, tipo, _valor, _traza):
+        self._nivel -= 1
+        if self._nivel == 0:
+            if tipo is None:
+                self._conn.commit()
+            else:
+                self._conn.rollback()
+        return False
+
+
+def conexion():
+    """Una sola conexión por petición (en `g`), en vez de una por función: cada
+    conexión a Supabase es un saludo TLS, y una petición llegaba a abrir cinco.
+    Fuera de una petición (scripts, tests), una conexión nueva como siempre."""
+    if not has_app_context():
+        return _conectar()
+    actual = g.get("_conexion")
+    if actual is None or actual.closed:
+        actual = g._conexion = _ConexionDePeticion(_conectar())
+    return actual
+
+
+def cerrar_conexion(_error=None) -> None:
+    """`teardown_appcontext` de `app.py`: cierra la conexión de la petición
+    (lo que no se confirmó, se descarta)."""
+    actual = g.pop("_conexion", None)
+    if actual is not None and not actual.closed:
+        actual.close()
 
 # Clave fija del bloqueo: dos instancias que arrancan a la vez no aplican la
 # misma migración dos veces; la segunda espera y ya la encuentra hecha.
@@ -41,8 +96,9 @@ def migrar() -> None:
     global _migrado
     if _migrado:
         return
-    with psycopg2.connect(DATABASE_URL) as conn:
-        with conn.cursor() as cur:
+    conn = _conectar()
+    try:
+        with conn, conn.cursor() as cur:
             cur.execute("SELECT pg_advisory_xact_lock(%s)", (_BLOQUEO_MIGRACIONES,))
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS schema_migrations (
@@ -63,7 +119,8 @@ def migrar() -> None:
                 cur.execute(archivo.read_text(encoding="utf-8"))
                 cur.execute("INSERT INTO schema_migrations (version) VALUES (%s)", (archivo.stem,))
             _cerrar_api_publica(cur)
-        conn.commit()
+    finally:
+        conn.close()
     _migrado = True
 
 
@@ -140,3 +197,11 @@ def _primera(fila):
     if fila is None:
         return None
     return fila["id"] if isinstance(fila, dict) else fila[0]
+
+
+if __name__ == "__main__":
+    # `python -m backend.services.db`: aplica las migraciones pendientes contra
+    # DATABASE_URL. Lo usa la Action `migraciones` al fusionar en `prod`, para
+    # que un fallo de esquema salga en GitHub y no en la primera petición.
+    migrar()
+    print("Migraciones al día.")

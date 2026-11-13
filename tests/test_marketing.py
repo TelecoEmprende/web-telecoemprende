@@ -24,7 +24,7 @@ from backend.services.db import migrar  # noqa: E402
 
 class MarketingTestCase(unittest.TestCase):
     def setUp(self):
-        security_service.request_log.clear()
+        security_service.olvidar_intentos()
         migrar()
 
         conn = marketing_service._get_connection()
@@ -405,6 +405,22 @@ class ContentTests(MarketingTestCase):
         detalle = self.client.get(f"/api/marketing/contents/{content['id']}").get_json()
         self.assertEqual(detalle["content"]["script"], "Guion original")
         self.assertEqual(detalle["content"]["cta"], "Nuevo CTA")
+
+    def test_los_enlaces_de_una_tarea_solo_son_http(self):
+        malo = self.client.post(
+            "/api/marketing/tasks",
+            json={"titulo": "Cartel", "enlaces": ["javascript:alert(1)"]},
+        )
+        self.assertEqual(malo.status_code, 400)
+
+        bueno = self.client.post(
+            "/api/marketing/tasks",
+            json={"titulo": "Cartel", "enlaces": ["https://a.es/x", "drive.google.com/d/1"]},
+        )
+        self.assertEqual(bueno.status_code, 201, bueno.get_json())
+        self.assertEqual(
+            bueno.get_json()["task"]["enlaces"], ["https://a.es/x", "https://drive.google.com/d/1"]
+        )
 
     def test_las_comillas_se_guardan_tal_cual(self):
         """El guion es texto que se lee y se copia, no HTML. Si se escapara,

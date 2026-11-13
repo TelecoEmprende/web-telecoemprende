@@ -9,10 +9,9 @@ consulta (`_visible`) en vez de en `departamento_actual()`.
 
 import json
 
-import psycopg2
 from psycopg2.extras import Json, RealDictCursor
 
-from backend.config import DATABASE_URL
+from backend.services.db import conexion
 from backend.services import historial
 
 # Campo de la API (y de la vista `notes_v`) -> columna de la tabla `notes`.
@@ -23,7 +22,7 @@ NOTA_COLUMNAS = {
 
 
 def _get_connection():
-    return psycopg2.connect(DATABASE_URL)
+    return conexion()
 
 
 # La autoría es la cuenta (`created_by_id`, `edited_by_id`); las consultas
