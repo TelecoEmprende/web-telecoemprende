@@ -160,6 +160,15 @@ class ApiTestCase(unittest.TestCase):
         self.assertEqual(self.client.get("/api/admin/equipo").status_code, 401)
         self.assertFalse(self.client.get("/api/equipo/session").get_json()["admin"])
 
+    def test_cada_respuesta_dice_si_la_sesion_tiene_admin(self):
+        # El front lo mira para enseñar o quitar el grupo Admin sin recargar.
+        self.assertNotIn("X-Equipo-Admin", self.client.get("/api/equipo/session").headers)
+        self.seed_equipo()
+        self.equipo_login()
+        self.assertEqual(self.client.get("/api/equipo/session").headers["X-Equipo-Admin"], "0")
+        self._sql("UPDATE members SET is_admin = TRUE WHERE email = 'marketing@example.com'")
+        self.assertEqual(self.client.get("/api/marketing/tasks").headers["X-Equipo-Admin"], "1")
+
     def test_cambiar_el_email_no_rompe_la_sesion_abierta(self):
         self.seed_equipo()
         self.equipo_login()

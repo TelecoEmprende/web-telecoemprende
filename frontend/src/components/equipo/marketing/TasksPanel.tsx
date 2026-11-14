@@ -18,7 +18,7 @@ import { Badge } from "@/components/ui/badge";
 import { Contador, useEntradaDeFila } from "../../movimiento";
 import { SPRING_DEFAULT } from "@/components/smoothui/lib/animation";
 import type { ApiFailure } from "../../../types/api";
-import { ADMINISTRATIVO, TEAMS, etiquetaTablero, type Tablero, type Team } from "../../../types/equipo";
+import { ADMINISTRATIVO, TEAMS, etiquetaTablero, puedeAsignarEn as puedeAsignar, type Tablero, type Team } from "../../../types/equipo";
 import {
   MAX_TITULO_LEN,
   PRIORIDADES,
@@ -145,8 +145,7 @@ export function TasksPanel({
   const [hora, setHora] = useState("");
   const [responsables, setResponsables] = useState<string[]>([]);
   function puedeAsignarEn(depto: Tablero) {
-    // Una administrativa no es de nadie: la reparte cualquier VP (como en el backend).
-    return puedeAsignarEnTodo || (depto === ADMINISTRATIVO ? vpDe.length > 0 : vpDe.includes(depto));
+    return puedeAsignar(depto, vpDe, puedeAsignarEnTodo);
   }
   // De dónde sale a qué departamentos se puede dar de alta una tarea: todo el
   // club si asigna en todo (esté o no dado de alta ahí), o los suyos propios

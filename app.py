@@ -124,6 +124,16 @@ def registrar_auditoria(response):
 
 
 @app.after_request
+def avisar_permisos(response):
+    # El front se fija en si cambia (`api/client.ts`): a quien le dan o le
+    # quitan el admin con la sesión abierta le aparece o desaparece el grupo
+    # Admin en su siguiente clic, sin recargar.
+    if request.path.startswith("/api/") and session.get("member_id"):
+        response.headers["X-Equipo-Admin"] = "1" if session.get("admin_auth") else "0"
+    return response
+
+
+@app.after_request
 def aplicar_headers_seguridad(response):
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "DENY"

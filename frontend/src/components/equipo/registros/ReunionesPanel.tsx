@@ -10,10 +10,18 @@ import { ContadorCaracteres } from "../../feedback/ContadorCaracteres";
 import { Badge } from "@/components/ui/badge";
 import { AvataresDeResponsables } from "../marketing/Avatares";
 import { SelectorMiembros } from "../marketing/SelectorMiembros";
-import { useDirectorio } from "../DeptoApi";
+import { useDirectorio, useYo } from "../DeptoApi";
 import { useEntradaDeFila } from "../../movimiento";
 import type { ApiFailure } from "../../../types/api";
-import { ADMINISTRATIVO, DEPTO_LABEL, TEAMS, etiquetaTablero, type Tablero, type Team } from "../../../types/equipo";
+import {
+  ADMINISTRATIVO,
+  DEPTO_LABEL,
+  TEAMS,
+  etiquetaTablero,
+  puedeAsignarEn,
+  type Tablero,
+  type Team,
+} from "../../../types/equipo";
 import { MAX_TEXTO_LARGO_LEN, MAX_TITULO_LEN, formatearFecha } from "../../../types/marketing";
 import { listaDe, textoDe, type Registro } from "../../../types/registros";
 
@@ -107,6 +115,8 @@ function PasarATarea({
   acuerdo,
   deptoInicial,
   reunion,
+  vpDe,
+  puedeAsignarEnTodo,
   onCreada,
 }: {
   acuerdo: { id: string; texto: string };
@@ -114,8 +124,11 @@ function PasarATarea({
    *  «Administrativo». Todos somos de los tres: solo dice en qué tablero sale. */
   deptoInicial: Tablero;
   reunion: string;
+  vpDe: Team[];
+  puedeAsignarEnTodo: boolean;
   onCreada: (id: string) => void;
 }) {
+  const yo = useYo();
   const [abierto, setAbierto] = useState(false);
   const [titulo, setTitulo] = useState(acuerdo.texto.slice(0, MAX_TITULO_LEN));
   const [instrucciones, setInstrucciones] = useState(`Acuerdo de la reunión «${reunion}».`);
@@ -171,16 +184,35 @@ function PasarATarea({
               onChange={(e) => setInstrucciones(e.target.value)}
             />
           </div>
-          <div className="field-group-react">
-            <label htmlFor={id}>Para quién</label>
-            <SelectorMiembros
-              id={id}
-              seleccionados={responsables}
-              onCambiar={setResponsables}
-              deptos={depto === ADMINISTRATIVO ? undefined : [depto]}
-              proponer
-            />
-          </div>
+          {/* Como en Tareas: repartir a otra persona es de board y VPs; los
+              demás la dejan sin dueño o se la quedan. */}
+          {puedeAsignarEn(depto, vpDe, puedeAsignarEnTodo) ? (
+            <div className="field-group-react">
+              <label htmlFor={id}>Para quién</label>
+              <SelectorMiembros
+                id={id}
+                seleccionados={responsables}
+                onCambiar={setResponsables}
+                deptos={depto === ADMINISTRATIVO ? undefined : [depto]}
+                proponer
+              />
+            </div>
+          ) : (
+            <label className="mkt-me-la-quedo-react">
+              <input
+                type="checkbox"
+                className="crm-check"
+                checked={yo !== "" && responsables.includes(yo)}
+                disabled={yo === ""}
+                onChange={(e) => setResponsables(e.target.checked ? [yo] : [])}
+              />
+              Me la quedo yo
+              <span className="mkt-meta-react">
+                Si no, queda sin dueño: sale en la Mesa del club para que alguien se la quede o la
+                reparta un VP.
+              </span>
+            </label>
+          )}
           <div className="field-group-react">
             <label htmlFor={`${id}-fecha`}>Para cuándo</label>
             <input
@@ -192,7 +224,18 @@ function PasarATarea({
           </div>
           <div className="field-group-react">
             <label htmlFor={`${id}-depto`}>En qué tablero sale</label>
-            <select id={`${id}-depto`} value={depto} onChange={(e) => setDepto(e.target.value as Tablero)}>
+            <select
+              id={`${id}-depto`}
+              value={depto}
+              onChange={(e) => {
+                const nuevo = e.target.value as Tablero;
+                setDepto(nuevo);
+                // En un tablero donde no reparte, solo puede quedar ella misma.
+                if (!puedeAsignarEn(nuevo, vpDe, puedeAsignarEnTodo)) {
+                  setResponsables((actuales) => actuales.filter((r) => r === yo));
+                }
+              }}
+            >
               {[...TEAMS, ADMINISTRATIVO].map((t) => (
                 <option key={t} value={t}>
                   {etiquetaTablero(t)}
@@ -224,6 +267,9 @@ type Props = {
   deptos: Team[];
   /** Cargo, VP o admin: convoca y edita las de la directiva y ve las privadas. */
   esDirectiva: boolean;
+  /** Para repartir los acuerdos (ver `puedeAsignarEn`). */
+  vpDe: Team[];
+  puedeAsignarEnTodo: boolean;
 };
 
 /**
@@ -231,7 +277,7 @@ type Props = {
  * documento como una nota (títulos, listas, casillas). El acta se guarda sola.
  * Las casillas sin marcar del acta salen como pendientes de la reunión.
  */
-export function ReunionesPanel({ deptos, esDirectiva }: Props) {
+export function ReunionesPanel({ deptos, esDirectiva, vpDe, puedeAsignarEnTodo }: Props) {
   const entradaFila = useEntradaDeFila();
   const directorio = useDirectorio();
   const [reuniones, setReuniones] = useState<Registro[]>([]);
@@ -545,6 +591,8 @@ export function ReunionesPanel({ deptos, esDirectiva }: Props) {
                   acuerdo={a}
                   deptoInicial={deptoDeLaReunion ?? ADMINISTRATIVO}
                   reunion={textoDe(abierta, "titulo")}
+                  vpDe={vpDe}
+                  puedeAsignarEnTodo={puedeAsignarEnTodo}
                   onCreada={(id) => {
                     cambiar({ contenido: marcarComoTarea(abierta.contenido, id) });
                     setVersionActa((v) => v + 1);

@@ -125,7 +125,8 @@ export function MisDatos({ onGuardado }: Props) {
           <label htmlFor="md-linkedin">LinkedIn</label>
           <input
             id="md-linkedin"
-            type="url"
+            type="text"
+            inputMode="url"
             value={datos.linkedin}
             placeholder="https://www.linkedin.com/in/..."
             onChange={(e) => cambiar("linkedin", e.target.value)}

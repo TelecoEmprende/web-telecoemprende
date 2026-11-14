@@ -168,8 +168,8 @@ class DatosFormularioTestCase(unittest.TestCase):
         fila = [c.value for c in ws[2]]
         self.assertEqual(fila[0], "'=HYPERLINK()")
         self.assertEqual(fila[1:5], ["García López", "12345678Z", "ana@alumnos.upm.es",
-                                     "marketing, eventos, ingenieria"])
-        self.assertEqual(fila[5], "marketing")
+                                     "Marketing, Eventos, Ingeniería"])
+        self.assertEqual(fila[5], "Marketing")
         self.assertEqual(len(ws._images), 1)
 
 

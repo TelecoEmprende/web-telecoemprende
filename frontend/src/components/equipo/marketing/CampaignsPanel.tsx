@@ -423,19 +423,16 @@ export function CampaignsPanel({ deptos, campaignInicial, onCampaignAbierta, onA
     }
   }
 
-  async function añadirContent() {
+  function añadirContent() {
     if (!detalle) return;
-    try {
-      const respuesta = await apiDepto(detalle.departamento).createContent(detalle.id, {
-        titulo: "Entregable sin título",
-      });
-      await recargarDetalle();
-      // Se abre el editor directamente: crear una tarjeta llamada "sin título"
-      // y dejarla ahí obliga a un segundo clic que nadie quiere dar.
-      setEditando(respuesta.content);
-    } catch (err) {
-      setError(mensajeDeError(err, "No se pudo crear el entregable."));
-    }
+    // Se abre el editor con un borrador (id 0) que se crea al guardar. Antes se
+    // creaba ya un «Entregable sin título» y, al cancelar, se quedaba ahí.
+    setEditando({
+      id: 0, campaign_id: detalle.id, titulo: "", tipo: "", plataforma: "",
+      fecha_publicacion: null, estado: "idea", script: "", copy_texto: "", cta: "",
+      hashtags: "", idea_visual: "", responsables: [], enlaces: [],
+      created_at: "", updated_at: "", tasks: [],
+    });
   }
 
   async function cambiarEstadoContent(content: Content, estado: ContentEstado) {
@@ -656,7 +653,7 @@ export function CampaignsPanel({ deptos, campaignInicial, onCampaignAbierta, onA
                 {detalle.nombre}
                 {detalle.archivado ? (
                   <Badge variant="secondary" className="mkt-archivada-badge-react">
-                    Archivada
+                    Archivado
                   </Badge>
                 ) : null}
               </h3>
@@ -702,7 +699,7 @@ export function CampaignsPanel({ deptos, campaignInicial, onCampaignAbierta, onA
               <button
                 type="button"
                 className="mkt-btn-react"
-                onClick={() => void añadirContent()}
+                onClick={añadirContent}
               >
                 + Entregable
               </button>
@@ -840,7 +837,8 @@ export function CampaignsPanel({ deptos, campaignInicial, onCampaignAbierta, onA
             Enviar proyecto a la papelera
           </button>
           <p className="mkt-meta-react">
-            Se lleva sus {detalle.contents.length} entregables y {todasLasTareas.length} tareas, y se
+            Se lleva {detalle.contents.length} {detalle.contents.length === 1 ? "entregable" : "entregables"} y{" "}
+            {todasLasTareas.length} {todasLasTareas.length === 1 ? "tarea" : "tareas"}, y se
             puede restaurar durante 30 días.
           </p>
         </div>
@@ -912,7 +910,7 @@ export function CampaignsPanel({ deptos, campaignInicial, onCampaignAbierta, onA
                 checked={mostrarArchivadas}
                 onChange={(event) => setMostrarArchivadas(event.target.checked)}
               />
-              Archivadas ({archivadasCount})
+              Archivados ({archivadasCount})
             </label>
           ) : null}
       </div>
@@ -996,7 +994,7 @@ export function CampaignsPanel({ deptos, campaignInicial, onCampaignAbierta, onA
       {visibles.length === 0 ? (
         <p className="mkt-vacio-react">
           {campaigns.length === 0
-            ? "Aún no hay proyectos. Un proyecto agrupa todo lo que hace falta para sacar adelante una idea, un evento o una mejora."
+            ? "No hay proyectos en los departamentos marcados. Un proyecto agrupa todo lo que hace falta para sacar adelante una idea, un evento o una mejora."
             : "Todos los proyectos están archivados."}
         </p>
       ) : (
@@ -1012,7 +1010,7 @@ export function CampaignsPanel({ deptos, campaignInicial, onCampaignAbierta, onA
                   {campaign.nombre}
                   {campaign.archivado ? (
                     <Badge variant="secondary" className="mkt-archivada-badge-react">
-                      Archivada
+                      Archivado
                     </Badge>
                   ) : null}
                 </span>

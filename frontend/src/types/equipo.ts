@@ -29,6 +29,13 @@ export const DEPTO_LABEL: Record<Team, string> = {
 export const ADMINISTRATIVO = "administrativo" as const;
 export type Tablero = Team | typeof ADMINISTRATIVO;
 
+/** Quién reparte tareas a otras personas en un tablero, igual que
+ *  `_puede_asignar_tareas` en el backend: cargo o admin en todos; un VP en el
+ *  suyo, y en Administrativo (que no es de nadie) cualquier VP. */
+export function puedeAsignarEn(tablero: Tablero, vpDe: Team[], enTodo: boolean): boolean {
+  return enTodo || (tablero === ADMINISTRATIVO ? vpDe.length > 0 : vpDe.includes(tablero));
+}
+
 /** El nombre del tablero de una tarea: un departamento o «Administrativo». */
 export function etiquetaTablero(departamento: string): string {
   return departamento === ADMINISTRATIVO

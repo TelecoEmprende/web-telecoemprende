@@ -107,6 +107,10 @@ class MiembrosWebTestCase(unittest.TestCase):
         self.assertEqual(self.client.put(url, json={"linkedin": "javascript:alert(1)"}).status_code, 400)
         self.assertEqual(self.client.put(url, json={"linkedin": perfil}).status_code, 200)
         self.assertEqual(self.miembros()[0]["linkedin"], perfil)
+        # Sin esquema se completa, como los enlaces de las tareas; http no vale.
+        self.assertEqual(self.client.put(url, json={"linkedin": "linkedin.com/in/ana"}).status_code, 200)
+        self.assertEqual(self.miembros()[0]["linkedin"], "https://linkedin.com/in/ana")
+        self.assertEqual(self.client.put(url, json={"linkedin": "http://linkedin.com/in/ana"}).status_code, 400)
 
 
 if __name__ == "__main__":

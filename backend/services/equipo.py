@@ -299,7 +299,7 @@ def generar_pdf_equipo_en_memoria() -> BytesIO:
             acceso["nombre"] or "-",
             acceso["email"],
             acceso["dni"] or "-",
-            ", ".join(acceso["equipos"]) or "-",
+            _deptos(acceso["equipos"]) or "-",
             acceso["cargo"] or "-",
             "Sí" if acceso["activo"] else "No",
         ]
@@ -309,6 +309,11 @@ def generar_pdf_equipo_en_memoria() -> BytesIO:
         pdf.ln()
 
     return BytesIO(bytes(pdf.output()))
+
+
+def _deptos(claves: list[str]) -> str:
+    """«Marketing, Ingeniería» para el Excel y el PDF, no las claves."""
+    return ", ".join(_DEPTO_WEB.get(c, (c,))[0] for c in claves)
 
 
 def generar_excel_equipo_en_memoria() -> BytesIO:
@@ -337,8 +342,8 @@ def generar_excel_equipo_en_memoria() -> BytesIO:
             _celda_segura(a["apellidos"]),
             _celda_segura(a["dni"]),
             _celda_segura(a["email"]),
-            ", ".join(a["equipos"]),
-            ", ".join(a["vp_de"]),
+            _deptos(a["equipos"]),
+            _deptos(a["vp_de"]),
             a["cargo"],
             "Sí" if a["activo"] else "No",
         ])

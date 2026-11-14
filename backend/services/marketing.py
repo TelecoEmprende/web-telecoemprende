@@ -991,6 +991,9 @@ def mesa_del_club() -> dict:
                 LEFT JOIN deliverables co ON co.id = t.content_id
                 LEFT JOIN projects c ON c.id = t.campaign_id
                 WHERE t.estado <> 'acabado' AND cardinality(t.responsables) = 0
+                  -- Como los proyectos de arriba: lo de uno archivado o
+                  -- cerrado ya no está sobre la mesa (ni en el resumen de Slack).
+                  AND (c.id IS NULL OR (NOT c.archived AND c.status <> 'cerrado'))
                 ORDER BY COALESCE(t.deadline, '9999-12-31'::date), t.id
                 LIMIT 40
                 """
@@ -1005,6 +1008,7 @@ def mesa_del_club() -> dict:
                 LEFT JOIN deliverables co ON co.id = t.content_id
                 LEFT JOIN projects c ON c.id = t.campaign_id
                 WHERE t.estado <> 'acabado' AND t.deadline < %s
+                  AND (c.id IS NULL OR (NOT c.archived AND c.status <> 'cerrado'))
                 ORDER BY t.deadline, t.id
                 LIMIT 40
                 """,

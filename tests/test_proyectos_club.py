@@ -377,6 +377,21 @@ class MesaTests(ProyectosClubTestCase):
         self.assertEqual([t["titulo"] for t in mesa["sin_dueno"]], ["Sin dueño"])
         self.assertEqual([t["titulo"] for t in mesa["atrasadas"]], ["Vencida"])
 
+    def test_lo_de_un_proyecto_archivado_o_cerrado_no_esta_sobre_la_mesa(self):
+        ayer = (date.today() - timedelta(days=1)).isoformat()
+        archivado = self.crear_campaign(nombre="Archivado")
+        self.client.put(f"/api/marketing/campaigns/{archivado['id']}", json={"archivado": True})
+        cerrado = self.crear_campaign(nombre="Cerrado", estado="cerrado")
+        vivo = self.crear_campaign(nombre="Vivo")
+        for proyecto in (archivado, cerrado, vivo):
+            self.tarea(campaign_id=proyecto["id"], titulo=f"Suelta de {proyecto['nombre']}")
+            self.tarea(campaign_id=proyecto["id"], titulo=f"Vencida de {proyecto['nombre']}",
+                       deadline=ayer, responsables=["marketing@example.com"])
+
+        mesa = self.mesa()["mesa"]
+        self.assertEqual([t["titulo"] for t in mesa["sin_dueno"]], ["Suelta de Vivo"])
+        self.assertEqual([t["titulo"] for t in mesa["atrasadas"]], ["Vencida de Vivo"])
+
     def test_un_proyecto_activo_que_no_se_mueve_sale_estancado(self):
         proyecto = self.crear_campaign(nombre="Dormido")
         pausado = self.crear_campaign(nombre="En pausa", estado="pausado")

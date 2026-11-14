@@ -157,6 +157,19 @@ def _lista_urls(datos: dict, clave: str, maximo: int) -> list[str]:
     return enlaces
 
 
+def _linkedin(valor) -> str:
+    """El LinkedIn de una cuenta («Mis datos» y Cuentas). Acaba en un `<a
+    href>` de la web pública, así que solo https; sin esquema
+    («linkedin.com/in/...») se completa, como los enlaces de las tareas. Sin
+    `limpiar_texto`: no toca nada de la URL."""
+    texto = str(valor or "").strip()
+    if texto and not re.match(r"^[a-z][a-z0-9+.-]*:", texto, re.IGNORECASE):
+        texto = f"https://{texto}"
+    if len(texto) > 600 or (texto and not texto.lower().startswith("https://")):
+        raise DatosInvalidos("El LinkedIn tiene que ser un enlace https://.")
+    return texto
+
+
 def _opcion(datos: dict, clave: str, validas: tuple, por_defecto: str) -> str:
     valor = str(datos.get(clave, "") or por_defecto)
     if valor not in validas:

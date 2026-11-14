@@ -39,13 +39,13 @@ describe("ReunionesPanel · directiva", () => {
   });
 
   it("sin cargo no se ofrece convocar una de directiva", async () => {
-    render(<ReunionesPanel deptos={["marketing"]} esDirectiva={false} />);
+    render(<ReunionesPanel deptos={["marketing"]} esDirectiva={false} vpDe={[]} puedeAsignarEnTodo={false} />);
     await userEvent.click(await screen.findByRole("button", { name: "+ Nueva reunión" }));
     expect(screen.queryByRole("option", { name: "Directiva" })).not.toBeInTheDocument();
   });
 
   it("la directiva la convoca y por defecto solo la ve ella", async () => {
-    render(<ReunionesPanel deptos={["marketing"]} esDirectiva />);
+    render(<ReunionesPanel deptos={["marketing"]} esDirectiva vpDe={[]} puedeAsignarEnTodo />);
     await userEvent.click(await screen.findByRole("button", { name: "+ Nueva reunión" }));
     await userEvent.type(screen.getByLabelText("Título"), "Junta");
     await userEvent.selectOptions(screen.getByLabelText("De quién es"), "directiva");
@@ -60,7 +60,7 @@ describe("ReunionesPanel · directiva", () => {
 
   it("una de directiva abierta al club la lee quien no es de la directiva, sin poder tocarla", async () => {
     listarRegistros.mockResolvedValue({ ok: true, reuniones: [JUNTA] });
-    render(<ReunionesPanel deptos={["marketing"]} esDirectiva={false} />);
+    render(<ReunionesPanel deptos={["marketing"]} esDirectiva={false} vpDe={[]} puedeAsignarEnTodo={false} />);
     await userEvent.click(await screen.findByRole("button", { name: /Junta/ }));
 
     expect(screen.getByLabelText("Título")).toBeDisabled();
@@ -105,7 +105,7 @@ describe("acuerdos del acta", () => {
     });
     createTask.mockReset().mockResolvedValue({ ok: true, task: { id: 9 } });
     actualizarRegistro.mockReset().mockResolvedValue({ ok: true });
-    render(<ReunionesPanel deptos={["marketing"]} esDirectiva={false} />);
+    render(<ReunionesPanel deptos={["marketing"]} esDirectiva={false} vpDe={[]} puedeAsignarEnTodo={false} />);
     await userEvent.click(await screen.findByRole("button", { name: /Semanal/ }));
     expect(listarRegistros).toHaveBeenCalledWith("reuniones", ["marketing"]);
 
@@ -118,6 +118,9 @@ describe("acuerdos del acta", () => {
     await userEvent.clear(titulo);
     await userEvent.type(titulo, "Reservar sala B");
     expect(screen.getByLabelText("En qué tablero sale")).toHaveValue("eventos");
+    // Sin cargo ni VP no reparte: como en Tareas, solo puede quedársela.
+    expect(screen.queryByLabelText("Para quién")).not.toBeInTheDocument();
+    expect(screen.getByRole("checkbox", { name: /Me la quedo yo/ })).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Crear tarea" }));
 
     expect(createTask).toHaveBeenCalledWith({
@@ -138,6 +141,23 @@ describe("acuerdos del acta", () => {
   });
 });
 
+describe("acuerdos: quién reparte", () => {
+  it("un VP reparte en su tablero, pero no en el de otro departamento", async () => {
+    listarRegistros.mockReset().mockResolvedValue({
+      ok: true,
+      reuniones: [{ ...JUNTA, departamento: "eventos", titulo: "Semanal", contenido: ACTA }],
+    });
+    render(<ReunionesPanel deptos={["eventos"]} esDirectiva vpDe={["eventos"]} puedeAsignarEnTodo={false} />);
+    await userEvent.click(await screen.findByRole("button", { name: /Semanal/ }));
+    await userEvent.click(screen.getAllByRole("button", { name: "Pasar a tarea" })[0]);
+
+    expect(screen.getByLabelText("Para quién")).toBeInTheDocument();
+    await userEvent.selectOptions(screen.getByLabelText("En qué tablero sale"), "marketing");
+    expect(screen.queryByLabelText("Para quién")).not.toBeInTheDocument();
+    expect(screen.getByRole("checkbox", { name: /Me la quedo yo/ })).toBeInTheDocument();
+  });
+});
+
 describe("acuerdos de una reunión de todo el club", () => {
   it("por defecto la tarea es administrativa: no es de ningún departamento", async () => {
     listarRegistros.mockReset().mockResolvedValue({
@@ -146,7 +166,7 @@ describe("acuerdos de una reunión de todo el club", () => {
     });
     createTask.mockReset().mockResolvedValue({ ok: true, task: { id: 9 } });
     actualizarRegistro.mockReset().mockResolvedValue({ ok: true });
-    render(<ReunionesPanel deptos={["marketing"]} esDirectiva={false} />);
+    render(<ReunionesPanel deptos={["marketing"]} esDirectiva={false} vpDe={[]} puedeAsignarEnTodo={false} />);
     await userEvent.click(await screen.findByRole("button", { name: /Asamblea/ }));
     await userEvent.click(screen.getAllByRole("button", { name: "Pasar a tarea" })[0]);
 
@@ -166,7 +186,7 @@ describe("cambiar de quién es una reunión ya creada", () => {
       reuniones: [{ ...JUNTA, departamento: "", titulo: "Reunión directiva" }],
     });
     actualizarRegistro.mockReset().mockResolvedValue({ ok: true });
-    render(<ReunionesPanel deptos={["eventos", "marketing"]} esDirectiva />);
+    render(<ReunionesPanel deptos={["eventos", "marketing"]} esDirectiva vpDe={[]} puedeAsignarEnTodo />);
     await userEvent.click(await screen.findByRole("button", { name: /Reunión directiva/ }));
 
     await userEvent.selectOptions(screen.getByLabelText("De quién es"), "marketing");
@@ -188,7 +208,7 @@ describe("cambiar de quién es una reunión ya creada", () => {
       ok: true,
       reuniones: [{ ...JUNTA, departamento: "", titulo: "Semanal" }],
     });
-    render(<ReunionesPanel deptos={["eventos"]} esDirectiva={false} />);
+    render(<ReunionesPanel deptos={["eventos"]} esDirectiva={false} vpDe={[]} puedeAsignarEnTodo={false} />);
     await userEvent.click(await screen.findByRole("button", { name: /Semanal/ }));
     expect(screen.queryByRole("option", { name: "Directiva" })).not.toBeInTheDocument();
     expect(screen.getByRole("option", { name: "Marketing" })).toBeInTheDocument();
@@ -203,7 +223,7 @@ describe("editar una reunión ya creada", () => {
       reuniones: [{ ...JUNTA, departamento: "eventos", titulo: "Plano de la feria" }],
     });
     actualizarRegistro.mockReset().mockResolvedValue({ ok: true });
-    render(<ReunionesPanel deptos={["ingenieria", "marketing", "eventos"]} esDirectiva={false} />);
+    render(<ReunionesPanel deptos={["ingenieria", "marketing", "eventos"]} esDirectiva={false} vpDe={[]} puedeAsignarEnTodo={false} />);
     await userEvent.click(await screen.findByRole("button", { name: /Plano de la feria/ }));
 
     const titulo = screen.getByLabelText("Título");
