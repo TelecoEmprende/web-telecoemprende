@@ -252,8 +252,12 @@ class PapeleraTests(ProyectosClubTestCase):
         self.client.delete(f"/api/marketing/tasks/{tarea['id']}")
 
         self.assertEqual(self.client.delete(f"/api/equipo/papelera/tarea/{tarea['id']}").status_code, 403)
-        with self.client.session_transaction() as s:
-            s["admin_auth"] = True
+        # Admin de verdad, en la cuenta: la cookie sola ya no da permisos.
+        conn = base.marketing_service._get_connection()
+        with conn.cursor() as cur:
+            cur.execute("UPDATE members SET is_admin = TRUE")
+        conn.commit()
+        conn.close()
         self.assertEqual(self.client.delete(f"/api/equipo/papelera/tarea/{tarea['id']}").status_code, 200)
         self.assertEqual(self.papelera(), [])
         self.assertEqual(self.client.post(f"/api/equipo/papelera/tarea/{tarea['id']}/restaurar").status_code, 404)
@@ -373,6 +377,21 @@ class MesaTests(ProyectosClubTestCase):
         self.assertEqual([t["titulo"] for t in mesa["sin_dueno"]], ["Sin dueño"])
         self.assertEqual([t["titulo"] for t in mesa["atrasadas"]], ["Vencida"])
 
+    def test_lo_de_un_proyecto_archivado_o_cerrado_no_esta_sobre_la_mesa(self):
+        ayer = (date.today() - timedelta(days=1)).isoformat()
+        archivado = self.crear_campaign(nombre="Archivado")
+        self.client.put(f"/api/marketing/campaigns/{archivado['id']}", json={"archivado": True})
+        cerrado = self.crear_campaign(nombre="Cerrado", estado="cerrado")
+        vivo = self.crear_campaign(nombre="Vivo")
+        for proyecto in (archivado, cerrado, vivo):
+            self.tarea(campaign_id=proyecto["id"], titulo=f"Suelta de {proyecto['nombre']}")
+            self.tarea(campaign_id=proyecto["id"], titulo=f"Vencida de {proyecto['nombre']}",
+                       deadline=ayer, responsables=["marketing@example.com"])
+
+        mesa = self.mesa()["mesa"]
+        self.assertEqual([t["titulo"] for t in mesa["sin_dueno"]], ["Suelta de Vivo"])
+        self.assertEqual([t["titulo"] for t in mesa["atrasadas"]], ["Vencida de Vivo"])
+
     def test_un_proyecto_activo_que_no_se_mueve_sale_estancado(self):
         proyecto = self.crear_campaign(nombre="Dormido")
         pausado = self.crear_campaign(nombre="En pausa", estado="pausado")
@@ -405,7 +424,7 @@ class CronMesaTests(ProyectosClubTestCase):
         with patch("backend.services.slack.enviar", side_effect=lambda t: mensajes.append(t) or True), patch(
             "backend.api.cron.resumen_salud_equipo", return_value=True
         ):
-            respuesta = self.client.post("/api/cron/resumen-equipo", headers=self.HEADERS)
+            respuesta = self.client.get("/api/cron/resumen-equipo", headers=self.HEADERS)
         self.assertEqual(respuesta.status_code, 200)
         self.assertTrue(respuesta.get_json()["mesa"])
         self.assertIn("Sin dueño", mensajes[0])
@@ -415,7 +434,7 @@ class CronMesaTests(ProyectosClubTestCase):
         with patch("backend.services.slack.enviar") as enviar, patch(
             "backend.api.cron.resumen_salud_equipo", return_value=True
         ):
-            respuesta = self.client.post("/api/cron/resumen-equipo", headers=self.HEADERS)
+            respuesta = self.client.get("/api/cron/resumen-equipo", headers=self.HEADERS)
         self.assertFalse(respuesta.get_json()["mesa"])
         enviar.assert_not_called()
 
@@ -429,7 +448,7 @@ class CronMesaTests(ProyectosClubTestCase):
         conn.close()
 
         with patch("backend.api.cron.aviso_deadlines_manana", return_value=False):
-            respuesta = self.client.post("/api/cron/avisar-deadlines", headers=self.HEADERS)
+            respuesta = self.client.get("/api/cron/avisar-deadlines", headers=self.HEADERS)
         self.assertEqual(respuesta.get_json()["vaciadas"], 1)
 
 

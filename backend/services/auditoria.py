@@ -12,10 +12,9 @@ usuario sigue adelante y solo se pierde la línea de registro.
 
 import logging
 
-import psycopg2
 from psycopg2.extras import RealDictCursor
 
-from backend.config import DATABASE_URL
+from backend.services.db import conexion
 
 logger = logging.getLogger("telecoemprende.auditoria")
 
@@ -31,7 +30,7 @@ MAX_RUTA_LEN = 255
 DIAS_DE_AUDITORIA = 365
 
 def _get_connection():
-    return psycopg2.connect(DATABASE_URL)
+    return conexion()
 
 
 def debe_registrarse(metodo: str, ruta: str) -> bool:

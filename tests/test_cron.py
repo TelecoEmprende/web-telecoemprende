@@ -67,11 +67,19 @@ class CronTests(unittest.TestCase):
         return respuesta.get_json()["task"]
 
     def test_sin_secreto_rechazado(self):
-        respuesta = self.client.post("/api/cron/avisar-deadlines")
+        respuesta = self.client.get("/api/cron/avisar-deadlines")
         self.assertEqual(respuesta.status_code, 401)
 
+    def test_vercel_cron_llama_con_get(self):
+        # Vercel Cron hace GET: con la ruta solo en POST cada ejecución era un
+        # 405 y nunca salía nada. POST sigue valiendo para lanzarla a mano.
+        cabecera = {"Authorization": "Bearer test-cron-secret"}
+        with patch("backend.api.cron.aviso_deadlines_manana", return_value=True):
+            self.assertEqual(self.client.get("/api/cron/avisar-deadlines", headers=cabecera).status_code, 200)
+            self.assertEqual(self.client.post("/api/cron/avisar-deadlines", headers=cabecera).status_code, 200)
+
     def test_con_secreto_equivocado_rechazado(self):
-        respuesta = self.client.post(
+        respuesta = self.client.get(
             "/api/cron/avisar-deadlines", headers={"Authorization": "Bearer nopo"}
         )
         self.assertEqual(respuesta.status_code, 401)
@@ -86,7 +94,7 @@ class CronTests(unittest.TestCase):
 
         with patch("backend.api.cron.aviso_deadlines_manana") as aviso:
             aviso.return_value = True
-            respuesta = self.client.post(
+            respuesta = self.client.get(
                 "/api/cron/avisar-deadlines",
                 headers={"Authorization": "Bearer test-cron-secret"},
             )
@@ -108,7 +116,7 @@ class CronTests(unittest.TestCase):
 
         with patch("backend.api.cron.aviso_reuniones_manana") as aviso:
             aviso.return_value = True
-            respuesta = self.client.post(
+            respuesta = self.client.get(
                 "/api/cron/avisar-deadlines", headers={"Authorization": "Bearer test-cron-secret"}
             )
         self.assertEqual(respuesta.get_json()["reuniones"], 1)
@@ -142,7 +150,7 @@ class CronTests(unittest.TestCase):
         conn.commit()
 
         with patch("backend.api.cron.aviso_deadlines_manana", return_value=True):
-            respuesta = self.client.post(
+            respuesta = self.client.get(
                 "/api/cron/avisar-deadlines",
                 headers={"Authorization": "Bearer test-cron-secret"},
             )
@@ -158,7 +166,7 @@ class CronTests(unittest.TestCase):
     def test_sin_tareas_no_llama_a_slack_con_lista_vacia(self):
         with patch("backend.api.cron.aviso_deadlines_manana") as aviso:
             aviso.return_value = False
-            respuesta = self.client.post(
+            respuesta = self.client.get(
                 "/api/cron/avisar-deadlines",
                 headers={"Authorization": "Bearer test-cron-secret"},
             )
@@ -191,7 +199,7 @@ class CronTests(unittest.TestCase):
         with patch(
             "backend.api.cron.salud_equipo", side_effect=salud_que_falla_en_eventos
         ), patch("backend.api.cron.resumen_salud_equipo", return_value=True):
-            respuesta = self.client.post(
+            respuesta = self.client.get(
                 "/api/cron/resumen-equipo",
                 headers={"Authorization": "Bearer test-cron-secret"},
             )

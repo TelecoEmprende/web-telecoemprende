@@ -4,6 +4,9 @@ Autorización: la sesión de /equipo no pinta nada aquí -- un cron no manda
 cookie. Se verifica el header que Vercel añade solo a la petición,
 "Authorization: Bearer <CRON_SECRET>" (ver vercel.json > crons y
 https://vercel.com/docs/cron-jobs/manage-cron-jobs).
+
+Vercel Cron llama con GET: con solo POST, cada ejecución era un 405 y no
+salía ningún aviso ni se vaciaba nada. POST se queda para lanzarlas a mano.
 """
 
 import hmac
@@ -14,7 +17,7 @@ from flask import Blueprint, jsonify, request
 
 from backend.config import CRON_SECRET, EQUIPOS_VALIDOS
 from backend.schemas import build_response
-from backend.services import auditoria, historial, registros
+from backend.services import auditoria, historial, registros, security
 from backend.services.registrations import purgar_inscripciones_antiguas
 from backend.services.marketing import mesa_del_club, salud_equipo, tareas_que_vencen
 from backend.services.slack import (
@@ -38,7 +41,7 @@ def _autorizado() -> bool:
     )
 
 
-@cron_api.route("/avisar-deadlines", methods=["POST"])
+@cron_api.route("/avisar-deadlines", methods=["GET", "POST"])
 def api_avisar_deadlines():
     """Un aviso a Slack con las tareas (de cualquier departamento) que vencen
     mañana y siguen sin acabar, y otro con las reuniones de mañana. Pensado
@@ -66,6 +69,7 @@ def api_avisar_deadlines():
         ("vaciadas", historial.vaciar_papelera),
         ("auditoria", auditoria.purgar_antigua),
         ("inscripciones", purgar_inscripciones_antiguas),
+        ("intentos", security.purgar_intentos),
     ):
         try:
             borradas[nombre] = limpiar()
@@ -78,7 +82,7 @@ def api_avisar_deadlines():
     }), 200
 
 
-@cron_api.route("/resumen-equipo", methods=["POST"])
+@cron_api.route("/resumen-equipo", methods=["GET", "POST"])
 def api_resumen_equipo():
     """El resumen del lunes: la Mesa del club (atrasadas, sin dueño, proyectos
     estancados) y un resumen de salud por departamento. Se salta el

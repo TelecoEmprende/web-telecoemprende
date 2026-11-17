@@ -72,7 +72,7 @@ export function PapeleraPanel({ esAdmin }: { esAdmin: boolean }) {
       {aviso ? <AlertBanner variant="success" message={aviso} /> : null}
 
       <CabeceraPanel
-        descripcion={`Lo que se borra de Proyectos, Tareas y Notas se queda aquí ${dias} días, y cualquiera puede devolverlo. Un proyecto vuelve con sus entregables y tareas. Pasado ese tiempo se borra solo.`}
+        descripcion={`Lo que se borra (proyectos, entregables, tareas, notas y reuniones) se queda aquí ${dias} días, y cualquiera puede devolverlo. Un proyecto vuelve con sus entregables y tareas. Pasado ese tiempo se borra solo.`}
       />
 
       {elementos.length === 0 ? (

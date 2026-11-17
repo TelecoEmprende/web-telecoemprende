@@ -11,6 +11,7 @@ os.environ["DATABASE_URL"] = os.environ.get(
 )
 
 import app  # noqa: E402
+from test_api import sesion_de_admin  # noqa: E402
 import backend.services.equipo as equipo_service  # noqa: E402
 import backend.services.security as security_service  # noqa: E402
 from backend.config import MAX_LOGIN_ATTEMPTS_PER_WINDOW  # noqa: E402
@@ -19,7 +20,7 @@ from backend.services.db import migrar  # noqa: E402
 
 class RecuperarClaveTestCase(unittest.TestCase):
     def setUp(self):
-        security_service.request_log.clear()
+        security_service.olvidar_intentos()
         migrar()
         conn = equipo_service._get_connection()
         with conn.cursor() as cur:
@@ -152,7 +153,7 @@ class RecuperarClaveTestCase(unittest.TestCase):
 
 class ClaveProvisionalTestCase(unittest.TestCase):
     def setUp(self):
-        security_service.request_log.clear()
+        security_service.olvidar_intentos()
         migrar()
         conn = equipo_service._get_connection()
         with conn.cursor() as cur:
@@ -168,8 +169,7 @@ class ClaveProvisionalTestCase(unittest.TestCase):
         self.assertEqual(self.client.post(f"/api/admin/equipo/{self.acceso_id}/clave-provisional").status_code, 401)
 
     def test_la_provisional_vale_una_vez_y_obliga_a_cambiarla(self):
-        with self.client.session_transaction() as s:
-            s["admin_auth"] = True
+        sesion_de_admin(self.client)
         respuesta = self.client.post(f"/api/admin/equipo/{self.acceso_id}/clave-provisional")
         self.assertEqual(respuesta.status_code, 200)
         provisional = respuesta.get_json()["password"]
@@ -199,8 +199,7 @@ class ClaveProvisionalTestCase(unittest.TestCase):
         self.assertFalse(again.get_json()["cambiar_clave"])
 
     def test_cuenta_inexistente(self):
-        with self.client.session_transaction() as s:
-            s["admin_auth"] = True
+        sesion_de_admin(self.client)
         self.assertEqual(self.client.post("/api/admin/equipo/999999/clave-provisional").status_code, 404)
 
 

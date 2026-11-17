@@ -1,9 +1,10 @@
 import logging
 import re
+from datetime import date
 
 from flask import Blueprint, jsonify, request, send_file, session
 
-from backend.api.marketing import _foto
+from backend.api.marketing import _foto, _linkedin
 from backend.api.sesion import requiere_admin
 
 from backend.config import (
@@ -320,11 +321,7 @@ def api_admin_actualizar_equipo(acceso_id: int):
         return jsonify(build_response(False, "Valor de 'en_web' no válido.")), 400
     linkedin = payload.get("linkedin")
     if linkedin is not None:
-        # Sin limpiar_texto: escaparía los & de la URL. Acaba en un <a href>
-        # de la web pública, así que solo https (nada de javascript:).
-        linkedin = str(linkedin).strip()
-        if len(linkedin) > 600 or (linkedin and not linkedin.lower().startswith("https://")):
-            return jsonify(build_response(False, "El LinkedIn tiene que ser un enlace https://.")), 400
+        linkedin = _linkedin(linkedin)
     foto = _foto(payload) if "foto" in payload else None
 
     # La combinación equipos/vp_de/cargo la valida el servicio contra la fila ya
@@ -473,8 +470,14 @@ def _validar_evento_calendario(payload: dict) -> str | None:
         return "El título es obligatorio y debe tener como máximo 150 caracteres."
     if len(descripcion) > 500:
         return "La descripción debe tener como máximo 500 caracteres."
-    if not _FECHA_RE.match(fecha):
-        return "La fecha debe tener el formato AAAA-MM-DD."
+    try:
+        # fromisoformat y no solo la forma: «2026-02-31» tiene buena pinta y
+        # la base de datos lo rechazaba con un 500.
+        if not _FECHA_RE.match(fecha):
+            raise ValueError
+        date.fromisoformat(fecha)
+    except ValueError:
+        return "La fecha debe tener el formato AAAA-MM-DD y existir."
     if hora and not _HORA_RE.match(hora):
         return "La hora debe tener el formato HH:MM, o dejarse vacía."
     return None

@@ -9,6 +9,7 @@ from backend.api.admin import _validar_evento_calendario
 from backend.api.marketing import (
     DatosInvalidos,
     _foto,
+    _linkedin,
     _lista_textos,
     _payload,
     _texto,
@@ -419,9 +420,7 @@ def api_equipo_guardar_perfil():
     nombre = limpiar_texto(str(payload.get("nombre", "")))
     apellidos = limpiar_texto(str(payload.get("apellidos", "")))
     dni = re.sub(r"[\s-]", "", str(payload.get("dni", ""))).upper()
-    # Sin limpiar_texto: escaparía los & de la URL. Acaba en un <a href> de la
-    # web pública, así que solo https (nada de javascript:).
-    linkedin = str(payload.get("linkedin", "")).strip()
+    linkedin = _linkedin(payload.get("linkedin"))
 
     if not nombre or not apellidos:
         return jsonify(build_response(False, "Nombre y apellidos son obligatorios.")), 400
@@ -429,8 +428,6 @@ def api_equipo_guardar_perfil():
         return jsonify(build_response(False, "Nombre o apellidos demasiado largos.")), 400
     if dni and not _DOCUMENTO_RE.match(dni):
         return jsonify(build_response(False, "Introduce un DNI, NIE o pasaporte válido.")), 400
-    if len(linkedin) > 600 or (linkedin and not linkedin.lower().startswith("https://")):
-        return jsonify(build_response(False, "El LinkedIn tiene que ser un enlace https://.")), 400
 
     # Sin `foto` en el payload se conserva la que ya había.
     foto = _foto(payload) if "foto" in payload else None

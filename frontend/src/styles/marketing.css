@@ -2294,11 +2294,18 @@ button.mkt-evento-react {
 
 .mkt-selector-nombre-react {
   flex: 1;
-  min-width: 0;
+  /* A 390 px «sobrecargado · 3 abiertas» se comía el nombre hasta dejar una
+     letra debajo de la insignia 1ª: el nombre se queda al menos con esto y
+     corta con puntos suspensivos; la carga baja de línea. */
+  min-width: 4.5em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* 1ª/2ª: el orden de `equipos` que fija admin en Cuentas del equipo. */
 .mkt-selector-pref-react {
+  flex-shrink: 0;
   padding: 2px 8px;
   border-radius: 999px;
   background: var(--color-papel);

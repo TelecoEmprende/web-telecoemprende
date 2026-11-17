@@ -1,14 +1,16 @@
 """API del espacio de trabajo de un departamento dentro de /equipo.
 
-Sirve a Marketing y a Eventos con las mismas rutas: el blueprint se registra
-una vez por departamento (ver `app.py`) y `departamento_actual()` dice cuál es
-el de la petición. Todas las consultas van acotadas por él, así que pasar el id
-de una tarea de otro departamento no encuentra nada.
+Sirve a Marketing, Eventos e Ingeniería con las mismas rutas: el blueprint se
+registra una vez por departamento (ver `app.py`) y `departamento_actual()` dice
+cuál es el de la petición. Todas las consultas van acotadas por él, así que
+pasar el id de una tarea de otro departamento no encuentra nada.
 
 Autorización: reutiliza la sesión que ya monta `login_equipo` (no hay un
-sistema de auth paralelo). Cada ruta pasa por `@requiere_sesion`, que exige
-pertenecer al departamento de la ruta -- comprobado en servidor, nunca
-confiando en que el frontend haya escondido el botón.
+sistema de auth paralelo). Cada ruta pasa por `@requiere_sesion`, que solo
+exige una sesión de /equipo: todos somos de los tres departamentos. Los
+permisos finos (repartir tareas, Presupuesto, reuniones de directiva) se
+comprueban dentro de cada ruta, en servidor, nunca confiando en que el
+frontend haya escondido el botón.
 """
 
 import base64
@@ -35,6 +37,7 @@ from backend.api.sesion import requiere_sesion
 from backend.services.admin import is_admin_authenticated
 from backend.services.db import DatosInvalidos
 from backend.services.equipo import equipo_session_info
+from backend.services.security import limpiar_texto
 from backend.services.slack import (
     tarea_cambia_estado,
     tarea_comentada,
@@ -65,34 +68,6 @@ from backend.services.marketing import (
 )
 
 logger = logging.getLogger("telecoemprende.marketing")
-
-# Caracteres de control (menos tab y salto de línea): no aportan nada y
-# ensucian tanto la base de datos como los exports.
-_CONTROL = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
-
-
-def _sanear(texto: str, *, multilinea: bool = False) -> str:
-    """Limpieza para los textos de Marketing.
-
-    Deliberadamente NO usa `services.security.limpiar_texto`, que hace
-    `escape()` y aplasta los saltos de línea. Eso es correcto para el
-    formulario de inscripción (su texto acaba en un Excel), pero aquí rompe
-    dos cosas: un guion con comillas se guardaría como `&quot;` y React lo
-    pintaría tal cual -- React escapa al renderizar, no desescapa --, y un
-    guion multilínea se convertiría en un párrafo de una sola línea.
-
-    Contra XSS ya protegen el escapado de React al pintar y la CSP; contra
-    inyección SQL, las consultas parametrizadas de psycopg2. Escapar aquí no
-    añade seguridad, solo corrompe el contenido.
-    """
-    texto = _CONTROL.sub("", texto)
-
-    if not multilinea:
-        return " ".join(texto.split())
-
-    lineas = texto.replace("\r\n", "\n").replace("\r", "\n").split("\n")
-    return "\n".join(" ".join(linea.split()) for linea in lineas).strip()
-
 
 # El mismo blueprint se registra una vez por departamento (ver `app.py`), con
 # un `name` distinto cada vez. Así Marketing y Eventos comparten tablero,
@@ -132,7 +107,7 @@ def _texto(
     maximo=MAX_TITULO_LEN,
     multilinea=False,
 ) -> str:
-    valor = _sanear(str(datos.get(clave, "") or ""), multilinea=multilinea)
+    valor = limpiar_texto(str(datos.get(clave, "") or ""), multilinea=multilinea)
     if obligatorio and not valor:
         raise DatosInvalidos(f"El campo '{clave}' es obligatorio.")
     if len(valor) > maximo:
@@ -156,8 +131,43 @@ def _lista_textos(datos: dict, clave: str, maximo: int) -> list[str]:
         raise DatosInvalidos(f"'{clave}' debe ser una lista.")
     if len(valor) > maximo:
         raise DatosInvalidos(f"'{clave}' admite como mucho {maximo} elementos.")
-    limpios = [_sanear(str(v)) for v in valor]
+    limpios = [limpiar_texto(str(v)) for v in valor]
     return [v for v in limpios if v]
+
+
+def _url(datos: dict, clave: str) -> str:
+    """Enlace http(s), o vacío. Lo que acaba en un `<a href>` no puede ser un
+    `javascript:` ni un `data:` guardado por alguien del equipo."""
+    valor = _texto(datos, clave, maximo=600)
+    if valor and not valor.lower().startswith(("http://", "https://")):
+        raise DatosInvalidos(f"'{clave}' tiene que empezar por http:// o https://.")
+    return valor
+
+
+def _lista_urls(datos: dict, clave: str, maximo: int) -> list[str]:
+    """Los enlaces de una tarea o un entregable, que se pintan en un `<a
+    href>` (`AdjuntosDeContent`). Uno sin esquema («drive.google.com/...») se
+    completa con https://; cualquier otro esquema (`javascript:`, `data:`) se
+    rechaza."""
+    enlaces = []
+    for enlace in _lista_textos(datos, clave, maximo):
+        if not re.match(r"^[a-z][a-z0-9+.-]*:", enlace, re.IGNORECASE):
+            enlace = f"https://{enlace}"
+        enlaces.append(_url({clave: enlace}, clave))
+    return enlaces
+
+
+def _linkedin(valor) -> str:
+    """El LinkedIn de una cuenta («Mis datos» y Cuentas). Acaba en un `<a
+    href>` de la web pública, así que solo https; sin esquema
+    («linkedin.com/in/...») se completa, como los enlaces de las tareas. Sin
+    `limpiar_texto`: no toca nada de la URL."""
+    texto = str(valor or "").strip()
+    if texto and not re.match(r"^[a-z][a-z0-9+.-]*:", texto, re.IGNORECASE):
+        texto = f"https://{texto}"
+    if len(texto) > 600 or (texto and not texto.lower().startswith("https://")):
+        raise DatosInvalidos("El LinkedIn tiene que ser un enlace https://.")
+    return texto
 
 
 def _opcion(datos: dict, clave: str, validas: tuple, por_defecto: str) -> str:
@@ -182,7 +192,7 @@ def _checklist(datos: dict) -> list[dict]:
     for item in valor:
         if not isinstance(item, dict):
             raise DatosInvalidos("Cada elemento de la checklist debe ser un objeto.")
-        texto = _sanear(str(item.get("texto", "")))
+        texto = limpiar_texto(str(item.get("texto", "")))
         if not texto:
             continue
         items.append({"texto": texto[:MAX_TITULO_LEN], "hecho": bool(item.get("hecho"))})
@@ -396,7 +406,7 @@ def _campos_content(datos: dict, *, parcial: bool) -> dict:
     if incluir("responsables"):
         campos["responsables"] = _lista_textos(datos, "responsables", MAX_RESPONSABLES)
     if incluir("enlaces"):
-        campos["enlaces"] = _lista_textos(datos, "enlaces", MAX_ENLACES)
+        campos["enlaces"] = _lista_urls(datos, "enlaces", MAX_ENLACES)
     return campos
 
 
@@ -503,7 +513,7 @@ def api_crear_task():
         responsables=responsables,
         tags=_lista_textos(datos, "tags", MAX_RESPONSABLES),
         checklist=_checklist(datos),
-        enlaces=_lista_textos(datos, "enlaces", MAX_ENLACES),
+        enlaces=_lista_urls(datos, "enlaces", MAX_ENLACES),
         creado_por=_autor(),
     )
     if task is None:
@@ -566,7 +576,7 @@ def api_actualizar_task(task_id: int):
     if "checklist" in datos:
         campos["checklist"] = _checklist(datos)
     if "enlaces" in datos:
-        campos["enlaces"] = _lista_textos(datos, "enlaces", MAX_ENLACES)
+        campos["enlaces"] = _lista_urls(datos, "enlaces", MAX_ENLACES)
     if "departamento" in datos:
         # Mover una tarea de departamento es asignarla igual que crearla, y
         # hay que poder hacerlo en los dos: en el de origen para sacarla y en

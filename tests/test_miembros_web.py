@@ -15,6 +15,7 @@ os.environ["DATABASE_URL"] = os.environ.get(
 )
 
 import app  # noqa: E402
+from test_api import sesion_de_admin  # noqa: E402
 import backend.services.equipo as equipo_service  # noqa: E402
 from backend.services.db import migrar  # noqa: E402
 
@@ -100,13 +101,16 @@ class MiembrosWebTestCase(unittest.TestCase):
 
     def test_linkedin_solo_https(self):
         acceso = self.alta("ana@example.com", "Ana", ["marketing", "eventos"], foto=FOTO)
-        with self.client.session_transaction() as sesion:
-            sesion["admin_auth"] = True
+        sesion_de_admin(self.client)
         url = f"/api/admin/equipo/{acceso['id']}"
         perfil = "https://www.linkedin.com/in/ana-garc%C3%ADa/?a=1&b=2"
         self.assertEqual(self.client.put(url, json={"linkedin": "javascript:alert(1)"}).status_code, 400)
         self.assertEqual(self.client.put(url, json={"linkedin": perfil}).status_code, 200)
         self.assertEqual(self.miembros()[0]["linkedin"], perfil)
+        # Sin esquema se completa, como los enlaces de las tareas; http no vale.
+        self.assertEqual(self.client.put(url, json={"linkedin": "linkedin.com/in/ana"}).status_code, 200)
+        self.assertEqual(self.miembros()[0]["linkedin"], "https://linkedin.com/in/ana")
+        self.assertEqual(self.client.put(url, json={"linkedin": "http://linkedin.com/in/ana"}).status_code, 400)
 
 
 if __name__ == "__main__":

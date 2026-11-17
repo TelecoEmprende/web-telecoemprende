@@ -31,15 +31,18 @@ import backend.api.registros  # noqa: F401
 from backend.config import ADMIN_SESSION_LIFETIME_SECONDS
 from backend.schemas import build_response
 from backend.services import auditoria
-from backend.services.db import DatosInvalidos, migrar
+from backend.services.db import DatosInvalidos, cerrar_conexion, migrar
+from backend.services.equipo import refrescar_sesion
 from backend.services.security import obtener_ip_real
 
 app = Flask(__name__)
-# Vercel (y Nginx en Docker) hacen de proxy delante: sin esto, Flask no se fía
+# Vercel hace de proxy delante: sin esto, Flask no se fía
 # de X-Forwarded-Proto y `url_for(..., _external=True)` genera enlaces
 # `http://` en vez de `https://` -- justo el enlace de suscripción del
 # calendario, que Google Calendar rechaza en silencio si no es https.
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
+# Una conexión a Postgres por petición (ver `services/db.py`), cerrada al final.
+app.teardown_appcontext(cerrar_conexion)
 app.register_blueprint(admin_api)
 app.register_blueprint(equipo_api)
 app.register_blueprint(notas_api)
@@ -56,9 +59,14 @@ app.register_blueprint(
     marketing_api, url_prefix="/api/ingenieria", name="ingenieria_api"
 )
 
-# Usa una clave segura desde variable de entorno.
-# Si no existe, genera una temporal para desarrollo.
-app.secret_key = os.environ.get("FLASK_SECRET_KEY", secrets.token_hex(32))
+# La clave que firma la cookie de sesión. En Vercel es obligatoria: con una
+# aleatoria, cada instancia tendría la suya y las sesiones se cerrarían al azar
+# según qué instancia contestara. En local, sin ella, una temporal.
+app.secret_key = os.environ.get("FLASK_SECRET_KEY", "")
+if not app.secret_key:
+    if os.environ.get("VERCEL"):
+        raise RuntimeError("Falta FLASK_SECRET_KEY en las variables de entorno de Vercel.")
+    app.secret_key = secrets.token_hex(32)
 
 # Configuración de cookies de sesión más segura
 app.config["SESSION_COOKIE_HTTPONLY"] = True
@@ -86,6 +94,9 @@ def preparar_base_de_datos():
     # dependen de la base de datos y no esperan por ella.
     if request.path.startswith("/api/"):
         migrar()
+        # Los permisos salen de la cuenta, no de la cookie: una cuenta
+        # desactivada, borrada o sin admin lo nota en esta misma petición.
+        refrescar_sesion()
 
 
 @app.errorhandler(DatosInvalidos)
@@ -109,6 +120,16 @@ def registrar_auditoria(response):
             # contraseña) es justo lo que interesa ver.
             email = str((request.get_json(silent=True) or {}).get("email", ""))[:120]
         auditoria.registrar(email, request.method, request.path, response.status_code, obtener_ip_real())
+    return response
+
+
+@app.after_request
+def avisar_permisos(response):
+    # El front se fija en si cambia (`api/client.ts`): a quien le dan o le
+    # quitan el admin con la sesión abierta le aparece o desaparece el grupo
+    # Admin en su siguiente clic, sin recargar.
+    if request.path.startswith("/api/") and session.get("member_id"):
+        response.headers["X-Equipo-Admin"] = "1" if session.get("admin_auth") else "0"
     return response
 
 
@@ -190,7 +211,7 @@ def frontend_robots():
 
 
 # Imágenes sueltas de `frontend/dist` (fotos del equipo, logos de eventos...).
-# En Vercel y en Nginx se sirve todo el directorio; aquí había solo reglas para
+# En Vercel se sirve todo el directorio; aquí había solo reglas para
 # /logo.png y /robots.txt, así que /equipo-abril.jpg daba 404 en local y las
 # fotos de perfil salían como iniciales.
 NOMBRE_IMAGEN = re.compile(r"^[\w.-]+\.(png|jpe?g|svg|webp|gif|ico)$")

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { ArrowLeft } from "lucide-react";
 import { Link, useSearchParams } from "react-router-dom";
 
+import { REVISAR_SESION } from "../api/client";
 import { getEquipoSession, loginEquipo, logoutEquipo, registrarEquipo } from "../api/equipo";
 import { SidebarProvider, SidebarTrigger } from "../components/ui/sidebar";
 import { AuditoriaPanel } from "../components/admin/AuditoriaPanel";
@@ -48,6 +49,9 @@ const TITULO_ADMIN: Partial<Record<Seccion, string>> = {
   "calendario-club": "Calendario del club",
   auditoria: "Auditoría",
 };
+
+/** Los apartados de Admin que exigen `members.is_admin` (`@requiere_admin`). */
+const SOLO_ADMIN: Seccion[] = ["inscripciones", "cuentas", "calendario-club", "auditoria"];
 
 function esPanel(seccion: Seccion): seccion is Panel {
   return (PANELES as string[]).includes(seccion);
@@ -219,24 +223,54 @@ export function EquipoPage() {
     setRegistroMessage(null);
   }
 
+  // Solo usa setters de useState, que no cambian: vale la de cualquier render.
+  function olvidarSesion() {
+    setIsAuthenticated(false);
+    setTeams([]);
+    setVpDe([]);
+    setCargo("");
+    setEsAdmin(false);
+    setCambiarClave(false);
+    setPerfil({ nombre: "", email: "" });
+    setSeccion("club");
+    setDeptosFiltro([]);
+  }
+
   async function handleLogout() {
     setIsLoggingOut(true);
 
     try {
       await logoutEquipo();
     } finally {
-      setIsAuthenticated(false);
-      setTeams([]);
-      setVpDe([]);
-      setCargo("");
-      setEsAdmin(false);
-      setCambiarClave(false);
-      setPerfil({ nombre: "", email: "" });
-      setSeccion("club");
-      setDeptosFiltro([]);
+      olvidarSesion();
       setIsLoggingOut(false);
     }
   }
+
+  // La API avisa (ver REVISAR_SESION) y se vuelve a pedir la sesión: sin ella,
+  // al login; sin admin, fuera el grupo Admin y sus apartados; con admin
+  // nuevo, aparece. Así un cambio en Cuentas se nota en el siguiente clic.
+  useEffect(() => {
+    async function revisarSesion() {
+      try {
+        const session = await getEquipoSession();
+        if (!session.authenticated) {
+          olvidarSesion();
+          return;
+        }
+        setEsAdmin(session.admin);
+        setCargo(session.cargo);
+        setVpDe(session.vp_de);
+        if (!session.admin) {
+          setSeccion((actual) => (SOLO_ADMIN.includes(actual) ? "club" : actual));
+        }
+      } catch {
+        // Sin red: el panel que falló ya lo avisa.
+      }
+    }
+    window.addEventListener(REVISAR_SESION, revisarSesion);
+    return () => window.removeEventListener(REVISAR_SESION, revisarSesion);
+  }, []);
 
   /** Desde el calendario se salta a la campaña del elemento tocado -- puede
    *  ser de un departamento distinto al filtrado, así que acota el filtro a

@@ -92,7 +92,12 @@ export function DeptoDashboard({
           /> : null}
         {seccion === "presupuesto" ? <PresupuestoPanel /> : null}
         {seccion === "reuniones" ? (
-          <ReunionesPanel deptos={deptos} esDirectiva={puedeAsignarEnTodo || vpDe.length > 0} />
+          <ReunionesPanel
+            deptos={deptos}
+            esDirectiva={puedeAsignarEnTodo || vpDe.length > 0}
+            vpDe={vpDe}
+            puedeAsignarEnTodo={puedeAsignarEnTodo}
+          />
         ) : null}
       </DirectorioProvider>
       </YoProvider>

@@ -9,6 +9,7 @@ Leer cuando la tarea los toque (no se cargan solos):
 - `docs/arquitectura.md` — cómo encajan backend, base de datos, frontend y despliegue.
 - `docs/dominio.md` — qué significan departamentos, cargo, admin, Cuentas, Herramientas, Calendario y Miembros.
 - `docs/brand-guide.html` (la referencia) y `DESIGN.md` — marca.
+- `docs/auditoria-2026-11.md` — auditoría de noviembre de 2026: qué se arregló, qué riesgos se aceptan y qué queda pendiente.
 
 ## Flujo de git
 
@@ -41,17 +42,17 @@ export TEST_DATABASE_URL=postgresql://telecoemprende:telecoemprende@localhost:55
 .venv/bin/python -m unittest discover -s tests -p "test_api.py" -k <test>   # un archivo / un test (los tests se importan entre sí por nombre, así que `tests.test_x` no funciona)
 ```
 
-La base de datos de tests es el contenedor Docker `teleco-test-pg` (no está en `docker-compose.yml`). Si no existe: `docker run -d --name teleco-test-pg -p 55434:5432 -e POSTGRES_USER=telecoemprende -e POSTGRES_PASSWORD=telecoemprende -e POSTGRES_DB=telecoemprende_test postgres:16-alpine`.
+La base de datos de tests es el contenedor Docker `teleco-test-pg`. Si no existe: `docker run -d --name teleco-test-pg -p 55434:5432 -e POSTGRES_USER=telecoemprende -e POSTGRES_PASSWORD=telecoemprende -e POSTGRES_DB=telecoemprende_test postgres:16-alpine`.
 
 En local, el Python de python.org para macOS no trae certificados: arrancar el backend con `SSL_CERT_FILE=$(python -m certifi)` o el feed de Luma vuelve vacío sin avisar.
 
 ### `demo/` y `juego/` (independientes)
 
-Proyectos aparte, cada uno su propio servicio de Vercel; no comparten build, dependencias ni CSS con `frontend/`. `cd demo && npm install && npm run dev` (base `/demo/`). `juego/` no tiene build: HTML/CSS/JS servido tal cual (ver `juego/README.md`).
+Proyectos aparte, cada uno su propio servicio de Vercel; no comparten build, dependencias ni CSS con `frontend/`. `cd demo && npm install && npm run dev` (base `/demo/`). `juego/` no tiene build: HTML/CSS/JS servido tal cual (ver `juego/README.md`). Se sirven en el mismo origen que `/equipo`, así que su código puede llamar a `/api` con la sesión de quien lo abra: `juego/` no lleva dependencias de terceros, y cada dependencia nueva de `demo/` se revisa como si fuera del CRM (riesgo aceptado, ver `docs/auditoria-2026-11.md`).
 
-### Docker (todo junto)
+### CI
 
-`docker compose up --build -d` / `docker compose logs -f` / `docker compose down`. Necesita un `.env` en la raíz con `FLASK_SECRET_KEY`, `POSTGRES_PASSWORD` y `CERTBOT_EMAIL` (ver `.env.example`).
+`.github/workflows/ci.yml` ejecuta lo de arriba (tests del backend con Postgres, ruff, lint, tests y build del frontend) en cada PR a `staging` y `prod`. Al fusionar en `prod`, `migraciones.yml` aplica las migraciones con el secreto `DATABASE_URL` del repositorio (`python -m backend.services.db`). Producción solo se despliega en Vercel: no hay despliegue con Docker.
 
 ### Vercel
 
@@ -64,10 +65,14 @@ Proyectos aparte, cada uno su propio servicio de Vercel; no comparten build, dep
 - Tablas y columnas en inglés; la API habla en español a través de las vistas `<tabla>_v`. Las lecturas van por las vistas y las escrituras por las tablas (mapas: `_COLUMNA`, `Tabla.columnas`, `NOTA_COLUMNAS`). Los valores de enumeración no se traducen.
 - Las personas se referencian por id de cuenta, nunca por email: las escrituras pasan por `fijar_personas`/`id_de_persona`.
 - Toda ruta con sesión lleva `@requiere_sesion` o `@requiere_admin` (`backend/api/sesion.py`). Un `DatosInvalidos` es un 400.
+- Los permisos salen de la cuenta, no de la cookie: `refrescar_sesion` (`services/equipo.py`) relee `members` en cada petición a `/api`. Un test que necesite admin crea la cuenta con `is_admin` (`sesion_de_admin` en `tests/test_api.py`); poner `admin_auth` en la cookie no basta.
+- Los servicios piden la conexión con `conexion()` (`services/db.py`): una por petición, en `g`. No se abre `psycopg2.connect` a mano.
+- Los textos se limpian con `limpiar_texto` (`services/security.py`), que no escapa HTML: React ya escapa al pintar.
 - Las vistas `_v` ya excluyen lo borrado; las consultas sobre tablas base necesitan `deleted_at IS NULL`.
-- Los campos URL pasan por `_url` (solo http(s)).
+- Los campos URL pasan por `_url` (solo http(s)); las listas de enlaces, por `_lista_urls` (`backend/api/marketing.py`).
 - `backend/api/registros.py` se importa en `app.py` *antes* de registrar `marketing_api` (Flask no deja añadir rutas después).
 - Correo, Slack y Luma fallan en silencio: si falta la clave o fallan, nunca bloquean la operación.
+- Las rutas de `backend/api/cron.py` aceptan GET: es lo que manda Vercel Cron.
 - Nunca se ordena la lista `equipos` de una persona: su orden es su preferencia.
 
 **Frontend**
@@ -76,5 +81,6 @@ Proyectos aparte, cada uno su propio servicio de Vercel; no comparten build, dep
 - El movimiento de `/equipo` sale de `components/movimiento.tsx`: solo `transform` y `opacity`, 0,2–0,3 s, muelle `bounce` 0,1 y siempre respetando `useReducedMotion`. Lo que usa drag nativo (el tablero de `TasksPanel`) se envuelve en un `motion.div`, no se convierte en `motion.button`. Una barra de progreso no puede llevar a la vez `transition: transform` en CSS y una animación de motion.
 - Los componentes de SmoothUI que traen `tokens.json` (`animated-tabs`, `notification-badge`) meten su propia paleta en `index.css`: tras instalarlos, revertir `index.css` y apuntar sus clases a `tokens.css`.
 - Los componentes de React Bits se copian a mano en `components/reactbits/`, no con `shadcn add @react-bits/...` (ese registro fija `motion@^12` y bajaría `motion@13`).
+- Un modal propio (no `Dialog` de shadcn) va en `createPortal(…, document.body)`: dentro del panel queda por debajo de la barra de arriba. Con puntero táctil los campos van a 16 px (regla al final de `equipo.css`); no se baja de ahí o Safari hace zoom.
 - Una ruta nueva **de primer nivel** necesita su propio `frontend/<ruta>/index.html` + una entrada en `build.rollupOptions.input` de `vite.config.ts` para su título y las vistas previas de enlaces. El servidor de desarrollo de Flask da 404 en las rutas que no declara.
 - Añadir una vista de Admin: un id de `Seccion` + entrada en `itemsAdmin` (`EquipoSidebar.tsx`), su título en `TITULO_ADMIN` y su línea de render en `EquipoPage.tsx`; las rutas del backend usan `@requiere_admin`.

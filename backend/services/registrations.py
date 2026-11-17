@@ -1,9 +1,8 @@
 from io import BytesIO
 
-import psycopg2
 from openpyxl import Workbook
 
-from backend.config import DATABASE_URL
+from backend.services.db import conexion
 
 
 # Las inscripciones están cerradas: pasado un año, los datos de quien se apuntó
@@ -13,7 +12,7 @@ DIAS_DE_INSCRIPCION = 365
 
 
 def _get_connection():
-    return psycopg2.connect(DATABASE_URL)
+    return conexion()
 
 
 def purgar_inscripciones_antiguas() -> int:
