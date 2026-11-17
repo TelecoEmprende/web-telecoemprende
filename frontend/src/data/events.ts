@@ -19,6 +19,16 @@ type ClubEvent = {
  */
 export const CLUB_EVENTS: ClubEvent[] = [
   {
+    id: "natalia-rodriguez-2026",
+    title: "Natalia Rodríguez · Saturno Labs",
+    tag: { es: "Charla con fundadores", en: "Talk with founders" },
+    description: {
+      es: "Natalia Rodríguez, de Saturno Labs, contando su historia desde sus inicios en la escuela hasta hoy: los retos que se ha atrevido a emprender y lo que ha aprendido por el camino.",
+      en: "Natalia Rodríguez, from Saturno Labs, telling her story from her first days at the school to today: the challenges she dared to take on as a founder and what she learned along the way.",
+    },
+    photo: { src: "/evento-natalia-rodriguez.jpg", alt: "Natalia Rodríguez (Saturno Labs) con dos miembros del club ante el cartel de la Red Alumni ETSIT-UPM" },
+  },
+  {
     id: "blanca-cena-2026",
     title: "Blanca Ceña",
     tag: { es: "Entrevista", en: "Interview" },
