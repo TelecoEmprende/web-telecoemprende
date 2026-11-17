@@ -22,9 +22,34 @@ from werkzeug.security import generate_password_hash  # noqa: E402
 from backend.services.db import migrar  # noqa: E402
 
 
+def sesion_de_admin(client, email="admin@example.com"):
+    """Sesión de una cuenta con admin. Tiene que existir de verdad: los
+    permisos se releen de la cuenta en cada petición (`refrescar_sesion`), así
+    que una cookie con `admin_auth` y nada detrás ya no da admin."""
+    conn = registration_service._get_connection()
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            INSERT INTO members (email, password_hash, preferred_departments, active, is_admin)
+            VALUES (%s, 'sin-clave', '{marketing,eventos,ingenieria}', TRUE, TRUE)
+            ON CONFLICT (email) DO UPDATE SET active = TRUE, is_admin = TRUE
+            RETURNING id
+            """,
+            (email,),
+        )
+        member_id = cur.fetchone()[0]
+    conn.commit()
+    conn.close()
+    with client.session_transaction() as s:
+        s.clear()
+        s["member_id"] = member_id
+        s["equipo_email"] = email
+        s["admin_auth"] = True
+
+
 class ApiTestCase(unittest.TestCase):
     def setUp(self):
-        security_service.request_log.clear()
+        security_service.olvidar_intentos()
 
         migrar()
 
@@ -102,12 +127,61 @@ class ApiTestCase(unittest.TestCase):
         conn.close()
 
     def login(self):
-        """Sesión de admin tal cual la deja el login de /equipo de alguien de
-        Ingeniería o del board (ver login_equipo): ya no hay contraseña
-        maestra."""
+        """Sesión de una cuenta con admin, como la deja el login de /equipo."""
+        sesion_de_admin(self.client)
+
+    def _sql(self, consulta, valores=()):
+        conn = registration_service._get_connection()
+        with conn.cursor() as cur:
+            cur.execute(consulta, valores)
+        conn.commit()
+        conn.close()
+
+    def test_desactivar_la_cuenta_corta_la_sesion_abierta(self):
+        self.seed_equipo()
+        self.assertEqual(self.equipo_login().status_code, 200)
+        self.assertEqual(self.client.get("/api/marketing/tasks").status_code, 200)
+
+        self._sql("UPDATE members SET active = FALSE WHERE email = 'marketing@example.com'")
+        self.assertEqual(self.client.get("/api/marketing/tasks").status_code, 401)
+        self.assertFalse(self.client.get("/api/equipo/session").get_json()["authenticated"])
+
+    def test_borrar_la_cuenta_corta_la_sesion_abierta(self):
+        self.seed_equipo()
+        self.equipo_login()
+        self._sql("DELETE FROM members WHERE email = 'marketing@example.com'")
+        self.assertEqual(self.client.get("/api/marketing/tasks").status_code, 401)
+
+    def test_quitar_el_admin_lo_quita_en_la_siguiente_peticion(self):
+        self.login()
+        self.assertEqual(self.client.get("/api/admin/equipo").status_code, 200)
+
+        self._sql("UPDATE members SET is_admin = FALSE WHERE email = 'admin@example.com'")
+        self.assertEqual(self.client.get("/api/admin/equipo").status_code, 401)
+        self.assertFalse(self.client.get("/api/equipo/session").get_json()["admin"])
+
+    def test_cada_respuesta_dice_si_la_sesion_tiene_admin(self):
+        # El front lo mira para enseñar o quitar el grupo Admin sin recargar.
+        self.assertNotIn("X-Equipo-Admin", self.client.get("/api/equipo/session").headers)
+        self.seed_equipo()
+        self.equipo_login()
+        self.assertEqual(self.client.get("/api/equipo/session").headers["X-Equipo-Admin"], "0")
+        self._sql("UPDATE members SET is_admin = TRUE WHERE email = 'marketing@example.com'")
+        self.assertEqual(self.client.get("/api/marketing/tasks").headers["X-Equipo-Admin"], "1")
+
+    def test_cambiar_el_email_no_rompe_la_sesion_abierta(self):
+        self.seed_equipo()
+        self.equipo_login()
+        self._sql("UPDATE members SET email = 'nuevo@example.com' WHERE email = 'marketing@example.com'")
+
+        perfil = self.client.get("/api/equipo/perfil")
+        self.assertEqual(perfil.status_code, 200)
+        self.assertEqual(perfil.get_json()["email"], "nuevo@example.com")
+
+    def test_admin_auth_sin_cuenta_no_da_admin(self):
         with self.client.session_transaction() as s:
-            s.clear()
             s["admin_auth"] = True
+        self.assertEqual(self.client.get("/api/admin/equipo").status_code, 401)
 
     def test_admin_password_login_no_longer_exists(self):
         response = self.client.post("/api/admin/login", json={"password": "x"})
@@ -631,6 +705,13 @@ class ApiTestCase(unittest.TestCase):
             json={"titulo": "X", "descripcion": "", "fecha": "01-10-2026", "hora": ""},
         )
         self.assertEqual(response.status_code, 400)
+
+        # Bien formada pero imposible: antes llegaba a la base de datos y era un 500.
+        imposible = self.client.post(
+            "/api/admin/calendario",
+            json={"titulo": "X", "descripcion": "", "fecha": "2026-02-31", "hora": ""},
+        )
+        self.assertEqual(imposible.status_code, 400)
 
     def test_equipo_calendario_requires_equipo_auth(self):
         self.assertEqual(self.client.get("/api/equipo/calendario").status_code, 401)

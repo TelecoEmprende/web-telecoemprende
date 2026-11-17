@@ -26,7 +26,7 @@ FOTO = (
 
 class DatosFormularioTestCase(unittest.TestCase):
     def setUp(self):
-        security_service.request_log.clear()
+        security_service.olvidar_intentos()
         migrar()
 
         conn = equipo_service._get_connection()
@@ -79,6 +79,13 @@ class DatosFormularioTestCase(unittest.TestCase):
         self.assertEqual(self.client.get("/api/equipo/perfil").get_json()["foto"], datos["foto"])
         # El nombre nuevo se ve ya en la sesión, sin volver a entrar.
         self.assertEqual(self.client.get("/api/equipo/session").get_json()["nombre"], "Ana")
+
+    def test_el_nombre_se_guarda_tal_cual_sin_escapar(self):
+        # Antes salía «O&#x27;Brien» en la web: el texto se guardaba escapado.
+        self.entrar()
+        self.assertEqual(self.guardar(nombre="Ana O'Brien", apellidos="García & López").status_code, 200)
+        datos = self.client.get("/api/equipo/perfil").get_json()
+        self.assertEqual((datos["nombre"], datos["apellidos"]), ("Ana O'Brien", "García & López"))
 
     def test_el_perfil_no_toca_cargo_ni_departamentos_ni_permisos(self):
         self.entrar()
@@ -148,8 +155,12 @@ class DatosFormularioTestCase(unittest.TestCase):
 
         self.entrar()
         self.guardar(nombre="=HYPERLINK()")
-        with self.client.session_transaction() as s:
-            s["admin_auth"] = True
+        # Admin de verdad, en la cuenta: la cookie sola ya no da permisos.
+        conn = equipo_service._get_connection()
+        with conn.cursor() as cur:
+            cur.execute("UPDATE members SET is_admin = TRUE")
+        conn.commit()
+        conn.close()
         respuesta = self.client.get("/api/admin/equipo/excel")
         self.assertEqual(respuesta.status_code, 200)
 
@@ -157,8 +168,8 @@ class DatosFormularioTestCase(unittest.TestCase):
         fila = [c.value for c in ws[2]]
         self.assertEqual(fila[0], "'=HYPERLINK()")
         self.assertEqual(fila[1:5], ["García López", "12345678Z", "ana@alumnos.upm.es",
-                                     "marketing, eventos, ingenieria"])
-        self.assertEqual(fila[5], "marketing")
+                                     "Marketing, Eventos, Ingeniería"])
+        self.assertEqual(fila[5], "Marketing")
         self.assertEqual(len(ws._images), 1)
 
 

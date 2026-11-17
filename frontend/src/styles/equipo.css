@@ -256,6 +256,9 @@
    un grupo por departamento del que colgarlo. */
 .workspace-selector-depto-react {
   display: flex;
+  /* En Tareas son cuatro casillas (con Administrativo): a 390 px no caben en
+     una línea y la página deslizaba de lado. */
+  flex-wrap: wrap;
   gap: 6px;
   margin-left: auto;
 }
@@ -3578,4 +3581,15 @@ span.cal-capa-react {
 .equipo-login-react .acceso-enlace-react:hover,
 .equipo-login-react .acceso-enlace-react:focus-visible {
   opacity: 1;
+}
+
+/* Safari de iPhone hace zoom al tocar un campo de menos de 16 px (buscadores,
+   desplegables, la tabla de Cuentas) y no lo deshace al salir. Con el dedo,
+   16 px en todos; `!important` porque los tamaños vienen de muchos sitios
+   (Tailwind, crm-*, mkt-*) y esto tiene que ganar siempre. Sin acotar a
+   `.shadcn-scope`: los diálogos van en un portal fuera de ella. */
+@media (pointer: coarse) {
+  :is(input:not([type="checkbox"], [type="radio"], [type="file"]), select, textarea) {
+    font-size: 16px !important;
+  }
 }

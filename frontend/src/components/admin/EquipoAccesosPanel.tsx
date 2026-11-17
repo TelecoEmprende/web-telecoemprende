@@ -530,7 +530,8 @@ export function EquipoAccesosPanel() {
                           }}
                         />
                         <Input
-                          type="url"
+                          type="text"
+                          inputMode="url"
                           defaultValue={acceso.linkedin}
                           placeholder="LinkedIn (https://…)"
                           aria-label={`LinkedIn de ${acceso.email}`}

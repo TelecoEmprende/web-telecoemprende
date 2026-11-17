@@ -161,12 +161,19 @@ estado de la plataforma y los servicios.
 
 **Para qué:** recuperar lo borrado en 30 días.
 **Casos:** restaurar un proyecto devuelve sus entregables y tareas; no se
-restaura algo dentro de un proyecto que sigue borrado.
+restaura algo dentro de un proyecto que sigue borrado; cada cual ve solo lo que
+puede restaurar (una reunión de Directiva borrada, solo la directiva).
 
 ## Admin
 
 Métricas y Presupuesto de Eventos (cargo, VP o admin); Inscripciones, Cuentas del equipo,
 Calendario del club y Auditoría (admin).
+
+**Casos:** desactivar o borrar una cuenta en Cuentas la echa en su siguiente
+clic, aunque tuviera la sesión abierta; quitarle el admin le quita el grupo
+Admin igual de rápido; cambiarle el email no la saca de su sesión. Un nombre
+con apóstrofo o `&` («O'Brien», «García & Cía») se ve tal cual, en el CRM, en
+la web y en los Excel.
 
 ## Pendiente de decidir (fuera de la prioridad actual)
 

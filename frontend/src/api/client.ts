@@ -1,5 +1,24 @@
 import type { ApiFailure } from "../types/api";
 
+/** Se lanza en `window` cuando la sesión ya no es la que pinta la página:
+ *  un 401 (cuenta desactivada, borrada o sin admin con la sesión abierta) o un
+ *  cambio en `X-Equipo-Admin` (le han dado o quitado el admin). EquipoPage
+ *  vuelve a pedir la sesión y se pone al día. */
+export const REVISAR_SESION = "equipo:revisar-sesion";
+
+// El último `X-Equipo-Admin` visto: solo se avisa cuando cambia.
+let ultimoAdmin: string | null = null;
+
+function avisarSiCambiaLaSesion(response: Response) {
+  if (typeof window === "undefined") return;
+  const admin = response.headers.get("X-Equipo-Admin");
+  const cambiaAdmin = admin !== null && ultimoAdmin !== null && admin !== ultimoAdmin;
+  if (admin !== null) ultimoAdmin = admin;
+  if (response.status === 401 || cambiaAdmin) {
+    window.dispatchEvent(new Event(REVISAR_SESION));
+  }
+}
+
 function resolveRequestUrl(input: string) {
   if (typeof window === "undefined") {
     return input;
@@ -34,6 +53,8 @@ export async function apiRequest<T>(
       reintentable: true,
     } satisfies ApiFailure;
   }
+
+  avisarSiCambiaLaSesion(response);
 
   if (response.status === 204) {
     return {} as T;

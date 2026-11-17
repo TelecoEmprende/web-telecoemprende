@@ -7,7 +7,7 @@
       "entrypoint": "app.py",
       "functions": {
         "app.py": {
-          "excludeFiles": "{frontend/**,docker-compose.yml,Dockerfile,tests/**,data/**,.git/**}"
+          "excludeFiles": "{frontend/**,tests/**,data/**,.git/**}"
         }
       }
     },

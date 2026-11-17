@@ -27,7 +27,7 @@ DOC = [
 
 class NotasTestCase(unittest.TestCase):
     def setUp(self):
-        security_service.request_log.clear()
+        security_service.olvidar_intentos()
         migrar()
         conn = notas_service._get_connection()
         with conn.cursor() as cur:

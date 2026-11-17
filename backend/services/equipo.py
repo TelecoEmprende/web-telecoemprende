@@ -3,7 +3,6 @@ import hashlib
 import secrets
 from io import BytesIO
 
-import psycopg2
 from fpdf import FPDF
 from flask import session
 from openpyxl import Workbook
@@ -12,11 +11,11 @@ from werkzeug.security import check_password_hash, generate_password_hash
 
 from backend.config import (
     CARGOS_VALIDOS,
-    DATABASE_URL,
     EQUIPOS_ORDEN_POR_DEFECTO,
     MINUTOS_ENLACE_CLAVE,
     EQUIPOS_VALIDOS,
 )
+from backend.services.db import conexion
 from backend.services.registrations import _celda_segura
 
 # Hash "de relleno" para cuando el email no existe: sin esto, saltarse
@@ -26,7 +25,7 @@ _DUMMY_HASH = generate_password_hash("no-existe-ningun-usuario-con-este-email")
 
 
 def _get_connection():
-    return psycopg2.connect(DATABASE_URL)
+    return conexion()
 
 
 # La inscripción de la que sale una cuenta nueva: la más reciente con su email.
@@ -51,51 +50,85 @@ def completar_equipos(equipos: list[str]) -> list[str]:
     return ordenados + [e for e in EQUIPOS_ORDEN_POR_DEFECTO if e not in ordenados]
 
 
+# Lo que la sesión copia de la cuenta. Se lee al entrar y otra vez en cada
+# petición (`refrescar_sesion`), así que la cookie nunca manda sobre la base.
+_CUENTA = """
+    SELECT id, email, preferred_departments, vp_of, role, first_name,
+           COALESCE(is_admin, FALSE), must_change_password, password_hash
+    FROM members
+"""
+
+
+def _poner_sesion(fila) -> dict:
+    equipos = completar_equipos(fila[2])
+    info = {
+        "teams": equipos,
+        "vp_de": [e for e in fila[3] if e in equipos],
+        "cargo": fila[4] if fila[4] in CARGOS_VALIDOS else "",
+        "nombre": fila[5],
+        "admin": bool(fila[6]),
+        "cambiar_clave": bool(fila[7]),
+    }
+    session.permanent = True
+    session["member_id"] = fila[0]
+    session["equipo_email"] = fila[1]
+    session["equipo_teams"] = info["teams"]
+    session["equipo_vp_de"] = info["vp_de"]
+    session["equipo_cargo"] = info["cargo"]
+    session["equipo_nombre"] = info["nombre"]
+    session["equipo_admin"] = info["admin"]
+    session["equipo_cambiar_clave"] = info["cambiar_clave"]
+    # Solo quien tiene el permiso de admin marcado (no el departamento ni el
+    # cargo) recibe la sesión de admin: grupo Admin y rutas /api/admin/*.
+    if info["admin"]:
+        session["admin_auth"] = True
+    else:
+        session.pop("admin_auth", None)
+    return info
+
+
 def login_equipo(email: str, password: str) -> dict | None:
     email = email.strip().lower()
     with _get_connection() as conn:
         with conn.cursor() as cur:
-            cur.execute(
-                """
-                SELECT password_hash, preferred_departments, vp_of, role, first_name,
-                       COALESCE(is_admin, FALSE), must_change_password
-                FROM members WHERE email = %s AND active = TRUE
-                """,
-                (email,),
-            )
+            cur.execute(_CUENTA + " WHERE email = %s AND active = TRUE", (email,))
             row = cur.fetchone()
 
-    password_hash = row[0] if row is not None else _DUMMY_HASH
+    password_hash = row[8] if row is not None else _DUMMY_HASH
     password_ok = check_password_hash(password_hash, password)
 
     if row is None or not password_ok:
         return None
 
-    equipos = completar_equipos(row[1])
-    vp_de = [e for e in row[2] if e in equipos]
-    cargo = row[3] if row[3] in CARGOS_VALIDOS else ""
-    nombre = row[4]
-    es_admin = bool(row[5])
-    cambiar_clave = bool(row[6])
-
     # session.clear() por higiene ante fijación de sesión.
     session.clear()
-    session.permanent = True
-    session["equipo_email"] = email
-    session["equipo_teams"] = equipos
-    session["equipo_vp_de"] = vp_de
-    session["equipo_cargo"] = cargo
-    session["equipo_nombre"] = nombre
-    session["equipo_admin"] = es_admin
-    session["equipo_cambiar_clave"] = cambiar_clave
-    # Solo quien tiene el permiso de admin marcado (no el departamento ni el
-    # cargo) recibe la sesión de admin: grupo Admin y rutas /api/admin/*.
-    if es_admin:
-        session["admin_auth"] = True
-    return {
-        "teams": equipos, "vp_de": vp_de, "cargo": cargo, "nombre": nombre,
-        "admin": es_admin, "cambiar_clave": cambiar_clave,
-    }
+    return _poner_sesion(row)
+
+
+def refrescar_sesion() -> None:
+    """Antes de cada petición a /api con sesión: vuelve a leer la cuenta. Si
+    se ha desactivado o borrado, la sesión se cierra; si le han cambiado el
+    email, el admin o los departamentos, vale ya, sin volver a entrar. Sin
+    esto, la cookie conservaba los permisos del login mientras se usara."""
+    member_id = session.get("member_id")
+    email = session.get("equipo_email")
+    if member_id is None and email is None:
+        # Admin sin cuenta detrás no existe: no hay a quién preguntar si lo es.
+        session.pop("admin_auth", None)
+        return
+    with _get_connection() as conn:
+        with conn.cursor() as cur:
+            if member_id is not None:
+                cur.execute(_CUENTA + " WHERE id = %s AND active = TRUE", (member_id,))
+            else:
+                # Sesiones abiertas antes de guardar el id: se buscan una vez
+                # por email y desde ahí van por id.
+                cur.execute(_CUENTA + " WHERE email = %s AND active = TRUE", (email,))
+            fila = cur.fetchone()
+    if fila is None:
+        session.clear()
+        return
+    _poner_sesion(fila)
 
 
 def is_equipo_authenticated() -> bool:
@@ -266,7 +299,7 @@ def generar_pdf_equipo_en_memoria() -> BytesIO:
             acceso["nombre"] or "-",
             acceso["email"],
             acceso["dni"] or "-",
-            ", ".join(acceso["equipos"]) or "-",
+            _deptos(acceso["equipos"]) or "-",
             acceso["cargo"] or "-",
             "Sí" if acceso["activo"] else "No",
         ]
@@ -276,6 +309,11 @@ def generar_pdf_equipo_en_memoria() -> BytesIO:
         pdf.ln()
 
     return BytesIO(bytes(pdf.output()))
+
+
+def _deptos(claves: list[str]) -> str:
+    """«Marketing, Ingeniería» para el Excel y el PDF, no las claves."""
+    return ", ".join(_DEPTO_WEB.get(c, (c,))[0] for c in claves)
 
 
 def generar_excel_equipo_en_memoria() -> BytesIO:
@@ -304,8 +342,8 @@ def generar_excel_equipo_en_memoria() -> BytesIO:
             _celda_segura(a["apellidos"]),
             _celda_segura(a["dni"]),
             _celda_segura(a["email"]),
-            ", ".join(a["equipos"]),
-            ", ".join(a["vp_de"]),
+            _deptos(a["equipos"]),
+            _deptos(a["vp_de"]),
             a["cargo"],
             "Sí" if a["activo"] else "No",
         ])

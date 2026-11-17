@@ -1,7 +1,5 @@
 import ipaddress
 import re
-from html import escape
-from time import time
 
 from flask import request
 
@@ -16,14 +14,29 @@ from backend.config import (
     MAX_TELEFONO_LEN,
     UPM_EMAIL_DOMAINS,
 )
+from backend.services.db import conexion, migrar
+
+# Caracteres de control (menos tab y salto de línea): no aportan nada y
+# ensucian tanto la base de datos como los exports.
+_CONTROL = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
 
 
-request_log = {}
+def limpiar_texto(texto: str, *, multilinea: bool = False) -> str:
+    """Quita caracteres de control y espacios de sobra. Nada más.
 
+    No escapa HTML: antes lo hacía (`html.escape`) y «O'Brien» se guardaba
+    como `O&#x27;Brien`, que React pinta tal cual -- React escapa al pintar,
+    no desescapa. Contra XSS ya protegen ese escapado de React y la CSP;
+    contra inyección SQL, las consultas parametrizadas; contra fórmulas en
+    los Excel, `_celda_segura`. Escapar aquí solo corrompía el contenido.
+    """
+    texto = _CONTROL.sub("", texto)
 
-def limpiar_texto(texto: str) -> str:
-    texto = " ".join(texto.strip().split())
-    return escape(texto)
+    if not multilinea:
+        return " ".join(texto.split())
+
+    lineas = texto.replace("\r\n", "\n").replace("\r", "\n").split("\n")
+    return "\n".join(" ".join(linea.split()) for linea in lineas).strip()
 
 
 def email_valido(email: str) -> bool:
@@ -71,8 +84,8 @@ def longitud_valida(
 
 
 def obtener_ip_real() -> str:
-    # nginx (docker-compose) usa $proxy_add_x_forwarded_for, que AÑADE la IP real
-    # del cliente al final de la cabecera; el resto de la cadena puede venir
+    # El proxy de delante (Vercel) AÑADE la IP real del cliente al final de
+    # la cabecera; el resto de la cadena puede venir
     # directamente del cliente y no es de fiar (un atacante podría escribir
     # cualquier cosa ahí para saltarse el rate limiting por IP o inyectar datos
     # en el registro/Excel). Nos quedamos con el último valor -el que añade
@@ -94,17 +107,36 @@ def demasiadas_peticiones(
     window_seconds: int,
     bucket: str,
 ) -> bool:
-    ahora = time()
-    key = f"{bucket}:{ip}"
-
-    if key not in request_log:
-        request_log[key] = []
-
-    request_log[key] = [t for t in request_log[key] if ahora - t < window_seconds]
-
-    if len(request_log[key]) >= max_requests:
-        return True
-
-    request_log[key].append(ahora)
+    """True si esta IP ya ha gastado sus intentos en la ventana; si no, apunta
+    uno más. En la base de datos y no en memoria: en Vercel cada instancia
+    tenía su propia cuenta, y un ataque repartido entre instancias (o que
+    esperara a un arranque en frío) no se frenaba."""
+    with conexion() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT count(*) FROM login_attempts WHERE bucket = %s AND ip = %s"
+                " AND attempted_at > NOW() - make_interval(secs => %s)",
+                (bucket, ip[:64], window_seconds),
+            )
+            if cur.fetchone()[0] >= max_requests:
+                return True
+            cur.execute(
+                "INSERT INTO login_attempts (bucket, ip) VALUES (%s, %s)", (bucket, ip[:64])
+            )
     return False
 
+
+def purgar_intentos() -> int:
+    """Cron diario: los intentos de más de un día ya no cuentan para nada."""
+    with conexion() as conn:
+        with conn.cursor() as cur:
+            cur.execute("DELETE FROM login_attempts WHERE attempted_at < NOW() - interval '1 day'")
+            return cur.rowcount
+
+
+def olvidar_intentos() -> None:
+    """Para los tests: empezar cada uno sin intentos gastados."""
+    migrar()
+    with conexion() as conn:
+        with conn.cursor() as cur:
+            cur.execute("DELETE FROM login_attempts")

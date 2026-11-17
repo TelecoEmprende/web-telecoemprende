@@ -1,4 +1,5 @@
 import { FormEvent, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 import { useApi } from "../DeptoApi";
 import { AlertBanner } from "../../feedback/AlertBanner";
@@ -47,7 +48,9 @@ function mismosResponsables(a: string[], b: string[]) {
  * un guardar, y fuera.
  */
 export function ContentEditor({ content, onCerrar, onGuardado }: Props) {
-  const { updateContent } = useApi();
+  const { updateContent, createContent } = useApi();
+  // id 0: un borrador de «+ Entregable», que no existe hasta que se guarda.
+  const nuevo = content.id === 0;
 
   const [titulo, setTitulo] = useState(content.titulo);
   const [tipo, setTipo] = useState(content.tipo);
@@ -133,7 +136,7 @@ export function ContentEditor({ content, onCerrar, onGuardado }: Props) {
     setError(null);
 
     try {
-      await updateContent(content.id, {
+      const datos = {
         titulo,
         tipo,
         plataforma,
@@ -146,7 +149,8 @@ export function ContentEditor({ content, onCerrar, onGuardado }: Props) {
         idea_visual: ideaVisual,
         responsables,
         enlaces: desdeLineas(enlaces),
-      });
+      };
+      await (nuevo ? createContent(content.campaign_id, datos) : updateContent(content.id, datos));
       onGuardado();
     } catch (err) {
       const fallo = err as ApiFailure;
@@ -155,7 +159,10 @@ export function ContentEditor({ content, onCerrar, onGuardado }: Props) {
     }
   }
 
-  return (
+  // En un portal, como los diálogos de shadcn: dentro del panel quedaba por
+  // debajo de la barra de arriba (el panel animado hace su propio contexto de
+  // apilamiento) y en el móvil la barra tapaba el formulario.
+  return createPortal(
     <div
       className="mkt-modal-fondo-react"
       role="dialog"
@@ -168,7 +175,7 @@ export function ContentEditor({ content, onCerrar, onGuardado }: Props) {
     >
       <div className="mkt-modal-react" ref={cajaRef}>
         <header className="mkt-modal-header-react">
-          <h3 id="ce-encabezado">Editar entregable</h3>
+          <h3 id="ce-encabezado">{nuevo ? "Nuevo entregable" : "Editar entregable"}</h3>
           <button type="button" className="mkt-btn-mini-react" onClick={intentarCerrar}>
             Cerrar
           </button>
@@ -354,6 +361,7 @@ export function ContentEditor({ content, onCerrar, onGuardado }: Props) {
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

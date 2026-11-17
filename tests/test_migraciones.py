@@ -179,6 +179,30 @@ class MigracionPersonasTestCase(unittest.TestCase):
                 self.assertEqual(cur.fetchall(), [])
 
 
+    def test_la_0017_desescapa_los_textos_y_limpia_los_enlaces(self):
+        with psycopg2.connect(self.url) as conn:
+            with conn.cursor() as cur:
+                for archivo in sorted(MIGRACIONES.glob("*.sql")):
+                    if archivo.stem >= "0017":
+                        break
+                    self.aplicar(cur, archivo.stem)
+                cur.execute(
+                    "INSERT INTO members (email, password_hash, first_name, last_name)"
+                    " VALUES ('ana@x.es', 'h', 'O&#x27;Brien', 'García &amp; &amp;lt;Cía&gt;')"
+                )
+                cur.execute(
+                    "INSERT INTO tasks (title, links) VALUES ('Cartel',"
+                    " '{https://a.es,drive.google.com/x,javascript:alert(1)}') RETURNING id"
+                )
+                tarea = cur.fetchone()[0]
+
+                self.aplicar(cur, "0017_textos_sin_escapar")
+
+                cur.execute("SELECT first_name, last_name FROM members")
+                self.assertEqual(cur.fetchone(), ("O'Brien", "García & &lt;Cía>"))
+                cur.execute("SELECT links FROM tasks WHERE id = %s", (tarea,))
+                self.assertEqual(cur.fetchone()[0], ["https://a.es", "https://drive.google.com/x"])
+
     def test_la_0010_solo_renombra_y_la_api_lee_lo_mismo(self):
         """Tablas y columnas en inglés: los datos siguen ahí, las vistas `_v`
         mantienen los nombres de la API y las personas siguen enlazadas."""

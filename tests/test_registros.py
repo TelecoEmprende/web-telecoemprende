@@ -29,7 +29,7 @@ from backend.services.db import migrar  # noqa: E402
 
 class RegistrosTestCase(unittest.TestCase):
     def setUp(self):
-        security_service.request_log.clear()
+        security_service.olvidar_intentos()
         migrar()
 
         conn = registros_service._get_connection()
@@ -189,6 +189,14 @@ class RegistrosTestCase(unittest.TestCase):
         self._entrar_sin_cargo()
         self.assertEqual(self.client.get("/api/equipo/papelera").get_json()["elementos"], [])
         self.assertEqual(self.client.post(f"/api/equipo/papelera/reunion/{fila['id']}/restaurar").status_code, 404)
+
+    def test_una_de_directiva_visible_para_todos_no_sale_en_la_papelera_de_quien_no_la_restaura(self):
+        # Salía en la papelera de todos, pero restaurarla daba «No está en la papelera».
+        fila = self._de_directiva(solo_directiva=False)
+        self.client.delete(f"/api/eventos/reuniones/{fila['id']}")
+
+        self._entrar_sin_cargo()
+        self.assertEqual(self.client.get("/api/equipo/papelera").get_json()["elementos"], [])
 
     def test_solo_las_de_directiva_pueden_ser_solo_de_la_directiva(self):
         self.login()

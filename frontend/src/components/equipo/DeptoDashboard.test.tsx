@@ -14,6 +14,7 @@ const getCalendario = vi.fn();
 const getMiembros = vi.fn();
 const updateTask = vi.fn();
 const createTask = vi.fn();
+const createContent = vi.fn();
 const getFichaMiembro = vi.fn();
 const listarRegistros = vi.fn();
 const updateFichaMiembro = vi.fn();
@@ -59,7 +60,7 @@ vi.mock("../../api/marketing", () => ({
       updateTask: (...args: unknown[]) => updateTask(...args),
       createTask: (...args: unknown[]) => createTask(...args),
       createCampaign: vi.fn(),
-      createContent: vi.fn(),
+      createContent: (...args: unknown[]) => createContent(...args),
       deleteCampaign: vi.fn(),
       duplicateCampaign: (...args: unknown[]) => duplicateCampaign(...args),
       deleteContent: vi.fn(),
@@ -758,7 +759,7 @@ describe("/equipo — panel de Marketing", () => {
     await renderMarketing();
     await userEvent.click(screen.getByRole("button", { name: "Proyectos" }));
 
-    expect(await screen.findByText(/Aún no hay proyectos/)).toBeInTheDocument();
+    expect(await screen.findByText(/No hay proyectos en los departamentos marcados/)).toBeInTheDocument();
   });
 
   it("duplicar un proyecto lo recarga y abre la copia", async () => {
@@ -880,6 +881,34 @@ describe("/equipo — panel de Marketing", () => {
 
     await waitFor(() =>
       expect(createTask).toHaveBeenCalledWith({ titulo: "Grabar", content_id: 1 }),
+    );
+  });
+
+  it("«+ Entregable» no crea nada hasta guardar: cancelar no deja un entregable vacío", async () => {
+    getCampaign.mockResolvedValue({
+      ok: true,
+      campaign: {
+        id: 1, nombre: "Vuelta al cole", objetivo: "", audiencia: "", fecha: null,
+        departamento: "marketing", departamentos: ["marketing"], estado: "activo", responsable: "",
+        contents: [], tasks_sueltas: [],
+      },
+    });
+    createContent.mockReset().mockResolvedValue({ ok: true });
+    render(
+      <MemoryRouter initialEntries={["/equipo?campaign=1"]}>
+        <EquipoPage />
+      </MemoryRouter>,
+    );
+    await userEvent.click(await screen.findByRole("button", { name: "+ Entregable" }));
+    expect(screen.getByRole("heading", { name: "Nuevo entregable" })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Cancelar" }));
+    expect(createContent).not.toHaveBeenCalled();
+
+    await userEvent.click(screen.getByRole("button", { name: "+ Entregable" }));
+    await userEvent.type(screen.getByLabelText("Título"), "Reel");
+    await userEvent.click(screen.getByRole("button", { name: "Guardar" }));
+    await waitFor(() =>
+      expect(createContent).toHaveBeenCalledWith(1, expect.objectContaining({ titulo: "Reel" })),
     );
   });
 

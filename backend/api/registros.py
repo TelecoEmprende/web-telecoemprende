@@ -23,6 +23,7 @@ from backend.api.marketing import (
     _opcion,
     _payload,
     _texto,
+    _url,
     departamento_actual,
     es_cargo_vp_o_admin,
     marketing_api,
@@ -38,15 +39,6 @@ from backend.schemas import build_response
 from backend.services import registros as reg
 from backend.services import slack
 from backend.services.plataforma import estado_plataforma
-
-
-def _url(datos: dict, clave: str) -> str:
-    """Enlace http(s), o vacío. Lo que acaba en un `<a href>` no puede ser un
-    `javascript:` ni un `data:` guardado por alguien del equipo."""
-    valor = _texto(datos, clave, maximo=600)
-    if valor and not valor.lower().startswith(("http://", "https://")):
-        raise DatosInvalidos(f"'{clave}' tiene que empezar por http:// o https://.")
-    return valor
 
 
 def _importe(datos: dict, clave: str) -> str:
